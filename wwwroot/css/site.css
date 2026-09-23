@@ -1,0 +1,16 @@
+:root{
+  --teal: #2E7D5B;
+  --teal-deep: #1E5C41;
+  --rust: #A0432A;
+  --gold: #B9853B;
+}
+body{ background:#F7F5F1; font-family: "Segoe UI", Tahoma, Arial, sans-serif; }
+.app-navbar{ background: var(--teal-deep) !important; }
+.auth-wrap{ max-width: 420px; margin: 40px auto; }
+.auth-card{ background:#fff; border-radius:14px; padding:28px; box-shadow:0 4px 20px rgba(0,0,0,.08); }
+.auth-card h2{ color: var(--teal-deep); margin-bottom:4px; }
+.auth-card .sub{ color:#777; font-size:13px; margin-bottom:20px; }
+.choice-card{ display:block; background:#fff; border-radius:14px; padding:24px; margin-bottom:16px; text-decoration:none; color:var(--teal-deep); box-shadow:0 2px 10px rgba(0,0,0,.06); transition:.15s; }
+.choice-card:hover{ transform: translateY(-2px); box-shadow:0 6px 18px rgba(0,0,0,.1); color:var(--teal-deep); }
+.btn-brand{ background:var(--teal); border-color:var(--teal); color:#fff; }
+.btn-brand:hover{ background:var(--teal-deep); border-color:var(--teal-deep); color:#fff; }

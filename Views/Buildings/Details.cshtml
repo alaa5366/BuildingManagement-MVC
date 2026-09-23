@@ -1,0 +1,62 @@
+@model Building
+@{ ViewData["Title"] = "تفاصيل العمارة"; }
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>@Model.BuildingNumber — @Model.Name</h3>
+    <form method="post" asp-action="Delete" asp-route-id="@Model.Id" onsubmit="return confirm('تأكيد حذف العمارة نهائيًا؟');">
+        <button class="btn btn-outline-danger btn-sm">حذف العمارة</button>
+    </form>
+</div>
+
+<div class="row mb-4">
+    @foreach (var floor in Model.Floors.OrderBy(f => f.Order))
+    {
+        var apts = Model.Apartments.Where(a => a.FloorId == floor.Id).OrderBy(a => a.Number).ToList();
+        <div class="col-md-6 mb-3">
+            <div class="bg-white rounded shadow-sm p-3">
+                <h5>@floor.Label <span class="text-muted small">(دور رقم @floor.Order)</span></h5>
+                <ul class="list-group list-group-flush mb-2">
+                    @foreach (var apt in apts)
+                    {
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>🏠 شقة @apt.Number @(string.IsNullOrEmpty(apt.Label) ? "" : "— " + apt.Label)</span>
+                            <span class="text-muted small">@apt.Phone @(apt.Closed ? "🔒 مغلقة" : "")</span>
+                        </li>
+                    }
+                </ul>
+
+                <form method="post" asp-action="AddApartment" class="d-flex gap-2">
+                    <input type="hidden" name="buildingId" value="@Model.Id" />
+                    <input type="hidden" name="floorId" value="@floor.Id" />
+                    <input name="phone" class="form-control form-control-sm" placeholder="واتساب الشقة الجديدة" required />
+                    <input name="pin" class="form-control form-control-sm" placeholder="PIN" required />
+                    <button class="btn btn-sm btn-brand text-nowrap">+ شقة</button>
+                </form>
+            </div>
+        </div>
+    }
+</div>
+
+<div class="bg-white rounded shadow-sm p-3">
+    <h5>➕ إضافة دور جديد</h5>
+    <form method="post" asp-action="AddFloor">
+        <input type="hidden" name="buildingId" value="@Model.Id" />
+        <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small">اسم الدور</label>
+                <input name="label" class="form-control" required />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">أرقام واتساب الشقق (مفصولة بفاصلة)</label>
+                <input name="aptPhones" class="form-control" placeholder="+2010..., +2011..." required />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">PIN لكل شقة (بنفس الترتيب)</label>
+                <input name="aptPins" class="form-control" placeholder="1234, 5678" required />
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-brand w-100">إضافة</button>
+            </div>
+        </div>
+    </form>
+</div>

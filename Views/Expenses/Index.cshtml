@@ -1,0 +1,74 @@
+@model List<Expense>
+@{
+    ViewData["Title"] = "المصروفات";
+    var building = (Building)ViewBag.Building;
+    var categories = (List<FinancialCategory>)ViewBag.Categories;
+    string month = ViewBag.Month;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>💰 مصروفات @building.Name</h3>
+    <form method="get" class="d-flex gap-2">
+        <input type="month" name="month" value="@month" class="form-control" onchange="this.form.submit()" />
+    </form>
+</div>
+
+<div class="bg-white rounded shadow-sm p-3 mb-3">
+    <h5>➕ إضافة مصروف</h5>
+    <form method="post" asp-action="Add" class="row g-2 align-items-end">
+        <input type="hidden" name="month" value="@month" />
+        <div class="col-md-3">
+            <label class="form-label small">البند</label>
+            <select name="categoryId" class="form-select" required>
+                @foreach (var c in categories)
+                {
+                    <option value="@c.Id">@c.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small">ملاحظة</label>
+            <input name="note" class="form-control" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">المبلغ</label>
+            <input name="amount" type="number" step="0.01" class="form-control" required />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">التاريخ</label>
+            <input name="date" type="date" class="form-control" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-brand w-100">إضافة</button>
+        </div>
+    </form>
+</div>
+
+<div class="bg-white rounded shadow-sm p-3">
+    <div class="d-flex justify-content-between mb-2">
+        <h5>سجل المصروفات</h5>
+        <strong>الإجمالي: @(((double)ViewBag.Total).ToString("0.##")) ج.م</strong>
+    </div>
+    <table class="table table-sm">
+        <thead><tr><th>التاريخ</th><th>البند</th><th>ملاحظة</th><th>المبلغ</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var e in Model)
+        {
+            var cat = categories.FirstOrDefault(c => c.Id == e.CategoryId);
+            <tr>
+                <td>@e.Date</td>
+                <td>@(cat?.Name ?? e.CategoryId)</td>
+                <td>@e.Note</td>
+                <td>@e.Amount.ToString("0.##")</td>
+                <td>
+                    <form method="post" asp-action="Delete" onsubmit="return confirm('حذف المصروف؟');">
+                        <input type="hidden" name="month" value="@month" />
+                        <input type="hidden" name="id" value="@e.Id" />
+                        <button class="btn btn-sm btn-outline-danger">حذف</button>
+                    </form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,18 @@
+@{ ViewData["Title"] = "تسجيل الدخول"; }
+
+<div class="auth-wrap">
+    <h2 class="text-center mb-4" style="color:var(--teal-deep)">🏢 نظام إدارة العمارات</h2>
+
+    <a class="choice-card" asp-controller="Account" asp-action="LoginSuperAdmin">
+        <strong>👑 Super Admin</strong>
+        <div class="text-muted small">إدارة كل العمارات</div>
+    </a>
+    <a class="choice-card" asp-controller="Account" asp-action="LoginAdmin">
+        <strong>🛠️ Admin</strong>
+        <div class="text-muted small">إدارة عمارة أو أكثر</div>
+    </a>
+    <a class="choice-card" asp-controller="Account" asp-action="LoginResident">
+        <strong>🏠 Resident (ساكن)</strong>
+        <div class="text-muted small">الوصول لشقتك فقط</div>
+    </a>
+</div>

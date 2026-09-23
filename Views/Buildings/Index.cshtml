@@ -1,0 +1,23 @@
+@model List<Building>
+@{ ViewData["Title"] = "العمارات"; }
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>العمارات</h3>
+    <a asp-action="Create" class="btn btn-brand">+ عمارة جديدة</a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover bg-white">
+        <thead><tr><th>الرقم</th><th>الاسم</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var b in Model)
+        {
+            <tr>
+                <td>@b.BuildingNumber</td>
+                <td>@b.Name</td>
+                <td><a asp-action="Details" asp-route-id="@b.Id" class="btn btn-sm btn-outline-secondary">تفاصيل</a></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

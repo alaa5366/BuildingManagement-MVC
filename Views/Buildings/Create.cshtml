@@ -1,0 +1,19 @@
+@{ ViewData["Title"] = "عمارة جديدة"; }
+
+<div class="col-md-6">
+    <h3 class="mb-3">إنشاء عمارة جديدة</h3>
+    <div asp-validation-summary="All" class="text-danger"></div>
+
+    <form method="post" class="bg-white p-4 rounded shadow-sm">
+        <div class="mb-3">
+            <label class="form-label">اسم العمارة</label>
+            <input name="name" class="form-control" required />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">PIN الأدمن العام (اختياري)</label>
+            <input name="adminPin" class="form-control" />
+        </div>
+        <button type="submit" class="btn btn-brand">إنشاء</button>
+        <a asp-action="Index" class="btn btn-link">إلغاء</a>
+    </form>
+</div>

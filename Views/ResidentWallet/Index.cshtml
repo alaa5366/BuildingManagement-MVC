@@ -1,0 +1,78 @@
+@{
+    ViewData["Title"] = "محفظتي";
+    var building = (Building)ViewBag.Building;
+    var apt = (Apartment)ViewBag.Apartment;
+    string month = ViewBag.Month;
+    double balance = ViewBag.Balance;
+    var transactions = (List<WalletTransactionVm>)ViewBag.Transactions;
+    var pendingDeposits = (List<Deposit>)ViewBag.PendingDeposits;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>💼 محفظتي — شقة @apt.Number، @building.Name</h3>
+    <form method="get" class="d-flex gap-2">
+        <input type="month" name="month" value="@month" class="form-control" onchange="this.form.submit()" />
+    </form>
+</div>
+
+<div class="bg-white rounded shadow-sm p-4 mb-3 text-center">
+    <div class="text-muted small">رصيدك الحالي</div>
+    <div class="display-6 fw-bold @(balance < 0 ? "text-danger" : "text-success")">@balance.ToString("0.##") ج.م</div>
+    @if (balance < 0)
+    {
+        <div class="text-danger small">عليك مبلغ مستحق</div>
+    }
+</div>
+
+<div class="bg-white rounded shadow-sm p-3 mb-3">
+    <h5>➕ تسجيل دفعة جديدة</h5>
+    <p class="text-muted small">هتتحول لحالة "معلقة" لحد ما الأدمن يأكدها</p>
+    <form method="post" asp-action="CreateDeposit" class="row g-2 align-items-end">
+        <input type="hidden" name="month" value="@month" />
+        <div class="col-md-4">
+            <label class="form-label small">المبلغ</label>
+            <input name="amount" type="number" step="0.01" class="form-control" required />
+        </div>
+        <div class="col-md-5">
+            <label class="form-label small">ملاحظة</label>
+            <input name="note" class="form-control" />
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-brand w-100">إرسال</button>
+        </div>
+    </form>
+</div>
+
+@if (pendingDeposits.Count > 0)
+{
+    <div class="alert alert-warning">
+        عندك @pendingDeposits.Count دفعة/دفعات في انتظار تأكيد الأدمن.
+    </div>
+}
+
+<div class="bg-white rounded shadow-sm p-3">
+    <h5>كشف الحساب</h5>
+    <table class="table table-sm">
+        <thead><tr><th>التاريخ</th><th>البيان</th><th>المبلغ</th><th>الحالة</th></tr></thead>
+        <tbody>
+        @foreach (var tx in transactions)
+        {
+            var label = tx.Type switch {
+                "deposit" => "دفعة " + tx.Number,
+                "expense" => "نصيب من المصروفات",
+                "revenue" => "نصيب من الإيرادات",
+                "monthly_fee_due" => "رسم شهري مستحق",
+                "monthly_fee_credit" => "زيادة في الرسم الشهري",
+                "adjustment" => "تسوية: " + tx.Note,
+                _ => tx.Note
+            };
+            <tr>
+                <td>@tx.CreatedAt.Substring(0, Math.Min(10, tx.CreatedAt.Length))</td>
+                <td>@label</td>
+                <td class="@(tx.Amount < 0 ? "text-danger" : "text-success")">@tx.Amount.ToString("0.##")</td>
+                <td>@(tx.Status == "pending" ? "⏳ معلقة" : tx.Status == "cancelled" ? "❌ ملغاة" : "✅ مؤكدة")</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

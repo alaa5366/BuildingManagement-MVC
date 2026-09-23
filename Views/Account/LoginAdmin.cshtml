@@ -1,0 +1,39 @@
+@model AdminLoginVm
+@{ ViewData["Title"] = "دخول Admin"; }
+@{ var buildings = (List<BuildingManagementMvc.Models.Building>)ViewBag.Buildings; }
+
+<div class="auth-wrap">
+    <div class="auth-card">
+        <a asp-action="LoginChoice" class="small">← رجوع</a>
+        <h2>دخول Admin</h2>
+        <p class="sub">اختر العمارة وأدخل رقم الهاتف والـ PIN</p>
+
+        <form asp-action="LoginAdmin" method="post">
+            <div class="mb-3">
+                <label class="form-label">العمارة</label>
+                <select asp-for="BuildingId" class="form-select">
+                    <option value="">-- اختر --</option>
+                    @foreach (var b in buildings)
+                    {
+                        <option value="@b.Id">@b.BuildingNumber — @b.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">رقم الهاتف</label>
+                <input asp-for="Phone" class="form-control" placeholder="+201001234567" autocomplete="username" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">PIN</label>
+                <input asp-for="Pin" class="form-control" autocomplete="current-password" />
+            </div>
+
+            @if (ViewBag.Error != null)
+            {
+                <div class="alert alert-danger py-2">@ViewBag.Error</div>
+            }
+
+            <button type="submit" class="btn btn-brand w-100">دخول</button>
+        </form>
+    </div>
+</div>

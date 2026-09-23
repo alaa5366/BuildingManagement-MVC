@@ -1,0 +1,49 @@
+@model ResidentLoginVm
+@{ ViewData["Title"] = "دخول ساكن"; }
+@{ var buildings = (List<BuildingManagementMvc.Models.Building>)ViewBag.Buildings; }
+
+<div class="auth-wrap">
+    <div class="auth-card">
+        <a asp-action="LoginChoice" class="small">← رجوع</a>
+        <h2>دخول ساكن</h2>
+        <p class="sub">اختر العمارة، رقم الدور، رقم الشقة، ثم أدخل الواتساب والـ PIN</p>
+
+        <form asp-action="LoginResident" method="post">
+            <div class="mb-3">
+                <label class="form-label">العمارة</label>
+                <select asp-for="BuildingId" class="form-select">
+                    <option value="">-- اختر --</option>
+                    @foreach (var b in buildings)
+                    {
+                        <option value="@b.Id">@b.BuildingNumber — @b.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="row">
+                <div class="col mb-3">
+                    <label class="form-label">رقم الدور (0 = أرضي)</label>
+                    <input asp-for="FloorOrder" type="number" class="form-control" />
+                </div>
+                <div class="col mb-3">
+                    <label class="form-label">رقم الشقة</label>
+                    <input asp-for="AptNumber" type="number" class="form-control" />
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">رقم الواتساب</label>
+                <input asp-for="Whatsapp" class="form-control" placeholder="+201001234567" autocomplete="username" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">PIN</label>
+                <input asp-for="Pin" class="form-control" autocomplete="current-password" />
+            </div>
+
+            @if (ViewBag.Error != null)
+            {
+                <div class="alert alert-danger py-2">@ViewBag.Error</div>
+            }
+
+            <button type="submit" class="btn btn-brand w-100">دخول</button>
+        </form>
+    </div>
+</div>
