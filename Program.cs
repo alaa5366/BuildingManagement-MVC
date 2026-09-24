@@ -2,7 +2,6 @@ using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using QuestPDF.Drawing;
 using QuestPDF.Infrastructure;
-using BuildingManagementMvc.Services;
 
 // ✅ إعدادات QuestPDF
 QuestPDF.Settings.License = LicenseType.Community;
@@ -12,6 +11,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 // MVC
 builder.Services.AddControllersWithViews();
+
+// ✅ Session (لتخزين بيانات الاستيراد بين الطلبات)
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.Name = "bm_session";
+});
 
 // Firebase / Firestore
 builder.Services.AddSingleton<FirestoreContext>();
@@ -29,6 +38,8 @@ builder.Services.AddSingleton<InvoicePdfService>();
 builder.Services.AddSingleton<OcrService>();
 builder.Services.AddSingleton<TransactionParser>();
 builder.Services.AddSingleton<CloudinaryService>();
+builder.Services.AddSingleton<ExcelTemplateService>();
+builder.Services.AddSingleton<ExcelImportService>();
 
 // Cookie authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -82,10 +93,12 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-//app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+
+// ✅ Session middleware (قبل Authentication)
+app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();

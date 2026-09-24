@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using BuildingManagementMvc.Services;
+using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Controllers;
 
-// إدارة العمارات — نفس شاشات sa-buildings.js و sa-building-view.js و structure.js
 [Authorize(Roles = "superadmin")]
 public class BuildingsController : Controller
 {
@@ -22,16 +22,62 @@ public class BuildingsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(string name, string adminPin)
+    public async Task<IActionResult> Create(
+        string name,
+        string? buildingNumber,
+        string adminPin,
+        string adminWhatsapp,
+        string? logoUrl,
+        bool addDefaultExpenseCategories = false,
+        bool addDefaultRevenueCategories = false)
     {
-        if (string.IsNullOrWhiteSpace(name))
+        // ========== Validation ==========
+        if (string.IsNullOrWhiteSpace(name) || name.Length < 2 || name.Length > 100)
         {
-            ModelState.AddModelError("", "اسم العمارة مطلوب");
+            ModelState.AddModelError("", "اسم العمارة مطلوب (من 2 إلى 100 حرف)");
             return View();
         }
 
-        var (id, number) = await _service.CreateAsync(name.Trim(), (adminPin ?? "").Trim());
-        TempData["Message"] = $"تم إنشاء العمارة {number} بنجاح";
+        if (string.IsNullOrWhiteSpace(adminPin) || adminPin.Length != 4 || !adminPin.All(char.IsDigit))
+        {
+            ModelState.AddModelError("", "PIN الأدمن لازم يكون 4 أرقام بالظبط");
+            return View();
+        }
+
+        if (string.IsNullOrWhiteSpace(adminWhatsapp))
+        {
+            ModelState.AddModelError("", "رقم واتساب الأدمن مطلوب");
+            return View();
+        }
+
+        var phoneClean = adminWhatsapp.Replace("+", "").Trim();
+        if (!phoneClean.All(char.IsDigit) || phoneClean.Length < 7)
+        {
+            ModelState.AddModelError("", "رقم واتساب الأدمن غير صحيح (أرقام فقط، 7 خانات على الأقل)");
+            return View();
+        }
+
+        if (!string.IsNullOrWhiteSpace(buildingNumber))
+        {
+            if (!System.Text.RegularExpressions.Regex.IsMatch(buildingNumber.Trim(), @"^BLD-\d{3}$"))
+            {
+                ModelState.AddModelError("", "رقم العمارة لازم يكون بصيغة BLD-XXX (مثال: BLD-001)");
+                return View();
+            }
+        }
+
+        // ========== إنشاء العمارة ==========
+        var (id, number) = await _service.CreateAsync(
+            name.Trim(),
+            adminPin.Trim(),
+            adminWhatsapp.Trim(),
+            logoUrl?.Trim(),
+            buildingNumber?.Trim(),
+            addDefaultExpenseCategories,
+            addDefaultRevenueCategories
+        );
+
+        TempData["Message"] = $"✅ تم إنشاء العمارة {number} بنجاح";
         return RedirectToAction("Details", new { id });
     }
 
@@ -50,7 +96,7 @@ public class BuildingsController : Controller
         return RedirectToAction("Index");
     }
 
-    // إضافة دور جديد + شققه (كل شقة برقم واتساب و PIN مفصولين بفاصلة)
+    // إضافة دور جديد + شققه
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddFloor(string buildingId, string label, string aptPhones, string aptPins)

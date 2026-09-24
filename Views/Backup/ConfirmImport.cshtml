@@ -1,0 +1,105 @@
+﻿@using BuildingManagementMvc.Services
+@model BuildingImportData
+@{
+    ViewData["Title"] = "تأكيد الاستيراد";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>✅ تأكيد استيراد العمارة</h3>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">← رجوع</a>
+</div>
+
+<div class="alert alert-success">
+    ✅ الملف صالح! راجع البيانات التالية قبل التأكيد.
+</div>
+
+<div class="bg-white rounded shadow-sm p-4 mb-3">
+    <h5>🏢 بيانات العمارة</h5>
+    <dl class="row mb-0">
+        <dt class="col-sm-3">الاسم</dt>
+        <dd class="col-sm-9">@Model.Name</dd>
+
+        <dt class="col-sm-3">رقم العمارة</dt>
+        <dd class="col-sm-9">
+            @(string.IsNullOrEmpty(Model.BuildingNumber) ? "تلقائي (BLD-XXX)" : Model.BuildingNumber)
+        </dd>
+
+        <dt class="col-sm-3">PIN الأدمن</dt>
+        <dd class="col-sm-9">@Model.AdminPin</dd>
+
+        <dt class="col-sm-3">واتساب الأدمن</dt>
+        <dd class="col-sm-9">@Model.AdminWhatsapp</dd>
+    </dl>
+</div>
+
+<div class="bg-white rounded shadow-sm p-4 mb-3">
+    <h5>🏠 الشقق (@Model.Apartments.Count)</h5>
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>الدور</th>
+                <th>رقم الشقة</th>
+                <th>المالك</th>
+                <th>واتساب</th>
+                <th>PIN</th>
+                <th>الرسم</th>
+                <th>الحالة</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                int index = 1;
+                var grouped = Model.Apartments
+                    .GroupBy(a => new { a.FloorLabel, a.FloorOrder })
+                    .OrderBy(g => g.Key.FloorOrder);
+            }
+            @foreach (var group in grouped)
+            {
+                foreach (var apt in group.OrderBy(a => a.AptNumber))
+                {
+                    <tr>
+                        <td>@index</td>
+                        <td>@group.Key.FloorLabel</td>
+                        <td>@apt.AptNumber</td>
+                        <td>@apt.Owner</td>
+                        <td>@apt.WhatsApp</td>
+                        <td><code>@apt.Pin</code></td>
+                        <td>@apt.MonthlyFee.ToString("0.##")</td>
+                        <td>
+                            @if (apt.Status == "closed")
+                            {
+                                <span class="badge bg-secondary">مغلقة</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">مفتوحة</span>
+                            }
+                        </td>
+                    </tr>
+                    index++;
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="bg-white rounded shadow-sm p-4">
+    <h5>⚠️ تأكيد نهائي</h5>
+    <p class="text-muted small">
+        بمجرد الضغط على "تأكيد الاستيراد"، هتتعمل عمارة جديدة في قاعدة البيانات، وهتتعمل حسابات Firebase Auth لكل شقة.
+    </p>
+
+    <form method="post" asp-action="ConfirmImport">
+        @Html.AntiForgeryToken()
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success">
+                ✅ تأكيد الاستيراد
+            </button>
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                إلغاء
+            </a>
+        </div>
+    </form>
+</div>

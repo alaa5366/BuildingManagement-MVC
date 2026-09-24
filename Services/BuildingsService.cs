@@ -41,25 +41,50 @@ public class BuildingsService
     }
 
     // إنشاء عمارة جديدة برقم تلقائي BLD-001, BLD-002...
-    public async Task<(string Id, string BuildingNumber)> CreateAsync(string name, string adminPin)
+    public async Task<(string Id, string BuildingNumber)> CreateAsync(
+     string name,
+     string adminPin,
+     string adminWhatsapp = "",
+     string? logoUrl = null,
+     string? buildingNumber = null,
+     bool addDefaultExpenseCategories = true,
+     bool addDefaultRevenueCategories = true)
     {
-        var all = await GetAllAsync();
-        var maxNum = 0;
-        foreach (var b in all)
+        // 1. تحديد رقم العمارة
+        string nextNumber;
+        if (!string.IsNullOrWhiteSpace(buildingNumber))
         {
-            var m = Regex.Match(b.BuildingNumber ?? "", @"^BLD-(\d+)$");
-            if (m.Success) maxNum = Math.Max(maxNum, int.Parse(m.Groups[1].Value));
-        }
-        var nextNumber = "BLD-" + (maxNum + 1).ToString("D3");
+            // تحقق من عدم التكرار
+            var all = await GetAllAsync();
+            if (all.Any(b => b.BuildingNumber == buildingNumber))
+                throw new InvalidOperationException($"رقم العمارة {buildingNumber} مستخدم بالفعل");
 
+            nextNumber = buildingNumber.Trim();
+        }
+        else
+        {
+            // توليد تلقائي
+            var all = await GetAllAsync();
+            var maxNum = 0;
+            foreach (var b in all)
+            {
+                var m = Regex.Match(b.BuildingNumber ?? "", @"^BLD-(\d+)$");
+                if (m.Success) maxNum = Math.Max(maxNum, int.Parse(m.Groups[1].Value));
+            }
+            nextNumber = "BLD-" + (maxNum + 1).ToString("D3");
+        }
+
+        // 2. إنشاء العمارة
         var building = new Building
         {
             BuildingNumber = nextNumber,
             Name = name,
             AdminPin = adminPin,
+            AdminWhatsapp = AuthHelpers.NormalizePhone(adminWhatsapp),
+            LogoUrl = logoUrl ?? "",
             DataVersion = "3.2",
-            ExpenseCategories = DefaultExpenseCategories(),
-            RevenueCategories = DefaultRevenueCategories(),
+            ExpenseCategories = addDefaultExpenseCategories ? DefaultExpenseCategories() : new(),
+            RevenueCategories = addDefaultRevenueCategories ? DefaultRevenueCategories() : new(),
             CreatedAt = DateTime.UtcNow.ToString("o")
         };
 
