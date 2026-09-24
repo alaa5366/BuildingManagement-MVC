@@ -21,14 +21,23 @@ public class BuildingsService
     public async Task<List<Building>> GetAllAsync()
     {
         var snap = await Col.OrderBy("buildingNumber").GetSnapshotAsync();
-        return snap.Documents.Select(d => d.ConvertTo<Building>()).ToList();
+        var buildings = snap.Documents.Select(d => d.ConvertTo<Building>()).ToList();
+
+        foreach (var b in buildings) NormalizeOrder(b);   // ← ضيف السطر ده
+
+        return buildings;
     }
 
     public async Task<Building?> GetByIdAsync(string id)
     {
         if (string.IsNullOrWhiteSpace(id)) return null;
         var doc = await Col.Document(id).GetSnapshotAsync();
-        return doc.Exists ? doc.ConvertTo<Building>() : null;
+        if (!doc.Exists) return null;
+
+        var building = doc.ConvertTo<Building>();
+        NormalizeOrder(building);   // ← ضيف السطر ده
+
+        return building;
     }
 
     // إنشاء عمارة جديدة برقم تلقائي BLD-001, BLD-002...
@@ -83,7 +92,9 @@ public class BuildingsService
         var floorId = Guid.NewGuid().ToString("N");
         building.Floors.Add(new Floor { Id = floorId, Label = label, Order = floorOrder });
 
-        var number = 1;
+        var number = building.Apartments.Count == 0
+            ? 1
+            : building.Apartments.Max(a => a.Number) + 1;
         foreach (var (phoneRaw, pin) in apartments)
         {
             var phone = AuthHelpers.NormalizePhone(phoneRaw);
@@ -119,8 +130,9 @@ public class BuildingsService
         var floor = building.Floors.FirstOrDefault(f => f.Id == floorId)
             ?? throw new InvalidOperationException("floor-not-found");
 
-        var existing = building.Apartments.Where(a => a.FloorId == floorId).ToList();
-        var nextNum = existing.Count == 0 ? 1 : existing.Max(a => a.Number) + 1;
+        var nextNum = building.Apartments.Count == 0
+            ? 1
+            : building.Apartments.Max(a => a.Number) + 1;
         var phone = AuthHelpers.NormalizePhone(phoneRaw);
 
         building.Apartments.Add(new Apartment
@@ -157,4 +169,17 @@ public class BuildingsService
         new FinancialCategory{ Id="scrap",         Name="بيع خردة",    Color="#8E6BB2", Active=true, Order=2 },
         new FinancialCategory{ Id="other-revenue", Name="إيراد آخر",   Color="#B9853B", Active=true, Order=3 },
     };
+    // ✅ Helper: ترتيب الأدوار والشقق بشكل موحّد
+    private static void NormalizeOrder(Building building)
+    {
+        building.Floors = building.Floors.OrderBy(f => f.Order).ToList();
+
+        var floorOrderMap = building.Floors.ToDictionary(f => f.Id, f => f.Order);
+
+        building.Apartments = building.Apartments
+            .OrderBy(a => floorOrderMap.GetValueOrDefault(a.FloorId, int.MaxValue))
+            .ThenBy(a => a.Number)
+            .ToList();
+    }
+
 }

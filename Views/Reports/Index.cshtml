@@ -1,0 +1,148 @@
+@model ReportsVm
+@{
+    ViewData["Title"] = "التقارير";
+    string RangeBtn(string key, string label) =>
+        $"<a href='?range={key}' class='btn btn-sm {(Model.Range == key ? "btn-brand" : "btn-outline-secondary")} me-1'>{label}</a>";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h3>📊 تقارير @Model.Building.Name</h3>
+    <div>
+        @Html.Raw(RangeBtn("6m", "6 شهور"))
+        @Html.Raw(RangeBtn("12m", "12 شهر"))
+        @Html.Raw(RangeBtn("year", "السنة الحالية"))
+        @Html.Raw(RangeBtn("all", "الكل"))
+        <a href="@Url.Action("ExportCsv", new { range = Model.Range })" class="btn btn-sm btn-outline-success">⬇️ تصدير CSV</a>
+    </div>
+</div>
+
+<div class="row mb-3 text-center g-2">
+    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">إجمالي المحصّل</div><div class="fw-bold">@Model.TotalCollected.ToString("0.##")</div></div></div>
+    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">إجمالي الإيرادات</div><div class="fw-bold text-success">@Model.TotalRevenues.ToString("0.##")</div></div></div>
+    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">إجمالي المصروفات</div><div class="fw-bold text-danger">@Model.TotalExpenses.ToString("0.##")</div></div></div>
+    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">صافي الرصيد</div><div class="fw-bold @(Model.NetBalance >= 0 ? "text-success" : "text-danger")">@Model.NetBalance.ToString("0.##")</div></div></div>
+    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">متوسط شهري</div><div class="fw-bold @(Model.AvgMonthly >= 0 ? "text-success" : "text-danger")">@Model.AvgMonthly.ToString("0.##")</div></div></div>
+</div>
+
+<div class="bg-white rounded shadow-sm p-3 mb-3">
+    <h5>المحصّل مقابل المصروفات شهريًا</h5>
+    <div style="height:320px"><canvas id="chartMonthly"></canvas></div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <div class="bg-white rounded shadow-sm p-3">
+            <h5>المصروفات حسب البند</h5>
+            @if (Model.Categories.Count == 0)
+            {
+                <div class="text-muted text-center py-4">لا توجد بيانات</div>
+            }
+            else
+            {
+                <div style="height:280px"><canvas id="chartCategories"></canvas></div>
+            }
+        </div>
+    </div>
+    <div class="col-md-6 mb-3">
+        <div class="bg-white rounded shadow-sm p-3">
+            <h5>توزيع المحفظة (الشهر الحالي)</h5>
+            @if (Model.Wallet.Count == 0)
+            {
+                <div class="text-muted text-center py-4">لا توجد بيانات</div>
+            }
+            else
+            {
+                <div style="height:280px"><canvas id="chartWallet"></canvas></div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <div class="bg-white rounded shadow-sm p-3">
+            <h5>🔴 أكثر الشقق مديونية</h5>
+            @if (Model.Debtors.Count == 0)
+            {
+                <div class="text-muted small py-2">لا توجد بيانات</div>
+            }
+            else
+            {
+                <table class="table table-sm mb-0">
+                    <tbody>
+                    @foreach (var d in Model.Debtors)
+                    {
+                        <tr><td>شقة @d.Apt.Number @(string.IsNullOrEmpty(d.Apt.Owner) ? "" : "— " + d.Apt.Owner)</td><td class="text-danger fw-bold text-end">@d.Balance.ToString("0.##")</td></tr>
+                    }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+    <div class="col-md-6 mb-3">
+        <div class="bg-white rounded shadow-sm p-3">
+            <h5>🟢 أكثر الشقق رصيدًا</h5>
+            @if (Model.Creditors.Count == 0)
+            {
+                <div class="text-muted small py-2">لا توجد بيانات</div>
+            }
+            else
+            {
+                <table class="table table-sm mb-0">
+                    <tbody>
+                    @foreach (var cr in Model.Creditors)
+                    {
+                        <tr><td>شقة @cr.Apt.Number @(string.IsNullOrEmpty(cr.Apt.Owner) ? "" : "— " + cr.Apt.Owner)</td><td class="text-success fw-bold text-end">@cr.Balance.ToString("0.##")</td></tr>
+                    }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+const monthly = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Monthly));
+const categories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Categories));
+const wallet = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Wallet));
+
+new Chart(document.getElementById('chartMonthly'), {
+    type: 'bar',
+    data: {
+        labels: monthly.map(m => m.label),
+        datasets: [
+            { label: 'محصّل', data: monthly.map(m => m.collected), backgroundColor: '#1C5A50' },
+            { label: 'إيرادات', data: monthly.map(m => m.revenues), backgroundColor: '#2E7D5B' },
+            { label: 'مصروفات', data: monthly.map(m => m.expenses), backgroundColor: '#A0432A' }
+        ]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+});
+
+if (categories.length > 0) {
+    new Chart(document.getElementById('chartCategories'), {
+        type: 'doughnut',
+        data: {
+            labels: categories.map(c => c.name),
+            datasets: [{ data: categories.map(c => c.total), backgroundColor: categories.map(c => c.color) }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+}
+
+if (wallet.length > 0) {
+    new Chart(document.getElementById('chartWallet'), {
+        type: 'bar',
+        data: {
+            labels: wallet.map(w => w.label),
+            datasets: [{
+                label: 'الرصيد',
+                data: wallet.map(w => w.balance),
+                backgroundColor: wallet.map(w => w.balance >= 0 ? '#2E7D5B' : '#A0432A')
+            }]
+        },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+}
+</script>

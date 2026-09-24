@@ -29,8 +29,12 @@ public class WalletController : Controller
         var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
         _wallet.GetOrCreateMonth(building, mk);
 
+        // ✅ خريطة: floorId → floorOrder
+        var floorOrderMap = building.Floors.ToDictionary(f => f.Id, f => f.Order);
+
         var balances = building.Apartments
-            .OrderBy(a => a.FloorId).ThenBy(a => a.Number)
+            .OrderBy(a => floorOrderMap.GetValueOrDefault(a.FloorId, int.MaxValue))
+            .ThenBy(a => a.Number)
             .Select(a => (Apt: a, Balance: _wallet.ComputeWalletBalance(building, a.Id, mk)))
             .ToList();
 

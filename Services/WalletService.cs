@@ -33,7 +33,8 @@ public class WalletService
         return "D" + (maxNum + 1).ToString("D3");
     }
 
-    public Deposit CreateDeposit(Building building, string aptId, double amount, string? note, string createdBy, string monthKey)
+    public Deposit CreateDeposit(Building building, string aptId, double amount, string? note,
+     string createdBy, string monthKey, ReceiptData? receipt = null)
     {
         var m = GetOrCreateMonth(building, monthKey);
         var deposit = new Deposit
@@ -45,7 +46,8 @@ public class WalletService
             Note = note ?? "",
             Status = "pending",
             CreatedAt = DateTime.UtcNow.ToString("o"),
-            CreatedBy = createdBy
+            CreatedBy = createdBy,
+            Receipt = receipt    // ← جديد
         };
         m.Deposits.Add(deposit);
         return deposit;

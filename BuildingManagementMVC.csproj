@@ -9,12 +9,16 @@
 
   <ItemGroup>
     <PackageReference Include="Google.Cloud.Firestore" Version="3.9.0" />
+    <PackageReference Include="QRCoder" Version="1.6.0" />
+    <PackageReference Include="QuestPDF" Version="2024.12.3" />
+    <PackageReference Include="Tesseract" Version="5.2.0" />
+	<PackageReference Include="CloudinaryDotNet" Version="1.26.2" />
   </ItemGroup>
 
-<ItemGroup>
-  <None Update="firebase-service-account.json">
-    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-  </None>
-</ItemGroup>
+  <ItemGroup>
+    <None Update="firebase-service-account.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
 </Project>

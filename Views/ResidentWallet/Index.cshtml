@@ -22,24 +22,59 @@
     {
         <div class="text-danger small">عليك مبلغ مستحق</div>
     }
+    <a asp-controller="Invoice" asp-action="Download" asp-route-month="@month" class="btn btn-sm btn-outline-primary mt-2">🧾 تحميل فاتورة PDF</a>
 </div>
 
+<!-- ============================================================ -->
+<!-- ✅ تسجيل دفعة جديدة + OCR + رفع الصورة                        -->
+<!-- ============================================================ -->
 <div class="bg-white rounded shadow-sm p-3 mb-3">
     <h5>➕ تسجيل دفعة جديدة</h5>
     <p class="text-muted small">هتتحول لحالة "معلقة" لحد ما الأدمن يأكدها</p>
-    <form method="post" asp-action="CreateDeposit" class="row g-2 align-items-end">
+
+    <!-- زرار OCR -->
+    <div class="alert alert-info d-flex justify-content-between align-items-center">
+        <div>
+            <strong>📷 عندك صورة التحويل؟</strong>
+            <div class="small text-muted">ارفعها وهنقرأ المبلغ والبيانات تلقائياً + هترفق مع الدفعة</div>
+        </div>
+        <button type="button" class="btn btn-brand" onclick="document.getElementById('receiptFile').click()">
+            اقرأ من صورة
+        </button>
+        <input type="file" id="receiptFile" accept="image/*" style="display:none" onchange="handleReceiptUpload(this)" />
+    </div>
+
+    <!-- حالة التحميل -->
+    <div id="ocrStatus" class="alert alert-secondary" style="display:none"></div>
+
+    <!-- النتيجة -->
+    <div id="ocrResult" class="alert alert-success" style="display:none">
+        <strong>✅ تم قراءة الصورة بنجاح</strong>
+        <div id="ocrDetails" class="small mt-2"></div>
+    </div>
+
+    <!-- الخطأ -->
+    <div id="ocrError" class="alert alert-danger" style="display:none"></div>
+
+    <!-- الفورم -->
+    <form method="post" asp-action="CreateDeposit" enctype="multipart/form-data"
+          class="row g-2 align-items-end" id="depositForm">
         <input type="hidden" name="month" value="@month" />
+
         <div class="col-md-4">
             <label class="form-label small">المبلغ</label>
-            <input name="amount" type="number" step="0.01" class="form-control" required />
+            <input name="amount" id="amountInput" type="number" step="0.01" class="form-control" required />
         </div>
         <div class="col-md-5">
             <label class="form-label small">ملاحظة</label>
-            <input name="note" class="form-control" />
+            <input name="note" id="noteInput" class="form-control" />
         </div>
         <div class="col-md-3">
             <button class="btn btn-brand w-100">إرسال</button>
         </div>
+
+        <!-- ✅ حقل الصورة المخفي — الـ JS بيملّيه بعد نجاح OCR -->
+        <input type="file" name="receiptImage" id="receiptFileInput" accept="image/*" style="display:none" />
     </form>
 </div>
 
@@ -53,26 +88,123 @@
 <div class="bg-white rounded shadow-sm p-3">
     <h5>كشف الحساب</h5>
     <table class="table table-sm">
-        <thead><tr><th>التاريخ</th><th>البيان</th><th>المبلغ</th><th>الحالة</th></tr></thead>
-        <tbody>
-        @foreach (var tx in transactions)
-        {
-            var label = tx.Type switch {
-                "deposit" => "دفعة " + tx.Number,
-                "expense" => "نصيب من المصروفات",
-                "revenue" => "نصيب من الإيرادات",
-                "monthly_fee_due" => "رسم شهري مستحق",
-                "monthly_fee_credit" => "زيادة في الرسم الشهري",
-                "adjustment" => "تسوية: " + tx.Note,
-                _ => tx.Note
-            };
+        <thead>
             <tr>
-                <td>@tx.CreatedAt.Substring(0, Math.Min(10, tx.CreatedAt.Length))</td>
-                <td>@label</td>
-                <td class="@(tx.Amount < 0 ? "text-danger" : "text-success")">@tx.Amount.ToString("0.##")</td>
-                <td>@(tx.Status == "pending" ? "⏳ معلقة" : tx.Status == "cancelled" ? "❌ ملغاة" : "✅ مؤكدة")</td>
+                <th>التاريخ</th>
+                <th>البيان</th>
+                <th>المبلغ</th>
+                <th>الحالة</th>
+                <th>الإيصال</th>
             </tr>
-        }
+        </thead>
+        <tbody>
+            @foreach (var tx in transactions)
+            {
+                var label = tx.Type switch
+                {
+                    "deposit" => "دفعة " + tx.Number,
+                    "expense" => "نصيب من المصروفات",
+                    "revenue" => "نصيب من الإيرادات",
+                    "monthly_fee_due" => "رسم شهري مستحق",
+                    "monthly_fee_credit" => "زيادة في الرسم الشهري",
+                    "adjustment" => "تسوية: " + tx.Note,
+                    _ => tx.Note
+                };
+
+                // ✅ ابحث عن الدفعة الأصلية لو ده deposit (عشان نجيب الصورة)
+                Deposit? dep = null;
+                if (tx.Type == "deposit")
+                {
+                    dep = (ViewBag.PendingDeposits as List<Deposit>)?.FirstOrDefault(x => x.Id == tx.Id);
+                }
+
+                <tr>
+                    <td>@tx.CreatedAt.Substring(0, Math.Min(10, tx.CreatedAt.Length))</td>
+                    <td>@label</td>
+                    <td class="@(tx.Amount < 0 ? "text-danger" : "text-success")">@tx.Amount.ToString("0.##")</td>
+                    <td>@(tx.Status == "pending" ? "⏳ معلقة" : tx.Status == "cancelled" ? "❌ ملغاة" : "✅ مؤكدة")</td>
+                    <td>
+                        @if (dep?.Receipt?.Success == true)
+                        {
+                            <a href="@dep.Receipt.Url" target="_blank" class="btn btn-sm btn-outline-primary">
+                                📎 عرض
+                            </a>
+                        }
+                    </td>
+                </tr>
+            }
         </tbody>
     </table>
 </div>
+
+@section Scripts {
+    <script>
+        async function handleReceiptUpload(input) {
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    // ✅ ضيف الـ AntiForgeryToken جوه الـ FormData
+    const token = document.querySelector('input[name="__RequestVerificationToken"]');
+    if (token) {
+        formData.append('__RequestVerificationToken', token.value);
+    }
+
+    document.getElementById('ocrStatus').style.display = 'block';
+    document.getElementById('ocrStatus').innerText = '⏳ جاري قراءة الصورة... (قد يستغرق 5-15 ثانية)';
+    document.getElementById('ocrResult').style.display = 'none';
+    document.getElementById('ocrError').style.display = 'none';
+
+    try {
+        const response = await fetch('@Url.Action("ParseReceiptImage", "ResidentWallet")', {
+            method: 'POST',
+            body: formData
+            // ❌ شيل الـ headers خالص
+        });
+
+        document.getElementById('ocrStatus').style.display = 'none';
+
+        // ✅ اقرأ النص أولاً عشان لو مش JSON نعرف السبب
+        const text = await response.text();
+        
+        if (!response.ok) {
+            console.error('Server error:', response.status, text);
+            throw new Error(`Server returned ${response.status}: ${text.substring(0, 200)}`);
+        }
+
+        const data = JSON.parse(text);
+
+        if (data.success) {
+            document.getElementById('amountInput').value = data.amount;
+            document.getElementById('noteInput').value = data.note || '';
+
+            // ✅ احفظ الصورة عشان تتبعت مع الفورم
+            const fileInput = document.getElementById('receiptFileInput');
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            fileInput.files = dataTransfer.files;
+
+            document.getElementById('ocrResult').style.display = 'block';
+            document.getElementById('ocrDetails').innerHTML = `
+                <div>💰 المبلغ: <strong>${data.amount}</strong> ج.م</div>
+                <div>🔢 المرجع: ${data.reference || '—'}</div>
+                <div>📅 التاريخ: ${data.date || '—'}</div>
+                <div>🏦 حساب: ${data.recipientAccount || '—'}</div>
+                <div class="mt-2 text-success">✅ الصورة هترفع مع الدفعة</div>
+            `;
+        } else {
+            document.getElementById('ocrError').style.display = 'block';
+            document.getElementById('ocrError').innerText = '❌ ' + data.error;
+        }
+    } catch (err) {
+        document.getElementById('ocrStatus').style.display = 'none';
+        document.getElementById('ocrError').style.display = 'block';
+        document.getElementById('ocrError').innerText = '❌ خطأ: ' + err.message;
+    }
+
+    input.value = '';
+}
+    </script>
+}

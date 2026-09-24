@@ -61,6 +61,7 @@ public class Deposit
     [FirestoreProperty("amount")] public double Amount { get; set; }
     [FirestoreProperty("note")] public string Note { get; set; } = "";
     [FirestoreProperty("status")] public string Status { get; set; } = "pending";
+    [FirestoreProperty("receipt")] public ReceiptData? Receipt { get; set; }
     [FirestoreProperty("createdAt")] public string CreatedAt { get; set; } = "";
     [FirestoreProperty("createdBy")] public string CreatedBy { get; set; } = "";
     [FirestoreProperty("confirmedAt")] public string? ConfirmedAt { get; set; }
@@ -107,4 +108,15 @@ public class WalletTransactionVm
     public double Amount { get; set; }
     public string Note { get; set; } = "";
     public string CreatedAt { get; set; } = "";
+}
+
+[FirestoreData]
+public class ReceiptData
+{
+    [FirestoreProperty("url")] public string Url { get; set; } = "";
+    [FirestoreProperty("path")] public string Path { get; set; } = "";
+    [FirestoreProperty("fileName")] public string FileName { get; set; } = "";
+    [FirestoreProperty("fileSize")] public long FileSize { get; set; }
+    [FirestoreProperty("fileType")] public string FileType { get; set; } = "";
+    [FirestoreProperty("success")] public bool Success { get; set; }
 }

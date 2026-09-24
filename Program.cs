@@ -1,5 +1,12 @@
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using QuestPDF.Drawing;
+using QuestPDF.Infrastructure;
+using BuildingManagementMvc.Services;
+
+// ✅ إعدادات QuestPDF
+QuestPDF.Settings.License = LicenseType.Community;
+QuestPDF.Settings.UseEnvironmentFonts = false;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,8 +23,14 @@ builder.Services.AddSingleton<WalletService>();
 builder.Services.AddSingleton<ExpensesService>();
 builder.Services.AddSingleton<RevenuesService>();
 builder.Services.AddSingleton<AuditLogService>();
+builder.Services.AddSingleton<ReportsService>();
+builder.Services.AddSingleton<InvoiceService>();
+builder.Services.AddSingleton<InvoicePdfService>();
+builder.Services.AddSingleton<OcrService>();
+builder.Services.AddSingleton<TransactionParser>();
+builder.Services.AddSingleton<CloudinaryService>();
 
-// Cookie authentication (الجلسة بتتخزن في كوكي بعد التحقق من Firebase)
+// Cookie authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -31,9 +44,37 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
-// للعمل على Google App Engine
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-app.Urls.Add($"http://*:{port}");
+
+// ✅ سجّل خطوط Cairo مرة واحدة عند بداية التطبيق
+var fontsDir = Path.Combine(app.Environment.WebRootPath, "fonts");
+Console.WriteLine("====================================================");
+Console.WriteLine($"[Startup] Fonts dir: {fontsDir}");
+Console.WriteLine($"[Startup] Dir exists: {Directory.Exists(fontsDir)}");
+
+if (Directory.Exists(fontsDir))
+{
+    var fontFiles = Directory.GetFiles(fontsDir, "*.ttf");
+    Console.WriteLine($"[Startup] Found {fontFiles.Length} font files");
+
+    foreach (var fontFile in fontFiles)
+    {
+        try
+        {
+            using var stream = File.OpenRead(fontFile);
+            FontManager.RegisterFont(stream);
+            Console.WriteLine($"[Startup] Registered: {Path.GetFileName(fontFile)}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Startup] FAILED {Path.GetFileName(fontFile)}: {ex.Message}");
+        }
+    }
+}
+else
+{
+    Console.WriteLine("[Startup] ERROR: Fonts directory not found!");
+}
+Console.WriteLine("====================================================");
 
 if (!app.Environment.IsDevelopment())
 {
@@ -41,7 +82,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
