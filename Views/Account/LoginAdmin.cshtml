@@ -1,39 +1,124 @@
 @model AdminLoginVm
-@{ ViewData["Title"] = "دخول Admin"; }
-@{ var buildings = (List<BuildingManagementMvc.Models.Building>)ViewBag.Buildings; }
+@{
+    ViewData["Title"] = "دخول الأدمن";
+    var buildings = (List<Building>)ViewBag.Buildings;
+
+    // ✅ QR data
+    var qrBuildingId = ViewBag.QrBuildingId as string;
+    var qrBuildingName = ViewBag.QrBuildingName as string;
+    var qrBuildingNumber = ViewBag.QrBuildingNumber as string;
+    var hasQr = !string.IsNullOrEmpty(qrBuildingId);
+}
 
 <div class="auth-wrap">
     <div class="auth-card">
-        <a asp-action="LoginChoice" class="small">← رجوع</a>
-        <h2>دخول Admin</h2>
-        <p class="sub">اختر العمارة وأدخل رقم الهاتف والـ PIN</p>
+        <a asp-action="LoginChoice" class="link-btn back-link">← رجوع</a>
+        <h2>دخول الأدمن</h2>
+        <p class="sub">اختار العمارة وأدخل رقم الهاتف والـ PIN</p>
 
-        <form asp-action="LoginAdmin" method="post">
-            <div class="mb-3">
-                <label class="form-label">العمارة</label>
-                <select asp-for="BuildingId" class="form-select">
-                    <option value="">-- اختر --</option>
+        @if (hasQr)
+        {
+            <div class="alert alert-success">
+                <strong>📱 تم التعرف على العمارة تلقائياً</strong>
+                <div class="small mt-2">
+                    <div>🏢 <strong>@qrBuildingName</strong></div>
+                    <div>@qrBuildingNumber</div>
+                </div>
+                <div class="small mt-2 text-muted">
+                    💡 بس أدخل رقم الواتساب والـ PIN
+                </div>
+            </div>
+        }
+
+        @if (ViewBag.Error != null)
+        {
+            <div class="alert alert-danger">@ViewBag.Error</div>
+        }
+
+        <form method="post" asp-action="LoginAdmin">
+            @Html.AntiForgeryToken()
+
+            <div class="field">
+                <label>العمارة</label>
+                <select name="BuildingId" class="form-select" required>
+                    <option value="">— اختار —</option>
                     @foreach (var b in buildings)
                     {
-                        <option value="@b.Id">@b.BuildingNumber — @b.Name</option>
+                        <option value="@b.Id" selected="@(hasQr && b.Id == qrBuildingId)">
+                            @b.BuildingNumber — @b.Name
+                        </option>
                     }
                 </select>
             </div>
-            <div class="mb-3">
-                <label class="form-label">رقم الهاتف</label>
-                <input asp-for="Phone" class="form-control" placeholder="+201001234567" autocomplete="username" />
-            </div>
-            <div class="mb-3">
-                <label class="form-label">PIN</label>
-                <input asp-for="Pin" class="form-control" autocomplete="current-password" />
+
+            <div class="field">
+                <label>رقم الواتساب</label>
+                <input name="Phone" type="tel" class="form-control"
+                       placeholder="+201001234567" required autofocus="@hasQr" />
             </div>
 
-            @if (ViewBag.Error != null)
-            {
-                <div class="alert alert-danger py-2">@ViewBag.Error</div>
-            }
+            <div class="field">
+                <label>PIN</label>
+                <input name="Pin" type="password" class="form-control" required maxlength="4" />
+            </div>
 
             <button type="submit" class="btn btn-brand w-100">دخول</button>
         </form>
     </div>
 </div>
+
+<style>
+    .auth-wrap {
+        display: flex;
+        justify-content: center;
+        padding: 40px 20px;
+    }
+
+    .auth-card {
+        background: white;
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        width: 100%;
+        max-width: 480px;
+    }
+
+        .auth-card h2 {
+            margin-bottom: 8px;
+            color: #12433C;
+            font-weight: 700;
+        }
+
+        .auth-card .sub {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 24px;
+        }
+
+    .field {
+        margin-bottom: 18px;
+    }
+
+        .field label {
+            display: block;
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 6px;
+            color: #333;
+        }
+
+    .back-link {
+        display: inline-block;
+        margin-bottom: 16px;
+        color: #12433C;
+        text-decoration: none;
+        font-size: 13px;
+    }
+
+    .link-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+    }
+</style>

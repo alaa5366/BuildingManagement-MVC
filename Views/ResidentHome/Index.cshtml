@@ -1,19 +1,40 @@
-@model Apartment
-@{ ViewData["Title"] = "لوحة الساكن"; }
-@{ var building = ViewBag.Building as Building; }
+@model BuildingManagementMvc.Models.Apartment
+@{
+    ViewData["Title"] = "الرئيسية";
+    var building = (BuildingManagementMvc.Models.Building?)ViewBag.Building;
+}
 
 @if (Model == null || building == null)
 {
-    <div class="alert alert-warning">لا يمكن تحديد بيانات شقتك.</div>
+    <div class="alert alert-warning">
+        ⚠️ مش قادرين نجيب بيانات شقتك. تواصل مع الأدمن.
+    </div>
 }
 else
 {
-    <h3>مرحبًا 👋 — شقة @Model.Number، @building.Name</h3>
-    <p class="text-muted">الرسم الشهري: @Model.MonthlyFee ج.م</p>
-    <div class="mb-3">
-        <a asp-controller="ResidentWallet" asp-action="Index" class="btn btn-brand">💼 محفظتي</a>
+    <div class="text-center mb-4">
+        <h2>👋 أهلاً، @Model.Owner</h2>
+        <p class="text-muted">
+            🏢 @building.Name (@building.BuildingNumber) — 🏠 شقة @Model.Number
+        </p>
     </div>
-    <div class="alert alert-info">
-        باقي شاشات الساكن (التصويتات، الصيانة، الفواتير...) هتتضاف في المراحل الجاية.
+
+    <div class="row justify-content-center g-3">
+        <div class="col-md-4">
+            <a asp-controller="ResidentWallet" asp-action="Index"
+               class="btn btn-brand w-100 py-4">
+                💼 محفظتي
+            </a>
+        </div>
+        <div class="col-md-4">
+            <a asp-controller="Invoice" asp-action="Download"
+               class="btn btn-outline-primary w-100 py-4">
+                🧾 فاتورتي
+            </a>
+        </div>
+    </div>
+
+    <div class="alert alert-info mt-4 text-center">
+        💡 باقي الميزات (التصويتات، سجل الصيانة، الإشعارات...) هتتضاف قريباً.
     </div>
 }

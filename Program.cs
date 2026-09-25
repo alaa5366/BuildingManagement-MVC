@@ -40,7 +40,14 @@ builder.Services.AddSingleton<TransactionParser>();
 builder.Services.AddSingleton<CloudinaryService>();
 builder.Services.AddSingleton<ExcelTemplateService>();
 builder.Services.AddSingleton<ExcelImportService>();
-
+builder.Services.AddSingleton<FirebaseAdminService>();
+builder.Services.AddScoped<UnifiedAuthService>();
+builder.Services.AddSingleton<QrSecurityService>();
+builder.Services.AddSingleton<QrCodePdfService>();
+// ✅ Memory Cache
+builder.Services.AddMemoryCache();
+// ✅ Unified Auth
+builder.Services.AddScoped<UnifiedAuthService>();
 // Cookie authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

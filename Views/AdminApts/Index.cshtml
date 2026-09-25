@@ -1,51 +1,38 @@
-@model Building
+﻿@model Building
 @{
-    ViewData["Title"] = "تفاصيل العمارة";
+    ViewData["Title"] = "إدارة الشقق";
 }
 
 @Html.AntiForgeryToken()
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>@Model.BuildingNumber — @Model.Name</h3>
+    <h3>🏠 شقق @Model.Name (@Model.BuildingNumber)</h3>
     <div class="d-flex gap-2">
-        <a asp-action="QrCodes" asp-route-id="@Model.Id" class="btn btn-outline-primary btn-sm">
-            📱 QR Codes
-        </a>
-        <form method="post" asp-action="Delete" asp-route-id="@Model.Id" onsubmit="return confirm('تأكيد حذف العمارة نهائيًا؟');">
-            <button class="btn btn-outline-danger btn-sm">حذف العمارة</button>
-        </form>
-        <form method="post" asp-action="FixFirebaseAccounts" asp-route-id="@Model.Id" onsubmit="return confirm('إصلاح حسابات Firebase Auth لكل الشقق؟');"> @Html.AntiForgeryToken()
-            <button class="btn btn-outline-warning btn-sm" type="submit">
-                🔧 إصلاح حسابات Firebase
-            </button>
-        </form>
-        <form method="post" asp-action="RecreateFirebaseAccounts" asp-route-id="@Model.Id" onsubmit="return confirm('إعادة إنشاء حسابات Firebase لكل الشقق؟');"> @Html.AntiForgeryToken()
-            <button class="btn btn-outline-warning btn-sm" type="submit">
-                🔧 إعادة إنشاء حسابات Firebase
-            </button>
-        </form>
-        <form method="post" asp-action="SyncFirebasePasswords" asp-route-id="@Model.Id" onsubmit="return confirm('مزامنة كلمات سر Firebase لكل الشقق؟');"> @Html.AntiForgeryToken()
-            <button class="btn btn-outline-success btn-sm" type="submit">
-                🔄 مزامنة كلمات سر Firebase
-            </button>
-        </form>
+        <a asp-action="Index" asp-controller="AdminHome" class="btn btn-outline-secondary btn-sm">← رجوع</a>
     </div>
 </div>
 
-<div class="row mb-4">
+<div class="alert alert-info">
+    💡 اضغط <strong>"⚡ QR سريع"</strong> جنب أي شقة عشان تولّد رابط دخول مؤقت وآمن للساكن.
+</div>
+
+<div class="row">
     @foreach (var floor in Model.Floors.OrderBy(f => f.Order))
     {
         var apts = Model.Apartments.Where(a => a.FloorId == floor.Id).OrderBy(a => a.Number).ToList();
         <div class="col-md-6 mb-3">
             <div class="bg-white rounded shadow-sm p-3">
                 <h5>@floor.Label <span class="text-muted small">(دور رقم @floor.Order)</span></h5>
-                <ul class="list-group list-group-flush mb-2">
+                <ul class="list-group list-group-flush">
                     @foreach (var apt in apts)
                     {
                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>🏠 شقة @apt.Number @(string.IsNullOrEmpty(apt.Label) ? "" : "— " + apt.Label)</span>
+                            <div>
+                                <span>🏠 شقة @apt.Number @(string.IsNullOrEmpty(apt.Label) ? "" : "— " + apt.Label)</span>
+                                <div class="text-muted small">@apt.Owner</div>
+                            </div>
                             <div class="d-flex gap-2 align-items-center">
-                                <span class="text-muted small">@apt.Phone @(apt.Closed ? "🔒 مغلقة" : "")</span>
+                                <span class="text-muted small">@apt.Phone @(apt.Closed ? "🔒" : "")</span>
                                 <button type="button" class="btn btn-sm btn-outline-warning"
                                         onclick="openQuickQrModal('@apt.Id', '@apt.Number', '@floor.Label')">
                                     ⚡ QR سريع
@@ -54,45 +41,13 @@
                         </li>
                     }
                 </ul>
-
-                <form method="post" asp-action="AddApartment" class="d-flex gap-2">
-                    <input type="hidden" name="buildingId" value="@Model.Id" />
-                    <input type="hidden" name="floorId" value="@floor.Id" />
-                    <input name="phone" class="form-control form-control-sm" placeholder="واتساب الشقة الجديدة" required />
-                    <input name="pin" class="form-control form-control-sm" placeholder="PIN" required />
-                    <button class="btn btn-sm btn-brand text-nowrap">+ شقة</button>
-                </form>
             </div>
         </div>
     }
 </div>
 
-<div class="bg-white rounded shadow-sm p-3">
-    <h5>➕ إضافة دور جديد</h5>
-    <form method="post" asp-action="AddFloor">
-        <input type="hidden" name="buildingId" value="@Model.Id" />
-        <div class="row g-2 align-items-end">
-            <div class="col-md-3">
-                <label class="form-label small">اسم الدور</label>
-                <input name="label" class="form-control" required />
-            </div>
-            <div class="col-md-4">
-                <label class="form-label small">أرقام واتساب الشقق (مفصولة بفاصلة)</label>
-                <input name="aptPhones" class="form-control" placeholder="+2010..., +2011..." required />
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small">PIN لكل شقة (بنفس الترتيب)</label>
-                <input name="aptPins" class="form-control" placeholder="1234, 5678" required />
-            </div>
-            <div class="col-md-2">
-                <button class="btn btn-brand w-100">إضافة</button>
-            </div>
-        </div>
-    </form>
-</div>
-
 <!-- ============================================================ -->
-<!-- Modal QR سريع -->
+<!-- Modal QR سريع (نفس بتاع Super Admin) -->
 <!-- ============================================================ -->
 <div class="modal fade" id="quickQrModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -102,8 +57,6 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-
-                <!-- ============ الفورم ============ -->
                 <div id="quickQrForm">
                     <div class="alert alert-info small">
                         💡 الـ QR السريع بيسمح للساكن يدخل مباشرة بدون إدخال أي بيانات. آمن ومشفّر.
@@ -142,15 +95,11 @@
                     <div class="mb-3" id="maxUsesField" style="display:none">
                         <label class="form-label">الحد الأقصى للاستخدام</label>
                         <input type="number" id="maxUsesInput" class="form-control" value="5" min="1" max="100" />
-                        <div class="form-text">عدد المرات المسموح بها خلال فترة الصلاحية</div>
                     </div>
                 </div>
 
-                <!-- ============ النتيجة ============ -->
                 <div id="quickQrResult" style="display:none">
-                    <div class="alert alert-success text-center">
-                        ✅ تم توليد QR السريع بنجاح
-                    </div>
+                    <div class="alert alert-success text-center">✅ تم توليد QR السريع بنجاح</div>
 
                     <div class="text-center mb-3">
                         <img id="quickQrImage" src="" alt="QR" class="img-fluid border rounded p-2" style="max-width:280px" />
@@ -160,12 +109,8 @@
                         <label class="form-label small fw-bold">🔗 الرابط السريع</label>
                         <div class="input-group">
                             <input type="text" id="quickQrUrl" class="form-control form-control-sm" readonly />
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="copyQuickUrl()">
-                                📋 نسخ
-                            </button>
-                            <a id="quickQrOpenLink" href="" target="_blank" class="btn btn-sm btn-outline-success">
-                                🔗 فتح
-                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="copyQuickUrl()">📋 نسخ</button>
+                            <a id="quickQrOpenLink" href="" target="_blank" class="btn btn-sm btn-outline-success">🔗 فتح</a>
                         </div>
                     </div>
 
@@ -175,16 +120,10 @@
                         ⚠️ ابعت الرابط ده للساكن عن طريق واتساب. بعد انتهاء الصلاحية أو استخدامه، مش هيعمل تاني.
                     </div>
                 </div>
-
             </div>
             <div class="modal-footer">
-                <button type="button" id="generateBtn" class="btn btn-warning" onclick="generateQuickQr()">
-                    ⚡ توليد QR
-                </button>
-                <button type="button" id="newQrBtn" class="btn btn-outline-warning" style="display:none"
-                        onclick="resetQuickQrForm()">
-                    🔄 توليد جديد
-                </button>
+                <button type="button" id="generateBtn" class="btn btn-warning" onclick="generateQuickQr()">⚡ توليد QR</button>
+                <button type="button" id="newQrBtn" class="btn btn-outline-warning" style="display:none" onclick="resetQuickQrForm()">🔄 توليد جديد</button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
             </div>
         </div>
@@ -194,38 +133,25 @@
 @section Scripts {
     <script>
         let currentAptId = '';
-        let currentBuildingId = '@Model.Id';
 
-        // ============================================================
-        // فتح المودال
-        // ============================================================
         function openQuickQrModal(aptId, aptNum, floorLabel) {
             currentAptId = aptId;
             document.getElementById('quickAptInfo').textContent = `${floorLabel} — شقة ${aptNum}`;
             resetQuickQrForm();
-
             new bootstrap.Modal(document.getElementById('quickQrModal')).show();
         }
 
-        // ============================================================
-        // إعادة تعيين الفورم
-        // ============================================================
         function resetQuickQrForm() {
             document.getElementById('quickQrForm').style.display = 'block';
             document.getElementById('quickQrResult').style.display = 'none';
             document.getElementById('generateBtn').style.display = 'inline-block';
             document.getElementById('newQrBtn').style.display = 'none';
-
             document.getElementById('validitySelect').value = '60';
             document.getElementById('usageOnce').checked = true;
-            document.getElementById('usageMultiple').checked = false;
             document.getElementById('maxUsesField').style.display = 'none';
             document.getElementById('maxUsesInput').value = '5';
         }
 
-        // ============================================================
-        // Toggle Max Uses
-        // ============================================================
         document.querySelectorAll('input[name="usageType"]').forEach(r => {
             r.addEventListener('change', () => {
                 document.getElementById('maxUsesField').style.display =
@@ -233,9 +159,6 @@
             });
         });
 
-        // ============================================================
-        // توليد QR
-        // ============================================================
         async function generateQuickQr() {
             const validity = parseInt(document.getElementById('validitySelect').value);
             const usageType = document.querySelector('input[name="usageType"]:checked').value;
@@ -247,7 +170,6 @@
 
             try {
                 const formData = new FormData();
-                formData.append('buildingId', currentBuildingId);
                 formData.append('aptId', currentAptId);
                 formData.append('validityMinutes', validity);
                 formData.append('oneTime', usageType === 'once' ? 'true' : 'false');
@@ -255,19 +177,17 @@
                 formData.append('__RequestVerificationToken',
                     document.querySelector('input[name="__RequestVerificationToken"]').value);
 
-                const res = await fetch('@Url.Action("GenerateQuickQr", "Buildings")', {
+                const res = await fetch('@Url.Action("GenerateQuickQr", "AdminApts")', {
                     method: 'POST',
                     body: formData
                 });
 
                 const data = await res.json();
-
                 if (!data.success) {
                     alert('❌ فشل توليد QR: ' + (data.error || 'خطأ غير معروف'));
                     return;
                 }
 
-                // عرض النتيجة
                 document.getElementById('quickQrForm').style.display = 'none';
                 document.getElementById('quickQrResult').style.display = 'block';
                 document.getElementById('generateBtn').style.display = 'none';
@@ -278,24 +198,17 @@
                 document.getElementById('quickQrUrl').value = data.url;
                 document.getElementById('quickQrOpenLink').href = data.url;
 
-                const usageText = data.oneTime
-                    ? 'مرة واحدة فقط'
-                    : `حتى ${data.maxUses} استخدام`;
-
+                const usageText = data.oneTime ? 'مرة واحدة فقط' : `حتى ${data.maxUses} استخدام`;
                 document.getElementById('quickQrInfo').innerHTML =
                     `⏱️ صالح لمدة <strong>${data.expiresIn}</strong> دقيقة &nbsp;|&nbsp; 🔢 ${usageText}`;
-
             } catch (err) {
-                alert('❌ خطأ في الاتصال: ' + err.message);
+                alert('❌ خطأ: ' + err.message);
             } finally {
                 btn.disabled = false;
                 btn.textContent = '⚡ توليد QR';
             }
         }
 
-        // ============================================================
-        // نسخ الرابط
-        // ============================================================
         function copyQuickUrl() {
             const input = document.getElementById('quickQrUrl');
             input.select();
@@ -304,4 +217,9 @@
             alert('✅ تم نسخ الرابط');
         }
     </script>
+}
+@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
 }

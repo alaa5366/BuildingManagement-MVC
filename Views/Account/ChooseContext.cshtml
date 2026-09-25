@@ -1,0 +1,242 @@
+﻿@model ChooseContextVm
+@{
+    ViewData["Title"] = "اختيار الحساب";
+
+    // ✅ تجميع السياقات
+    var superAdmins = Model.Contexts.Where(c => c.Type == "superadmin").ToList();
+    var admins = Model.Contexts.Where(c => c.Type == "admin").ToList();
+    var residents = Model.Contexts.Where(c => c.Type == "resident").ToList();
+
+    // ✅ تجميع السكان حسب العمارة
+    var residentsByBuilding = residents
+        .GroupBy(c => c.BuildingId)
+        .Select(g => new
+        {
+            BuildingId = g.Key,
+            BuildingName = g.First().BuildingName,
+            BuildingNumber = g.First().BuildingNumber,
+            Apartments = g.OrderBy(r => r.AptNumber).ToList()
+        })
+        .OrderBy(g => g.BuildingName)
+        .ToList();
+}
+
+<div class="container py-4" style="max-width: 1000px;">
+    <div class="text-center mb-4">
+        <h2>👋 مرحبًا، @Model.FullName</h2>
+        <p class="text-muted">عندك أكتر من حساب — اختار اللي عايز تدخله</p>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <form method="post" asp-action="ChooseContext" id="contextForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="sessionToken" value="@Model.SessionToken" />
+        <input type="hidden" name="contextId" id="contextIdInput" />
+        <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
+
+        <!-- ============================================================ -->
+        <!-- 1. Super Admin -->
+        <!-- ============================================================ -->
+        @if (superAdmins.Any())
+        {
+            <div class="mb-4">
+                <h5 class="text-warning mb-3">👑 Super Admin</h5>
+                <div class="row g-3">
+                    @foreach (var ctx in superAdmins)
+                    {
+                        <div class="col-md-4 col-sm-6">
+                            <div class="context-card" style="background: #FFF3CD;"
+                                 onclick="selectContext('@ctx.Id')">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div style="font-size: 36px;">👑</div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold">Super Admin</div>
+                                        <div class="text-muted small">@ctx.Subtitle</div>
+                                    </div>
+                                    <div style="color: #12433C;">→</div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- ============================================================ -->
+        <!-- 2. الأدمن (كلهم في سطر واحد) -->
+        <!-- ============================================================ -->
+        @if (admins.Any())
+        {
+            <div class="mb-4">
+                <h5 class="text-success mb-3">🏢 الأدمن (@admins.Count)</h5>
+                <div class="row g-3">
+                    @foreach (var ctx in admins)
+                    {
+                        <div class="col-md-4 col-sm-6">
+                            <div class="context-card" style="background: #DCEAE5;"
+                                 onclick="selectContext('@ctx.Id')">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div style="font-size: 36px;">🏢</div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold">أدمن</div>
+                                        <div class="text-muted small">@ctx.Subtitle</div>
+                                    </div>
+                                    <div style="color: #12433C;">→</div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- ============================================================ -->
+        <!-- 3. السكان (كل عمارة في عمود) -->
+        <!-- ============================================================ -->
+        @if (residentsByBuilding.Any())
+        {
+            <div class="mb-4">
+                <h5 class="text-primary mb-3">🏠 السكان (@residents.Count شقة في @residentsByBuilding.Count عمارة)</h5>
+                <div class="row g-3">
+                    @foreach (var buildingGroup in residentsByBuilding)
+                    {
+                        <div class="col-md-6 col-lg-4">
+                            <div class="building-group">
+                                <div class="building-header">
+                                    <span style="font-size: 20px;">🏢</span>
+                                    <div>
+                                        <div class="fw-bold">@buildingGroup.BuildingName</div>
+                                        <div class="text-muted small">@buildingGroup.BuildingNumber</div>
+                                    </div>
+                                </div>
+                                <div class="building-apartments">
+                                    @foreach (var apt in buildingGroup.Apartments)
+                                    {
+                                        <div class="apt-card" onclick="selectContext('@apt.Id')">
+                                            <span style="font-size: 18px;">🏠</span>
+                                            <div class="flex-grow-1">
+                                                <div class="fw-bold">شقة @apt.AptNumber</div>
+                                                @if (!string.IsNullOrEmpty(apt.AptLabel))
+                                                {
+                                                    <div class="text-muted small">@apt.AptLabel</div>
+                                                }
+                                            </div>
+                                            <div style="color: #12433C;">→</div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (!superAdmins.Any() && !admins.Any() && !residents.Any())
+        {
+            <div class="alert alert-warning text-center">
+                ⚠️ مفيش سياقات متاحة
+            </div>
+        }
+    </form>
+
+    <div class="text-center mt-4">
+        <a asp-action="UnifiedLogin" class="text-muted small">← رجوع</a>
+    </div>
+</div>
+
+<style>
+    /* ============ كروت الأدمن ============ */
+    .context-card {
+        padding: 18px;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 2px solid transparent;
+        min-height: 80px;
+    }
+
+        .context-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+            border-color: #12433C;
+        }
+
+    /* ============ مجموعة العمارة ============ */
+    .building-group {
+        background: white;
+        border: 2px solid #E0E0E0;
+        border-radius: 12px;
+        overflow: hidden;
+        height: 100%;
+        transition: all 0.2s;
+    }
+
+        .building-group:hover {
+            border-color: #12433C;
+            box-shadow: 0 4px 16px rgba(18, 67, 60, 0.1);
+        }
+
+    .building-header {
+        background: #F0F5F4;
+        padding: 12px 16px;
+        border-bottom: 2px solid #E0E0E0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .building-apartments {
+        padding: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .apt-card {
+        background: #E3F0FF;
+        padding: 10px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 2px solid transparent;
+    }
+
+        .apt-card:hover {
+            background: #D0E4FF;
+            transform: translateX(-4px);
+            border-color: #0066CC;
+        }
+
+        .apt-card .fw-bold {
+            font-size: 14px;
+        }
+
+    /* Scrollbar للشقق */
+    .building-apartments::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .building-apartments::-webkit-scrollbar-thumb {
+        background: #CCC;
+        border-radius: 3px;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        function selectContext(id) {
+            document.getElementById('contextIdInput').value = id;
+            document.getElementById('contextForm').submit();
+        }
+    </script>
+}
