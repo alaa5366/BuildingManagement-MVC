@@ -17,6 +17,13 @@
                     @if (User.IsInRole("superadmin"))
                     {
                         <a class="nav-link text-white-50" asp-controller="SuperAdminHome" asp-action="Index">العمارات</a>
+                        <a class="nav-link text-white-50" asp-controller="Admins" asp-action="Index">الأدمنة</a>
+                        <a class="nav-link text-white-50" asp-controller="Tools" asp-action="Index">🧰 الأدوات</a>
+                        <a class="nav-link text-white-50" asp-controller="Sync" asp-action="Index">🔄 المزامنة</a>
+                        <a class="nav-link text-white-50" asp-controller="Permissions" asp-action="Index">الصلاحيات</a>
+                        <a class="nav-link text-white-50" asp-controller="Categories" asp-action="Index">🏷️ الفئات</a>
+                        <a class="nav-link text-white-50" asp-controller="AuditLog" asp-action="Index">📜 السجل</a>
+
                     }
                     @if (User.IsInRole("admin"))
                     {
@@ -24,11 +31,23 @@
                         <a class="nav-link text-white-50" asp-controller="Wallet" asp-action="Index">المحفظة</a>
                         <a class="nav-link text-white-50" asp-controller="Expenses" asp-action="Index">المصروفات</a>
                         <a class="nav-link text-white-50" asp-controller="Revenues" asp-action="Index">الإيرادات</a>
+                        <a class="nav-link text-white-50" asp-controller="Categories" asp-action="Index">🏷️ الفئات</a>
+                        <a class="nav-link text-white-50" asp-controller="Polls" asp-action="Index"> 🗳️ التصويتات </a>
+                        <a class="nav-link text-white-50" asp-controller="Maintenance" asp-action="Index"> 🔧 الصيانة</a>
+                        <a class="nav-link text-white-50" asp-controller="Notifications" asp-action="Index"> 🔔 الإشعارات </a>
+                        <a class="nav-link text-white-50" asp-controller="WhatsApp" asp-action="Index"> 💬 واتساب </a>
+                        <a class="nav-link text-white-50" asp-controller="AuditLog" asp-action="Index">📜 السجل</a>
+
                     }
                     @if (User.IsInRole("resident"))
                     {
                         <a class="nav-link text-white-50" asp-controller="ResidentHome" asp-action="Index">الرئيسية</a>
                         <a class="nav-link text-white-50" asp-controller="ResidentWallet" asp-action="Index">محفظتي</a>
+                        <a class="nav-link text-white-50" asp-controller="Polls" asp-action="Index"> 🗳️ التصويتات </a>
+                        <a class="nav-link text-white-50" asp-controller="Maintenance" asp-action="Index"> 🔧 الصيانة</a>
+                        <a class="nav-link text-white-50" asp-controller="Notifications" asp-action="Index"> 🔔 الإشعارات </a>
+                        <a class="nav-link text-white-50" asp-controller="WhatsApp" asp-action="Index"> 💬 واتساب </a>
+                        <a class="nav-link text-white-50" asp-controller="AuditLog" asp-action="Index">📜 السجل</a>
                     }
                     <span class="text-white-50 small">@User.Identity.Name (@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value)</span>
                     <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
@@ -52,7 +71,7 @@
     </main>
 
     <footer class="text-center text-muted small py-4">
-        نظام إدارة العمارات — نسخة C# MVC (مرحلة 1: الهيكل الأساسي)
+        نظام إدارة العمارات
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

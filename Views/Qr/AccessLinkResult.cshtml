@@ -1,0 +1,20 @@
+@{
+    ViewData["Title"] = "رابط دخول مؤقت";
+    var apt = (Apartment)ViewBag.Apt;
+    var building = (Building)ViewBag.Building;
+    DateTime expiresAt = ViewBag.ExpiresAt;
+    string link = ViewBag.Link;
+}
+
+<div class="col-md-6">
+    <h3 class="mb-3">✅ اتعمل رابط دخول مؤقت</h3>
+    <div class="bg-white rounded shadow-sm p-4">
+        <p>شقة <strong>@apt.Number</strong> — @building.Name</p>
+        <p class="text-muted small">صالح لحد: @expiresAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</p>
+        <div class="input-group mb-3">
+            <input type="text" class="form-control" value="@link" readonly id="linkBox" />
+            <button class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('linkBox').value)">نسخ</button>
+        </div>
+        <a asp-action="Index" class="btn btn-link">رجوع لكل الأكواد</a>
+    </div>
+</div>

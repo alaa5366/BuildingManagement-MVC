@@ -44,6 +44,22 @@ builder.Services.AddSingleton<FirebaseAdminService>();
 builder.Services.AddScoped<UnifiedAuthService>();
 builder.Services.AddSingleton<QrSecurityService>();
 builder.Services.AddSingleton<QrCodePdfService>();
+builder.Services.AddSingleton<PollsService>();
+builder.Services.AddSingleton<MaintenanceService>();
+builder.Services.AddSingleton<NotificationsService>();
+builder.Services.AddSingleton<WhatsAppTemplateService>();
+// ✅ المرحلة 18 — الأدوات والمزامنة
+builder.Services.AddScoped<MigrationService>();
+builder.Services.AddScoped<DbMaintenanceService>();
+builder.Services.AddScoped<DbSyncService>();
+// ✅ المرحلة 17 — السجل
+builder.Services.AddScoped<AuditLogQueryService>();
+// ✅ المرحلة 16 — الفئات المالية
+builder.Services.AddScoped<CategoriesService>();
+// ✅ المرحلة 15 — إدارة الأدمنة
+builder.Services.AddSingleton<IAuditLogger, AuditLogger>();
+builder.Services.AddSingleton<AuditLogger>();
+builder.Services.AddScoped<AdminManagementService>();
 // ✅ Memory Cache
 builder.Services.AddMemoryCache();
 // ✅ Unified Auth

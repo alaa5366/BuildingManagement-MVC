@@ -22,7 +22,7 @@ public class ResidentWalletController : Controller
     private string ApartmentId => User.FindFirstValue("apartmentId")!;
 
     [HttpGet]
-    public async Task<IActionResult> Index(string? month)
+    public async Task<IActionResult> Index(string? month, int page = 1, int pageSize = 50)
     {
         var building = await _buildings.GetByIdAsync(BuildingId);
         if (building == null) return NotFound();
@@ -33,13 +33,31 @@ public class ResidentWalletController : Controller
         var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
         _wallet.GetOrCreateMonth(building, mk);
 
+        // ✅ كل المعاملات
+        var allTxs = _wallet.GetUnifiedTransactions(building, apt.Id, mk);
+
+        // ✅ Pagination
+        var pagedTxs = PagedResult<BuildingManagementMvc.Models.WalletTransactionVm>
+            .Create(allTxs, page, pageSize);
+
+        // ✅ Pagination للدفعات المعلقة
+        var pendingList = _wallet.GetApartmentDeposits(building, apt.Id, mk)
+            .Where(d => d.Status == "pending").ToList();
+        var pagedPending = PagedResult<BuildingManagementMvc.Models.Deposit>
+            .Create(pendingList, 1, pageSize);
+
         ViewBag.Building = building;
         ViewBag.Apartment = apt;
         ViewBag.Month = mk;
         ViewBag.Balance = _wallet.ComputeWalletBalance(building, apt.Id, mk);
-        ViewBag.Transactions = _wallet.GetUnifiedTransactions(building, apt.Id, mk);
-        ViewBag.PendingDeposits = _wallet.GetApartmentDeposits(building, apt.Id, mk)
-            .Where(d => d.Status == "pending").ToList();
+        ViewBag.Transactions = pagedTxs;
+        ViewBag.PendingDeposits = pagedPending;
+        ViewBag.RouteValues = new Dictionary<string, string?>
+        {
+            ["month"] = mk,
+            ["pageSize"] = pageSize.ToString()
+        };
+
         return View();
     }
 

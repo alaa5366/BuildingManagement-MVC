@@ -63,13 +63,13 @@ public class Building
     public List<string> AdminUids { get; set; } = new();
 
     [FirestoreProperty("notifications")]
-    public List<Dictionary<string, object>> Notifications { get; set; } = new();
+    public List<Notification> Notifications { get; set; } = new();
 
     [FirestoreProperty("polls")]
-    public List<Dictionary<string, object>> Polls { get; set; } = new();
+    public List<Poll> Polls { get; set; } = new();
 
     [FirestoreProperty("maintenanceLog")]
-    public List<Dictionary<string, object>> MaintenanceLog { get; set; } = new();
+    public List<MaintenanceRecord> MaintenanceLog { get; set; } = new();
 
     [FirestoreProperty("createdAt")]
     public string CreatedAt { get; set; } = "";

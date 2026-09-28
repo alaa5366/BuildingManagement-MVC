@@ -1,0 +1,61 @@
+@model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Notification>
+@{
+    ViewData["Title"] = "الإشعارات";
+    var routeValuesStr = ViewBag.RouteValues as Dictionary<string, string> ?? new();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>🔔 الإشعارات (@Model.TotalItems)</h3>
+    @if (Model.Items.Any(n => !n.Read))
+    {
+        <form method="post" asp-action="MarkAllRead">
+            <button class="btn btn-sm btn-outline-secondary">تعليم الكل كمقروء</button>
+        </form>
+    }
+</div>
+
+@* ✅ Pagination (فوق) *@
+@{
+    ViewData["CurrentPage"] = Model.CurrentPage;
+    ViewData["PageSize"] = Model.PageSize;
+    ViewData["TotalItems"] = Model.TotalItems;
+    ViewData["TotalPages"] = Model.TotalPages;
+    ViewData["HasPrevious"] = Model.HasPrevious;
+    ViewData["HasNext"] = Model.HasNext;
+    ViewData["FirstItemIndex"] = Model.FirstItemIndex;
+    ViewData["LastItemIndex"] = Model.LastItemIndex;
+    ViewData["ActionName"] = "Index";
+    ViewData["ControllerName"] = "Notifications";
+    ViewData["RouteValues"] = routeValuesStr;
+    ViewData["PageSizeOptions"] = new[] { 10, 25, 50, 100 };
+}
+@await Html.PartialAsync("_Pagination")
+
+@if (Model.Items.Count == 0)
+{
+    <div class="alert alert-info">لا توجد إشعارات.</div>
+}
+else
+{
+    foreach (var n in Model.Items)
+    {
+        <div class="bg-white rounded shadow-sm p-3 mb-2 d-flex gap-3 align-items-start @(n.Read ? "" : "border-start border-4 border-warning")">
+            <div style="font-size:22px;">@n.Icon</div>
+            <div class="flex-grow-1">
+                <div class="fw-bold">@n.Title</div>
+                <div class="text-muted small">@n.Body</div>
+                <div class="text-muted small">🕐 @n.Ts.Substring(0, Math.Min(16, n.Ts.Length)).Replace("T", " ")</div>
+            </div>
+            @if (!n.Read)
+            {
+                <form method="post" asp-action="MarkRead">
+                    <input type="hidden" name="id" value="@n.Id" />
+                    <button class="btn btn-sm btn-outline-secondary">تعليم كمقروء</button>
+                </form>
+            }
+        </div>
+    }
+}
+
+@* ✅ Pagination (تحت) *@
+@await Html.PartialAsync("_Pagination")

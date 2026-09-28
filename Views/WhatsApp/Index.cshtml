@@ -1,0 +1,49 @@
+@{
+    ViewData["Title"] = "رسائل واتساب";
+    var building = (Building)ViewBag.Building;
+    var templates = (Dictionary<string, (string Name, string Text)>)ViewBag.Templates;
+}
+
+<h3 class="mb-3">💬 رسائل واتساب — @building.Name</h3>
+
+<div class="bg-white rounded shadow-sm p-3">
+    <form method="post" asp-action="Generate">
+        <div class="row g-2">
+            <div class="col-md-4">
+                <label class="form-label small">الشقة</label>
+                <select name="aptId" class="form-select" required>
+                    @foreach (var apt in building.Apartments.OrderBy(a => a.Number))
+                    {
+                        <option value="@apt.Id">شقة @apt.Number @(string.IsNullOrEmpty(apt.Owner) ? "" : "— " + apt.Owner)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">القالب</label>
+                <select name="templateId" class="form-select" required>
+                    @foreach (var kv in templates)
+                    {
+                        <option value="@kv.Key">@kv.Value.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">المبلغ (لو محتاج)</label>
+                <input name="amount" class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">البيان / الملاحظة (لو محتاج)</label>
+                <input name="note" class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">نصيب الشقة (لو محتاج)</label>
+                <input name="share" class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">رسالة عامة (لو اخترت "رسالة عامة")</label>
+                <input name="message" class="form-control" />
+            </div>
+        </div>
+        <button class="btn btn-brand mt-3">توليد الرسالة</button>
+    </form>
+</div>

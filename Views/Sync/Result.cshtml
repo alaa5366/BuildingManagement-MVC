@@ -1,0 +1,54 @@
+﻿@{
+    ViewData["Title"] = "نتيجة المزامنة";
+    var result = ViewBag.Result as BuildingManagementMvc.Models.SyncResult;
+    var syncType = ViewBag.SyncType as string ?? "";
+}
+
+<div class="container">
+    <h2>نتيجة مزامنة @syncType</h2>
+
+    @if (result != null)
+    {
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4"><strong>تم الفحص:</strong> @result.TotalChecked</div>
+                    <div class="col-md-4"><strong>مشاكل:</strong> @result.TotalIssues</div>
+                    <div class="col-md-4"><strong>تم الإصلاح:</strong> @result.TotalFixed</div>
+                </div>
+                <p class="text-muted">المدة: @result.Duration.TotalSeconds.ToString("0.00") ثانية</p>
+            </div>
+        </div>
+
+        @if (result.Items.Count > 0)
+        {
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>النوع</th>
+                        <th>الاسم</th>
+                        <th>المشكلة</th>
+                        <th>تم الإصلاح؟</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in result.Items)
+                    {
+                        <tr>
+                            <td>@item.Type</td>
+                            <td>@item.Name</td>
+                            <td>@item.Issue</td>
+                            <td>@(item.Fixed ? "✅" : "❌")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="alert alert-success">✅ لا توجد مشاكل</div>
+        }
+    }
+
+    <a asp-action="Index" class="btn btn-secondary">← رجوع</a>
+</div>

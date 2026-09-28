@@ -1,0 +1,262 @@
+﻿@{
+    ViewData["Title"] = "الفئات المالية";
+    var building = ViewBag.Building as BuildingManagementMvc.Models.Building;
+    var expenseCats = ViewBag.ExpenseCategories as List<BuildingManagementMvc.Models.FinancialCategory> ?? new();
+    var revenueCats = ViewBag.RevenueCategories as List<BuildingManagementMvc.Models.FinancialCategory> ?? new();
+    var isSuper = User.IsInRole("superadmin");
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>🏷️ الفئات المالية @(building != null ? $"— {building.Name}" : "")</h2>
+        @if (isSuper && building != null)
+        {
+            <a asp-controller="SuperAdminHome" asp-action="Index" class="btn btn-outline-secondary">← رجوع للعمارات</a>
+        }
+    </div>
+
+    <div class="row">
+        <!-- فئات المصروفات -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                    <strong>📉 فئات المصروفات</strong>
+                    <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+                        ➕ إضافة
+                    </button>
+                </div>
+                <div class="card-body">
+                    @if (expenseCats.Count == 0)
+                    {
+                        <p class="text-muted text-center">لا توجد فئات مصروفات.</p>
+                    }
+                    else
+                    {
+                        <table class="table table-sm align-middle">
+                            <thead>
+                                <tr>
+                                    <th>اللون</th>
+                                    <th>الاسم</th>
+                                    <th>الحالة</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var c in expenseCats)
+                                {
+                                    <tr>
+                                        <td>
+                                            <span style="display:inline-block;width:24px;height:24px;border-radius:4px;background:@c.Color;border:1px solid #ccc;"></span>
+                                        </td>
+                                        <td>
+                                            @c.Name
+                                            <br /><small class="text-muted"><code>@c.Id</code></small>
+                                        </td>
+                                        <td>
+                                            @if (c.Active)
+                                            {
+                                                <span class="badge bg-success">نشطة</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">معطّلة</span>
+                                            }
+                                        </td>
+                                        <td class="text-nowrap">
+                                            <button class="btn btn-sm btn-outline-primary"
+                                                    onclick="openEdit('@c.Id','@c.Name','@c.Color',@(c.Active.ToString().ToLower()),'expense')">
+                                                ✏️
+                                            </button>
+                                            <form method="post" asp-action="Delete" class="d-inline"
+                                                  onsubmit="return confirm('تأكيد الحذف؟')">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="buildingId" value="@(building?.Id ?? "")" />
+                                                <input type="hidden" name="isExpense" value="true" />
+                                                <input type="hidden" name="id" value="@c.Id" />
+                                                <button class="btn btn-sm btn-outline-danger">🗑️</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- فئات الإيرادات -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <strong>📈 فئات الإيرادات</strong>
+                    <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#addRevenueModal">
+                        ➕ إضافة
+                    </button>
+                </div>
+                <div class="card-body">
+                    @if (revenueCats.Count == 0)
+                    {
+                        <p class="text-muted text-center">لا توجد فئات إيرادات.</p>
+                    }
+                    else
+                    {
+                        <table class="table table-sm align-middle">
+                            <thead>
+                                <tr>
+                                    <th>اللون</th>
+                                    <th>الاسم</th>
+                                    <th>الحالة</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var c in revenueCats)
+                                {
+                                    <tr>
+                                        <td>
+                                            <span style="display:inline-block;width:24px;height:24px;border-radius:4px;background:@c.Color;border:1px solid #ccc;"></span>
+                                        </td>
+                                        <td>
+                                            @c.Name
+                                            <br /><small class="text-muted"><code>@c.Id</code></small>
+                                        </td>
+                                        <td>
+                                            @if (c.Active)
+                                            {
+                                                <span class="badge bg-success">نشطة</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">معطّلة</span>
+                                            }
+                                        </td>
+                                        <td class="text-nowrap">
+                                            <button class="btn btn-sm btn-outline-primary"
+                                                    onclick="openEdit('@c.Id','@c.Name','@c.Color',@(c.Active.ToString().ToLower()),'revenue')">
+                                                ✏️
+                                            </button>
+                                            <form method="post" asp-action="Delete" class="d-inline"
+                                                  onsubmit="return confirm('تأكيد الحذف؟')">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="buildingId" value="@(building?.Id ?? "")" />
+                                                <input type="hidden" name="isExpense" value="false" />
+                                                <input type="hidden" name="id" value="@c.Id" />
+                                                <button class="btn btn-sm btn-outline-danger">🗑️</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: إضافة مصروف -->
+<div class="modal fade" id="addExpenseModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" asp-action="Add" class="modal-content">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="buildingId" value="@building?.Id" />
+            <input type="hidden" name="isExpense" value="true" />
+            <div class="modal-header">
+                <h5 class="modal-title">➕ إضافة فئة مصروف</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">اسم الفئة</label>
+                    <input name="name" class="form-control" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">اللون</label>
+                    <input name="color" type="color" class="form-control form-control-color" value="#4A90D9" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button class="btn btn-primary">حفظ</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: إضافة إيراد -->
+<div class="modal fade" id="addRevenueModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" asp-action="Add" class="modal-content">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="buildingId" value="@building?.Id" />
+            <input type="hidden" name="isExpense" value="false" />
+            <div class="modal-header">
+                <h5 class="modal-title">➕ إضافة فئة إيراد</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">اسم الفئة</label>
+                    <input name="name" class="form-control" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">اللون</label>
+                    <input name="color" type="color" class="form-control form-control-color" value="#4FB286" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button class="btn btn-primary">حفظ</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: تعديل فئة -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" asp-action="Update" class="modal-content">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="buildingId" value="@building?.Id" />
+            <input type="hidden" name="id" id="editId" />
+            <input type="hidden" name="isExpense" id="editIsExpense" />
+            <div class="modal-header">
+                <h5 class="modal-title">✏️ تعديل الفئة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">اسم الفئة</label>
+                    <input name="name" id="editName" class="form-control" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">اللون</label>
+                    <input name="color" id="editColor" type="color" class="form-control form-control-color" />
+                </div>
+                <div class="form-check">
+                    <input name="active" id="editActive" type="checkbox" class="form-check-input" value="true" />
+                    <label class="form-check-label" for="editActive">نشطة</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button class="btn btn-primary">حفظ</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openEdit(id, name, color, active, type) {
+            document.getElementById('editId').value = id;
+            document.getElementById('editName').value = name;
+            document.getElementById('editColor').value = color;
+            document.getElementById('editActive').checked = active;
+            document.getElementById('editIsExpense').value = (type === 'expense');
+            new bootstrap.Modal(document.getElementById('editModal')).show();
+        }
+    </script>
+}

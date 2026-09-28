@@ -1,7 +1,8 @@
-using System.Security.Claims;
+using BuildingManagementMvc.Models;
+using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using BuildingManagementMvc.Services;
+using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
 
@@ -21,7 +22,8 @@ public class WalletController : Controller
     private string BuildingId => User.FindFirstValue("buildingId")!;
 
     [HttpGet]
-    public async Task<IActionResult> Index(string? month)
+    [HttpGet]
+    public async Task<IActionResult> Index(string? month, int page = 1, int pageSize = 50)
     {
         var building = await _buildings.GetByIdAsync(BuildingId);
         if (building == null) return NotFound();
@@ -29,23 +31,37 @@ public class WalletController : Controller
         var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
         _wallet.GetOrCreateMonth(building, mk);
 
-        // ✅ خريطة: floorId → floorOrder
         var floorOrderMap = building.Floors.ToDictionary(f => f.Id, f => f.Order);
 
-        var balances = building.Apartments
+        // ✅ كل الأرصدة
+        var allBalances = building.Apartments
             .OrderBy(a => floorOrderMap.GetValueOrDefault(a.FloorId, int.MaxValue))
             .ThenBy(a => a.Number)
             .Select(a => (Apt: a, Balance: _wallet.ComputeWalletBalance(building, a.Id, mk)))
             .ToList();
 
-        var pending = _wallet.GetAllPendingDeposits(building, mk);
+        // ✅ Pagination للشقق
+        var pagedBalances = PagedResult<(BuildingManagementMvc.Models.Apartment Apt, double Balance)>
+            .Create(allBalances, page, pageSize);
+
+        // ✅ Pagination للدفعات المعلقة
+        var allPending = _wallet.GetAllPendingDeposits(building, mk);
+        var pagedPending = PagedResult<(BuildingManagementMvc.Models.Apartment Apt, BuildingManagementMvc.Models.Deposit Deposit)>
+            .Create(allPending, 1, pageSize);
+
         var totals = _wallet.TotalsOf(building, mk);
 
         ViewBag.Building = building;
         ViewBag.Month = mk;
-        ViewBag.Balances = balances;
-        ViewBag.Pending = pending;
+        ViewBag.Balances = pagedBalances;
+        ViewBag.Pending = pagedPending;
         ViewBag.Totals = totals;
+        ViewBag.RouteValues = new Dictionary<string, string?>
+        {
+            ["month"] = mk,
+            ["pageSize"] = pageSize.ToString()
+        };
+
         return View();
     }
 

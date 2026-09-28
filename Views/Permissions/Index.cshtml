@@ -1,0 +1,61 @@
+﻿@model List<BuildingManagementMvc.Models.AppUserDoc>
+@{
+    ViewData["Title"] = "مصفوفة الصلاحيات";
+    var allPerms = ViewBag.AllPermissions as List<string> ?? new();
+}
+
+<div class="container-fluid">
+    <h2>🔐 مصفوفة الصلاحيات</h2>
+
+    <form id="af-form" method="post" style="display:none">@Html.AntiForgeryToken()</form>
+
+    <table class="table table-bordered table-sm">
+        <thead>
+            <tr>
+                <th>الصلاحية</th>
+                @foreach (var a in Model)
+                {
+                    <th class="text-center">@a.Name</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in allPerms)
+            {
+                <tr>
+                    <td><code>@p</code></td>
+                    @foreach (var a in Model)
+                    {
+                        var has = a.Permissions != null && a.Permissions.Contains(p);
+                        <td class="text-center">
+                            <input type="checkbox"
+                                   class="perm-toggle"
+                                   data-admin="@a.Uid"
+                                   data-perm="@p"
+                                   @(has ? "checked" : "") />
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<script>
+document.querySelectorAll('.perm-toggle').forEach(cb => {
+    cb.addEventListener('change', async e => {
+        const adminId = e.target.dataset.admin;
+        const perm = e.target.dataset.perm;
+        const enabled = e.target.checked;
+        const token = document.querySelector('#af-form input[name="__RequestVerificationToken"]').value;
+
+        const fd = new FormData();
+        fd.append('adminId', adminId);
+        fd.append('permission', perm);
+        fd.append('enabled', enabled);
+        fd.append('__RequestVerificationToken', token);
+
+        await fetch('/Permissions/Toggle', { method: 'POST', body: fd });
+    });
+});
+</script>

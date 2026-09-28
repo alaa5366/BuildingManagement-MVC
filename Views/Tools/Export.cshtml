@@ -1,0 +1,24 @@
+﻿@{
+    ViewData["Title"] = "تصدير شامل";
+    var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Models.Building> ?? new();
+}
+
+<div class="container">
+    <h2>📦 تصدير شامل</h2>
+
+    <div class="card">
+        <div class="card-body">
+            <p>سيتم تصدير:</p>
+            <ul>
+                <li><strong>buildings.json</strong> — @buildings.Count عمارة</li>
+                <li><strong>users.json</strong> — كل الأدمنة</li>
+                <li><strong>README.md</strong> — شرح المحتوى</li>
+            </ul>
+
+            <form method="post" asp-action="ExportAll">
+                @Html.AntiForgeryToken()
+                <button class="btn btn-success">⬇️ تصدير ZIP</button>
+            </form>
+        </div>
+    </div>
+</div>

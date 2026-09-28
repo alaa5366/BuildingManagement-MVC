@@ -1,7 +1,8 @@
-using System.Security.Claims;
+using BuildingManagementMvc.Models;
+using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using BuildingManagementMvc.Services;
+using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
 
@@ -22,7 +23,8 @@ public class ExpensesController : Controller
     private string BuildingId => User.FindFirstValue("buildingId")!;
 
     [HttpGet]
-    public async Task<IActionResult> Index(string? month)
+    [HttpGet]
+    public async Task<IActionResult> Index(string? month, int page = 1, int pageSize = 50)
     {
         var building = await _buildings.GetByIdAsync(BuildingId);
         if (building == null) return NotFound();
@@ -30,11 +32,24 @@ public class ExpensesController : Controller
         var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
         var m = _wallet.GetOrCreateMonth(building, mk);
 
+        // ✅ كل المصروفات
+        var allExpenses = m.Expenses.OrderByDescending(e => e.Date).ToList();
+
+        // ✅ Pagination
+        var pagedExpenses = PagedResult<BuildingManagementMvc.Models.Expense>
+            .Create(allExpenses, page, pageSize);
+
         ViewBag.Building = building;
         ViewBag.Month = mk;
         ViewBag.Categories = building.ExpenseCategories.Where(c => c.Active).OrderBy(c => c.Order).ToList();
         ViewBag.Total = m.Expenses.Sum(e => e.Amount);
-        return View(m.Expenses.OrderByDescending(e => e.Date).ToList());
+        ViewBag.RouteValues = new Dictionary<string, string?>
+        {
+            ["month"] = mk,
+            ["pageSize"] = pageSize.ToString()
+        };
+
+        return View(pagedExpenses);
     }
 
     [HttpPost]

@@ -1,0 +1,121 @@
+@model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.MaintenanceRecord>
+@{
+    ViewData["Title"] = "الصيانة";
+    var building = (Building)ViewBag.Building;
+    string[] statuses = { "open", "inprogress", "done", "cancelled" };
+    string StatusLabel(string s) => s switch { "open" => "🔓 مفتوحة", "inprogress" => "🔧 جاري التنفيذ", "done" => "✅ تم", "cancelled" => "❌ ملغاة", _ => s };
+    var routeValuesStr = ViewBag.RouteValues as Dictionary<string, string> ?? new();
+
+    // إحصائيات من الـ items بس (الصفحة الحالية)
+    var pageTotalCost = Model.Items.Sum(m => m.Cost);
+}
+
+<h3 class="mb-3">🔧 صيانة @building.Name (@Model.TotalItems)</h3>
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success">@TempData["Message"]</div>
+}
+
+<div class="bg-white rounded shadow-sm p-3 mb-3">
+    <h5>➕ سجل صيانة جديد</h5>
+    <form method="post" asp-action="Add" class="row g-2 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label small">العنوان</label>
+            <input name="title" class="form-control" required />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small">الوصف</label>
+            <input name="description" class="form-control" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">التاريخ</label>
+            <input name="date" type="date" class="form-control" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">التكلفة</label>
+            <input name="cost" type="number" step="0.01" class="form-control" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">المورّد</label>
+            <input name="vendor" class="form-control" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">الحالة</label>
+            <select name="status" class="form-select">
+                @foreach (var s in statuses)
+                {
+                    <option value="@s">@StatusLabel(s)</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-brand w-100">إضافة</button>
+        </div>
+    </form>
+</div>
+
+@* ✅ Pagination (فوق) *@
+@{
+    ViewData["CurrentPage"] = Model.CurrentPage;
+    ViewData["PageSize"] = Model.PageSize;
+    ViewData["TotalItems"] = Model.TotalItems;
+    ViewData["TotalPages"] = Model.TotalPages;
+    ViewData["HasPrevious"] = Model.HasPrevious;
+    ViewData["HasNext"] = Model.HasNext;
+    ViewData["FirstItemIndex"] = Model.FirstItemIndex;
+    ViewData["LastItemIndex"] = Model.LastItemIndex;
+    ViewData["ActionName"] = "Index";
+    ViewData["ControllerName"] = "Maintenance";
+    ViewData["RouteValues"] = routeValuesStr;
+    ViewData["PageSizeOptions"] = new[] { 10, 25, 50, 100 };
+}
+@await Html.PartialAsync("_Pagination")
+
+@if (Model.Items.Count == 0)
+{
+    <div class="alert alert-info">لا توجد سجلات صيانة بعد.</div>
+}
+else
+{
+    foreach (var m in Model.Items)
+    {
+        <div class="bg-white rounded shadow-sm p-3 mb-2">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                <div>
+                    <div class="fw-bold">@m.Title</div>
+                    <div class="text-muted small">📅 @m.Date @(string.IsNullOrEmpty(m.Vendor) ? "" : "· 👤 " + m.Vendor)</div>
+                    @if (!string.IsNullOrEmpty(m.Description))
+                    {
+                        <div class="small mt-1">@m.Description</div>
+                    }
+                    <span class="badge bg-secondary mt-1">@StatusLabel(m.Status)</span>
+                    @if (m.Cost > 0)
+                    {
+                        <span class="fw-bold ms-2">@m.Cost.ToString("0.##") ج.م</span>
+                    }
+                </div>
+                <div class="d-flex gap-1 flex-wrap">
+                    @if (m.Cost > 0 && !m.AddedToExpense)
+                    {
+                        <form method="post" asp-action="AddToExpenses">
+                            <input type="hidden" name="id" value="@m.Id" />
+                            <button class="btn btn-sm btn-outline-success">أضف للمصروفات</button>
+                        </form>
+                    }
+                    else if (m.AddedToExpense)
+                    {
+                        <span class="badge bg-success align-self-center">مضافة للمصروفات</span>
+                    }
+                    <form method="post" asp-action="Delete" onsubmit="return confirm('حذف السجل؟');">
+                        <input type="hidden" name="id" value="@m.Id" />
+                        <button class="btn btn-sm btn-outline-danger">حذف</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@* ✅ Pagination (تحت) *@
+@await Html.PartialAsync("_Pagination")

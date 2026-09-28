@@ -17,10 +17,18 @@ public class BuildingsController : Controller
         _qrPdf = qrPdf;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1, int pageSize = 50)
     {
-        var buildings = await _service.GetAllAsync();
-        return View(buildings);
+        var allBuildings = await _service.GetAllAsync();
+        var paged = BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Building>
+            .Create(allBuildings, page, pageSize);
+
+        ViewBag.RouteValues = new Dictionary<string, string?>
+        {
+            ["pageSize"] = pageSize.ToString()
+        };
+
+        return View(paged);
     }
 
     [HttpGet]

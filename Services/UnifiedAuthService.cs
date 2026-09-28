@@ -113,7 +113,7 @@ public class UnifiedAuthService
                 Console.WriteLine($"[UnifiedAuth] Matched apt {apt.Number}!");
 
                 if (apt.Disabled) continue;
-                if (apt.Closed) continue;
+                //if (apt.Closed) continue;
 
                 var floor = building.Floors.FirstOrDefault(f => f.Id == apt.FloorId);
                 if (floor == null) continue;
@@ -139,6 +139,7 @@ public class UnifiedAuthService
                     BuildingNumber = building.BuildingNumber,
                     FloorOrder = floor.Order,
                     AptNumber = apt.Number,
+                    AptId = apt.Id,          
                     AptLabel = apt.Label,
                     Email = email,
                     Uid = signIn.Uid,
@@ -183,7 +184,7 @@ public class UnifiedAuthService
                 context.Email!,
                 context.Name ?? "Resident",
                 new List<string> { context.BuildingId! },
-                null,   // ApartmentId — نحتاجها
+                context.AptId,
                 context.AptNumber);
         }
 

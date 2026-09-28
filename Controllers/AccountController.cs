@@ -1,10 +1,11 @@
-using System.Security.Claims;
+using BuildingManagementMvc.Models;
+using BuildingManagementMvc.Services;
+using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using BuildingManagementMvc.Models;
-using BuildingManagementMvc.Services;
+using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
 
@@ -13,11 +14,15 @@ public class AccountController : Controller
 {
     private readonly AuthService _auth;
     private readonly BuildingsService _buildings;
+    private readonly UsersService _users;   
 
-    public AccountController(AuthService auth, BuildingsService buildings)
+
+
+    public AccountController(AuthService auth, BuildingsService buildings, UsersService users)
     {
         _auth = auth;
         _buildings = buildings;
+        _users = users;
     }
 
     public IActionResult LoginChoice() => RedirectToAction("UnifiedLogin");
@@ -407,18 +412,39 @@ public class AccountController : Controller
     private async Task SignInCookieAsync(AuthResult res)
     {
         var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, res.Uid!),
-            new(ClaimTypes.Name, res.Name ?? ""),
-            new(ClaimTypes.Email, res.Email ?? ""),
-            new(ClaimTypes.Role, res.Role!),
-        };
+    {
+        new(ClaimTypes.NameIdentifier, res.Uid!),
+        new(ClaimTypes.Name, res.Name ?? ""),
+        new(ClaimTypes.Email, res.Email ?? ""),
+        new(ClaimTypes.Role, res.Role!),
+    };
 
         foreach (var bId in res.BuildingIds)
             claims.Add(new Claim("buildingId", bId));
 
         if (res.ApartmentId != null) claims.Add(new Claim("apartmentId", res.ApartmentId));
         if (res.ApartmentNumber != null) claims.Add(new Claim("apartmentNumber", res.ApartmentNumber.Value.ToString()));
+
+        // ✅ المرحلة 15 — إضافة الصلاحيات في الـ Claims
+        if (res.Role == "superadmin")
+        {
+            foreach (var p in BuildingManagementMvc.Models.AdminPermissions.SuperAdminAll)
+                claims.Add(new Claim("perm", p));
+        }
+        else if (res.Role == "admin")
+        {
+            var user = await _users.GetByUidAsync(res.Uid!);
+            if (user?.Permissions != null)
+            {
+                foreach (var p in user.Permissions)
+                    claims.Add(new Claim("perm", p));
+            }
+        }
+        else if (res.Role == "resident")
+        {
+            foreach (var p in BuildingManagementMvc.Models.AdminPermissions.ResidentBasic)
+                claims.Add(new Claim("perm", p));
+        }
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));

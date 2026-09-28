@@ -1,0 +1,56 @@
+﻿@{
+    ViewData["Title"] = "إضافة أدمن";
+    var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Models.Building> ?? new();
+    var allPerms = ViewBag.AllPermissions as List<string> ?? new();
+}
+
+<div class="container">
+    <h2>➕ إضافة أدمن</h2>
+
+    <form asp-action="Create" method="post">
+        @Html.AntiForgeryToken()
+
+        <div class="mb-3">
+            <label class="form-label">الاسم</label>
+            <input name="name" class="form-control" required />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">رقم الموبايل</label>
+            <input name="phone" class="form-control" required />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">العمارة</label>
+            <select name="buildingId" class="form-select" required>
+                <option value="">— اختر —</option>
+                @foreach (var b in buildings)
+                {
+                    <option value="@b.Id">@b.Name (@b.BuildingNumber)</option>
+                }
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">PIN</label>
+            <input name="pin" type="password" class="form-control" required />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">الصلاحيات</label>
+            <div class="row">
+                @foreach (var p in allPerms)
+                {
+                    <div class="col-md-4">
+                        <label>
+                            <input type="checkbox" name="permissions" value="@p" /> @BuildingManagementMvc.Models.AdminPermissions.LabelAr(p)
+                        </label>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <button class="btn btn-primary">حفظ</button>
+        <a asp-action="Index" class="btn btn-secondary">إلغاء</a>
+    </form>
+</div>

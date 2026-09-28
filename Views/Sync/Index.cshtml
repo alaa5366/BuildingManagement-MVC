@@ -1,0 +1,51 @@
+﻿@{
+    ViewData["Title"] = "مزامنة الداتابيز";
+}
+
+<div class="container">
+    <h2>🔄 مزامنة الداتابيز</h2>
+    <p class="text-muted">فحص وإصلاح الفروقات بين Firebase Auth و Firestore</p>
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <form method="post" asp-action="SyncAdmins" class="card h-100">
+                @Html.AntiForgeryToken()
+                <div class="card-body">
+                    <h5>👥 مزامنة الأدمنة</h5>
+                    <p class="text-muted">فحص الإيميلات + Firebase Auth</p>
+                    <div class="form-check mb-2">
+                        <input type="checkbox" name="autoFix" value="true" class="form-check-input" />
+                        <label class="form-check-label">إصلاح تلقائي</label>
+                    </div>
+                    <button class="btn btn-primary w-100">▶️ تشغيل</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-md-4">
+            <form method="post" asp-action="SyncResidents" class="card h-100">
+                @Html.AntiForgeryToken()
+                <div class="card-body">
+                    <h5>🏠 مزامنة السكان</h5>
+                    <p class="text-muted">فحص Firebase Auth للسكان</p>
+                    <div class="form-check mb-2">
+                        <input type="checkbox" name="autoFix" value="true" class="form-check-input" />
+                        <label class="form-check-label">إصلاح تلقائي</label>
+                    </div>
+                    <button class="btn btn-primary w-100">▶️ تشغيل</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-md-4">
+            <form method="post" asp-action="SyncPasswords" class="card h-100">
+                @Html.AntiForgeryToken()
+                <div class="card-body">
+                    <h5>🔑 مزامنة كلمات السر</h5>
+                    <p class="text-muted">تحديث Firebase Auth بالباسوردات الصحيحة</p>
+                    <button class="btn btn-warning w-100">▶️ تشغيل</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,14 +1,20 @@
-@model List<Revenue>
+@model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Revenue>
 @{
     ViewData["Title"] = "الإيرادات";
     var building = (Building)ViewBag.Building;
     var categories = (List<FinancialCategory>)ViewBag.Categories;
     string month = ViewBag.Month;
+    var routeValues = ViewBag.RouteValues as Dictionary<string, string?> ?? new();
+    var routeValuesStr = new Dictionary<string, string>();
+    foreach (var kv in routeValues)
+        if (!string.IsNullOrWhiteSpace(kv.Value))
+            routeValuesStr[kv.Key] = kv.Value!;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>📈 إيرادات @building.Name</h3>
     <form method="get" class="d-flex gap-2">
+        <input type="hidden" name="pageSize" value="@Model.PageSize" />
         <input type="month" name="month" value="@month" class="form-control" onchange="this.form.submit()" />
     </form>
 </div>
@@ -46,29 +52,57 @@
 
 <div class="bg-white rounded shadow-sm p-3">
     <div class="d-flex justify-content-between mb-2">
-        <h5>سجل الإيرادات</h5>
+        <h5>سجل الإيرادات (@Model.TotalItems)</h5>
         <strong>الإجمالي: @(((double)ViewBag.Total).ToString("0.##")) ج.م</strong>
     </div>
-    <table class="table table-sm">
-        <thead><tr><th>التاريخ</th><th>البند</th><th>ملاحظة</th><th>المبلغ</th><th></th></tr></thead>
-        <tbody>
-        @foreach (var r in Model)
-        {
-            var cat = categories.FirstOrDefault(c => c.Id == r.CategoryId);
-            <tr>
-                <td>@r.Date</td>
-                <td>@(cat?.Name ?? r.CategoryId)</td>
-                <td>@r.Note</td>
-                <td>@r.Amount.ToString("0.##")</td>
-                <td>
-                    <form method="post" asp-action="Delete" onsubmit="return confirm('حذف الإيراد؟');">
-                        <input type="hidden" name="month" value="@month" />
-                        <input type="hidden" name="id" value="@r.Id" />
-                        <button class="btn btn-sm btn-outline-danger">حذف</button>
-                    </form>
-                </td>
-            </tr>
-        }
-        </tbody>
-    </table>
+
+    @* ✅ Pagination (فوق) *@
+    @{
+        ViewData["CurrentPage"] = Model.CurrentPage;
+        ViewData["PageSize"] = Model.PageSize;
+        ViewData["TotalItems"] = Model.TotalItems;
+        ViewData["TotalPages"] = Model.TotalPages;
+        ViewData["HasPrevious"] = Model.HasPrevious;
+        ViewData["HasNext"] = Model.HasNext;
+        ViewData["FirstItemIndex"] = Model.FirstItemIndex;
+        ViewData["LastItemIndex"] = Model.LastItemIndex;
+        ViewData["ActionName"] = "Index";
+        ViewData["ControllerName"] = "Revenues";
+        ViewData["RouteValues"] = routeValuesStr;
+        ViewData["PageSizeOptions"] = new[] { 10, 25, 50, 100 };
+    }
+    @await Html.PartialAsync("_Pagination")
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="alert alert-info">لا توجد إيرادات لهذا الشهر.</div>
+    }
+    else
+    {
+        <table class="table table-sm">
+            <thead><tr><th>التاريخ</th><th>البند</th><th>ملاحظة</th><th>المبلغ</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var r in Model.Items)
+                {
+                    var cat = categories.FirstOrDefault(c => c.Id == r.CategoryId);
+                    <tr>
+                        <td>@r.Date</td>
+                        <td>@(cat?.Name ?? r.CategoryId)</td>
+                        <td>@r.Note</td>
+                        <td>@r.Amount.ToString("0.##")</td>
+                        <td>
+                            <form method="post" asp-action="Delete" onsubmit="return confirm('حذف الإيراد؟');">
+                                <input type="hidden" name="month" value="@month" />
+                                <input type="hidden" name="id" value="@r.Id" />
+                                <button class="btn btn-sm btn-outline-danger">حذف</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    @* ✅ Pagination (تحت) *@
+    @await Html.PartialAsync("_Pagination")
 </div>

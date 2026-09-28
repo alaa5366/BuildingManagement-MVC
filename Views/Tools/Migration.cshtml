@@ -1,0 +1,74 @@
+﻿@{
+    ViewData["Title"] = "Migration";
+    var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Models.Building> ?? new();
+    var result = ViewBag.Result as BuildingManagementMvc.Models.MigrationResult;
+    var isDryRun = ViewBag.IsDryRun as bool? ?? false;
+}
+
+<div class="container">
+    <h2>🔄 Migration — تحويل السجل القديم</h2>
+    <p class="text-muted">تحويل <code>building.AuditLog</code> → <code>auditLogs</code> collection</p>
+
+    <form method="post" asp-action="RunMigration" class="card mb-4">
+        @Html.AntiForgeryToken()
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">العمارة (اتركها فاضية = كل العمارات)</label>
+                <select name="buildingId" class="form-select">
+                    <option value="">— كل العمارات —</option>
+                    @foreach (var b in buildings)
+                    {
+                        <option value="@b.Id">@b.Name (@b.BuildingNumber)</option>
+                    }
+                </select>
+            </div>
+            <div class="mb-3 form-check">
+                <input type="checkbox" name="dryRun" value="true" class="form-check-input" id="dryRun" checked />
+                <label class="form-check-label" for="dryRun">
+                    🧪 Dry-run (تجربة بدون حفظ — موصى به أولاً)
+                </label>
+            </div>
+            <button class="btn btn-primary">▶️ بدء Migration</button>
+        </div>
+    </form>
+
+    @if (result != null)
+    {
+        <div class="card">
+            <div class="card-header @(isDryRun ? "bg-warning" : "bg-success text-white")">
+                @(isDryRun ? "🧪 نتيجة Dry-run" : "✅ نتيجة Migration")
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-3"><strong>عمارات:</strong> @result.BuildingsScanned</div>
+                    <div class="col-md-3"><strong>سجلات موجودة:</strong> @result.EntriesFound</div>
+                    <div class="col-md-3"><strong>تم ترحيلها:</strong> @result.EntriesMigrated</div>
+                    <div class="col-md-3"><strong>تم تخطيها:</strong> @result.EntriesSkipped</div>
+                    <div class="col-md-3"><strong>فشلت:</strong> @result.EntriesFailed</div>
+                    <div class="col-md-3"><strong>المدة:</strong> @result.Duration.TotalSeconds.ToString("0.00") ثانية</div>
+                </div>
+
+                @if (result.Errors.Count > 0)
+                {
+                    <div class="alert alert-danger">
+                        <strong>أخطاء:</strong>
+                        <ul>
+                            @foreach (var err in result.Errors.Take(20))
+                            {
+                                <li>@err</li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                @if (result.Details.Count > 0)
+                {
+                    <details>
+                        <summary>التفاصيل (@result.Details.Count)</summary>
+                        <pre style="font-size:11px;max-height:300px;overflow:auto;">@string.Join("\n", result.Details.Take(100))</pre>
+                    </details>
+                }
+            </div>
+        </div>
+    }
+</div>

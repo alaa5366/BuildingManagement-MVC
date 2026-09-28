@@ -1,0 +1,256 @@
+﻿@model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Services.AuditEntryDoc>
+@{
+    ViewData["Title"] = "السجل";
+    var role = ViewBag.CurrentRole as string ?? "admin";
+    var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Models.Building> ?? new();
+    var knownActions = ViewBag.KnownActions as List<string> ?? new();
+    var canFilterBuilding = ViewBag.CanFilterByBuilding as bool? ?? false;
+    var canFilterApartment = ViewBag.CanFilterByApartment as bool? ?? false;
+    var routeValues = ViewBag.RouteValues as Dictionary<string, string?> ?? new();
+
+    // ✅ تجهيز RouteValues للـ Partial (بدون القيم الفاضية)
+    var routeValuesStr = new Dictionary<string, string>();
+    foreach (var kv in routeValues)
+    {
+        if (!string.IsNullOrWhiteSpace(kv.Value))
+            routeValuesStr[kv.Key] = kv.Value!;
+    }
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>
+            📜 السجل
+            @if (role == "superadmin")
+            {
+                <small class="text-muted">— كل السجلات</small>
+            }
+            else if (role == "admin")
+            {
+
+                <small class="text-muted">— سجل عمارتي</small>
+            }
+            else
+            {
+
+                <small class="text-muted">— سجل شقتي</small>
+            }
+        </h2>
+        <div>
+            <span class="badge bg-secondary">@Model.TotalItems عملية</span>
+            <a asp-action="ExportCsv"
+               asp-route-buildingId="@ViewBag.SelectedBuildingId"
+               asp-route-apartmentId="@ViewBag.SelectedApartmentId"
+               asp-route-userId="@ViewBag.SelectedUserId"
+               asp-route-actionFilter="@ViewBag.SelectedAction"
+               asp-route-severity="@ViewBag.SelectedSeverity"
+               asp-route-from="@ViewBag.From"
+               asp-route-to="@ViewBag.To"
+               class="btn btn-outline-success">⬇️ تصدير CSV</a>
+        </div>
+    </div>
+
+    @* ============ الفلاتر ============ *@
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                @if (canFilterBuilding && buildings.Count > 0)
+                {
+                    <div class="col-md-3">
+                        <label class="form-label small">العمارة</label>
+                        <select name="buildingId" class="form-select form-select-sm">
+                            <option value="">— كل العمارات —</option>
+                            @foreach (var b in buildings)
+                            {
+                                <option value="@b.Id" selected="@(ViewBag.SelectedBuildingId == b.Id)">@b.Name (@b.BuildingNumber)</option>
+                            }
+                        </select>
+                    </div>
+                }
+
+                <div class="col-md-3">
+                    <label class="form-label small">العملية</label>
+                    <select name="actionFilter" class="form-select form-select-sm">
+                        <option value="">— الكل —</option>
+                        @foreach (var a in knownActions)
+                        {
+                            <option value="@a" selected="@(ViewBag.SelectedAction == a)">
+                                @BuildingManagementMvc.Services.AuditLogQueryService.LabelAr(a)
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label small">الخطورة</label>
+                    <select name="severity" class="form-select form-select-sm">
+                        <option value="">— الكل —</option>
+                        <option value="info" selected="@(ViewBag.SelectedSeverity == "info")">🔵 معلومة</option>
+                        <option value="warning" selected="@(ViewBag.SelectedSeverity == "warning")">🟡 تحذير</option>
+                        <option value="critical" selected="@(ViewBag.SelectedSeverity == "critical")">🔴 حرج</option>
+                    </select>
+                </div>
+
+                @if (canFilterApartment)
+                {
+                    <div class="col-md-2">
+                        <label class="form-label small">Apartment ID</label>
+                        <input name="apartmentId" value="@ViewBag.SelectedApartmentId" class="form-control form-control-sm" placeholder="اختياري" />
+                    </div>
+                }
+
+                <div class="col-md-2">
+                    <label class="form-label small">من تاريخ</label>
+                    <input name="from" type="date" value="@ViewBag.From" class="form-control form-control-sm" />
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label small">إلى تاريخ</label>
+                    <input name="to" type="date" value="@ViewBag.To" class="form-control form-control-sm" />
+                </div>
+
+                @* ✅ بنحفظ حجم الصفحة الحالي *@
+                <input type="hidden" name="pageSize" value="@Model.PageSize" />
+
+                <div class="col-md-2">
+                    <button class="btn btn-primary btn-sm w-100">🔍 فلترة</button>
+                </div>
+                <div class="col-md-2">
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm w-100">↻ إعادة تعيين</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @* ============ Pagination (فوق) ============ *@
+    @{
+        ViewData["CurrentPage"] = Model.CurrentPage;
+        ViewData["PageSize"] = Model.PageSize;
+        ViewData["TotalItems"] = Model.TotalItems;
+        ViewData["TotalPages"] = Model.TotalPages;
+        ViewData["HasPrevious"] = Model.HasPrevious;
+        ViewData["HasNext"] = Model.HasNext;
+        ViewData["FirstItemIndex"] = Model.FirstItemIndex;
+        ViewData["LastItemIndex"] = Model.LastItemIndex;
+        ViewData["ActionName"] = "Index";
+        ViewData["ControllerName"] = "AuditLog";
+        ViewData["RouteValues"] = routeValuesStr;
+        ViewData["PageSizeOptions"] = new[] { 10, 25, 50, 100 };
+    }
+    @await Html.PartialAsync("_Pagination", new
+    {
+        CurrentPage = Model.CurrentPage,
+        PageSize = Model.PageSize,
+        TotalItems = Model.TotalItems,
+        TotalPages = Model.TotalPages,
+        HasPrevious = Model.HasPrevious,
+        HasNext = Model.HasNext,
+        FirstItemIndex = Model.FirstItemIndex,
+        LastItemIndex = Model.LastItemIndex,
+        ActionName = "Index",
+        ControllerName = "AuditLog",
+        RouteValues = routeValuesStr,
+        PageSizeOptions = new[] { 10, 25, 50, 100 }
+    })
+
+    @* ============ الجدول ============ *@
+    @if (Model.Items.Count == 0)
+    {
+        <div class="alert alert-info">لا توجد سجلات مطابقة للفلاتر.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-sm table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>العملية</th>
+                        <th>الخطورة</th>
+                        <th>المستخدم</th>
+                        <th>الدور</th>
+                        <th>العمارة</th>
+                        <th>الشقة</th>
+                        <th>تفاصيل</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var e in Model.Items)
+                    {
+                        <tr>
+                            <td class="text-nowrap">
+                                <small>@e.EffectiveDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</small>
+                            </td>
+                            <td>
+                                <strong>@BuildingManagementMvc.Services.AuditLogQueryService.LabelAr(e.Action)</strong>
+                                <br /><small class="text-muted"><code>@e.Action</code></small>
+                            </td>
+                            <td>
+                                <span class="badge @BuildingManagementMvc.Services.AuditLogQueryService.SeverityBadgeClass(e.Severity)">
+                                    @BuildingManagementMvc.Services.AuditLogQueryService.SeverityLabelAr(e.Severity)
+                                </span>
+                            </td>
+                            <td><small>@(e.UserId ?? "—")</small></td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(e.UserRole))
+                                {
+                                    <span class="badge bg-secondary">@e.UserRole</span>
+                                }
+                            </td>
+                            <td><small>@(e.BuildingId ?? "—")</small></td>
+                            <td><small>@(e.ApartmentId ?? "—")</small></td>
+                            <td>
+                                @if (e.Metadata != null && e.Metadata.Count > 0)
+                                {
+                                    <button class="btn btn-sm btn-outline-info" type="button"
+                                            data-bs-toggle="collapse" data-bs-target="#meta-@e.Id">
+                                        عرض
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                        @if (e.Metadata != null && e.Metadata.Count > 0)
+                        {
+                            <tr class="collapse" id="meta-@e.Id">
+                                <td colspan="8">
+                                    <pre class="bg-light p-2 mb-0" style="font-size:11px;max-height:200px;overflow:auto;">@System.Text.Json.JsonSerializer.Serialize(e.Metadata, new System.Text.Json.JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping })</pre>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @* ============ Pagination (تحت) ============ *@
+    @{
+        ViewData["CurrentPage"] = Model.CurrentPage;
+        ViewData["PageSize"] = Model.PageSize;
+        ViewData["TotalItems"] = Model.TotalItems;
+        ViewData["TotalPages"] = Model.TotalPages;
+        ViewData["HasPrevious"] = Model.HasPrevious;
+        ViewData["HasNext"] = Model.HasNext;
+        ViewData["FirstItemIndex"] = Model.FirstItemIndex;
+        ViewData["LastItemIndex"] = Model.LastItemIndex;
+        ViewData["ActionName"] = "Index";
+        ViewData["ControllerName"] = "AuditLog";
+        ViewData["RouteValues"] = routeValuesStr;
+        ViewData["PageSizeOptions"] = new[] { 10, 25, 50, 100 };
+    }
+    @await Html.PartialAsync("_Pagination", new
+    {
+        CurrentPage = Model.CurrentPage,
+        PageSize = Model.PageSize,
+        TotalItems = Model.TotalItems,
+        TotalPages = Model.TotalPages,
+        HasPrevious = Model.HasPrevious,
+        HasNext = Model.HasNext,
+        FirstItemIndex = Model.FirstItemIndex,
+        LastItemIndex = Model.LastItemIndex,
+        ActionName = "Index",
+        ControllerName = "AuditLog",
+        RouteValues = routeValuesStr,
+        PageSizeOptions = new[] { 10, 25, 50, 100 }
+    })
+</div>

@@ -1,0 +1,111 @@
+﻿@using System.Linq
+@{
+    // ✅ نقرا من ViewData بدل Model
+    int currentPage = (int)(ViewData["CurrentPage"] ?? 1);
+    int pageSize = (int)(ViewData["PageSize"] ?? 50);
+    int totalItems = (int)(ViewData["TotalItems"] ?? 0);
+    int totalPages = (int)(ViewData["TotalPages"] ?? 0);
+    bool hasPrev = (bool)(ViewData["HasPrevious"] ?? false);
+    bool hasNext = (bool)(ViewData["HasNext"] ?? false);
+    int firstIdx = (int)(ViewData["FirstItemIndex"] ?? 0);
+    int lastIdx = (int)(ViewData["LastItemIndex"] ?? 0);
+    string actionName = (string)(ViewData["ActionName"] ?? "Index");
+    string controllerName = (string)(ViewData["ControllerName"] ?? "");
+    var routeValues = ViewData["RouteValues"] as Dictionary<string, string> ?? new();
+    int[] pageSizeOptions = ViewData["PageSizeOptions"] as int[] ?? new[] { 10, 25, 50, 100 };
+}
+
+@if (totalItems > 0)
+{
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 my-2 p-2 bg-light rounded">
+
+        @* عرض المعلومات *@
+        <div class="text-muted small">
+            عرض <strong>@firstIdx</strong> – <strong>@lastIdx</strong>
+            من إجمالي <strong>@totalItems</strong>
+            @if (totalPages > 1)
+            {
+                <span> — صفحة <strong>@currentPage</strong> من <strong>@totalPages</strong></span>
+            }
+        </div>
+
+        @* تغيير حجم الصفحة *@
+        <div class="d-flex align-items-center gap-2">
+            <label class="form-label mb-0 small">حجم الصفحة:</label>
+            <select class="form-select form-select-sm" style="width:auto;"
+                    onchange="window.location.href = this.value;">
+                @foreach (var opt in pageSizeOptions)
+                {
+                    var newRoute = new Dictionary<string, string>(routeValues)
+                    {
+                        ["page"] = "1",
+                        ["pageSize"] = opt.ToString()
+                    };
+                    var url = Url.Action(actionName, controllerName, newRoute);
+                    <option value="@url" selected="@(opt == pageSize)">@opt</option>
+                }
+            </select>
+        </div>
+
+        @* أزرار التنقل *@
+        @if (totalPages > 1)
+        {
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+
+                    @* السابق *@
+                    @{
+                        var prevRoute = new Dictionary<string, string>(routeValues) { ["page"] = (currentPage - 1).ToString() };
+                        var prevUrl = Url.Action(actionName, controllerName, prevRoute);
+                    }
+                    <li class="page-item @(hasPrev ? "" : "disabled")">
+                        <a class="page-link" href="@(hasPrev ? prevUrl : "#")">‹ السابق</a>
+                    </li>
+
+                    @* أرقام الصفحات *@
+                    @{
+                        int startPage = Math.Max(1, currentPage - 2);
+                        int endPage = Math.Min(totalPages, currentPage + 2);
+
+                        if (startPage > 1)
+                        {
+                            var firstRoute = new Dictionary<string, string>(routeValues) { ["page"] = "1" };
+                            <li class="page-item"><a class="page-link" href="@Url.Action(actionName, controllerName, firstRoute)">1</a></li>
+                            if (startPage > 2)
+                            {
+                                <li class="page-item disabled"><span class="page-link">…</span></li>
+                            }
+                        }
+
+                        for (int i = startPage; i <= endPage; i++)
+                        {
+                            var pageRoute = new Dictionary<string, string>(routeValues) { ["page"] = i.ToString() };
+                            <li class="page-item @(i == currentPage ? "active" : "")">
+                                <a class="page-link" href="@Url.Action(actionName, controllerName, pageRoute)">@i</a>
+                            </li>
+                        }
+
+                        if (endPage < totalPages)
+                        {
+                            if (endPage < totalPages - 1)
+                            {
+                                <li class="page-item disabled"><span class="page-link">…</span></li>
+                            }
+                            var lastRoute = new Dictionary<string, string>(routeValues) { ["page"] = totalPages.ToString() };
+                            <li class="page-item"><a class="page-link" href="@Url.Action(actionName, controllerName, lastRoute)">@totalPages</a></li>
+                        }
+                    }
+
+                    @* التالي *@
+                    @{
+                        var nextRoute = new Dictionary<string, string>(routeValues) { ["page"] = (currentPage + 1).ToString() };
+                        var nextUrl = Url.Action(actionName, controllerName, nextRoute);
+                    }
+                    <li class="page-item @(hasNext ? "" : "disabled")">
+                        <a class="page-link" href="@(hasNext ? nextUrl : "#")">التالي ›</a>
+                    </li>
+                </ul>
+            </nav>
+        }
+    </div>
+}

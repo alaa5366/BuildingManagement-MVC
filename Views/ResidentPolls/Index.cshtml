@@ -1,0 +1,82 @@
+@model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Poll>
+@{
+    ViewData["Title"] = "التصويتات";
+    var building = (Building)ViewBag.Building;
+    var apt = (Apartment)ViewBag.Apt;
+    var openApts = building.Apartments.Count(a => !a.Closed);
+    var routeValuesStr = ViewBag.RouteValues as Dictionary<string, string> ?? new();
+}
+
+<h3 class="mb-3">🗳️ التصويتات (@Model.TotalItems)</h3>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-warning">@TempData["Error"]</div>
+}
+
+@* ✅ Pagination (فوق) *@
+@{
+    ViewData["CurrentPage"] = Model.CurrentPage;
+    ViewData["PageSize"] = Model.PageSize;
+    ViewData["TotalItems"] = Model.TotalItems;
+    ViewData["TotalPages"] = Model.TotalPages;
+    ViewData["HasPrevious"] = Model.HasPrevious;
+    ViewData["HasNext"] = Model.HasNext;
+    ViewData["FirstItemIndex"] = Model.FirstItemIndex;
+    ViewData["LastItemIndex"] = Model.LastItemIndex;
+    ViewData["ActionName"] = "Index";
+    ViewData["ControllerName"] = "ResidentPolls";
+    ViewData["RouteValues"] = routeValuesStr;
+    ViewData["PageSizeOptions"] = new[] { 10, 25, 50, 100 };
+}
+@await Html.PartialAsync("_Pagination")
+
+@if (Model.Items.Count == 0)
+{
+    <div class="alert alert-info">لا توجد تصويتات نشطة حاليًا.</div>
+}
+else
+{
+    foreach (var poll in Model.Items)
+    {
+        var total = poll.Votes.Count;
+        var myVote = poll.Votes.TryGetValue(apt.Id, out var mv) ? mv : null;
+        var active = !poll.Closed && (string.IsNullOrEmpty(poll.Deadline) || !(DateTime.TryParse(poll.Deadline, out var dl) && dl < DateTime.UtcNow));
+
+        <div class="bg-white rounded shadow-sm p-3 mb-3">
+            <h5>@poll.Question</h5>
+            @if (!string.IsNullOrEmpty(poll.Description))
+            {
+                <div class="text-muted small mb-2">@poll.Description</div>
+            }
+            @if (myVote != null)
+            {
+                <span class="badge bg-success mb-2">✅ صوّتت</span>
+            }
+            <div class="mt-2">
+                @foreach (var opt in poll.Options)
+                {
+                    var cnt = poll.Votes.Values.Count(v => v == opt.Id);
+                    var pct = total > 0 ? (100.0 * cnt / total) : 0;
+                    var chosen = myVote == opt.Id;
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between small"><span>@(chosen ? "✓ " : "")@opt.Text</span><span>@cnt (@pct.ToString("0"))%</span></div>
+                        <div class="progress mb-1" style="height:8px;"><div class="progress-bar" style="width:@pct.ToString("0")%; background-color: @(chosen ? "var(--teal)" : "#ccc");"></div></div>
+                        @if (active && myVote == null)
+                        {
+                            <form method="post" asp-action="Vote">
+                                <input type="hidden" name="pollId" value="@poll.Id" />
+                                <input type="hidden" name="optionId" value="@opt.Id" />
+                                <button class="btn btn-sm btn-outline-secondary">صوّت لهذا الخيار</button>
+                            </form>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="text-muted small mt-2">إجمالي الأصوات: @total / @openApts</div>
+        </div>
+    }
+}
+
+@* ✅ Pagination (تحت) *@
+@await Html.PartialAsync("_Pagination")

@@ -1,0 +1,107 @@
+﻿@{
+    ViewData["Title"] = "صيانة DB";
+    var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Models.Building> ?? new();
+    var result = ViewBag.Result as BuildingManagementMvc.Models.MaintenanceResult;
+    var selectedTool = ViewBag.SelectedTool as string;
+    var fix = ViewBag.Fix as bool? ?? false;
+}
+
+<div class="container">
+    <h2>🔧 صيانة قاعدة البيانات</h2>
+
+    <div class="row g-3 mb-4">
+        <!-- أداة 1: كشف تكرار المستخدمين -->
+        <div class="col-md-6">
+            <form method="post" asp-action="RunMaintenance" class="card">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="tool" value="duplicate-users" />
+                <div class="card-body">
+                    <h5>👥 كشف تكرار المستخدمين</h5>
+                    <p class="text-muted">مستخدمين بنفس رقم الموبايل</p>
+                    <div class="form-check mb-2">
+                        <input type="checkbox" name="fix" value="true" class="form-check-input" />
+                        <label class="form-check-label">إصلاح تلقائي (حذف المكرر)</label>
+                    </div>
+                    <button class="btn btn-warning btn-sm">🔍 فحص</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- أداة 2: دفعات معلقة قديمة -->
+        <div class="col-md-6">
+            <form method="post" asp-action="RunMaintenance" class="card">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="tool" value="stale-deposits" />
+                <div class="card-body">
+                    <h5>⏰ دفعات معلقة قديمة</h5>
+                    <div class="mb-2">
+                        <label>أقدم من (يوم)</label>
+                        <input name="olderThanDays" type="number" value="90" class="form-control form-control-sm" />
+                    </div>
+                    <div class="form-check mb-2">
+                        <input type="checkbox" name="fix" value="true" class="form-check-input" />
+                        <label class="form-check-label">إلغاء تلقائي</label>
+                    </div>
+                    <button class="btn btn-warning btn-sm">🔍 فحص</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- أداة 3: إعادة حساب الأرصدة -->
+        <div class="col-md-6">
+            <form method="post" asp-action="RunMaintenance" class="card">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="tool" value="recalc-balances" />
+                <div class="card-body">
+                    <h5>🧮 إعادة حساب الأرصدة</h5>
+                    <select name="buildingId" class="form-select form-select-sm mb-2" required>
+                        <option value="">— اختر عمارة —</option>
+                        @foreach (var b in buildings)
+                        {
+                            <option value="@b.Id">@b.Name</option>
+                        }
+                    </select>
+                    <button class="btn btn-warning btn-sm">▶️ تشغيل</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- أداة 4: كشف اليتامى -->
+        <div class="col-md-6">
+            <form method="post" asp-action="RunMaintenance" class="card">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="tool" value="orphaned-deposits" />
+                <div class="card-body">
+                    <h5>🔗 كشف المراجع اليتيمة</h5>
+                    <p class="text-muted">دفعات مرتبطة بشقق مش موجودة</p>
+                    <div class="form-check mb-2">
+                        <input type="checkbox" name="fix" value="true" class="form-check-input" />
+                        <label class="form-check-label">إلغاء تلقائي</label>
+                    </div>
+                    <button class="btn btn-warning btn-sm">🔍 فحص</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (result != null)
+    {
+        <div class="card">
+            <div class="card-header bg-info">
+                نتيجة: @result.ToolName
+            </div>
+            <div class="card-body">
+                <p><strong>عدد العناصر:</strong> @result.ItemsFound</p>
+                <p><strong>تم إصلاحها:</strong> @result.ItemsFixed</p>
+
+                @if (result.Details.Count > 0)
+                {
+                    <details>
+                        <summary>التفاصيل</summary>
+                        <pre style="font-size:11px;max-height:300px;overflow:auto;">@string.Join("\n", result.Details.Take(100))</pre>
+                    </details>
+                }
+            </div>
+        </div>
+    }
+</div>

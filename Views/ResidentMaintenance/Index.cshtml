@@ -1,0 +1,42 @@
+@model List<MaintenanceRecord>
+@{
+    ViewData["Title"] = "الصيانة";
+    string StatusLabel(string s) => s switch { "open" => "🔓 مفتوحة", "inprogress" => "🔧 جاري التنفيذ", "done" => "✅ تم", _ => s };
+    var totalCost = Model.Sum(m => m.Cost);
+}
+
+<h3 class="mb-3">🔧 سجل الصيانة</h3>
+
+<div class="row mb-3 text-center g-2">
+    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">مفتوحة</div><div class="fw-bold">@Model.Count(m => m.Status == "open")</div></div></div>
+    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">جاري التنفيذ</div><div class="fw-bold">@Model.Count(m => m.Status == "inprogress")</div></div></div>
+    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">تم</div><div class="fw-bold">@Model.Count(m => m.Status == "done")</div></div></div>
+    @if (totalCost > 0)
+    {
+        <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">إجمالي التكلفة</div><div class="fw-bold">@totalCost.ToString("0.##")</div></div></div>
+    }
+</div>
+
+@if (Model.Count == 0)
+{
+    <div class="alert alert-info">لا توجد سجلات صيانة حاليًا.</div>
+}
+else
+{
+    foreach (var m in Model)
+    {
+        <div class="bg-white rounded shadow-sm p-3 mb-2">
+            <div class="fw-bold">@m.Title</div>
+            <div class="text-muted small">📅 @m.Date @(string.IsNullOrEmpty(m.Vendor) ? "" : "· 👤 " + m.Vendor)</div>
+            @if (!string.IsNullOrEmpty(m.Description))
+            {
+                <div class="small mt-1">@m.Description</div>
+            }
+            <span class="badge bg-secondary mt-1">@StatusLabel(m.Status)</span>
+            @if (m.Cost > 0)
+            {
+                <span class="fw-bold ms-2">@m.Cost.ToString("0.##") ج.م</span>
+            }
+        </div>
+    }
+}

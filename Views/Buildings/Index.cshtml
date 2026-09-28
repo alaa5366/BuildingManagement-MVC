@@ -1,23 +1,53 @@
-@model List<Building>
-@{ ViewData["Title"] = "العمارات"; }
+@model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Building>
+@{
+    ViewData["Title"] = "العمارات";
+    var routeValuesStr = ViewBag.RouteValues as Dictionary<string, string> ?? new();
+}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>العمارات</h3>
+    <h3>العمارات (@Model.TotalItems)</h3>
     <a asp-action="Create" class="btn btn-brand">+ عمارة جديدة</a>
 </div>
 
-<div class="table-responsive">
-    <table class="table table-hover bg-white">
-        <thead><tr><th>الرقم</th><th>الاسم</th><th></th></tr></thead>
-        <tbody>
-        @foreach (var b in Model)
-        {
-            <tr>
-                <td>@b.BuildingNumber</td>
-                <td>@b.Name</td>
-                <td><a asp-action="Details" asp-route-id="@b.Id" class="btn btn-sm btn-outline-secondary">تفاصيل</a></td>
-            </tr>
-        }
-        </tbody>
-    </table>
-</div>
+@* ✅ Pagination (فوق) *@
+@{
+    ViewData["CurrentPage"] = Model.CurrentPage;
+    ViewData["PageSize"] = Model.PageSize;
+    ViewData["TotalItems"] = Model.TotalItems;
+    ViewData["TotalPages"] = Model.TotalPages;
+    ViewData["HasPrevious"] = Model.HasPrevious;
+    ViewData["HasNext"] = Model.HasNext;
+    ViewData["FirstItemIndex"] = Model.FirstItemIndex;
+    ViewData["LastItemIndex"] = Model.LastItemIndex;
+    ViewData["ActionName"] = "Index";
+    ViewData["ControllerName"] = "Buildings";
+    ViewData["RouteValues"] = routeValuesStr;
+    ViewData["PageSizeOptions"] = new[] { 10, 25, 50, 100 };
+}
+@await Html.PartialAsync("_Pagination")
+
+@if (Model.Items.Count == 0)
+{
+    <div class="alert alert-info">لا توجد عمارات.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover bg-white">
+            <thead><tr><th>الرقم</th><th>الاسم</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var b in Model.Items)
+                {
+                    <tr>
+                        <td>@b.BuildingNumber</td>
+                        <td>@b.Name</td>
+                        <td><a asp-action="Details" asp-route-id="@b.Id" class="btn btn-sm btn-outline-secondary">تفاصيل</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@* ✅ Pagination (تحت) *@
+@await Html.PartialAsync("_Pagination")

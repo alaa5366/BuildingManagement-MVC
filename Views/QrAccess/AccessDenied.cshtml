@@ -1,0 +1,10 @@
+@{ ViewData["Title"] = "تعذّر الدخول"; }
+
+<div class="auth-wrap">
+    <div class="auth-card text-center">
+        <div style="font-size:48px;">🚫</div>
+        <h3 class="mt-2">تعذّر الدخول</h3>
+        <p class="text-muted">@ViewBag.Error</p>
+        <a asp-controller="Account" asp-action="LoginChoice" class="btn btn-brand">الدخول العادي</a>
+    </div>
+</div>

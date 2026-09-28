@@ -1,0 +1,65 @@
+﻿@model BuildingManagementMvc.Models.AppUserDoc
+@{
+    ViewData["Title"] = "تعديل أدمن";
+    var allPerms = ViewBag.AllPermissions as List<string> ?? new();
+    var current = Model.Permissions ?? new List<string>();
+}
+
+<div class="container">
+    <h2>✏️ تعديل: @Model.Name</h2>
+
+    <form asp-action="Edit" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.Uid" />
+
+        <div class="mb-3">
+            <label class="form-label">الاسم</label>
+            <input name="name" class="form-control" value="@Model.Name" required />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">رقم الموبايل</label>
+            <input name="phone" class="form-control" value="@Model.Phone" required />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">البريد</label>
+            <input class="form-control" value="@Model.Email" disabled />
+        </div>
+
+        <div class="mb-3">
+            <label><input type="checkbox" name="isActive" value="true" @(Model.IsActive && !Model.Disabled ? "checked" : "") /> نشط</label>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">الصلاحيات</label>
+            <div class="row">
+                @foreach (var p in allPerms)
+                {
+                    <div class="col-md-4">
+                        <label>
+                            <input type="checkbox" name="permissions" value="@p" @(current.Contains(p) ? "checked" : "") /> @BuildingManagementMvc.Models.AdminPermissions.LabelAr(p)
+                        </label>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <button class="btn btn-primary">حفظ</button>
+        <a asp-action="Index" class="btn btn-secondary">إلغاء</a>
+    </form>
+
+    <hr />
+
+    <h4>🔐 تغيير PIN</h4>
+    <form asp-action="ChangePin" method="post" class="row g-2">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.Uid" />
+        <div class="col-md-4">
+            <input name="newPin" type="password" class="form-control" placeholder="PIN جديد" required />
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-warning">تغيير PIN</button>
+        </div>
+    </form>
+</div>

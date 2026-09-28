@@ -2,14 +2,20 @@
     ViewData["Title"] = "المحفظة";
     var building = (Building)ViewBag.Building;
     string month = ViewBag.Month;
-    var balances = (List<(Apartment Apt, double Balance)>)ViewBag.Balances;
-    var pending = (List<(Apartment Apt, Deposit Deposit)>)ViewBag.Pending;
+    var balances = (BuildingManagementMvc.Models.PagedResult<(BuildingManagementMvc.Models.Apartment Apt, double Balance)>)ViewBag.Balances;
+    var pending = (BuildingManagementMvc.Models.PagedResult<(BuildingManagementMvc.Models.Apartment Apt, BuildingManagementMvc.Models.Deposit Deposit)>)ViewBag.Pending;
     var totals = ((double Collected, double Expenses, double Revenues, int OpenCount, int ClosedCount, double Balance, double TotalWallet))ViewBag.Totals;
+    var routeValues = ViewBag.RouteValues as Dictionary<string, string?> ?? new();
+    var routeValuesStr = new Dictionary<string, string>();
+    foreach (var kv in routeValues)
+        if (!string.IsNullOrWhiteSpace(kv.Value))
+            routeValuesStr[kv.Key] = kv.Value!;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>💼 محفظة @building.Name</h3>
     <form method="get" class="d-flex gap-2">
+        <input type="hidden" name="pageSize" value="@balances.PageSize" />
         <input type="month" name="month" value="@month" class="form-control" onchange="this.form.submit()" />
     </form>
 </div>
@@ -21,10 +27,13 @@
     <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">إجمالي المحفظة</div><div class="fw-bold">@totals.TotalWallet.ToString("0.##")</div></div></div>
 </div>
 
-@if (pending.Count > 0)
+@* ============================================================ *@
+@* ✅ دفعات في انتظار التأكيد                                  *@
+@* ============================================================ *@
+@if (pending.TotalItems > 0)
 {
     <div class="bg-white rounded shadow-sm p-3 mb-3">
-        <h5>⏳ دفعات في انتظار التأكيد</h5>
+        <h5>⏳ دفعات في انتظار التأكيد (@pending.TotalItems)</h5>
         <table class="table table-sm">
             <thead>
                 <tr>
@@ -37,7 +46,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var (apt, dep) in pending)
+                @foreach (var (apt, dep) in pending.Items)
                 {
                     <tr>
                         <td>شقة @apt.Number</td>
@@ -79,12 +88,32 @@
     </div>
 }
 
+@* ============================================================ *@
+@* ✅ أرصدة الشقق + Pagination                                  *@
+@* ============================================================ *@
 <div class="bg-white rounded shadow-sm p-3">
-    <h5>أرصدة الشقق</h5>
+    <h5>أرصدة الشقق (@balances.TotalItems)</h5>
+
+    @* ✅ Pagination (فوق) *@
+    @{
+        ViewData["CurrentPage"] = balances.CurrentPage;
+        ViewData["PageSize"] = balances.PageSize;
+        ViewData["TotalItems"] = balances.TotalItems;
+        ViewData["TotalPages"] = balances.TotalPages;
+        ViewData["HasPrevious"] = balances.HasPrevious;
+        ViewData["HasNext"] = balances.HasNext;
+        ViewData["FirstItemIndex"] = balances.FirstItemIndex;
+        ViewData["LastItemIndex"] = balances.LastItemIndex;
+        ViewData["ActionName"] = "Index";
+        ViewData["ControllerName"] = "Wallet";
+        ViewData["RouteValues"] = routeValuesStr;
+        ViewData["PageSizeOptions"] = new[] { 10, 25, 50, 100 };
+    }
+    @await Html.PartialAsync("_Pagination")
 
     @{
         var floorOrderMap = building.Floors.ToDictionary(f => f.Id, f => f.Order);
-        var balancesByFloor = balances
+        var balancesByFloor = balances.Items
             .GroupBy(b => b.Apt.FloorId)
             .OrderBy(g => floorOrderMap.GetValueOrDefault(g.Key, int.MaxValue));
     }
@@ -119,6 +148,9 @@
             </tbody>
         </table>
     }
+
+    @* ✅ Pagination (تحت) *@
+    @await Html.PartialAsync("_Pagination")
 </div>
 
 <!-- ============================================================ -->
@@ -149,21 +181,19 @@
 
 @section Scripts {
     <script>
-        // ✅ لما يفتح الـ Modal، نعرض الصورة المناسبة
         var receiptModal = document.getElementById('receiptModal');
         receiptModal.addEventListener('show.bs.modal', function(event) {
             var button = event.relatedTarget;
             var url = button.getAttribute('data-receipt-url');
             var name = button.getAttribute('data-receipt-name');
 
-            document.getElementById('receiptModalTitle').innerText = '📎 إيصال ' + name;
+                    document.getElementById('receiptModalTitle').innerText = '📎 إيصال ' + name;
             document.getElementById('receiptImage').src = url;
             document.getElementById('receiptOpenLink').href = url;
             document.getElementById('receiptDownloadLink').href = url;
-        });
+                });
 
-        // ✅ لما يقفل الـ Modal، نفرّغ الصورة (عشان الذاكرة)
-        receiptModal.addEventListener('hidden.bs.modal', function() {
+                receiptModal.addEventListener('hidden.bs.modal', function() {
             document.getElementById('receiptImage').src = '';
         });
     </script>

@@ -38,12 +38,37 @@
         </a>
     </div>
     <div class="col-md-4">
-        <a asp-controller="Expenses" asp-action="Categories" class="btn btn-outline-secondary w-100 py-3">
+        <a asp-controller="Categories" asp-action="Index" class="btn btn-outline-secondary w-100 py-3">
             🏷️ الفئات المالية
         </a>
     </div>
-</div>
-
-<div class="alert alert-info mt-4">
-    💡 باقي شاشات الأدمن (الفواتير، التصويتات، الصيانة...) هتتضاف في المراحل الجاية.
+    <div class="row justify-content-center g-3 mt-3">
+        <div class="col-md-3">
+            <a asp-controller="Polls" asp-action="Index" class="btn btn-outline-primary w-100 py-3">
+                🗳️ التصويتات
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a asp-controller="Maintenance" asp-action="Index" class="btn btn-outline-info w-100 py-3">
+                🔧 الصيانة
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a asp-controller="Notifications" asp-action="Index" class="btn btn-outline-success w-100 py-3">
+                🔔 الإشعارات
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a asp-controller="WhatsApp" asp-action="Index" class="btn btn-outline-success w-100 py-3">
+                💬 واتساب
+            </a>
+        </div>
+    </div>
+    <div class="row justify-content-center g-3 mt-3">
+        <div class="col-md-6">
+            <a asp-controller="AuditLog" asp-action="Index" class="btn btn-dark w-100 py-3">
+                📜 السجل
+            </a>
+        </div>
+    </div>
 </div>
