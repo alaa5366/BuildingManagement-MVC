@@ -75,17 +75,39 @@ public class NotificationsService
 
     // -------- Helpers لنفس إشعارات الأصل الجاهزة --------
     public void NotifyAdminNewDeposit(Building building, Deposit deposit, Apartment apt) =>
-        Push(building, "admin", null, "deposit_new", "💰", "دفعة جديدة", $"شقة {apt.Number}: {deposit.Amount:0.##} ج.م — {building.Name}");
+        Push(building, "admin", null, "deposit_new", "💰", "دفعة جديدة",
+            $"شقة {apt.Number}: {deposit.Amount:0.##} ج.م — {building.Name}");
 
     public void NotifyResidentDepositConfirmed(Building building, Deposit deposit, Apartment apt) =>
-        Push(building, "resident", apt.Id, "deposit_confirmed", "✅", "تم تأكيد الدفعة", $"{deposit.Amount:0.##} ج.م — {building.Name}");
+        Push(building, "resident", apt.Id, "deposit_confirmed", "✅", "تم تأكيد الدفعة",
+            $"{deposit.Amount:0.##} ج.م — {building.Name}");
 
     public void NotifyResidentDepositCancelled(Building building, Deposit deposit, Apartment apt, string? reason) =>
-        Push(building, "resident", apt.Id, "deposit_cancelled", "❌", "تم إلغاء الدفعة", $"{deposit.Amount:0.##} ج.م — السبب: {(string.IsNullOrWhiteSpace(reason) ? "—" : reason)}");
+        Push(building, "resident", apt.Id, "deposit_cancelled", "❌", "تم إلغاء الدفعة",
+            $"{deposit.Amount:0.##} ج.م — السبب: {(string.IsNullOrWhiteSpace(reason) ? "—" : reason)}");
 
     public void NotifyResidentsNewExpense(Building building, string categoryName, double amount)
     {
         foreach (var apt in building.Apartments.Where(a => !a.Closed))
-            Push(building, "resident", apt.Id, "expense_new", "💸", "مصروف جديد", $"{categoryName}: {amount:0.##} ج.م — {building.Name}");
+            Push(building, "resident", apt.Id, "expense_new", "💸", "مصروف جديد",
+                $"{categoryName}: {amount:0.##} ج.م — {building.Name}");
+    }
+
+    // ============================================================
+    // ✅ Phase 21: إشعار الساكن إن دفعة معلقة اتعدلت
+    // ============================================================
+    public void NotifyResidentDepositUpdated(
+        Building building,
+        Deposit deposit,
+        Apartment apt,
+        double oldAmount,
+        string? reason)
+    {
+        var body = $"دفعتك {deposit.Number} اتعدلت من {oldAmount:0.##} ج.م إلى {deposit.Amount:0.##} ج.م";
+        if (!string.IsNullOrWhiteSpace(reason))
+            body += $" — السبب: {reason}";
+        body += $" — {building.Name}";
+
+        Push(building, "resident", apt.Id, "deposit_updated", "✏️", "تم تعديل الدفعة", body);
     }
 }

@@ -67,6 +67,7 @@ public class AdminManagementService
                 ["email"] = email,
                 ["name"] = name,
                 ["phone"] = normalizedPhone,
+                ["whatsapp"] = normalizedPhone,
                 ["pin"] = pin,
                 ["role"] = "admin",
                 ["buildingIds"] = new List<object> { buildingId },

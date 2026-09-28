@@ -52,7 +52,15 @@
                         <td>شقة @apt.Number</td>
                         <td>@dep.Number</td>
                         <td>@dep.Amount.ToString("0.##")</td>
-                        <td>@dep.Note</td>
+                        <td>
+                            @dep.Note
+                            @if (!string.IsNullOrWhiteSpace(dep.UpdateReason))
+                            {
+                                <div class="small text-warning mt-1">
+                                    ✏️ معدّلة: @dep.UpdateReason
+                                </div>
+                            }
+                        </td>
                         <td>
                             @if (dep.Receipt?.Success == true)
                             {
@@ -80,6 +88,18 @@
                                 <input type="hidden" name="depositId" value="@dep.Id" />
                                 <button class="btn btn-sm btn-outline-danger">إلغاء</button>
                             </form>
+
+                            @* ✅ Phase 21: زر تعديل الدفعة *@
+                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                    data-bs-toggle="modal" data-bs-target="#editDepositModal"
+                                    data-deposit-id="@dep.Id"
+                                    data-deposit-number="@dep.Number"
+                                    data-deposit-amount="@dep.Amount.ToString("0.##")"
+                                    data-deposit-note="@dep.Note"
+                                    data-deposit-month="@month"
+                                    data-deposit-apt="شقة @apt.Number">
+                                ✏️ تعديل
+                            </button>
                         </td>
                     </tr>
                 }
@@ -179,22 +199,98 @@
     </div>
 </div>
 
+<!-- ============================================================ -->
+<!-- ✅ Phase 21: Modal لتعديل الدفعة المعلقة                       -->
+<!-- ============================================================ -->
+<div class="modal fade" id="editDepositModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <form method="post" asp-action="UpdateDeposit" class="modal-content">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="month" id="editMonth" />
+            <input type="hidden" name="depositId" id="editDepositId" />
+
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">✏️ تعديل دفعة</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="alert alert-info small mb-3">
+                    <strong id="editDepositNumber"></strong> — <span id="editDepositApt"></span>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">💰 المبلغ (ج.م)</label>
+                        <input type="number" name="amount" id="editAmount"
+                               class="form-control form-control-lg"
+                               step="0.01" min="0.01" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            📝 سبب التعديل <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" name="reason" id="editReason"
+                               class="form-control form-control-lg"
+                               maxlength="200" required
+                               placeholder="مثال: تصحيح المبلغ بناءً على الإيصال" />
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">📋 ملاحظة</label>
+                        <textarea name="note" id="editNote"
+                                  class="form-control" rows="2"
+                                  maxlength="500"
+                                  placeholder="ملاحظة على الدفعة (اختياري)"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="submit" class="btn btn-primary">💾 حفظ التعديلات</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @section Scripts {
     <script>
+        // ============================================================
+        // Modal الإيصال
+        // ============================================================
         var receiptModal = document.getElementById('receiptModal');
         receiptModal.addEventListener('show.bs.modal', function(event) {
             var button = event.relatedTarget;
             var url = button.getAttribute('data-receipt-url');
             var name = button.getAttribute('data-receipt-name');
 
-                    document.getElementById('receiptModalTitle').innerText = '📎 إيصال ' + name;
+            document.getElementById('receiptModalTitle').innerText = '📎 إيصال ' + name;
             document.getElementById('receiptImage').src = url;
             document.getElementById('receiptOpenLink').href = url;
             document.getElementById('receiptDownloadLink').href = url;
-                });
+        });
 
-                receiptModal.addEventListener('hidden.bs.modal', function() {
+        receiptModal.addEventListener('hidden.bs.modal', function() {
             document.getElementById('receiptImage').src = '';
         });
+
+        // ============================================================
+        // ✅ Phase 21 — Modal تعديل الدفعة
+        // ============================================================
+        var editModal = document.getElementById('editDepositModal');
+        if (editModal) {
+            editModal.addEventListener('show.bs.modal', function(event) {
+                var btn = event.relatedTarget;
+
+                document.getElementById('editDepositId').value = btn.getAttribute('data-deposit-id');
+                document.getElementById('editMonth').value = btn.getAttribute('data-deposit-month');
+                document.getElementById('editDepositNumber').innerText = btn.getAttribute('data-deposit-number');
+                document.getElementById('editDepositApt').innerText = btn.getAttribute('data-deposit-apt');
+                document.getElementById('editAmount').value = btn.getAttribute('data-deposit-amount');
+                document.getElementById('editNote').value = btn.getAttribute('data-deposit-note') || '';
+                document.getElementById('editReason').value = '';
+            });
+        }
     </script>
 }

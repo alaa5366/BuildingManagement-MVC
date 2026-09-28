@@ -1,0 +1,93 @@
+﻿@model BuildingManagementMvc.Models.RestorePreview
+@{
+    ViewData["Title"] = "معاينة الاستعادة";
+    var totalDocs = Model.Collections.Sum(c => c.DocCount);
+}
+
+<div class="container">
+    <h2>🔍 معاينة الاستعادة</h2>
+
+    <div class="card mb-3">
+        <div class="card-header bg-info">
+            <strong>📄 معلومات الملف</strong>
+        </div>
+        <div class="card-body">
+            <div><strong>الملف:</strong> @Model.FileName</div>
+            <div><strong>الحجم:</strong> @(Model.FileSize / 1024) KB</div>
+            <div><strong>Collections:</strong> @Model.Collections.Count</div>
+            <div><strong>إجمالي المستندات:</strong> @totalDocs</div>
+        </div>
+    </div>
+
+    @if (Model.Errors.Count > 0)
+    {
+        <div class="alert alert-warning">
+            <strong>تحذيرات:</strong>
+            <ul>@foreach (var err in Model.Errors) {
+                <li>@err</li>
+            }
+        </ul>
+    </div>
+}
+
+<form method="post" asp-action="ExecuteRestore">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="tempFilePath" value="@Model.TempFilePath" />
+
+    <div class="card mb-3">
+        <div class="card-header">
+            <strong>📦 اختر Collections للاستعادة</strong>
+            <div class="float-end">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAll(true)">تحديد الكل</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAll(false)">إلغاء الكل</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;"></th>
+                        <th>Collection</th>
+                        <th>الوصف</th>
+                        <th>عدد المستندات</th>
+                        <th>الحجم</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in Model.Collections)
+                    {
+                        <tr>
+                            <td><input type="checkbox" name="collections" value="@c.Collection" class="form-check-input col-check" checked /></td>
+                            <td><code>@c.Collection</code></td>
+                            <td>@c.LabelAr</td>
+                            <td><span class="badge bg-secondary">@c.DocCount</span></td>
+                            <td><small>@(c.SizeBytes / 1024) KB</small></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="form-check mb-3">
+        <input type="checkbox" name="overwrite" value="true" class="form-check-input" id="overwrite" />
+        <label class="form-check-label text-danger" for="overwrite">
+            ⚠️ <strong>استبدال</strong> المستندات الموجودة (Overwrite)
+        </label>
+    </div>
+
+    <button type="submit" class="btn btn-danger btn-lg"
+            onclick="return confirm('تأكيد الاستعادة؟');">
+        ⚠️ تنفيذ الاستعادة
+    </button>
+    <a asp-action="Restore" class="btn btn-secondary">← إلغاء</a>
+</form>
+</div>
+
+@section Scripts {
+    <script>
+        function selectAll(checked) {
+            document.querySelectorAll('.col-check').forEach(cb => cb.checked = checked);
+        }
+    </script>
+}

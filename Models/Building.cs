@@ -135,6 +135,9 @@ public class Apartment
 
     [FirestoreProperty("disabledReason")]
     public string DisabledReason { get; set; } = "";
+    // ✅ جديد: إعدادات الساكن
+    [FirestoreProperty("settings")]
+    public UserSettingsDoc? Settings { get; set; }
 }
 
 [FirestoreData]

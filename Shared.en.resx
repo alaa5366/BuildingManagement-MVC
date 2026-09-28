@@ -1,0 +1,63 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="App_Name" xml:space="preserve">
+    <value>Building Management System</value>
+  </data>
+  <data name="App_ShortName" xml:space="preserve">
+    <value>Building Mgmt</value>
+  </data>
+  <data name="Nav_Home" xml:space="preserve"><value>Home</value></data>
+  <data name="Nav_Wallet" xml:space="preserve"><value>Wallet</value></data>
+  <data name="Nav_Expenses" xml:space="preserve"><value>Expenses</value></data>
+  <data name="Nav_Revenues" xml:space="preserve"><value>Revenues</value></data>
+  <data name="Nav_Categories" xml:space="preserve"><value>Categories</value></data>
+  <data name="Nav_Polls" xml:space="preserve"><value>Polls</value></data>
+  <data name="Nav_Maintenance" xml:space="preserve"><value>Maintenance</value></data>
+  <data name="Nav_Notifications" xml:space="preserve"><value>Notifications</value></data>
+  <data name="Nav_WhatsApp" xml:space="preserve"><value>WhatsApp</value></data>
+  <data name="Nav_AuditLog" xml:space="preserve"><value>Audit Log</value></data>
+  <data name="Nav_Settings" xml:space="preserve"><value>Settings</value></data>
+  <data name="Nav_MySettings" xml:space="preserve"><value>My Settings</value></data>
+  <data name="Nav_MyWallet" xml:space="preserve"><value>My Wallet</value></data>
+  <data name="Nav_MyLog" xml:space="preserve"><value>My Log</value></data>
+  <data name="Nav_Help" xml:space="preserve"><value>Help</value></data>
+  <data name="Nav_Logout" xml:space="preserve"><value>Logout</value></data>
+  <data name="Nav_Buildings" xml:space="preserve"><value>Buildings</value></data>
+  <data name="Nav_Admins" xml:space="preserve"><value>Admins</value></data>
+  <data name="Nav_Tools" xml:space="preserve"><value>Tools</value></data>
+  <data name="Nav_Sync" xml:space="preserve"><value>Sync</value></data>
+  <data name="Nav_Backup" xml:space="preserve"><value>Backup</value></data>
+  <data name="Nav_Permissions" xml:space="preserve"><value>Permissions</value></data>
+  <data name="Footer_Copyright" xml:space="preserve">
+    <value>Building Management System — C# MVC</value>
+  </data>
+  <data name="Login_Title" xml:space="preserve"><value>Sign In</value></data>
+  <data name="Login_Subtitle" xml:space="preserve"><value>Sign in to continue</value></data>
+  <data name="Login_Identifier" xml:space="preserve"><value>Email / Phone</value></data>
+  <data name="Login_Credential" xml:space="preserve"><value>Password / PIN</value></data>
+  <data name="Login_Submit" xml:space="preserve"><value>Sign In</value></data>
+  <data name="Login_Or" xml:space="preserve"><value>or</value></data>
+  <data name="Login_QrHint" xml:space="preserve"><value>Have a Quick QR? Click here</value></data>
+  <data name="Common_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Common_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Common_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Common_Edit" xml:space="preserve"><value>Edit</value></data>
+  <data name="Common_Confirm" xml:space="preserve"><value>Confirm</value></data>
+  <data name="Common_Back" xml:space="preserve"><value>Back</value></data>
+  <data name="Role_SuperAdmin" xml:space="preserve"><value>Super Admin</value></data>
+  <data name="Role_Admin" xml:space="preserve"><value>Admin</value></data>
+  <data name="Role_Resident" xml:space="preserve"><value>Resident</value></data>
+</root>

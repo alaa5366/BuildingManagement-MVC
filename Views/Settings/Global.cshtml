@@ -1,0 +1,153 @@
+﻿@model BuildingManagementMvc.Models.GlobalSettings
+@{
+    ViewData["Title"] = "الإعدادات العامة";
+}
+
+<div class="container">
+    <h2 class="mb-3">⚙️ الإعدادات العامة (Global)</h2>
+
+    <form method="post" asp-action="Global">
+        @Html.AntiForgeryToken()
+
+        @* إعدادات التطبيق *@
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <strong>📱 إعدادات التطبيق</strong>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">اسم التطبيق</label>
+                        <input name="AppName" value="@Model.AppName" class="form-control" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">اللغة الافتراضية</label>
+                        <select name="DefaultLanguage" class="form-select">
+                            <option value="ar" selected="@(Model.DefaultLanguage == "ar")">العربية</option>
+                            <option value="en" selected="@(Model.DefaultLanguage == "en")">English</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* WhatsApp API *@
+        <div class="card mb-3">
+            <div class="card-header bg-success text-white">
+                <strong>💬 WhatsApp API</strong>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">API Token</label>
+                        <input name="WhatsappApiToken" value="@Model.WhatsappApiToken" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Phone ID</label>
+                        <input name="WhatsappPhoneId" value="@Model.WhatsappPhoneId" class="form-control" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* Cloudinary *@
+        <div class="card mb-3">
+            <div class="card-header bg-info text-dark">
+                <strong>☁️ Cloudinary</strong>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Cloud Name</label>
+                        <input name="CloudinaryCloudName" value="@Model.CloudinaryCloudName" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">API Key</label>
+                        <input name="CloudinaryApiKey" value="@Model.CloudinaryApiKey" class="form-control" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* Firebase (عرض فقط) *@
+        <div class="card mb-3">
+            <div class="card-header bg-secondary text-white">
+                <strong>🔥 Firebase (عرض فقط)</strong>
+            </div>
+            <div class="card-body">
+                <label class="form-label">Project ID</label>
+                <input value="@Model.FirebaseProjectId" class="form-control" disabled />
+                <div class="form-text">يُقرأ من appsettings.json</div>
+            </div>
+        </div>
+
+        @* Feature Flags *@
+        <div class="card mb-3">
+            <div class="card-header bg-warning">
+                <strong>🚩 Feature Flags</strong>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" name="FeatureFlags.EnablePolls" value="true" class="form-check-input"
+                            @(Model.FeatureFlags.EnablePolls ? "checked" : "") />
+                            <label class="form-check-label">التصويتات</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" name="FeatureFlags.EnableMaintenance" value="true" class="form-check-input"
+                            @(Model.FeatureFlags.EnableMaintenance ? "checked" : "") />
+                            <label class="form-check-label">الصيانة</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" name="FeatureFlags.EnableOcr" value="true" class="form-check-input"
+                            @(Model.FeatureFlags.EnableOcr ? "checked" : "") />
+                            <label class="form-check-label">OCR (قراءة الإيصالات)</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" name="FeatureFlags.EnableQrAccess" value="true" class="form-check-input"
+                            @(Model.FeatureFlags.EnableQrAccess ? "checked" : "") />
+                            <label class="form-check-label">QR Access</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" name="FeatureFlags.EnableWhatsApp" value="true" class="form-check-input"
+                            @(Model.FeatureFlags.EnableWhatsApp ? "checked" : "") />
+                            <label class="form-check-label">واتساب</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* الأمان *@
+        <div class="card mb-3">
+            <div class="card-header bg-danger text-white">
+                <strong>🔒 الأمان</strong>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">مدة الجلسة (بالأيام)</label>
+                        <input type="number" name="Security.SessionTimeoutDays" min="1" max="30"
+                               value="@Model.Security.SessionTimeoutDays" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">الحد الأقصى لمحاولات PIN</label>
+                        <input type="number" name="Security.MaxPinAttempts" min="1" max="10"
+                               value="@Model.Security.MaxPinAttempts" class="form-control" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg">💾 حفظ الإعدادات</button>
+    </form>
+</div>

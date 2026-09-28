@@ -13,15 +13,22 @@ public class WalletController : Controller
     private readonly BuildingsService _buildings;
     private readonly WalletService _wallet;
     private readonly AuditLogService _audit;
+    private readonly NotificationsService _notify;
 
-    public WalletController(BuildingsService buildings, WalletService wallet, AuditLogService audit)
+    public WalletController(
+        BuildingsService buildings,
+        WalletService wallet,
+        AuditLogService audit,
+        NotificationsService notify)
     {
-        _buildings = buildings; _wallet = wallet; _audit = audit;
+        _buildings = buildings;
+        _wallet = wallet;
+        _audit = audit;
+        _notify = notify;
     }
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
 
-    [HttpGet]
     [HttpGet]
     public async Task<IActionResult> Index(string? month, int page = 1, int pageSize = 50)
     {
@@ -114,5 +121,87 @@ public class WalletController : Controller
         }
 
         return RedirectToAction("Index", new { month });
+    }
+
+    // ============================================================
+    // ✅ Phase 21 — تعديل دفعة معلقة (المبلغ + الملاحظة بس)
+    // ============================================================
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateDeposit(
+        string month,
+        string depositId,
+        double amount,
+        string? note,
+        string? reason)
+    {
+        var building = await _buildings.GetByIdAsync(BuildingId);
+        if (building == null) return NotFound();
+
+        var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
+
+        try
+        {
+            var m = _wallet.GetOrCreateMonth(building, mk);
+            var dep = m.Deposits.FirstOrDefault(d => d.Id == depositId);
+            if (dep == null)
+            {
+                TempData["Error"] = "الدفعة غير موجودة";
+                return RedirectToAction("Index", new { month = mk });
+            }
+
+            if (dep.Status != "pending")
+            {
+                TempData["Error"] = "لا يمكن تعديل دفعة " +
+                    (dep.Status == "confirmed" ? "مؤكدة" : "ملغاة");
+                return RedirectToAction("Index", new { month = mk });
+            }
+
+            var oldAmount = dep.Amount;
+            var aptId = dep.AptId;
+
+            // ✅ نستدعي Service
+            var updated = _wallet.UpdatePendingDeposit(
+                building,
+                depositId,
+                mk,
+                amount,
+                note ?? "",
+                reason ?? "",
+                User.Identity?.Name ?? "admin");
+
+            if (updated != null)
+            {
+                // ✅ Audit
+                _audit.Push(
+                    building,
+                    "deposit_update",
+                    $"تعديل دفعة {updated.Number}: {oldAmount:0.##} ← {updated.Amount:0.##} ج.م" +
+                        (string.IsNullOrWhiteSpace(reason) ? "" : $" — السبب: {reason}"),
+                    "admin",
+                    User.Identity?.Name ?? "admin");
+
+                // ✅ إشعار الساكن
+                var apt = building.Apartments.FirstOrDefault(a => a.Id == aptId);
+                if (apt != null)
+                {
+                    _notify.NotifyResidentDepositUpdated(
+                        building, updated, apt, oldAmount, reason);
+                }
+
+                await _buildings.SaveFullAsync(building);
+                TempData["Message"] = "✅ تم تعديل الدفعة بنجاح";
+            }
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = "فشل التعديل: " + ex.Message;
+        }
+
+        return RedirectToAction("Index", new { month = mk });
     }
 }

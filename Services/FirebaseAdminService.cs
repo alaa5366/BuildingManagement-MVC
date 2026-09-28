@@ -73,6 +73,29 @@ public class FirebaseAdminService
     }
 
     // ============================================================
+    // ✅ جديد: جلب UID بالإيميل
+    // ============================================================
+    public async Task<string?> GetUidByEmailAsync(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return null;
+
+        try
+        {
+            var user = await FirebaseAuth.DefaultInstance.GetUserByEmailAsync(email);
+            return user?.Uid;
+        }
+        catch (FirebaseAuthException ex) when (ex.AuthErrorCode == AuthErrorCode.UserNotFound)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"[FirebaseAdmin] GetUidByEmail failed: {email}");
+            return null;
+        }
+    }
+
+    // ============================================================
     // تحديث كلمة السر
     // ============================================================
     public async Task<bool> UpdatePasswordAsync(string email, string newPassword)

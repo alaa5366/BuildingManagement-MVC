@@ -2,7 +2,6 @@ using Google.Cloud.Firestore;
 
 namespace BuildingManagementMvc.Models;
 
-// نفس شكل مستند users/{uid} في Firestore
 [FirestoreData]
 public class AppUserDoc
 {
@@ -18,13 +17,15 @@ public class AppUserDoc
     [FirestoreProperty("phone")]
     public string Phone { get; set; } = "";
 
+    [FirestoreProperty("whatsapp")]
+    public string Whatsapp { get; set; } = "";
+
     [FirestoreProperty("pin")]
     public string Pin { get; set; } = "";
 
     [FirestoreProperty("photoURL")]
     public string PhotoUrl { get; set; } = "";
 
-    // superadmin | admin
     [FirestoreProperty("role")]
     public string Role { get; set; } = "";
 
@@ -37,7 +38,6 @@ public class AppUserDoc
     [FirestoreProperty("disabledReason")]
     public string DisabledReason { get; set; } = "";
 
-    // ✅ جديد — للمرحلة 15
     [FirestoreProperty("permissions")]
     public List<string> Permissions { get; set; } = new();
 

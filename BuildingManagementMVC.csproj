@@ -12,15 +12,30 @@
     <PackageReference Include="QRCoder" Version="1.6.0" />
     <PackageReference Include="QuestPDF" Version="2024.12.3" />
     <PackageReference Include="Tesseract" Version="5.2.0" />
-	<PackageReference Include="CloudinaryDotNet" Version="1.26.2" />
-	<PackageReference Include="ClosedXML" Version="0.104.1" />
-	<PackageReference Include="FirebaseAdmin" Version="3.1.0" />
+    <PackageReference Include="CloudinaryDotNet" Version="1.26.2" />
+    <PackageReference Include="ClosedXML" Version="0.104.1" />
+    <PackageReference Include="FirebaseAdmin" Version="3.1.0" />
   </ItemGroup>
 
   <ItemGroup>
     <None Update="firebase-service-account.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <!-- ✅ Localization Resources -->
+  <ItemGroup>
+    <EmbeddedResource Update="Resources\Shared.*.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Update="Shared.en.resx">
+      <Generator></Generator>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Resources\" />
   </ItemGroup>
 
 </Project>

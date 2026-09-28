@@ -1,0 +1,350 @@
+﻿@model BuildingManagementMvc.Models.OwnSettings
+@{
+    ViewData["Title"] = "إعداداتي";
+    var isResident = ViewBag.IsResident as bool? ?? false;
+    var ownerName = ViewBag.OwnerName as string ?? "";
+    var aptLabel = ViewBag.AptLabel as string ?? "";
+    var currentPhone = ViewBag.CurrentPhone as string ?? "";
+    var currentWhatsapp = ViewBag.CurrentWhatsapp as string ?? currentPhone;
+    var aptNumber = ViewBag.AptNumber as int? ?? 0;
+    var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+    var roleLabel = role switch
+    {
+        "superadmin" => "مدير عام",
+        "admin" => "أدمن",
+        "resident" => "ساكن",
+        _ => role
+    };
+
+    var initials = string.IsNullOrWhiteSpace(ownerName)
+        ? "?"
+        : string.Join("", ownerName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                                .Take(2).Select(w => w[0]));
+}
+
+<div class="container" style="max-width: 1000px;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">⚙️ إعداداتي</h2>
+        <span class="badge bg-secondary fs-6">@roleLabel</span>
+    </div>
+
+    <form method="post" asp-action="Own" id="ownSettingsForm" novalidate>
+        @Html.AntiForgeryToken()
+
+        @* ============================================================ *@
+        @* 👤 بياناتي الشخصية                                          *@
+        @* ============================================================ *@
+        <div class="card mb-4 border-0 shadow-sm">
+            <div class="card-header bg-dark text-white py-3">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size: 22px;">👤</span>
+                    <div>
+                        <strong class="fs-5">بياناتي الشخصية</strong>
+                        <div class="small text-white-50">اسمك ورقم التواصل زي ما هيظهروا في الفواتير</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body p-4">
+
+                @* ===== Avatar + Info ===== *@
+                <div class="d-flex align-items-center gap-3 pb-4 mb-4 border-bottom flex-wrap">
+                    <div class="rounded-circle bg-primary bg-gradient d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0"
+                         style="width: 72px; height: 72px; font-size: 26px;">
+                        @initials
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold fs-5">
+                            @(string.IsNullOrWhiteSpace(ownerName) ? "—" : ownerName)
+                        </div>
+                        <div class="text-muted small">
+                            @roleLabel
+                            @if (isResident && aptNumber > 0)
+                            {
+                                <text> • شقة @aptNumber</text>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                @* ===== الحقول ===== *@
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            📝 الاسم <span class="text-danger">*</span>
+                        </label>
+                        <input name="OwnerName" value="@ownerName" required
+                               maxlength="100" class="form-control form-control-lg"
+                               placeholder="اكتب اسمك هنا" />
+                        <div class="form-text">الاسم اللي هيظهر في الفواتير والإشعارات</div>
+                    </div>
+
+                    @if (isResident)
+                    {
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                🏠 اسم الشقة
+                                <span class="badge bg-secondary" style="font-size: 10px;">اختياري</span>
+                            </label>
+                            <input name="AptLabel" value="@aptLabel" maxlength="60"
+                                   class="form-control form-control-lg"
+                                   placeholder="مثال: شقة علاء" />
+                            <div class="form-text">اسم مختصر للشقة للتمييز</div>
+                        </div>
+                    }
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            📱 رقم الموبايل
+                            <span class="badge bg-warning text-dark" style="font-size: 10px;">يؤثر على الدخول</span>
+                        </label>
+                        <input name="NewPhone" value="@currentPhone"
+                               class="form-control form-control-lg" dir="ltr"
+                               placeholder="+201xxxxxxxxx" />
+                        <div class="form-text text-warning small">
+                            ⚠️ تغييره = تحديث حساب Firebase Auth تلقائيًا
+                        </div>
+                    </div>
+
+                    @if (!isResident)
+                    {
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                💬 رقم الواتساب
+                                <span class="badge bg-success" style="font-size: 10px;">مستقل</span>
+                            </label>
+                            <input name="NewWhatsapp" value="@currentWhatsapp"
+                                   class="form-control form-control-lg" dir="ltr"
+                                   placeholder="+201xxxxxxxxx" />
+                            <div class="form-text">ممكن يكون مختلف عن رقم الموبايل</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @* ============================================================ *@
+        @* 🔐 الأمان — PIN                                              *@
+        @* ============================================================ *@
+        <div class="card mb-4 border-0 shadow-sm">
+            <div class="card-header bg-danger text-white py-3">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size: 22px;">🔐</span>
+                    <div>
+                        <strong class="fs-5">الأمان — تغيير PIN</strong>
+                        <div class="small text-white-50">اتركه فاضي لو مش عايز تغييره</div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">🔒 PIN الحالي</label>
+                        <div class="input-group">
+                            <input name="CurrentPin" id="currentPin" type="password"
+                                   maxlength="4" inputmode="numeric" pattern="\d*"
+                                   class="form-control form-control-lg" placeholder="••••" />
+                            <button type="button" class="btn btn-outline-secondary toggle-pin"
+                                    data-target="currentPin" tabindex="-1">👁</button>
+                        </div>
+                        <div class="form-text">مطلوب فقط لتغيير الموبايل أو PIN</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">🔑 PIN الجديد</label>
+                        <div class="input-group">
+                            <input name="NewPin" id="newPin" type="password"
+                                   maxlength="4" inputmode="numeric" pattern="\d*"
+                                   class="form-control form-control-lg" placeholder="••••" />
+                            <button type="button" class="btn btn-outline-secondary toggle-pin"
+                                    data-target="newPin" tabindex="-1">👁</button>
+                        </div>
+                        <div class="progress mt-1" style="height: 4px;">
+                            <div id="pinStrength" class="progress-bar" style="width: 0%;"></div>
+                        </div>
+                        <div class="form-text">4 أرقام بالظبط</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">✅ تأكيد PIN الجديد</label>
+                        <div class="input-group">
+                            <input name="ConfirmNewPin" id="confirmPin" type="password"
+                                   maxlength="4" inputmode="numeric" pattern="\d*"
+                                   class="form-control form-control-lg" placeholder="••••" />
+                            <button type="button" class="btn btn-outline-secondary toggle-pin"
+                                    data-target="confirmPin" tabindex="-1">👁</button>
+                        </div>
+                        <div class="form-text" id="pinMatchMsg"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* ============================================================ *@
+        @* ⚙️ التفضيلات                                                  *@
+        @* ============================================================ *@
+        <div class="card mb-4 border-0 shadow-sm">
+            <div class="card-header bg-primary text-white py-3">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size: 22px;">⚙️</span>
+                    <div>
+                        <strong class="fs-5">التفضيلات</strong>
+                        <div class="small text-white-50">اللغة، الإشعارات، طريقة الدفع</div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">🌐 اللغة</label>
+                        <select name="Language" class="form-select form-select-lg">
+                            <option value="ar" selected="@(Model.Language == "ar")">العربية</option>
+                            <option value="en" selected="@(Model.Language == "en")">English</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">💳 طريقة الدفع المفضلة</label>
+                        <select name="PreferredPaymentMethod" class="form-select form-select-lg">
+                            <option value="instapay" selected="@(Model.PreferredPaymentMethod == "instapay")">InstaPay</option>
+                            <option value="cash" selected="@(Model.PreferredPaymentMethod == "cash")">نقدي</option>
+                            <option value="bank" selected="@(Model.PreferredPaymentMethod == "bank")">تحويل بنكي</option>
+                            <option value="vodafone" selected="@(Model.PreferredPaymentMethod == "vodafone")">فودافون كاش</option>
+                        </select>
+                    </div>
+                </div>
+
+                <label class="form-label fw-semibold">🔔 تفضيلات الإشعارات</label>
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <div class="form-check form-switch p-3 border rounded">
+                            <input asp-for="NotificationPreferences.WhatsApp" class="form-check-input" />
+                            <label asp-for="NotificationPreferences.WhatsApp" class="form-check-label">
+                                💬 واتساب
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check form-switch p-3 border rounded">
+                            <input asp-for="NotificationPreferences.Email" class="form-check-input" />
+                            <label asp-for="NotificationPreferences.Email" class="form-check-label">
+                                📧 البريد الإلكتروني
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check form-switch p-3 border rounded">
+                            <input asp-for="NotificationPreferences.InApp" class="form-check-input" />
+                            <label asp-for="NotificationPreferences.InApp" class="form-check-label">
+                                🔔 داخل التطبيق
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* ===== أزرار ===== *@
+        <div class="d-flex gap-2 justify-content-end mb-5">
+            <a href="javascript:history.back()" class="btn btn-outline-secondary btn-lg">↩️ إلغاء</a>
+            <button type="submit" class="btn btn-primary btn-lg px-4">
+                💾 حفظ التغييرات
+            </button>
+        </div>
+
+    </form>
+</div>
+
+@section Scripts {
+<script>
+    // 👁 إظهار/إخفاء PIN
+    document.querySelectorAll('.toggle-pin').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const input = document.getElementById(btn.dataset.target);
+            if (!input) return;
+            input.type = input.type === 'password' ? 'text' : 'password';
+            btn.textContent = input.type === 'password' ? '👁' : '🙈';
+        });
+    });
+
+    // 🔢 امنع غير الأرقام في حقول PIN
+    ['currentPin', 'newPin', 'confirmPin'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('input', () => {
+            el.value = el.value.replace(/\D/g, '').slice(0, 4);
+            if (id === 'newPin') updatePinStrength(el.value);
+            if (id === 'newPin' || id === 'confirmPin') checkPinMatch();
+        });
+    });
+
+    // 📊 مؤشر قوة PIN
+    function updatePinStrength(pin) {
+        const bar = document.getElementById('pinStrength');
+        if (!bar) return;
+        const len = pin.length;
+        let pct = 0, color = 'bg-danger';
+        if (len === 4) {
+            const unique = new Set(pin).size;
+            if (unique === 1) { pct = 40; color = 'bg-danger'; }
+            else if (unique === 2) { pct = 60; color = 'bg-warning'; }
+            else if (unique === 3) { pct = 80; color = 'bg-info'; }
+            else { pct = 100; color = 'bg-success'; }
+        } else if (len > 0) {
+            pct = len * 15;
+            color = 'bg-danger';
+        }
+        bar.style.width = pct + '%';
+        bar.className = 'progress-bar ' + color;
+    }
+
+    // ✅ تحقق فوري من تطابق PIN
+    function checkPinMatch() {
+        const np = document.getElementById('newPin')?.value || '';
+        const cp = document.getElementById('confirmPin')?.value || '';
+        const msg = document.getElementById('pinMatchMsg');
+        const cpEl = document.getElementById('confirmPin');
+        if (!msg || !cpEl) return;
+
+        if (cp.length === 0) {
+            msg.textContent = '';
+            cpEl.classList.remove('is-valid', 'is-invalid');
+        } else if (cp === np) {
+            msg.textContent = '✅ متطابق';
+            msg.className = 'form-text text-success';
+            cpEl.classList.remove('is-invalid');
+            cpEl.classList.add('is-valid');
+        } else {
+            msg.textContent = '❌ غير متطابق';
+            msg.className = 'form-text text-danger';
+            cpEl.classList.remove('is-valid');
+            cpEl.classList.add('is-invalid');
+        }
+    }
+
+    // 🛡 تأكيد قبل الحفظ لو فيه تغيير PIN
+    document.getElementById('ownSettingsForm')?.addEventListener('submit', (e) => {
+        const np = document.getElementById('newPin')?.value || '';
+        const cp = document.getElementById('confirmPin')?.value || '';
+        const cur = document.getElementById('currentPin')?.value || '';
+
+        if (np.length > 0 || cp.length > 0) {
+            if (np.length !== 4) {
+                e.preventDefault();
+                alert('⚠️ PIN الجديد لازم يكون 4 أرقام');
+                return;
+            }
+            if (np !== cp) {
+                e.preventDefault();
+                alert('⚠️ PIN الجديد وتأكيده مش متطابقين');
+                return;
+            }
+            if (cur.length !== 4) {
+                e.preventDefault();
+                alert('⚠️ لازم تدخل PIN الحالي لتأكيد التغيير');
+                return;
+            }
+        }
+    });
+</script>
+}

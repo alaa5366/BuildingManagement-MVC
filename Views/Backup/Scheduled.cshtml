@@ -1,0 +1,199 @@
+﻿@model BuildingManagementMvc.Models.ScheduledBackupSettings
+@{
+    ViewData["Title"] = "النسخ المجدولة";
+    var collections = ViewBag.AvailableCollections as IReadOnlyDictionary<string, string>
+                       ?? new Dictionary<string, string>();
+    var backupFiles = ViewBag.BackupFiles as List<(string FileName, long FileSize, DateTime CreatedAt)>
+                       ?? new List<(string, long, DateTime)>();
+}
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>⏰ النسخ الاحتياطي المجدول</h2>
+        <div>
+            <a asp-action="Index" class="btn btn-outline-secondary">← الرئيسية</a>
+            <a asp-action="History" class="btn btn-outline-info">📜 السجل</a>
+        </div>
+    </div>
+
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success">@TempData["Message"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    @* ============================================ *@
+    @* الإعدادات                                     *@
+    @* ============================================ *@
+    <form method="post" asp-action="SaveScheduledSettings">
+        @Html.AntiForgeryToken()
+
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <strong>⚙️ إعدادات الجدولة</strong>
+            </div>
+            <div class="card-body">
+                <div class="form-check form-switch mb-3">
+                    <input type="checkbox" name="Enabled" value="true" class="form-check-input"
+                           id="enabled" @(Model.Enabled ? "checked" : "") />
+                    <label class="form-check-label" for="enabled">
+                        <strong>تشغيل النسخ التلقائي</strong>
+                    </label>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">التكرار</label>
+                        <select name="Frequency" class="form-select" id="frequency">
+                            <option value="daily" selected="@(Model.Frequency == "daily")">📅 يومي</option>
+                            <option value="weekly" selected="@(Model.Frequency == "weekly")">📆 أسبوعي</option>
+                            <option value="monthly" selected="@(Model.Frequency == "monthly")">🗓️ شهري</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">الساعة (UTC)</label>
+                        <input type="number" name="Hour" min="0" max="23" value="@Model.Hour" class="form-control" />
+                        <div class="form-text">0-23 — مثلاً: 2 = 2 الفجر</div>
+                    </div>
+                    <div class="col-md-4" id="dowGroup" style="display:none;">
+                        <label class="form-label">اليوم (للأسبوعي)</label>
+                        <select name="DayOfWeek" class="form-select">
+                            <option value="">— اختر —</option>
+                            <option value="0" selected="@(Model.DayOfWeek == 0)">الأحد</option>
+                            <option value="1" selected="@(Model.DayOfWeek == 1)">الاثنين</option>
+                            <option value="2" selected="@(Model.DayOfWeek == 2)">الثلاثاء</option>
+                            <option value="3" selected="@(Model.DayOfWeek == 3)">الأربعاء</option>
+                            <option value="4" selected="@(Model.DayOfWeek == 4)">الخميس</option>
+                            <option value="5" selected="@(Model.DayOfWeek == 5)">الجمعة</option>
+                            <option value="6" selected="@(Model.DayOfWeek == 6)">السبت</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4" id="domGroup" style="display:none;">
+                        <label class="form-label">اليوم من الشهر (للشهري)</label>
+                        <input type="number" name="DayOfMonth" min="1" max="28"
+                               value="@(Model.DayOfMonth ?? 1)" class="form-control" />
+                        <div class="form-text">1-28 (لتجنب مشاكل الشهور القصيرة)</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">عدد النسخ المحفوظة</label>
+                        <input type="number" name="MaxBackupsToKeep" min="1" max="30"
+                               value="@Model.MaxBackupsToKeep" class="form-control" />
+                        <div class="form-text">الأقدم بيتمسح تلقائيًا</div>
+                    </div>
+                </div>
+
+                <hr />
+
+                <div class="mb-2">
+                    <strong>📦 Collections المشمولة:</strong>
+                    <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="selectAll(true)">الكل</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="selectAll(false)">لا شيء</button>
+                </div>
+
+                <div class="row g-2">
+                    @foreach (var col in collections)
+                    {
+                        var isSelected = Model.Collections != null && Model.Collections.Contains(col.Key);
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input type="checkbox" name="Collections" value="@col.Key"
+                                       class="form-check-input col-check"
+                                       id="col-@col.Key" @(isSelected || (Model.Collections == null || Model.Collections.Count == 0) ? "checked" : "") />
+                                <label class="form-check-label" for="col-@col.Key">
+                                    <code>@col.Key</code> — @col.Value
+                                </label>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary">💾 حفظ الإعدادات</button>
+                @if (Model.Enabled)
+                {
+                    <span class="text-muted ms-3">
+                        آخر تشغيل: @(string.IsNullOrEmpty(Model.LastRunAt) ? "لم يتم" : DateTime.Parse(Model.LastRunAt).ToLocalTime().ToString("yyyy-MM-dd HH:mm"))
+                    </span>
+                }
+            </div>
+        </div>
+    </form>
+
+    @* ============================================ *@
+    @* تشغيل يدوي                                    *@
+    @* ============================================ *@
+    <form method="post" asp-action="RunNow" class="mb-3"
+          onsubmit="return confirm('تشغيل نسخة الآن يدويًا؟');">
+        @Html.AntiForgeryToken()
+        <button class="btn btn-warning">
+            ⚡ تشغيل نسخة الآن (يدويًا)
+        </button>
+    </form>
+
+    @* ============================================ *@
+    @* النسخ المحفوظة                                *@
+    @* ============================================ *@
+    <div class="card">
+        <div class="card-header">
+            <strong>📁 النسخ المحفوظة (@backupFiles.Count)</strong>
+        </div>
+        <div class="card-body">
+            @if (backupFiles.Count == 0)
+            {
+                <div class="alert alert-info mb-0">لا توجد نسخ محفوظة بعد.</div>
+            }
+            else
+            {
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th>الملف</th>
+                            <th>الحجم</th>
+                            <th>التاريخ</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var f in backupFiles)
+                        {
+                            <tr>
+                                <td><code>@f.FileName</code></td>
+                                <td>@(f.FileSize / 1024) KB</td>
+                                <td>@f.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                                <td>
+                                    <a asp-action="DownloadBackup" asp-route-fileName="@f.FileName"
+                                       class="btn btn-sm btn-outline-primary">⬇️ تحميل</a>
+                                    <form method="post" asp-action="DeleteBackup" class="d-inline"
+                                          onsubmit="return confirm('حذف الملف؟');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="fileName" value="@f.FileName" />
+                                        <button class="btn btn-sm btn-outline-danger">🗑️</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const freq = document.getElementById('frequency');
+        function updateGroups() {
+            document.getElementById('dowGroup').style.display = freq.value === 'weekly' ? '' : 'none';
+            document.getElementById('domGroup').style.display = freq.value === 'monthly' ? '' : 'none';
+        }
+        freq.addEventListener('change', updateGroups);
+        updateGroups();
+
+        function selectAll(checked) {
+            document.querySelectorAll('.col-check').forEach(cb => cb.checked = checked);
+        }
+    </script>
+}

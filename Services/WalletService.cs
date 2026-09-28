@@ -76,6 +76,52 @@ public class WalletService
         return d;
     }
 
+    // ✅ Phase 21 — تعديل دفعة معلقة (المبلغ + الملاحظة بس)
+    public Deposit? UpdatePendingDeposit(
+        Building building,
+        string depositId,
+        string monthKey,
+        double newAmount,
+        string newNote,
+        string reason,
+        string updatedBy)
+    {
+        var m = GetOrCreateMonth(building, monthKey);
+        var d = m.Deposits.FirstOrDefault(x => x.Id == depositId);
+        if (d == null) return null;
+
+        // ⚠️ نمنع التعديل بعد التأكيد أو الإلغاء
+        if (d.Status != "pending")
+            throw new InvalidOperationException("لا يمكن تعديل دفعة مؤكدة أو ملغاة");
+
+        if (newAmount <= 0)
+            throw new InvalidOperationException("المبلغ لازم يكون أكبر من صفر");
+
+        // 📝 سجّل التعديل في التاريخ
+        var editEntry = new DepositEditEntry
+        {
+            Ts = DateTime.UtcNow.ToString("o"),
+            By = updatedBy,
+            Reason = reason,
+            OldAmount = d.Amount,
+            NewAmount = newAmount,
+            OldNote = d.Note,
+            NewNote = newNote
+        };
+
+        d.EditHistory ??= new List<DepositEditEntry>();
+        d.EditHistory.Add(editEntry);
+
+        // ✅ عدّل القيم
+        d.Amount = newAmount;
+        d.Note = newNote;
+        d.UpdatedAt = DateTime.UtcNow.ToString("o");
+        d.UpdatedBy = updatedBy;
+        d.UpdateReason = reason;
+
+        return d;
+    }  
+
     public double TotalConfirmedDeposits(Building building, string aptId, string monthKey)
     {
         if (!building.Months.TryGetValue(monthKey, out var m)) return 0;
@@ -219,8 +265,13 @@ public class WalletService
             if (d.Status == "confirmed") totalPaid += d.Amount;
             txs.Add(new WalletTransactionVm
             {
-                Type = "deposit", Status = d.Status, Id = d.Id, Number = d.Number,
-                Amount = d.Amount, Note = d.Note, CreatedAt = d.CreatedAt
+                Type = "deposit",
+                Status = d.Status,
+                Id = d.Id,
+                Number = d.Number,
+                Amount = d.Amount,
+                Note = d.Note,
+                CreatedAt = d.CreatedAt
             });
         }
 

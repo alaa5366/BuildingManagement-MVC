@@ -1,61 +1,388 @@
-﻿@model List<BuildingManagementMvc.Models.AppUserDoc>
+﻿@using BuildingManagementMvc.Models
+@model List<BuildingManagementMvc.Models.AppUserDoc>
 @{
     ViewData["Title"] = "مصفوفة الصلاحيات";
-    var allPerms = ViewBag.AllPermissions as List<string> ?? new();
+    var allPermissions = ViewBag.AllPermissions as List<string> ?? new();
+    var groupedPermissions = ViewBag.GroupedPermissions as Dictionary<AdminPermissions.PermissionCategory, List<string>> ?? new();
+    var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Models.Building> ?? new();
+    var selectedBuildingId = ViewBag.SelectedBuildingId as string;
+    var totalPerms = allPermissions.Count;
 }
 
 <div class="container-fluid">
-    <h2>🔐 مصفوفة الصلاحيات</h2>
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h2>🔐 مصفوفة الصلاحيات</h2>
+        <div>
+            <span class="badge bg-secondary">@Model.Count أدمن</span>
+            <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#refTableModal">
+                📋 الجدول المرجعي التقني
+            </button>
+        </div>
+    </div>
 
-    <form id="af-form" method="post" style="display:none">@Html.AntiForgeryToken()</form>
+    @if (Model.Count == 0)
+    {
+        <div class="alert alert-info">لا يوجد أدمنة لعرض صلاحياتهم.</div>
+    }
+    else
+    {
+        <form id="af-form" method="post" style="display:none">@Html.AntiForgeryToken()</form>
 
-    <table class="table table-bordered table-sm">
-        <thead>
-            <tr>
-                <th>الصلاحية</th>
-                @foreach (var a in Model)
+        @* ============================================ *@
+        @* فلاتر + بحث                                    *@
+        @* ============================================ *@
+        <div class="card mb-3">
+            <div class="card-body py-2">
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-4">
+                        <input type="text" id="searchBox" class="form-control form-control-sm"
+                               placeholder="🔍 ابحث بالاسم أو الرقم..." />
+                    </div>
+                    <div class="col-md-3">
+                        <select id="buildingFilter" class="form-select form-select-sm">
+                            <option value="">🏢 كل العمارات</option>
+                            @foreach (var b in buildings)
+                            {
+                                <option value="@b.Id" selected="@(selectedBuildingId == b.Id)">@b.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-5 text-end">
+                        <button type="button" class="btn btn-sm btn-outline-success" onclick="expandAll()">
+                            📂 فتح الكل
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="collapseAll()">
+                            📁 غلق الكل
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* ============================================ *@
+        @* Accordion للأدمنة                              *@
+        @* ============================================ *@
+        <div class="accordion" id="adminsAccordion">
+            @{
+                int idx = 0;
+                foreach (var admin in Model)
                 {
-                    <th class="text-center">@a.Name</th>
+                    var perms = admin.Permissions ?? new List<string>();
+                    var enabledCount = perms.Count;
+                    var isActive = admin.IsActive && !admin.Disabled;
+                    var collapseId = $"admin-{idx}";
+                    var buildingNames = string.Join("، ",
+                        buildings.Where(b => admin.BuildingIds != null && admin.BuildingIds.Contains(b.Id))
+                                 .Select(b => b.Name));
+                    var adminSearchText = $"{admin.Name} {admin.Phone} {buildingNames}".ToLower();
+
+                    <div class="accordion-item mb-2 admin-row"
+                         data-admin-id="@admin.Uid"
+                         data-search="@adminSearchText"
+                         data-buildings="@string.Join(",", admin.BuildingIds ?? new List<string>())">
+
+                        <h2 class="accordion-header" id="heading-@idx">
+                            <button class="accordion-button collapsed" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#@collapseId"
+                                    aria-expanded="false">
+                                <div class="d-flex justify-content-between align-items-center w-100 me-3">
+                                    <div>
+                                        <strong>@admin.Name</strong>
+                                        @if (!string.IsNullOrEmpty(buildingNames))
+                                        {
+                                            <small class="text-muted ms-2">— @buildingNames</small>
+                                        }
+                                        <small class="text-muted ms-2">📱 @admin.Phone</small>
+
+                                        @if (!isActive)
+                                        {
+                                            <span class="badge bg-danger ms-2">معطّل</span>
+                                        }
+                                    </div>
+                                    <div>
+                                        <span class="badge @(enabledCount == totalPerms ? "bg-success" : enabledCount > 0 ? "bg-warning text-dark" : "bg-secondary")">
+                                            @enabledCount / @totalPerms
+                                        </span>
+                                    </div>
+                                </div>
+                            </button>
+                        </h2>
+
+                        <div id="@collapseId" class="accordion-collapse collapse"
+                             data-bs-parent="#adminsAccordion">
+                            <div class="accordion-body">
+
+                                @* أزرار عامة للأدمن *@
+                                <div class="d-flex justify-content-end gap-2 mb-3 flex-wrap">
+                                    <button type="button" class="btn btn-sm btn-outline-success"
+                                            onclick="applyTemplate('@admin.Uid', 'full')"
+                                            title="12 صلاحية — للأدمن العادي">
+                                        ⚡ قالب كامل (12)
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-danger"
+                                            onclick="applyTemplate('@admin.Uid', 'super')"
+                                            title="22 صلاحية — ⚠️ صلاحيات Super Admin">
+                                        👑 قالب Super (22)
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary"
+                                            onclick="applyTemplate('@admin.Uid', 'financial')"
+                                            title="7 صلاحيات — الإدارة المالية">
+                                        💰 قالب مالي (7)
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-info"
+                                            onclick="applyTemplate('@admin.Uid', 'maintenance')"
+                                            title="4 صلاحيات — الصيانة والإشعارات">
+                                        🔧 قالب صيانة (4)
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                            onclick="clearAll('@admin.Uid')">
+                                        🗑️ مسح الكل
+                                    </button>
+                                </div>
+
+                                @* المجموعات *@
+                                @foreach (var category in groupedPermissions.Keys.OrderBy(k => (int)k))
+                                {
+                                    var permsInCat = groupedPermissions[category];
+                                    var enabledInCat = permsInCat.Count(p => perms.Contains(p));
+
+                                    <div class="card mb-2">
+                                        <div class="card-header bg-light py-2">
+                                            <strong>@AdminPermissions.CategoryLabelAr(category)</strong>
+                                            <span class="badge bg-secondary ms-2">
+                                                @enabledInCat / @permsInCat.Count
+                                            </span>
+                                        </div>
+                                        <div class="card-body py-2">
+                                            <div class="row g-2">
+                                                @foreach (var p in permsInCat)
+                                                {
+                                                    var has = perms.Contains(p);
+                                                    var info = AdminPermissions.BackendInfo(p);
+
+                                                    <div class="col-md-6 col-lg-4">
+                                                        <div class="form-check">
+                                                            <input type="checkbox"
+                                                                   class="perm-toggle form-check-input"
+                                                                   id="perm-@admin.Uid-@p"
+                                                                   data-admin="@admin.Uid"
+                                                                   data-perm="@p"
+                                                            @(has ? "checked" : "") />
+                                                            <label class="form-check-label" for="perm-@admin.Uid-@p">
+                                                                <span class="fw-bold">@AdminPermissions.LabelAr(p)</span>
+                                                                <i class="bi bi-info-circle text-muted"
+                                                                   data-bs-toggle="tooltip"
+                                                                   title="@AdminPermissions.DescriptionAr(p)"
+                                                                   style="cursor: help; font-size: 12px;">ℹ️</i>
+                                                                <br />
+                                                                <code style="font-size: 10px;">@p</code>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+
+                                @* روابط سريعة *@
+                                <div class="mt-3">
+                                    <a asp-controller="Admins" asp-action="Edit" asp-route-id="@admin.Uid"
+                                       class="btn btn-sm btn-outline-primary">
+                                        ✏️ تعديل بيانات الأدمن
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    idx++;
                 }
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var p in allPerms)
-            {
-                <tr>
-                    <td><code>@p</code></td>
-                    @foreach (var a in Model)
-                    {
-                        var has = a.Permissions != null && a.Permissions.Contains(p);
-                        <td class="text-center">
-                            <input type="checkbox"
-                                   class="perm-toggle"
-                                   data-admin="@a.Uid"
-                                   data-perm="@p"
-                                   @(has ? "checked" : "") />
-                        </td>
-                    }
-                </tr>
             }
-        </tbody>
-    </table>
+        </div>
+
+        <div id="noResults" class="alert alert-info" style="display:none;">
+            لا يوجد أدمنة مطابقين للبحث.
+        </div>
+    }
 </div>
 
-<script>
-document.querySelectorAll('.perm-toggle').forEach(cb => {
-    cb.addEventListener('change', async e => {
-        const adminId = e.target.dataset.admin;
-        const perm = e.target.dataset.perm;
-        const enabled = e.target.checked;
-        const token = document.querySelector('#af-form input[name="__RequestVerificationToken"]').value;
+@* ============================================ *@
+@* Modal: الجدول المرجعي التقني                  *@
+@* ============================================ *@
+<div class="modal fade" id="refTableModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-dark">
+                <h5 class="modal-title">📋 مرجع تقني: Service + Controller + Actions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="min-width: 180px;">الصلاحية</th>
+                                <th style="min-width: 180px;">Service</th>
+                                <th style="min-width: 220px;">Controller</th>
+                                <th style="min-width: 280px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in allPermissions)
+                            {
+                                var info = AdminPermissions.BackendInfo(p);
+                                <tr>
+                                    <td>
+                                        <strong>@AdminPermissions.LabelAr(p)</strong><br />
+                                        <code class="small">@p</code>
+                                    </td>
+                                    <td><code class="small">@info.Service</code></td>
+                                    <td><code class="small">@info.Controller</code></td>
+                                    <td><code class="small" style="word-break: break-word;">@info.Actions</code></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
 
-        const fd = new FormData();
-        fd.append('adminId', adminId);
-        fd.append('permission', perm);
-        fd.append('enabled', enabled);
-        fd.append('__RequestVerificationToken', token);
+@section Scripts {
+    <script>
+        // تفعيل الـ tooltips
+            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+                    new bootstrap.Tooltip(el);
+                });
 
-        await fetch('/Permissions/Toggle', { method: 'POST', body: fd });
-    });
-});
-</script>
+                // Toggle الصلاحية
+                document.querySelectorAll('.perm-toggle').forEach(cb => {
+                    cb.addEventListener('change', async e => {
+                        const adminId = e.target.dataset.admin;
+                        const perm = e.target.dataset.perm;
+                        const enabled = e.target.checked;
+                        const token = document.querySelector('#af-form input[name="__RequestVerificationToken"]').value;
+
+                        const fd = new FormData();
+                        fd.append('adminId', adminId);
+                        fd.append('permission', perm);
+                        fd.append('enabled', enabled);
+                        fd.append('__RequestVerificationToken', token);
+
+                        try {
+                            const resp = await fetch('/Permissions/Toggle', { method: 'POST', body: fd });
+                            if (!resp.ok) throw new Error('Server returned ' + resp.status);
+                            updateAdminBadge(adminId);
+                        } catch (err) {
+                            console.error('Toggle failed:', err);
+                            e.target.checked = !enabled;
+                            alert('فشل الحفظ: ' + err.message);
+                        }
+                    });
+                });
+
+                // تحديث badge الأدمن
+                function updateAdminBadge(adminId) {
+                    const row = document.querySelector(`.admin-row[data-admin-id="${adminId}"]`);
+                    if (!row) return;
+
+                    const checkboxes = row.querySelectorAll('.perm-toggle');
+                    const enabled = Array.from(checkboxes).filter(c => c.checked).length;
+                    const total = checkboxes.length;
+
+                    const badge = row.querySelector('.accordion-button .badge');
+                    badge.innerText = `${enabled} / ${total}`;
+                    badge.className = 'badge ' + (enabled === total ? 'bg-success' : enabled > 0 ? 'bg-warning text-dark' : 'bg-secondary');
+                }
+
+                // Apply Template
+                async function applyTemplate(adminId, template) {
+                    if (!confirm(`تطبيق قالب "${template}"؟ سيتم استبدال كل الصلاحيات الحالية.`)) return;
+
+                    const token = document.querySelector('#af-form input[name="__RequestVerificationToken"]').value;
+                    const fd = new FormData();
+                    fd.append('adminId', adminId);
+                    fd.append('template', template);
+                    fd.append('__RequestVerificationToken', token);
+
+                    try {
+                        const resp = await fetch('/Permissions/ApplyTemplate', { method: 'POST', body: fd });
+                        if (resp.ok) {
+                            window.location.reload();
+                        } else {
+                            alert('فشل تطبيق القالب');
+                        }
+                    } catch (err) {
+                        alert('خطأ: ' + err.message);
+                    }
+                }
+
+                // Clear all
+                async function clearAll(adminId) {
+                    if (!confirm('مسح كل الصلاحيات؟')) return;
+
+                    const row = document.querySelector(`.admin-row[data-admin-id="${adminId}"]`);
+                    const checkboxes = row.querySelectorAll('.perm-toggle:checked');
+
+                    const token = document.querySelector('#af-form input[name="__RequestVerificationToken"]').value;
+
+                    for (const cb of checkboxes) {
+                        cb.checked = false;
+                        const fd = new FormData();
+                        fd.append('adminId', adminId);
+                        fd.append('permission', cb.dataset.perm);
+                        fd.append('enabled', 'false');
+                        fd.append('__RequestVerificationToken', token);
+                        await fetch('/Permissions/Toggle', { method: 'POST', body: fd });
+                    }
+
+                    updateAdminBadge(adminId);
+                }
+
+                // Expand / Collapse all
+                function expandAll() {
+                    document.querySelectorAll('.accordion-collapse').forEach(el => {
+                        new bootstrap.Collapse(el, { show: true });
+                    });
+                }
+
+                function collapseAll() {
+                    document.querySelectorAll('.accordion-collapse').forEach(el => {
+                        new bootstrap.Collapse(el, { hide: true });
+                    });
+                }
+
+                // Search
+                document.getElementById('searchBox').addEventListener('input', filterAdmins);
+                document.getElementById('buildingFilter').addEventListener('change', filterAdmins);
+
+                function filterAdmins() {
+                    const search = document.getElementById('searchBox').value.toLowerCase().trim();
+                    const buildingId = document.getElementById('buildingFilter').value;
+
+                    let visibleCount = 0;
+
+                    document.querySelectorAll('.admin-row').forEach(row => {
+                        const searchText = row.dataset.search || '';
+                        const buildings = row.dataset.buildings || '';
+
+                        const matchSearch = !search || searchText.includes(search);
+                        const matchBuilding = !buildingId || buildings.includes(buildingId);
+
+                        if (matchSearch && matchBuilding) {
+                            row.style.display = '';
+                            visibleCount++;
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+
+                    document.getElementById('noResults').style.display = visibleCount === 0 ? 'block' : 'none';
+                }
+    </script>
+}

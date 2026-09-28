@@ -1,0 +1,25 @@
+﻿@{
+    ViewData["Title"] = "اختر العمارة";
+    var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Models.Building> ?? new();
+}
+
+<div class="container">
+    <h2>🏢 اختر العمارة لإعداداتها</h2>
+
+    @if (buildings.Count == 0)
+    {
+        <div class="alert alert-info">لا توجد عمارات.</div>
+    }
+    else
+    {
+        <div class="list-group mt-3">
+            @foreach (var b in buildings)
+            {
+                <a asp-action="Building" asp-route-id="@b.Id" class="list-group-item list-group-item-action">
+                    <strong>@b.Name</strong>
+                    <small class="text-muted">— @b.BuildingNumber</small>
+                </a>
+            }
+        </div>
+    }
+</div>

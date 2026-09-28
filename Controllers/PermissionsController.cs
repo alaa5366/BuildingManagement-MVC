@@ -13,16 +13,24 @@ namespace BuildingManagementMvc.Controllers;
 public class PermissionsController : Controller
 {
     private readonly AdminManagementService _admins;
+    private readonly BuildingsService _buildings;
 
-    public PermissionsController(AdminManagementService admins) => _admins = admins;
+    public PermissionsController(AdminManagementService admins, BuildingsService buildings)
+    {
+        _admins = admins;
+        _buildings = buildings;
+    }
 
     private string CurrentUserId =>
         User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? buildingId)
     {
         var admins = await _admins.GetAdminsAsync();
         ViewBag.AllPermissions = AdminPermissions.All;
+        ViewBag.GroupedPermissions = GetGroupedPermissions();
+        ViewBag.Buildings = await _buildings.GetAllAsync();
+        ViewBag.SelectedBuildingId = buildingId;
         return View(admins);
     }
 
@@ -45,16 +53,41 @@ public class PermissionsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ApplyTemplate(string adminId, string template)
     {
-        var perms = template switch
+        List<string> perms = template switch
         {
             "full" => AdminPermissions.TemplateAdminFull,
+            "super" => AdminPermissions.TemplateAdminSuper,      // ← جديد
             "financial" => AdminPermissions.TemplateAdminFinancial,
             "maintenance" => AdminPermissions.TemplateAdminMaintenance,
             _ => new List<string>()
         };
 
         await _admins.SyncPermissionsAsync(adminId, perms, CurrentUserId);
-        TempData["Message"] = "تم تطبيق القالب.";
+
+        var label = template switch
+        {
+            "full" => "كامل (12)",
+            "super" => "Super (22)",
+            "financial" => "مالي (7)",
+            "maintenance" => "صيانة (4)",
+            _ => template
+        };
+
+        TempData["Message"] = $"✅ تم تطبيق قالب {label} — {perms.Count} صلاحية.";
         return RedirectToAction(nameof(Index));
+    }
+    private static Dictionary<AdminPermissions.PermissionCategory, List<string>> GetGroupedPermissions()
+    {
+        var result = new Dictionary<AdminPermissions.PermissionCategory, List<string>>();
+
+        foreach (var p in AdminPermissions.All)
+        {
+            var cat = AdminPermissions.CategoryOf(p);
+            if (!result.ContainsKey(cat))
+                result[cat] = new List<string>();
+            result[cat].Add(p);
+        }
+
+        return result;
     }
 }

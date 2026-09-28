@@ -8,7 +8,6 @@ namespace BuildingManagementMvc.Models;
 [FirestoreData]
 public class MonthData
 {
-    // نظام قديم (Legacy) — تحصيل شقة واحدة لكل شهر، لسه موجود لأغراض التوافق
     [FirestoreProperty("collections")]
     public Dictionary<string, object> Collections { get; set; } = new();
 
@@ -21,11 +20,9 @@ public class MonthData
     [FirestoreProperty("revenues")]
     public List<Revenue> Revenues { get; set; } = new();
 
-    // aptId -> نصيبه من مصروفات الشهر
     [FirestoreProperty("distribution")]
     public Dictionary<string, double> Distribution { get; set; } = new();
 
-    // aptId -> نصيبه من إيرادات الشهر
     [FirestoreProperty("revenueDistribution")]
     public Dictionary<string, double> RevenueDistribution { get; set; } = new();
 }
@@ -69,6 +66,25 @@ public class Deposit
     [FirestoreProperty("cancelledAt")] public string? CancelledAt { get; set; }
     [FirestoreProperty("cancelledBy")] public string? CancelledBy { get; set; }
     [FirestoreProperty("cancelledReason")] public string? CancelledReason { get; set; }
+
+    // ✅ Phase 21: تتبع تعديلات الأدمن على الدفعة المعلقة
+    [FirestoreProperty("updatedAt")] public string? UpdatedAt { get; set; }
+    [FirestoreProperty("updatedBy")] public string? UpdatedBy { get; set; }
+    [FirestoreProperty("updateReason")] public string? UpdateReason { get; set; }
+    [FirestoreProperty("editHistory")] public List<DepositEditEntry>? EditHistory { get; set; }
+}
+
+// ✅ Phase 21: سجل تعديل واحد على دفعة
+[FirestoreData]
+public class DepositEditEntry
+{
+    [FirestoreProperty("ts")] public string Ts { get; set; } = "";
+    [FirestoreProperty("by")] public string By { get; set; } = "";
+    [FirestoreProperty("reason")] public string Reason { get; set; } = "";
+    [FirestoreProperty("oldAmount")] public double OldAmount { get; set; }
+    [FirestoreProperty("newAmount")] public double NewAmount { get; set; }
+    [FirestoreProperty("oldNote")] public string OldNote { get; set; } = "";
+    [FirestoreProperty("newNote")] public string NewNote { get; set; } = "";
 }
 
 [FirestoreData]
@@ -98,10 +114,9 @@ public class AuditLogEntry
     [FirestoreProperty("aptNumber")] public int? AptNumber { get; set; }
 }
 
-// عنصر معاملة موحّد لعرض كشف حساب الشقة (مش بيتخزن، بيتحسب وقت العرض)
 public class WalletTransactionVm
 {
-    public string Type { get; set; } = ""; // deposit | expense | revenue | monthly_fee_due | monthly_fee_credit | adjustment
+    public string Type { get; set; } = "";
     public string Status { get; set; } = "confirmed";
     public string Id { get; set; } = "";
     public string? Number { get; set; }

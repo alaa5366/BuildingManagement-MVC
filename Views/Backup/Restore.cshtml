@@ -1,0 +1,36 @@
+﻿@{
+    ViewData["Title"] = "استعادة نسخة احتياطية";
+}
+
+<div class="container">
+    <h2>📥 استعادة من نسخة احتياطية</h2>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <div class="alert alert-warning">
+        <strong>⚠️ تحذير:</strong> الاستعادة بتكتب بيانات في Firestore.
+        استخدم خيار <strong>"Preview"</strong> الأول عشان تشوف المحتوى قبل التنفيذ.
+    </div>
+
+    <form method="post" asp-action="PreviewRestore" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+
+        <div class="card">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">📁 ملف النسخة الاحتياطية (.zip)</label>
+                    <input type="file" name="backupFile" accept=".zip" class="form-control" required />
+                    <div class="form-text">الحد الأقصى: 100 MB</div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    🔍 معاينة المحتوى
+                </button>
+                <a asp-action="Index" class="btn btn-secondary">← رجوع</a>
+            </div>
+        </div>
+    </form>
+</div>

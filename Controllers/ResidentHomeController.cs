@@ -21,4 +21,19 @@ public class ResidentHomeController : Controller
         ViewBag.Building = building;
         return View(apt);
     }
+    [HttpGet]
+    public IActionResult Debug()
+    {
+        var claims = string.Join("\n", User.Claims.Select(c => $"{c.Type} = {c.Value}"));
+        var isAuth = User.Identity?.IsAuthenticated ?? false;
+        var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "(none)";
+
+        var text = $@"IsAuthenticated: {isAuth}
+Role: {role}
+
+=== Claims ===
+{claims}";
+
+        return Content(text, "text/plain", System.Text.Encoding.UTF8);
+    }
 }

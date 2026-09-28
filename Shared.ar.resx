@@ -1,0 +1,63 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="App_Name" xml:space="preserve">
+    <value>نظام إدارة العمارات</value>
+  </data>
+  <data name="App_ShortName" xml:space="preserve">
+    <value>إدارة العمارات</value>
+  </data>
+  <data name="Nav_Home" xml:space="preserve"><value>الرئيسية</value></data>
+  <data name="Nav_Wallet" xml:space="preserve"><value>المحفظة</value></data>
+  <data name="Nav_Expenses" xml:space="preserve"><value>المصروفات</value></data>
+  <data name="Nav_Revenues" xml:space="preserve"><value>الإيرادات</value></data>
+  <data name="Nav_Categories" xml:space="preserve"><value>الفئات</value></data>
+  <data name="Nav_Polls" xml:space="preserve"><value>التصويتات</value></data>
+  <data name="Nav_Maintenance" xml:space="preserve"><value>الصيانة</value></data>
+  <data name="Nav_Notifications" xml:space="preserve"><value>الإشعارات</value></data>
+  <data name="Nav_WhatsApp" xml:space="preserve"><value>واتساب</value></data>
+  <data name="Nav_AuditLog" xml:space="preserve"><value>السجل</value></data>
+  <data name="Nav_Settings" xml:space="preserve"><value>الإعدادات</value></data>
+  <data name="Nav_MySettings" xml:space="preserve"><value>إعداداتي</value></data>
+  <data name="Nav_MyWallet" xml:space="preserve"><value>محفظتي</value></data>
+  <data name="Nav_MyLog" xml:space="preserve"><value>سجلي</value></data>
+  <data name="Nav_Help" xml:space="preserve"><value>الكتيب</value></data>
+  <data name="Nav_Logout" xml:space="preserve"><value>تسجيل الخروج</value></data>
+  <data name="Nav_Buildings" xml:space="preserve"><value>العمارات</value></data>
+  <data name="Nav_Admins" xml:space="preserve"><value>الأدمنة</value></data>
+  <data name="Nav_Tools" xml:space="preserve"><value>الأدوات</value></data>
+  <data name="Nav_Sync" xml:space="preserve"><value>المزامنة</value></data>
+  <data name="Nav_Backup" xml:space="preserve"><value>النسخ الاحتياطي</value></data>
+  <data name="Nav_Permissions" xml:space="preserve"><value>الصلاحيات</value></data>
+  <data name="Footer_Copyright" xml:space="preserve">
+    <value>نظام إدارة العمارات — نسخة C# MVC</value>
+  </data>
+  <data name="Login_Title" xml:space="preserve"><value>تسجيل الدخول</value></data>
+  <data name="Login_Subtitle" xml:space="preserve"><value>سجل دخولك للمتابعة</value></data>
+  <data name="Login_Identifier" xml:space="preserve"><value>الإيميل / رقم التليفون</value></data>
+  <data name="Login_Credential" xml:space="preserve"><value>الباسورد / PIN</value></data>
+  <data name="Login_Submit" xml:space="preserve"><value>دخول</value></data>
+  <data name="Login_Or" xml:space="preserve"><value>أو</value></data>
+  <data name="Login_QrHint" xml:space="preserve"><value>عندك QR سريع؟ اضغط هنا</value></data>
+  <data name="Common_Save" xml:space="preserve"><value>حفظ</value></data>
+  <data name="Common_Cancel" xml:space="preserve"><value>إلغاء</value></data>
+  <data name="Common_Delete" xml:space="preserve"><value>حذف</value></data>
+  <data name="Common_Edit" xml:space="preserve"><value>تعديل</value></data>
+  <data name="Common_Confirm" xml:space="preserve"><value>تأكيد</value></data>
+  <data name="Common_Back" xml:space="preserve"><value>رجوع</value></data>
+  <data name="Role_SuperAdmin" xml:space="preserve"><value>مدير عام</value></data>
+  <data name="Role_Admin" xml:space="preserve"><value>أدمن</value></data>
+  <data name="Role_Resident" xml:space="preserve"><value>ساكن</value></data>
+</root>

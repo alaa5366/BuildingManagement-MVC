@@ -1,12 +1,19 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using BuildingManagementMvc.Attributes;
 using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using ClosedXML.Excel;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Controllers;
 
 [Authorize(Roles = "superadmin")]
+[HasPermission(AdminPermissions.ManageBackup)]
 public class BackupController : Controller
 {
     private readonly BuildingsService _buildings;
@@ -14,6 +21,9 @@ public class BackupController : Controller
     private readonly FirebaseAuthRestService _fbAuth;
     private readonly ExcelTemplateService _template;
     private readonly ExcelImportService _import;
+    private readonly BackupService _backup;
+    private readonly ScheduledBackupService _scheduled;
+    private readonly IWebHostEnvironment _env;
     private readonly ILogger<BackupController> _logger;
 
     public BackupController(
@@ -22,6 +32,9 @@ public class BackupController : Controller
         FirebaseAuthRestService fbAuth,
         ExcelTemplateService template,
         ExcelImportService import,
+        BackupService backup,
+        ScheduledBackupService scheduled,
+        IWebHostEnvironment env,
         ILogger<BackupController> logger)
     {
         _buildings = buildings;
@@ -29,22 +42,203 @@ public class BackupController : Controller
         _fbAuth = fbAuth;
         _template = template;
         _import = import;
+        _backup = backup;
+        _scheduled = scheduled;
+        _env = env;
         _logger = logger;
     }
 
+    private string CurrentUserId =>
+        User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
+
     // ============================================================
-    // الصفحة الرئيسية
+    // Index — الصفحة الموحّدة بـ Tabs
     // ============================================================
     [HttpGet]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? tab = "overview")
     {
         var buildings = await _buildings.GetAllAsync();
+        var stats = await _backup.GetStatsAsync();
+        var backupFiles = _scheduled.ListBackupFiles(_env);
+        var settings = await _scheduled.GetSettingsAsync();
+        var history = await _scheduled.GetHistoryAsync(_env, 50);
+
         ViewBag.Buildings = buildings;
+        ViewBag.Stats = stats;
+        ViewBag.BackupFiles = backupFiles;
+        ViewBag.Settings = settings;
+        ViewBag.History = history;
+        ViewBag.ActiveTab = tab;
+
+        // إجماليات
+        ViewBag.TotalCollections = stats.Count;
+        ViewBag.TotalDocuments = stats.Sum(s => s.DocCount);
+        ViewBag.TotalBuildings = buildings.Count;
+        ViewBag.TotalBackups = backupFiles.Count;
+        ViewBag.LastScheduledRun = settings.LastRunAt;
+        ViewBag.LastScheduledStatus = settings.LastRunStatus;
+        ViewBag.AvailableCollections = BackupService.GetKnownCollections();
+
         return View();
     }
 
     // ============================================================
-    // 1. تنزيل القالب الفاضي
+    // Backup كامل — إنشاء ZIP
+    // ============================================================
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(List<string> collections)
+    {
+        if (collections == null || collections.Count == 0)
+        {
+            TempData["Error"] = "اختر على الأقل Collection واحد";
+            return RedirectToAction(nameof(Index), new { tab = "backup" });
+        }
+
+        try
+        {
+            var (bytes, result) = await _backup.CreateBackupAsync(collections, CurrentUserId);
+            TempData["Message"] = $"✅ تم إنشاء النسخة ({result.Collections.Count} collections، {result.TotalDocuments} مستند)";
+            return File(bytes, "application/zip", result.FileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Backup create failed");
+            TempData["Error"] = "فشل الإنشاء: " + ex.Message;
+            return RedirectToAction(nameof(Index), new { tab = "backup" });
+        }
+    }
+
+    // ============================================================
+    // Restore
+    // ============================================================
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(100 * 1024 * 1024)]
+    public async Task<IActionResult> PreviewRestore(IFormFile backupFile)
+    {
+        if (backupFile == null || backupFile.Length == 0)
+        {
+            TempData["Error"] = "ارفع ملف ZIP أولاً";
+            return RedirectToAction(nameof(Index), new { tab = "restore" });
+        }
+
+        if (!backupFile.FileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+        {
+            TempData["Error"] = "الملف لازم يكون ZIP";
+            return RedirectToAction(nameof(Index), new { tab = "restore" });
+        }
+
+        try
+        {
+            using var stream = backupFile.OpenReadStream();
+            var preview = await _backup.PreviewRestoreAsync(stream, backupFile.FileName, CurrentUserId);
+
+            if (!preview.Success)
+            {
+                TempData["Error"] = "فشل قراءة الملف: " + string.Join("، ", preview.Errors);
+                return RedirectToAction(nameof(Index), new { tab = "restore" });
+            }
+
+            return View("RestorePreview", preview);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Backup preview failed");
+            TempData["Error"] = "فشل: " + ex.Message;
+            return RedirectToAction(nameof(Index), new { tab = "restore" });
+        }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ExecuteRestore(
+        string tempFilePath, List<string> collections, bool overwrite)
+    {
+        if (string.IsNullOrEmpty(tempFilePath) || collections == null || collections.Count == 0)
+        {
+            TempData["Error"] = "بيانات ناقصة";
+            return RedirectToAction(nameof(Index), new { tab = "restore" });
+        }
+
+        try
+        {
+            var result = await _backup.RestoreAsync(tempFilePath, collections, overwrite, CurrentUserId);
+            return View("RestoreResult", result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Restore failed");
+            TempData["Error"] = "فشل: " + ex.Message;
+            return RedirectToAction(nameof(Index), new { tab = "restore" });
+        }
+    }
+
+    // ============================================================
+    // Scheduled — حفظ الإعدادات + تشغيل يدوي + تحميل + حذف
+    // ============================================================
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveScheduledSettings(ScheduledBackupSettings model)
+    {
+        if (model.Enabled && (model.Collections == null || model.Collections.Count == 0))
+        {
+            TempData["Error"] = "لازم تختار على الأقل Collection واحد";
+            return RedirectToAction(nameof(Index), new { tab = "scheduled" });
+        }
+
+        try
+        {
+            await _scheduled.SaveSettingsAsync(model, CurrentUserId);
+            TempData["Message"] = "✅ تم حفظ الإعدادات";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "SaveScheduledSettings failed");
+            TempData["Error"] = "فشل الحفظ: " + ex.Message;
+        }
+
+        return RedirectToAction(nameof(Index), new { tab = "scheduled" });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RunNow()
+    {
+        try
+        {
+            await _scheduled.RunScheduledBackupAsync(_env, forceRun: true);
+            TempData["Message"] = "✅ تم إنشاء النسخة";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "RunNow failed");
+            TempData["Error"] = "فشل: " + ex.Message;
+        }
+        return RedirectToAction(nameof(Index), new { tab = "scheduled" });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> DownloadBackup(string fileName)
+    {
+        var path = await _scheduled.GetBackupFilePathAsync(_env, fileName);
+        if (path == null) return NotFound();
+
+        var bytes = await System.IO.File.ReadAllBytesAsync(path);
+        return File(bytes, "application/zip", fileName);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteBackup(string fileName)
+    {
+        var ok = await _scheduled.DeleteBackupAsync(_env, fileName, CurrentUserId);
+        TempData[ok ? "Message" : "Error"] = ok ? "✅ تم الحذف" : "❌ لم يتم العثور على الملف";
+        return RedirectToAction(nameof(Index), new { tab = "scheduled" });
+    }
+
+    // ============================================================
+    // Excel Import/Export
     // ============================================================
     [HttpGet]
     public IActionResult DownloadTemplate()
@@ -53,7 +247,6 @@ public class BackupController : Controller
         {
             var issuedBy = User.Identity?.Name ?? "superadmin";
             var bytes = _template.GenerateTemplate(null, issuedBy);
-
             var fileName = $"building-import-template-{DateTime.Now:yyyyMMdd-HHmm}.xlsx";
             return File(bytes,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -63,13 +256,10 @@ public class BackupController : Controller
         {
             _logger.LogError(ex, "[Backup] DownloadTemplate failed");
             TempData["Error"] = "فشل تنزيل القالب: " + ex.Message;
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Index), new { tab = "import" });
         }
     }
 
-    // ============================================================
-    // 2. رفع ملف Excel
-    // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(10 * 1024 * 1024)]
@@ -78,14 +268,14 @@ public class BackupController : Controller
         if (excelFile == null || excelFile.Length == 0)
         {
             TempData["Error"] = "لم يتم رفع أي ملف";
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Index), new { tab = "import" });
         }
 
         var ext = Path.GetExtension(excelFile.FileName).ToLowerInvariant();
         if (ext != ".xlsx")
         {
             TempData["Error"] = "الملف لازم يكون بصيغة .xlsx";
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Index), new { tab = "import" });
         }
 
         try
@@ -96,7 +286,7 @@ public class BackupController : Controller
             if (!result.IsSuccess || result.Data == null)
             {
                 TempData["Error"] = result.Error ?? "الملف غير صالح";
-                return RedirectToAction("Index");
+                return RedirectToAction(nameof(Index), new { tab = "import" });
             }
 
             var json = System.Text.Json.JsonSerializer.Serialize(result.Data);
@@ -108,13 +298,10 @@ public class BackupController : Controller
         {
             _logger.LogError(ex, "[Backup] UploadExcel failed");
             TempData["Error"] = "فشل قراءة الملف: " + ex.Message;
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Index), new { tab = "import" });
         }
     }
 
-    // ============================================================
-    // 3. تأكيد الاستيراد (بدون رفع الملف تاني)
-    // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ConfirmImport()
@@ -123,7 +310,7 @@ public class BackupController : Controller
         if (string.IsNullOrEmpty(json))
         {
             TempData["Error"] = "انتهت صلاحية الجلسة. ارفع الملف تاني.";
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Index), new { tab = "import" });
         }
 
         BuildingImportData? data;
@@ -134,40 +321,29 @@ public class BackupController : Controller
         catch
         {
             TempData["Error"] = "البيانات تالفة. ارفع الملف تاني.";
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Index), new { tab = "import" });
         }
 
         if (data == null || data.Apartments.Count == 0)
         {
             TempData["Error"] = "البيانات ناقصة. ارفع الملف تاني.";
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Index), new { tab = "import" });
         }
 
         try
         {
-            // ============================================================
-            // ✅ 1. إنشاء العمارة
-            // ============================================================
             var (buildingId, buildingNumber) = await _buildings.CreateAsync(
-                data.Name,
-                data.AdminPin,
-                data.AdminWhatsapp,
-                data.LogoUrl,
-                data.BuildingNumber,
+                data.Name, data.AdminPin, data.AdminWhatsapp, data.LogoUrl, data.BuildingNumber,
                 addDefaultExpenseCategories: true,
-                addDefaultRevenueCategories: true
-            );
+                addDefaultRevenueCategories: true);
 
             var building = await _buildings.GetByIdAsync(buildingId);
             if (building == null)
             {
                 TempData["Error"] = "فشل إنشاء العمارة";
-                return RedirectToAction("Index");
+                return RedirectToAction(nameof(Index), new { tab = "import" });
             }
 
-            // ============================================================
-            // ✅ 2. تجميع الشقق حسب الدور + إنشاء Firebase Auth accounts
-            // ============================================================
             var floorsGrouped = data.Apartments
                 .GroupBy(a => new { a.FloorLabel, a.FloorOrder })
                 .OrderBy(g => g.Key.FloorOrder)
@@ -176,12 +352,7 @@ public class BackupController : Controller
             foreach (var group in floorsGrouped)
             {
                 var floorId = Guid.NewGuid().ToString("N");
-                building.Floors.Add(new Floor
-                {
-                    Id = floorId,
-                    Label = group.Key.FloorLabel,
-                    Order = group.Key.FloorOrder
-                });
+                building.Floors.Add(new Floor { Id = floorId, Label = group.Key.FloorLabel, Order = group.Key.FloorOrder });
 
                 foreach (var aptData in group.OrderBy(a => a.AptNumber))
                 {
@@ -201,18 +372,15 @@ public class BackupController : Controller
                         Label = aptData.AptLabel,
                         Notes = aptData.Notes,
                         CloseDate = aptData.Status.Equals("closed", StringComparison.OrdinalIgnoreCase)
-                            ? DateTime.UtcNow.ToString("o")
-                            : null,
+                            ? DateTime.UtcNow.ToString("o") : null,
                         OpenDate = DateTime.UtcNow.ToString("o")
                     });
 
-                    // ✅ إنشاء Firebase Auth account للشقة
                     try
                     {
                         var email = AuthHelpers.ResidentInternalEmail(buildingId, group.Key.FloorOrder, aptData.AptNumber);
                         var password = AuthHelpers.ResidentPassword(buildingId, aptData.AptNumber, aptData.Pin);
                         await _fbAuth.CreateUserAsync(email, password);
-                        Console.WriteLine($"[Backup] Resident auth created: {email}");
                     }
                     catch (Exception ex)
                     {
@@ -221,67 +389,7 @@ public class BackupController : Controller
                 }
             }
 
-            // ============================================================
-            // ✅ 3. حفظ العمارة (مع الشقق والأدوار)
-            // ============================================================
             await _buildings.SaveFullAsync(building);
-            Console.WriteLine($"[Backup] Building saved: {buildingId}");
-
-            // ============================================================
-            // ✅ 4. إنشاء Firebase Auth account للأدمن
-            // ============================================================
-            string? adminUid = null;
-            string adminEmail;
-            try
-            {
-                adminEmail = AuthHelpers.AdminEmailForPhone(buildingId, building.AdminWhatsapp);
-                var adminPassword = AuthHelpers.AdminPasswordForPhone(building.AdminWhatsapp, building.AdminPin);
-
-                Console.WriteLine($"[Backup] Creating admin auth: {adminEmail}");
-                var createResult = await _fbAuth.CreateUserAsync(adminEmail, adminPassword);
-                Console.WriteLine($"[Backup] Admin auth result: {createResult}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "[Backup] Failed to create admin auth");
-                adminEmail = AuthHelpers.AdminEmailForPhone(buildingId, building.AdminWhatsapp);
-            }
-
-            // ============================================================
-            // ✅ 5. تسجيل الأدمن في users collection
-            // ============================================================
-            try
-            {
-                // signin الأول عشان نجيب الـ UID
-                var adminPassword = AuthHelpers.AdminPasswordForPhone(building.AdminWhatsapp, building.AdminPin);
-                var signIn = await _fbAuth.SignInWithPasswordAsync(adminEmail, adminPassword);
-
-                if (signIn.Success && !string.IsNullOrEmpty(signIn.Uid))
-                {
-                    adminUid = signIn.Uid;
-                    Console.WriteLine($"[Backup] Admin signed in, UID: {adminUid}");
-
-                    await _users.SetAsync(adminUid, new Dictionary<string, object>
-                    {
-                        ["email"] = adminEmail,
-                        ["name"] = "Admin - " + building.Name,
-                        ["phone"] = building.AdminWhatsapp,
-                        ["pin"] = building.AdminPin,
-                        ["role"] = "admin",
-                        ["buildingIds"] = new List<object> { buildingId }
-                    });
-
-                    Console.WriteLine($"[Backup] Admin added to users collection");
-                }
-                else
-                {
-                    _logger.LogWarning($"[Backup] Admin signin failed: {signIn.Error}");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "[Backup] Failed to add admin to users");
-            }
 
             TempData["Message"] = $"✅ تم استيراد العمارة '{data.Name}' بنجاح ({data.Apartments.Count} شقة)";
             return RedirectToAction("Details", "Buildings", new { id = buildingId });
@@ -290,12 +398,12 @@ public class BackupController : Controller
         {
             _logger.LogError(ex, "[Backup] ConfirmImport failed");
             TempData["Error"] = "فشل الاستيراد: " + ex.Message;
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Index), new { tab = "import" });
         }
     }
 
     // ============================================================
-    // 4. تصدير عمارة واحدة JSON
+    // Export
     // ============================================================
     [HttpGet]
     public async Task<IActionResult> ExportJson(string id)
@@ -311,13 +419,9 @@ public class BackupController : Controller
 
         var bytes = System.Text.Encoding.UTF8.GetBytes(json);
         var fileName = $"{building.BuildingNumber}-{DateTime.Now:yyyyMMdd-HHmm}.json";
-
         return File(bytes, "application/json", fileName);
     }
 
-    // ============================================================
-    // 5. تصدير كل العمارات JSON
-    // ============================================================
     [HttpGet]
     public async Task<IActionResult> ExportAllJson()
     {
@@ -339,13 +443,9 @@ public class BackupController : Controller
 
         var bytes = System.Text.Encoding.UTF8.GetBytes(json);
         var fileName = $"all-buildings-{DateTime.Now:yyyyMMdd-HHmm}.json";
-
         return File(bytes, "application/json", fileName);
     }
 
-    // ============================================================
-    // 6. تصدير Excel
-    // ============================================================
     [HttpGet]
     public async Task<IActionResult> ExportExcel(string id)
     {
@@ -381,11 +481,7 @@ public class BackupController : Controller
         int row = 2;
         foreach (var floor in building.Floors.OrderBy(f => f.Order))
         {
-            var apts = building.Apartments
-                .Where(a => a.FloorId == floor.Id)
-                .OrderBy(a => a.Number)
-                .ToList();
-
+            var apts = building.Apartments.Where(a => a.FloorId == floor.Id).OrderBy(a => a.Number).ToList();
             foreach (var apt in apts)
             {
                 aptsSheet.Cell(row, 1).Value = floor.Label;
@@ -407,7 +503,6 @@ public class BackupController : Controller
         expSheet.Cell(1, 1).Value = "Name";
         expSheet.Cell(1, 2).Value = "Color";
         expSheet.Cell(1, 3).Value = "Active";
-        expSheet.Cell(1, 4).Value = "ملاحظات";
         row = 2;
         foreach (var cat in building.ExpenseCategories)
         {
@@ -421,7 +516,6 @@ public class BackupController : Controller
         revSheet.Cell(1, 1).Value = "Name";
         revSheet.Cell(1, 2).Value = "Color";
         revSheet.Cell(1, 3).Value = "Active";
-        revSheet.Cell(1, 4).Value = "ملاحظات";
         row = 2;
         foreach (var cat in building.RevenueCategories)
         {

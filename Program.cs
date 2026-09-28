@@ -2,16 +2,15 @@ using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using QuestPDF.Drawing;
 using QuestPDF.Infrastructure;
+using System.Globalization;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.Extensions.Options;
 
 // ✅ إعدادات QuestPDF
 QuestPDF.Settings.License = LicenseType.Community;
 QuestPDF.Settings.UseEnvironmentFonts = false;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// MVC
-builder.Services.AddControllersWithViews();
-
 // ✅ Session (لتخزين بيانات الاستيراد بين الطلبات)
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
@@ -48,6 +47,12 @@ builder.Services.AddSingleton<PollsService>();
 builder.Services.AddSingleton<MaintenanceService>();
 builder.Services.AddSingleton<NotificationsService>();
 builder.Services.AddSingleton<WhatsAppTemplateService>();
+// ✅ المرحلة 20 — الإعدادات
+builder.Services.AddScoped<SettingsService>();
+// ✅ المرحلة 19 — Backup
+builder.Services.AddScoped<BackupService>();
+builder.Services.AddScoped<ScheduledBackupService>();
+builder.Services.AddHostedService<BackupScheduler>();
 // ✅ المرحلة 18 — الأدوات والمزامنة
 builder.Services.AddScoped<MigrationService>();
 builder.Services.AddScoped<DbMaintenanceService>();
@@ -64,6 +69,36 @@ builder.Services.AddScoped<AdminManagementService>();
 builder.Services.AddMemoryCache();
 // ✅ Unified Auth
 builder.Services.AddScoped<UnifiedAuthService>();
+// ✅ Localization
+builder.Services.AddLocalization();
+
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    var supportedCultures = new[]
+    {
+        new CultureInfo("ar"),
+        new CultureInfo("en")
+    };
+
+    options.DefaultRequestCulture = new RequestCulture("ar");
+    options.SupportedCultures = supportedCultures;
+    options.SupportedUICultures = supportedCultures;
+
+    // ✅ نستخدم الكوكي القياسي بتاع ASP.NET Core
+    // (اسمه ".AspNetCore.Culture" وقيمته "c=ar|uic=ar")
+    options.RequestCultureProviders.Clear();
+    options.RequestCultureProviders.Add(
+        new CookieRequestCultureProvider
+        {
+            CookieName = CookieRequestCultureProvider.DefaultCookieName
+        });
+    options.RequestCultureProviders.Add(new QueryStringRequestCultureProvider());
+    options.RequestCultureProviders.Add(new AcceptLanguageHeaderRequestCultureProvider());
+});
+
+builder.Services.AddControllersWithViews()
+    .AddViewLocalization()
+    .AddDataAnnotationsLocalization();
 // Cookie authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -117,7 +152,8 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseStaticFiles();
-
+var locOptions = app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>();
+app.UseRequestLocalization(locOptions.Value);
 app.UseRouting();
 
 // ✅ Session middleware (قبل Authentication)
