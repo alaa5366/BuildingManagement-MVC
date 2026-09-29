@@ -110,4 +110,31 @@ public class NotificationsService
 
         Push(building, "resident", apt.Id, "deposit_updated", "✏️", "تم تعديل الدفعة", body);
     }
+    // ✅ Phase 24.5 — إشعار الساكن بفتح الشقة
+    public void NotifyResidentApartmentReopened(
+        Building building,
+        Apartment apt,
+        string? reason)
+    {
+        var body = $"تم إعادة تفعيل شقتك رقم {apt.Number} في {building.Name}";
+        if (!string.IsNullOrWhiteSpace(reason))
+            body += $" — {reason}";
+        body += ". هتبدأ تدفع من الشهر الجاي.";
+
+        Push(building, "resident", apt.Id, "apartment_reopened", "🔓", "تم إعادة تفعيل شقتك", body);
+    }
+
+    // ✅ Phase 24.5 — إشعار الساكن بإغلاق الشقة
+    public void NotifyResidentApartmentClosed(
+        Building building,
+        Apartment apt,
+        string? reason)
+    {
+        var body = $"تم إغلاق شقتك رقم {apt.Number} في {building.Name}";
+        if (!string.IsNullOrWhiteSpace(reason))
+            body += $" — السبب: {reason}";
+        body += ". مش هتتضمن في المصروفات دلوقتي.";
+
+        Push(building, "resident", apt.Id, "apartment_closed", "🔒", "تم إغلاق شقتك", body);
+    }
 }

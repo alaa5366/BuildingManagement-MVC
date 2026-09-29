@@ -213,20 +213,20 @@ public class SettingsController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Own(
-        OwnSettings model,
-        string? OwnerName,
-        string? AptLabel,
-        string? NewPhone,
-        string? NewWhatsapp,
-        string? NewPin,
-        string? ConfirmNewPin,
-        string? CurrentPin)
+    OwnSettings model,
+    string? OwnerName,
+    string? AptLabel,
+    string? NewPhone,
+    string? NewWhatsapp,
+    string? NewPin,
+    string? ConfirmNewPin,
+    string? CurrentPin)
     {
         var saveErrors = new List<string>();
         var saveSuccess = new List<string>();
 
         // ============================================================
-        // 1. حفظ الإعدادات العادية (اللغة + التفضيلات) — مستقل تمامًا
+        // 1. حفظ الإعدادات العادية (اللغة + التفضيلات)
         // ============================================================
         try
         {
@@ -242,7 +242,7 @@ public class SettingsController : Controller
         }
 
         // ============================================================
-        // 2. تحديث بيانات المستخدم (الاسم/الموبايل/PIN) — مستقل
+        // 2. تحديث بيانات المستخدم (الاسم/الموبايل/PIN)
         // ============================================================
         try
         {
@@ -305,6 +305,22 @@ public class SettingsController : Controller
         else
         {
             TempData["Error"] = "❌ فشل الحفظ: " + string.Join(" | ", saveErrors);
+        }
+
+        // ============================================================
+        // ✅ 4. مزامنة اللغة: لو اتغيرت، نحدّث الكوكي عبر LanguageController
+        // ============================================================
+        var currentLang = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        var newLang = string.IsNullOrWhiteSpace(model.Language) ? "ar" : model.Language.ToLower();
+        if (newLang != "ar" && newLang != "en") newLang = "ar";
+
+        if (newLang != currentLang)
+        {
+            return RedirectToAction("Set", "Language", new
+            {
+                lang = newLang,
+                returnUrl = Url.Action(nameof(Own))
+            });
         }
 
         return RedirectToAction(nameof(Own));

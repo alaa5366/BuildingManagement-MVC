@@ -32,6 +32,26 @@
     <link rel="apple-touch-icon" href="~/icons/icon-192.png" />
 </head>
 <body>
+    @{
+        var isImpersonating = Context.Request.Cookies.ContainsKey("bm_admin_backup");
+    }
+    @if (isImpersonating)
+    {
+        <div class="impersonation-banner">
+            <div class="container-fluid d-flex justify-content-between align-items-center">
+                <div>
+                    🚪 <strong>أنت في وضع Impersonation</strong>
+                    — تتصفح كـ <strong>@User.Identity?.Name</strong>
+                </div>
+                <form asp-controller="Impersonation" asp-action="Exit" method="post" class="m-0">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-sm btn-light">
+                        ↩️ رجوع لحسابي (الأدمن)
+                    </button>
+                </form>
+            </div>
+        </div>
+    }
     <nav class="navbar navbar-expand-lg navbar-dark app-navbar">
         <div class="container-fluid">
             <a class="navbar-brand fw-bold" asp-controller="Home" asp-action="Index">
@@ -56,6 +76,7 @@
                     @if (User.IsInRole("admin"))
                     {
                         <a class="nav-link text-white-50" asp-controller="AdminHome" asp-action="Index">@Localizer["Nav_Home"]</a>
+                        <a class="nav-link text-white-50" asp-controller="AdminApts" asp-action="Index">🏠 @Localizer["Nav_Apts"]</a>
                         <a class="nav-link text-white-50" asp-controller="Wallet" asp-action="Index">@Localizer["Nav_Wallet"]</a>
                         <a class="nav-link text-white-50" asp-controller="Expenses" asp-action="Index">@Localizer["Nav_Expenses"]</a>
                         <a class="nav-link text-white-50" asp-controller="Revenues" asp-action="Index">@Localizer["Nav_Revenues"]</a>
@@ -148,6 +169,11 @@
                 });
             }
     </script>
+    @* ✅ Presence Heartbeat *@
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <script src="~/js/presence-heartbeat.js" asp-append-version="true"></script>
+    }
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

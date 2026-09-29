@@ -13,7 +13,8 @@
 </div>
 
 <div class="alert alert-info">
-    💡 اضغط <strong>"⚡ QR سريع"</strong> جنب أي شقة عشان تولّد رابط دخول مؤقت وآمن للساكن.
+    💡 اضغط <strong>"⚡ QR سريع"</strong> عشان تولّد رابط دخول مؤقت للساكن،
+    أو <strong>"💌 ترحيب"</strong> لإرسال رسالة كاملة فيها بياناته + QR.
 </div>
 
 <div class="row">
@@ -26,17 +27,30 @@
                 <ul class="list-group list-group-flush">
                     @foreach (var apt in apts)
                     {
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <div>
                                 <span>🏠 شقة @apt.Number @(string.IsNullOrEmpty(apt.Label) ? "" : "— " + apt.Label)</span>
                                 <div class="text-muted small">@apt.Owner</div>
                             </div>
-                            <div class="d-flex gap-2 align-items-center">
+                            <div class="d-flex gap-2 align-items-center flex-wrap">
                                 <span class="text-muted small">@apt.Phone @(apt.Closed ? "🔒" : "")</span>
+
+                                @* ✅ QR سريع *@
                                 <button type="button" class="btn btn-sm btn-outline-warning"
                                         onclick="openQuickQrModal('@apt.Id', '@apt.Number', '@floor.Label')">
                                     ⚡ QR سريع
                                 </button>
+
+                                @* ✅ جديد — رسالة ترحيب *@
+                                <form method="post" asp-action="GenerateWelcome" style="display:inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="aptId" value="@apt.Id" />
+                                    <input type="hidden" name="validityHours" value="24" />
+                                    <button type="submit" class="btn btn-sm btn-outline-success"
+                                            title="رسالة ترحيب + QR للدخول السريع">
+                                        💌 ترحيب
+                                    </button>
+                                </form>
                             </div>
                         </li>
                     }
@@ -217,9 +231,4 @@
             alert('✅ تم نسخ الرابط');
         }
     </script>
-}
-@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
 }

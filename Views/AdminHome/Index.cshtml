@@ -1,74 +1,118 @@
+@model BuildingManagementMvc.ViewModels.BuildingMapVm
 @{
     ViewData["Title"] = "لوحة الأدمن";
-    var buildingName = User.FindFirst("buildingName")?.Value ?? User.Identity?.Name ?? "عمارتي";
+    var stats = Model.Stats;
 }
 
-<div class="text-center mb-4">
-    <h2>مرحبًا بك في إدارة عمارة @buildingName</h2>
-    <p class="text-muted">@ViewBag.FloorsCount دور — @ViewBag.AptsCount شقة</p>
-</div>
+<link rel="stylesheet" href="~/css/building-map.css" asp-append-version="true" />
 
-<div class="row justify-content-center g-3">
-    <div class="col-md-3">
-        <a asp-controller="Wallet" asp-action="Index" class="btn btn-brand w-100 py-3">
-            💼 المحفظة
-        </a>
-    </div>
-    <div class="col-md-3">
-        <a asp-controller="Expenses" asp-action="Index" class="btn btn-brand w-100 py-3">
-            💸 المصروفات
-        </a>
-    </div>
-    <div class="col-md-3">
-        <a asp-controller="Revenues" asp-action="Index" class="btn btn-brand w-100 py-3">
-            💰 الإيرادات
-        </a>
-    </div>
-    <div class="col-md-3">
-        <a asp-controller="Reports" asp-action="Index" class="btn btn-brand w-100 py-3">
-            📊 التقارير
-        </a>
-    </div>
-</div>
+<div class="container-fluid">
 
-<div class="row justify-content-center g-3 mt-3">
-    <div class="col-md-4">
-        <a asp-controller="AdminApts" asp-action="Index" class="btn btn-outline-warning w-100 py-3">
-            🏠 إدارة الشقق + QR سريع
-        </a>
+    @* ===== Header ===== *@
+    <div class="text-center mb-4">
+        <h2>🏢 @Model.Building.Name — @Model.Building.BuildingNumber</h2>
+        <p class="text-muted mb-1">
+            🏢 @stats.FloorsCount دور &nbsp;|&nbsp;
+            🏠 @stats.AptsCount شقة
+            (@stats.OpenAptsCount مفتوحة
+            @if (stats.ClosedAptsCount > 0)
+            {
+                <text> — @stats.ClosedAptsCount مغلقة</text>
+            }
+            )
+        </p>
     </div>
-    <div class="col-md-4">
-        <a asp-controller="Categories" asp-action="Index" class="btn btn-outline-secondary w-100 py-3">
-            🏷️ الفئات المالية
-        </a>
-    </div>
-    <div class="row justify-content-center g-3 mt-3">
-        <div class="col-md-3">
-            <a asp-controller="Polls" asp-action="Index" class="btn btn-outline-primary w-100 py-3">
-                🗳️ التصويتات
-            </a>
+
+    @* ===== Stats Cards ===== *@
+    <div class="row g-2 mb-4 justify-content-center">
+        <div class="col-md-2 col-6">
+            <div class="stat-card stat-online">
+                <div class="stat-icon">🟢</div>
+                <div class="stat-value">@stats.OnlineCount</div>
+                <div class="stat-label">أونلاين</div>
+            </div>
         </div>
-        <div class="col-md-3">
-            <a asp-controller="Maintenance" asp-action="Index" class="btn btn-outline-info w-100 py-3">
-                🔧 الصيانة
-            </a>
+        <div class="col-md-2 col-6">
+            <div class="stat-card stat-balance">
+                <div class="stat-icon">💰</div>
+                <div class="stat-value">@stats.TotalBalance.ToString("N0")</div>
+                <div class="stat-label">إجمالي الرصيد</div>
+            </div>
         </div>
-        <div class="col-md-3">
-            <a asp-controller="Notifications" asp-action="Index" class="btn btn-outline-success w-100 py-3">
-                🔔 الإشعارات
-            </a>
+        <div class="col-md-2 col-6">
+            <div class="stat-card stat-debtors">
+                <div class="stat-icon">🔴</div>
+                <div class="stat-value">@stats.DebtorsCount</div>
+                <div class="stat-label">مدينون</div>
+            </div>
         </div>
-        <div class="col-md-3">
-            <a asp-controller="WhatsApp" asp-action="Index" class="btn btn-outline-success w-100 py-3">
-                💬 واتساب
-            </a>
-        </div>
-    </div>
-    <div class="row justify-content-center g-3 mt-3">
-        <div class="col-md-6">
-            <a asp-controller="AuditLog" asp-action="Index" class="btn btn-dark w-100 py-3">
-                📜 السجل
-            </a>
+        <div class="col-md-2 col-6">
+            <div class="stat-card stat-pending">
+                <div class="stat-icon">⏳</div>
+                <div class="stat-value">@stats.PendingDepositsCount</div>
+                <div class="stat-label">دفعات معلقة</div>
+            </div>
         </div>
     </div>
+
+    @* ===== Building Map ===== *@
+    @foreach (var floor in Model.Floors)
+    {
+        <div class="floor-section">
+            <div class="floor-header">
+                <h5 class="mb-0">
+                    🏢 @floor.Label
+                    <span class="text-muted small">(دور @floor.Order)</span>
+                    <span class="badge bg-secondary ms-2">@floor.Apartments.Count شقة</span>
+
+                    @if (floor.OnlineCount > 0)
+                    {
+                        <span class="badge bg-success ms-1">🟢 @floor.OnlineCount</span>
+                    }
+                    @if (floor.DebtorsCount > 0)
+                    {
+                        <span class="badge bg-danger ms-1">🔴 @floor.DebtorsCount</span>
+                    }
+                </h5>
+            </div>
+            <div class="apartments-grid">
+                @foreach (var card in floor.Apartments)
+                {
+                    @await Html.PartialAsync("_ApartmentCard", card)
+                }
+            </div>
+        </div>
+    }
+
+    @* ===== Legend ===== *@
+    <div class="legend-bar mt-4">
+        <strong>🔑 الرموز:</strong>
+        <span class="legend-item"><span class="legend-dot" style="background:#2E7D5B;"></span> أونلاين</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#D9B34A;"></span> آخر ظهور قريب</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#999;"></span> أوفلاين</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#A0432A;"></span> رصيد سالب</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#5B9BD5;"></span> مغلقة</span>
+    </div>
+
+    @* ===== Quick Actions ===== *@
+    <div class="row justify-content-center g-3 mt-4 mb-5">
+        <div class="col-md-3">
+            <a asp-controller="Wallet" asp-action="Index" class="btn btn-brand w-100 py-3">
+                💼 المحفظة
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a asp-controller="AdminApts" asp-action="Index" class="btn btn-outline-warning w-100 py-3">
+                🏠 إدارة الشقق
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a asp-controller="Reports" asp-action="Index" class="btn btn-outline-success w-100 py-3">
+                📊 التقارير
+            </a>
+        </div>
+    </div>
+    @section Scripts {
+        <script src="~/js/apartment-details.js" asp-append-version="true"></script>
+    }
 </div>

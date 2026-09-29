@@ -1,0 +1,189 @@
+﻿@model BuildingManagementMvc.ViewModels.ApartmentDetailsVm
+@{
+    var balanceClass = Model.Balance < 0 ? "text-danger" : "text-success";
+}
+
+<div class="apartment-details-modal">
+
+    @* ===== Header ===== *@
+    <div class="apt-details-header" style="border-right-color: @Model.StatusColor;">
+        <div class="d-flex align-items-center gap-3">
+            <div class="apt-details-avatar" style="background: @Model.StatusColor;">
+                @Model.OwnerInitial
+            </div>
+            <div class="flex-grow-1">
+                <h4 class="mb-1">
+                    🏠 شقة @Model.AptNumber
+                    @if (!string.IsNullOrWhiteSpace(Model.AptLabel))
+                    {
+                        <small class="text-muted">— @Model.AptLabel</small>
+                    }
+                </h4>
+                <div class="text-muted small">
+                    🏢 @Model.FloorLabel (دور @Model.FloorOrder)
+                    <span class="ms-2 badge" style="background: @Model.StatusColor;">
+                        @Model.StatusIcon @Model.StatusLabel
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ===== Content ===== *@
+    <div class="apt-details-body">
+
+        @* ===== Owner Info ===== *@
+        <div class="details-section">
+            <h6 class="details-section-title">👤 الساكن</h6>
+            <div class="details-grid">
+                <div class="detail-item">
+                    <label>الاسم</label>
+                    <span>@(string.IsNullOrWhiteSpace(Model.Owner) ? "—" : Model.Owner)</span>
+                </div>
+                <div class="detail-item">
+                    <label>📱 الموبايل</label>
+                    <span dir="ltr">@Model.Phone</span>
+                </div>
+                <div class="detail-item">
+                    <label>🔒 PIN</label>
+                    <span class="pin-value">@Model.Pin</span>
+                </div>
+                <div class="detail-item">
+                    <label>🕐 آخر ظهور</label>
+                    <span>@Model.LastSeenText</span>
+                </div>
+            </div>
+        </div>
+
+        @* ===== Financial ===== *@
+        <div class="details-section">
+            <h6 class="details-section-title">💰 المالية</h6>
+            <div class="financial-cards">
+                <div class="fin-card fin-balance">
+                    <div class="fin-label">الرصيد الحالي</div>
+                    <div class="fin-value @balanceClass">
+                        @Model.Balance.ToString("N0") ج.م
+                    </div>
+                </div>
+                <div class="fin-card fin-collected">
+                    <div class="fin-label">محصّل هذا الشهر</div>
+                    <div class="fin-value">@Model.TotalCollectedThisMonth.ToString("N0") ج.م</div>
+                </div>
+                <div class="fin-card fin-pending">
+                    <div class="fin-label">دفعات معلقة</div>
+                    <div class="fin-value">@Model.PendingDepositsCount</div>
+                </div>
+                <div class="fin-card fin-confirmed">
+                    <div class="fin-label">دفعات مؤكدة</div>
+                    <div class="fin-value">@Model.ConfirmedDepositsCount</div>
+                </div>
+            </div>
+        </div>
+
+        @* ===== Recent Deposits ===== *@
+        @if (Model.RecentDeposits.Any())
+        {
+            <div class="details-section">
+                <h6 class="details-section-title">📜 آخر الدفعات</h6>
+                <table class="table table-sm details-table">
+                    <thead>
+                        <tr>
+                            <th>الرقم</th>
+                            <th>المبلغ</th>
+                            <th>الحالة</th>
+                            <th>التاريخ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var dep in Model.RecentDeposits)
+                        {
+                            <tr>
+                                <td>@dep.Number</td>
+                                <td>@dep.Amount.ToString("N0") ج.م</td>
+                                <td>@dep.StatusLabel</td>
+                                <td class="text-muted small">@dep.DateText</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        @* ===== Quick Actions ===== *@
+        <div class="details-section">
+            <h6 class="details-section-title">⚡ إجراءات سريعة</h6>
+            <div class="quick-actions-grid">
+
+                <a asp-controller="Invoice" asp-action="Download"
+                   asp-route-aptId="@Model.AptId"
+                   asp-route-month="@Model.CurrentMonth"
+                   target="_blank"
+                   class="qa-btn qa-invoice">
+                    <span class="qa-icon">🧾</span>
+                    <span>فاتورة PDF</span>
+                </a>
+
+                <a asp-controller="AdminApts" asp-action="Index"
+                   class="qa-btn qa-edit">
+                    <span class="qa-icon">✏️</span>
+                    <span>تعديل الشقة</span>
+                </a>
+
+                <a asp-controller="Wallet" asp-action="Index"
+                   asp-route-month="@Model.CurrentMonth"
+                   class="qa-btn qa-wallet">
+                    <span class="qa-icon">💼</span>
+                    <span>المحفظة</span>
+                </a>
+
+                <button type="button" class="qa-btn qa-welcome"
+                        onclick="sendWelcomeFromDetails('@Model.AptId')">
+                    <span class="qa-icon">💌</span>
+                    <span>رسالة ترحيب</span>
+                </button>
+
+                <button type="button" class="qa-btn qa-qr"
+                        onclick="quickQrFromDetails('@Model.AptId')">
+                    <span class="qa-icon">⚡</span>
+                    <span>QR سريع</span>
+                </button>
+
+                <button type="button" class="qa-btn qa-impersonate"
+                        onclick="impersonateResident('@Model.AptId')">
+                    <span class="qa-icon">🚪</span>
+                    <span>دخول كساكن</span>
+                </button>
+
+            </div>
+        </div>
+
+    </div>
+    @* ===== Status Actions ===== *@
+    @if (Model.IsClosed)
+    {
+        <div class="details-section">
+            <h6 class="details-section-title">🔓 الشقة مغلقة</h6>
+            <div class="alert alert-info small mb-3">
+                📅 تاريخ الإغلاق: <strong>@Model.CloseDateText</strong>
+                <br />
+                💡 لما تفتح الشقة، هتضاف تلقائيًا للمصروفات الشهرية.
+            </div>
+            <button type="button" class="btn btn-success btn-lg w-100"
+                    onclick="openApartment('@Model.AptId', '@Model.AptNumber')">
+                🔓 فتح الشقة
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="details-section">
+            <h6 class="details-section-title">🔒 إغلاق الشقة</h6>
+            <div class="alert alert-warning small mb-3">
+                ⚠️ إغلاق الشقة يعني إنها مش هتتضمن في توزيع المصروفات، ومش هيتم إصدار فواتير ليها.
+            </div>
+            <button type="button" class="btn btn-outline-danger w-100"
+                    onclick="closeApartment('@Model.AptId', '@Model.AptNumber')">
+                🔒 إغلاق الشقة
+            </button>
+        </div>
+    }
+</div>

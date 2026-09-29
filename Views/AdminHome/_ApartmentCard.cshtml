@@ -1,0 +1,43 @@
+﻿@model BuildingManagementMvc.ViewModels.ApartmentCardVm
+@{
+    var apt = Model.Apt;
+}
+
+<div class="apt-card"
+     style="border-color: @Model.StatusColor;"
+     data-apt-id="@apt.Id"
+     data-bs-toggle="tooltip"
+     data-bs-placement="top"
+     title="@Model.OwnerDisplay — @Model.StatusLabel — @Model.LastSeenText"
+     onclick="openApartmentDetails('@apt.Id')">
+
+    <div class="apt-status" style="background: @Model.StatusColor;"></div>
+
+    <div class="apt-header">
+        <span class="apt-number">🏠 شقة @apt.Number</span>
+        <span class="apt-status-icon" title="@Model.StatusLabel">@Model.StatusIcon</span>
+    </div>
+
+    <div class="apt-body">
+        <div class="apt-avatar-lg" style="background: @Model.StatusColor;">
+            @(string.IsNullOrWhiteSpace(apt.Owner) ? "?" : apt.Owner.Trim()[0])
+        </div>
+
+        <div class="apt-owner">@Model.OwnerDisplay</div>
+
+        <div class="apt-balance @Model.BalanceClass">
+            @Model.Balance.ToString("N0") ج.م
+        </div>
+
+        @if (Model.PendingDepositsCount > 0)
+        {
+            <div class="apt-pending">
+                ⏳ @Model.PendingDepositsCount معلقة
+            </div>
+        }
+
+        <div class="apt-lastseen">
+            @Model.LastSeenText
+        </div>
+    </div>
+</div>

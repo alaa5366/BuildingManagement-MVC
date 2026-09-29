@@ -1,0 +1,501 @@
+﻿/* ============================================================ */
+/* Building Map — Phase 24.2                                    */
+/* ============================================================ */
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transition: all 0.2s;
+    border-right: 4px solid #ccc;
+}
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+
+.stat-online {
+    border-right-color: #2E7D5B;
+}
+
+.stat-balance {
+    border-right-color: #12433C;
+}
+
+.stat-debtors {
+    border-right-color: #A0432A;
+}
+
+.stat-pending {
+    border-right-color: #D9B34A;
+}
+
+.stat-icon {
+    font-size: 24px;
+    line-height: 1;
+    margin-bottom: 6px;
+}
+
+.stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #12433C;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #666;
+    margin-top: 2px;
+}
+
+/* Floor */
+.floor-section {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.floor-header {
+    border-bottom: 2px solid #F0F0F0;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.apartments-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+/* Apartment Card */
+.apt-card {
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    padding: 12px;
+    position: relative;
+    transition: all 0.2s;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+    .apt-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    }
+
+.apt-status {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 4px;
+}
+
+.apt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-top: 4px;
+}
+
+.apt-number {
+    font-weight: 700;
+    font-size: 14px;
+    color: #333;
+}
+
+.apt-status-icon {
+    font-size: 14px;
+}
+
+.apt-body {
+    text-align: right;
+}
+
+.apt-owner {
+    font-size: 13px;
+    color: #555;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.apt-balance {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.apt-pending {
+    display: inline-block;
+    background: #FFF3CD;
+    color: #856404;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    margin-bottom: 4px;
+}
+
+.apt-lastseen {
+    font-size: 11px;
+    color: #999;
+}
+
+.apt-actions {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.btn-xs {
+    padding: 2px 8px;
+    font-size: 12px;
+    border-radius: 6px;
+}
+
+/* Legend */
+.legend-bar {
+    background: white;
+    padding: 12px 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    text-align: center;
+    font-size: 13px;
+}
+
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 12px;
+}
+
+.legend-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .apartments-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    }
+
+    .stat-value {
+        font-size: 18px;
+    }
+}
+/* ============================================================ */
+/* Apartment Avatar (الجديد)                                    */
+/* ============================================================ */
+
+.apt-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: white;
+    font-weight: 700;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    float: left;
+    margin-left: 8px;
+}
+
+/* ============================================================ */
+/* Apartment Details Modal                                       */
+/* ============================================================ */
+
+.apartment-details-modal {
+    direction: rtl;
+    text-align: right;
+}
+
+.apt-details-header {
+    background: #F7F5F1;
+    padding: 20px;
+    border-right: 5px solid #999;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.apt-details-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    color: white;
+    font-weight: 700;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.apt-details-body {
+    padding: 0 10px;
+}
+
+.details-section {
+    margin-bottom: 24px;
+}
+
+.details-section-title {
+    color: #12433C;
+    font-weight: 700;
+    border-bottom: 2px solid #D9B34A;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+}
+
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.detail-item {
+    background: #FAFAFA;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border-right: 3px solid #12433C;
+}
+
+    .detail-item label {
+        display: block;
+        font-size: 11px;
+        color: #888;
+        margin-bottom: 2px;
+    }
+
+    .detail-item span {
+        font-weight: 600;
+        font-size: 14px;
+        color: #333;
+    }
+
+.pin-value {
+    background: #12433C;
+    color: white;
+    padding: 2px 10px;
+    border-radius: 6px;
+    letter-spacing: 2px;
+}
+
+/* Financial Cards */
+.financial-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+}
+
+.fin-card {
+    padding: 12px;
+    border-radius: 10px;
+    background: #FAFAFA;
+    text-align: center;
+    border-top: 3px solid #ccc;
+}
+
+    .fin-card.fin-balance {
+        border-top-color: #12433C;
+    }
+
+    .fin-card.fin-collected {
+        border-top-color: #2E7D5B;
+    }
+
+    .fin-card.fin-pending {
+        border-top-color: #D9B34A;
+    }
+
+    .fin-card.fin-confirmed {
+        border-top-color: #4A90D9;
+    }
+
+.fin-label {
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 6px;
+}
+
+.fin-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #12433C;
+}
+
+/* Recent Deposits */
+.details-table {
+    font-size: 13px;
+}
+
+    .details-table th {
+        background: #F0F0F0;
+        font-size: 12px;
+        color: #555;
+    }
+
+/* Quick Actions */
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+}
+
+.qa-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 8px;
+    border: 2px solid #E0E0E0;
+    border-radius: 10px;
+    background: white;
+    text-decoration: none;
+    color: #333;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+    .qa-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+    }
+
+.qa-icon {
+    font-size: 24px;
+    line-height: 1;
+}
+
+.qa-btn.qa-invoice:hover {
+    border-color: #4A90D9;
+}
+
+.qa-btn.qa-edit:hover {
+    border-color: #D9B34A;
+}
+
+.qa-btn.qa-wallet:hover {
+    border-color: #12433C;
+}
+
+.qa-btn.qa-welcome:hover {
+    border-color: #2E7D5B;
+}
+
+.qa-btn.qa-qr:hover {
+    border-color: #B9853B;
+}
+
+.qa-btn.qa-impersonate:hover {
+    border-color: #A0432A;
+}
+
+@media (max-width: 576px) {
+    .qa-btn {
+        padding: 10px 6px;
+        font-size: 12px;
+    }
+
+    .qa-icon {
+        font-size: 20px;
+    }
+
+    .fin-value {
+        font-size: 15px;
+    }
+}
+/* ✅ Avatar Big للبطاقة */
+.apt-avatar-lg {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    color: white;
+    font-weight: 700;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* ✅ تحسين أزرار Quick Actions (تظهر كلها) */
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.qa-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 6px;
+    border: 2px solid #E0E0E0;
+    border-radius: 10px;
+    background: white;
+    text-decoration: none;
+    color: #333;
+    font-size: 11px;
+    font-weight: 600;
+    transition: all 0.2s;
+    cursor: pointer;
+    min-height: 72px;
+    justify-content: center;
+}
+
+    .qa-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+    }
+
+.qa-icon {
+    font-size: 22px;
+    line-height: 1;
+}
+
+/* ✅ Modal wider للـ details */
+.apartment-details-modal {
+    direction: rtl;
+    text-align: right;
+}
+
+.apt-details-header {
+    background: linear-gradient(135deg, #F7F5F1 0%, #FFFFFF 100%);
+    padding: 16px;
+    border-right: 5px solid #999;
+    border-radius: 8px;
+    margin-bottom: 16px;
+}
+
+.apt-details-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    color: white;
+    font-weight: 700;
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}

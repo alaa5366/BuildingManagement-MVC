@@ -11,7 +11,13 @@ QuestPDF.Settings.License = LicenseType.Community;
 QuestPDF.Settings.UseEnvironmentFonts = false;
 
 var builder = WebApplication.CreateBuilder(args);
-// ✅ Session (لتخزين بيانات الاستيراد بين الطلبات)
+
+// MVC + Localization
+builder.Services.AddControllersWithViews()
+    .AddViewLocalization()
+    .AddDataAnnotationsLocalization();
+
+// ✅ Session
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -43,32 +49,45 @@ builder.Services.AddSingleton<FirebaseAdminService>();
 builder.Services.AddScoped<UnifiedAuthService>();
 builder.Services.AddSingleton<QrSecurityService>();
 builder.Services.AddSingleton<QrCodePdfService>();
+builder.Services.AddSingleton<QrGeneratorService>();        // ✅ جديد
+builder.Services.AddSingleton<QrTokenStoreService>();       // ✅ تأكد إنه موجود
 builder.Services.AddSingleton<PollsService>();
 builder.Services.AddSingleton<MaintenanceService>();
 builder.Services.AddSingleton<NotificationsService>();
 builder.Services.AddSingleton<WhatsAppTemplateService>();
-// ✅ المرحلة 20 — الإعدادات
+builder.Services.AddScoped<ImpersonationService>();
+
+// ✅ Phase 20 — الإعدادات
 builder.Services.AddScoped<SettingsService>();
-// ✅ المرحلة 19 — Backup
+
+// ✅ Phase 24 — Presence
+builder.Services.AddSingleton<PresenceService>();
+builder.Services.AddScoped<BuildingMapService>();
+
+// ✅ Phase 19 — Backup
 builder.Services.AddScoped<BackupService>();
 builder.Services.AddScoped<ScheduledBackupService>();
 builder.Services.AddHostedService<BackupScheduler>();
-// ✅ المرحلة 18 — الأدوات والمزامنة
+
+// ✅ Phase 18 — الأدوات والمزامنة
 builder.Services.AddScoped<MigrationService>();
 builder.Services.AddScoped<DbMaintenanceService>();
 builder.Services.AddScoped<DbSyncService>();
-// ✅ المرحلة 17 — السجل
+
+// ✅ Phase 17 — السجل
 builder.Services.AddScoped<AuditLogQueryService>();
-// ✅ المرحلة 16 — الفئات المالية
+
+// ✅ Phase 16 — الفئات المالية
 builder.Services.AddScoped<CategoriesService>();
-// ✅ المرحلة 15 — إدارة الأدمنة
+
+// ✅ Phase 15 — إدارة الأدمنة
 builder.Services.AddSingleton<IAuditLogger, AuditLogger>();
 builder.Services.AddSingleton<AuditLogger>();
 builder.Services.AddScoped<AdminManagementService>();
+
 // ✅ Memory Cache
 builder.Services.AddMemoryCache();
-// ✅ Unified Auth
-builder.Services.AddScoped<UnifiedAuthService>();
+
 // ✅ Localization
 builder.Services.AddLocalization();
 
@@ -84,8 +103,6 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
     options.SupportedCultures = supportedCultures;
     options.SupportedUICultures = supportedCultures;
 
-    // ✅ نستخدم الكوكي القياسي بتاع ASP.NET Core
-    // (اسمه ".AspNetCore.Culture" وقيمته "c=ar|uic=ar")
     options.RequestCultureProviders.Clear();
     options.RequestCultureProviders.Add(
         new CookieRequestCultureProvider
@@ -96,9 +113,6 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
     options.RequestCultureProviders.Add(new AcceptLanguageHeaderRequestCultureProvider());
 });
 
-builder.Services.AddControllersWithViews()
-    .AddViewLocalization()
-    .AddDataAnnotationsLocalization();
 // Cookie authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -114,7 +128,7 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// ✅ سجّل خطوط Cairo مرة واحدة عند بداية التطبيق
+// ✅ سجّل خطوط Cairo
 var fontsDir = Path.Combine(app.Environment.WebRootPath, "fonts");
 Console.WriteLine("====================================================");
 Console.WriteLine($"[Startup] Fonts dir: {fontsDir}");
@@ -152,13 +166,13 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseStaticFiles();
+
 var locOptions = app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>();
 app.UseRequestLocalization(locOptions.Value);
+
 app.UseRouting();
 
-// ✅ Session middleware (قبل Authentication)
 app.UseSession();
-
 app.UseAuthentication();
 app.UseAuthorization();
 

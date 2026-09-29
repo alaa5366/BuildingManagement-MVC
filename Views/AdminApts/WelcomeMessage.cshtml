@@ -1,0 +1,160 @@
+﻿@{
+    ViewData["Title"] = "رسالة ترحيب";
+    var building = (Building)ViewBag.Building;
+    var apt = (Apartment)ViewBag.Apt;
+    var floor = (Floor?)ViewBag.Floor;
+    var quickUrl = (string)ViewBag.QuickUrl;
+    var messageText = (string)ViewBag.MessageText;
+    var waLink = (string)ViewBag.WhatsAppLink;
+    var qrBase64 = (string)ViewBag.QrBase64;
+    var validityHours = (int)ViewBag.ValidityHours;
+
+    // ✅ نبني اسم الملف هنا كـ C# string — أنضف من الـ JS
+    var fileName = $"QR-Apt-{apt.Number}-{building.BuildingNumber}.png";
+}
+
+<div class="container" style="max-width: 800px;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>💌 رسالة ترحيب — شقة @apt.Number</h2>
+        <span class="badge bg-secondary">@building.Name</span>
+    </div>
+
+    @* ===== الخطوات ===== *@
+    <div class="alert alert-info">
+        <strong>📋 خطوات الإرسال:</strong>
+        <ol class="mb-0 mt-2">
+            <li>حمّل صورة الـ QR (زر <strong>📥 تحميل QR</strong>)</li>
+            <li>اضغط <strong>💬 إرسال عبر واتساب</strong> — الرسالة هتفتح جاهزة</li>
+            <li>ابعت الصورة بعد الرسالة (من الـ Downloads)</li>
+        </ol>
+    </div>
+
+    @* ===== QR + Info ===== *@
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+            <strong>📱 QR للدخول السريع</strong>
+            <span class="badge bg-info">صالح @validityHours ساعة</span>
+        </div>
+        <div class="card-body text-center">
+            <img src="data:image/png;base64,@qrBase64"
+                 alt="QR Code"
+                 id="qrImage"
+                 style="width: 300px; height: 300px; border: 4px solid #12433C; border-radius: 12px; padding: 8px; background: white;" />
+
+            <div class="mt-3">
+                <small class="text-muted d-block mb-1">رابط الدخول السريع:</small>
+                <code class="small d-block" style="word-break: break-all;">@quickUrl</code>
+            </div>
+
+            @* ✅ أزرار التحميل والنسخ للـ QR *@
+            <div class="d-flex gap-2 justify-content-center mt-3 flex-wrap">
+                <button type="button" onclick="downloadQr()" class="btn btn-primary">
+                    📥 تحميل QR كصورة
+                </button>
+                <button type="button" onclick="copyImageToClipboard()" class="btn btn-outline-primary">
+                    📋 نسخ الصورة للحافظة
+                </button>
+                <button type="button" onclick="copyText('@quickUrl', this)" class="btn btn-outline-secondary">
+                    🔗 نسخ الرابط
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @* ===== WhatsApp Send ===== *@
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-body text-center">
+            <h5 class="mb-3">📤 إرسال الرسالة</h5>
+            <p class="text-muted small mb-3">
+                اضغط الزر لفتح واتساب مع الرسالة جاهزة. بعد الإرسال، ارفق صورة الـ QR.
+            </p>
+            <a href="@waLink" target="_blank" class="btn btn-success btn-lg">
+                💬 إرسال عبر واتساب — @apt.Phone
+            </a>
+            <div class="mt-2 text-muted small">
+                💡 هيتم فتح واتساب على جهازك (أو WhatsApp Web)
+            </div>
+        </div>
+    </div>
+
+    @* ===== Message Preview ===== *@
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center">
+            <strong>📄 معاينة الرسالة</strong>
+            <button type="button" onclick="copyMsg(this)" class="btn btn-sm btn-outline-light">
+                📋 نسخ
+            </button>
+        </div>
+        <div class="card-body">
+            <div id="msgText" style="white-space: pre-wrap; font-family: 'Segoe UI', Tahoma, sans-serif; line-height: 1.8; direction: rtl; text-align: right;">@messageText</div>
+        </div>
+    </div>
+
+    @* ===== Actions ===== *@
+    <div class="d-flex gap-2 justify-content-end mb-5 flex-wrap">
+        <a asp-action="Index" class="btn btn-secondary">
+            ↩️ رجوع
+        </a>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // ✅ اسم الملف جاي من C# — مفيش parsing في JS
+        const qrFileName = '@fileName';
+
+        // ============================================================
+        // 📥 تحميل صورة QR
+        // ============================================================
+        function downloadQr() {
+            const qrImg = document.getElementById('qrImage');
+            const link = document.createElement('a');
+            link.href = qrImg.src;
+            link.download = qrFileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // ============================================================
+        // 📋 نسخ صورة QR للحافظة
+        // ============================================================
+        async function copyImageToClipboard() {
+            try {
+                const qrImg = document.getElementById('qrImage');
+                const response = await fetch(qrImg.src);
+                const blob = await response.blob();
+
+                await navigator.clipboard.write([
+                    new ClipboardItem({ 'image/png': blob })
+                ]);
+
+                alert('✅ تم نسخ الصورة — تقدر تلصقها في واتساب');
+            } catch (err) {
+                alert('❌ المتصفح مش بيدعم نسخ الصور. استخدم "تحميل QR كصورة" بدل.');
+                console.error(err);
+            }
+        }
+
+        // ============================================================
+        // 📋 نسخ نص
+        // ============================================================
+        function copyText(text, btn) {
+            navigator.clipboard.writeText(text).then(() => {
+                const original = btn.innerText;
+                btn.innerText = '✅ تم النسخ';
+                setTimeout(() => btn.innerText = original, 1500);
+            });
+        }
+
+        function copyMsg(btn) {
+            const text = document.getElementById('msgText').innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                const original = btn.innerText;
+                btn.innerText = '✅ تم النسخ';
+                setTimeout(() => btn.innerText = original, 1500);
+            });
+        }
+    </script>
+}

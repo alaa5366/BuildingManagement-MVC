@@ -162,8 +162,8 @@ public class AuditLogQueryService
     // استعلام building.AuditLog (القديمة)
     // ============================================================
     private async Task<List<AuditEntryDoc>> QueryOldAsync(
-    string buildingId, string? apartmentId, string? userId,
-    string? action, DateTime? from, DateTime? to)
+        string buildingId, string? apartmentId, string? userId,
+        string? action, DateTime? from, DateTime? to)
     {
         var list = new List<AuditEntryDoc>();
 
@@ -186,7 +186,6 @@ public class AuditLogQueryService
 
             var effectiveCreated = created == DateTime.MinValue ? DateTime.UtcNow : created;
 
-            // ✅ تأكد إنه UTC
             if (effectiveCreated.Kind == DateTimeKind.Unspecified)
                 effectiveCreated = DateTime.SpecifyKind(effectiveCreated, DateTimeKind.Utc);
             else if (effectiveCreated.Kind == DateTimeKind.Local)
@@ -215,26 +214,58 @@ public class AuditLogQueryService
     }
 
     // ============================================================
-    // Helpers الثابتة
+    // Known Actions
     // ============================================================
     public static readonly List<string> KnownActions = new()
     {
+        // Admin
         "admin.create", "admin.update", "admin.change_pin", "admin.deactivate",
         "admin.activate", "admin.delete", "admin.sync_permissions",
+
+        // Categories
         "category.expense.add", "category.expense.update", "category.expense.delete",
         "category.expense.deactivate", "category.expense.reorder",
         "category.revenue.add", "category.revenue.update", "category.revenue.delete",
         "category.revenue.deactivate", "category.revenue.reorder",
-        "deposit_create", "deposit_confirm", "deposit_cancel",
+
+        // Deposits
+        "deposit_create", "deposit_confirm", "deposit_cancel", "deposit_update",
+
+        // Expenses / Revenues
         "expense_add", "expense_delete", "revenue_add", "revenue_delete",
+
+        // Wallet
         "wallet_adjustment", "report_export", "invoice_download",
+
+        // Maintenance
         "maint_add", "maint_update", "maint_delete", "maint_add_expense",
+
+        // Polls
         "poll_create", "poll_close", "poll_reopen", "poll_delete", "poll_vote",
+
+        // QR
         "qr_access_generate",
-        "resident.create", "resident.update",
-        "building.create", "building.delete"
+
+        // Residents
+        "resident.create", "resident.update", "resident.profile_update",
+
+        // Buildings
+        "building.create", "building.delete",
+
+        // Settings
+        "settings.own.update", "settings.building.update", "settings.global.update",
+        "superadmin.name_update", "admin.profile_update",
+
+        // ✅ Phase 24.4-24.5
+        "apartment.opened",
+        "apartment.closed",
+        "impersonation.enter",
+        "impersonation.exit"
     };
 
+    // ============================================================
+    // LabelAr
+    // ============================================================
     public static string LabelAr(string action) => action switch
     {
         "admin.create" => "إنشاء أدمن",
@@ -244,6 +275,8 @@ public class AuditLogQueryService
         "admin.activate" => "تنشيط أدمن",
         "admin.delete" => "حذف أدمن",
         "admin.sync_permissions" => "مزامنة صلاحيات",
+        "admin.profile_update" => "تحديث بيانات أدمن",
+
         "category.expense.add" => "إضافة فئة مصروف",
         "category.expense.update" => "تعديل فئة مصروف",
         "category.expense.delete" => "حذف فئة مصروف",
@@ -254,33 +287,58 @@ public class AuditLogQueryService
         "category.revenue.delete" => "حذف فئة إيراد",
         "category.revenue.deactivate" => "تعطيل فئة إيراد",
         "category.revenue.reorder" => "إعادة ترتيب فئات الإيرادات",
+
         "deposit_create" => "إنشاء دفعة",
         "deposit_confirm" => "تأكيد دفعة",
         "deposit_cancel" => "إلغاء دفعة",
+        "deposit_update" => "تعديل دفعة",
+
         "expense_add" => "إضافة مصروف",
         "expense_delete" => "حذف مصروف",
         "revenue_add" => "إضافة إيراد",
         "revenue_delete" => "حذف إيراد",
+
         "wallet_adjustment" => "تسوية محفظة",
         "report_export" => "تصدير تقرير",
         "invoice_download" => "تحميل فاتورة",
+
         "maint_add" => "إضافة صيانة",
         "maint_update" => "تعديل صيانة",
         "maint_delete" => "حذف صيانة",
         "maint_add_expense" => "إضافة تكلفة صيانة كمصروف",
+
         "poll_create" => "إنشاء تصويت",
         "poll_close" => "إغلاق تصويت",
         "poll_reopen" => "إعادة فتح تصويت",
         "poll_delete" => "حذف تصويت",
         "poll_vote" => "تصويت",
+
         "qr_access_generate" => "توليد رابط دخول QR",
+
         "resident.create" => "إضافة ساكن",
         "resident.update" => "تعديل ساكن",
+        "resident.profile_update" => "تحديث بيانات ساكن",
+
         "building.create" => "إنشاء عمارة",
         "building.delete" => "حذف عمارة",
+
+        "settings.own.update" => "تحديث إعداداتي",
+        "settings.building.update" => "تحديث إعدادات العمارة",
+        "settings.global.update" => "تحديث الإعدادات العامة",
+        "superadmin.name_update" => "تحديث اسم السوبر أدمن",
+
+        // ✅ Phase 24.4-24.5
+        "apartment.opened" => "🔓 فتح شقة",
+        "apartment.closed" => "🔒 إغلاق شقة",
+        "impersonation.enter" => "🚪 دخول كساكن (Impersonation)",
+        "impersonation.exit" => "↩️ رجوع من Impersonation",
+
         _ => action
     };
 
+    // ============================================================
+    // Severity Labels
+    // ============================================================
     public static string SeverityBadgeClass(string severity) => severity switch
     {
         "critical" => "bg-danger",
