@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include=".github\workflows\BuildingManagementMVC20260930173859.yml" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Google.Cloud.Firestore" Version="3.9.0" />
     <PackageReference Include="QRCoder" Version="1.6.0" />
     <PackageReference Include="QuestPDF" Version="2024.12.3" />
