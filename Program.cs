@@ -1,4 +1,5 @@
 using BuildingManagementMvc.Services;
+using BuildingManagementMvc.Resources;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using QuestPDF.Drawing;
 using QuestPDF.Infrastructure;
@@ -15,7 +16,11 @@ var builder = WebApplication.CreateBuilder(args);
 // MVC + Localization
 builder.Services.AddControllersWithViews()
     .AddViewLocalization()
-    .AddDataAnnotationsLocalization();
+    .AddDataAnnotationsLocalization(options =>
+    {
+        options.DataAnnotationLocalizerProvider = (type, factory) =>
+            factory.Create(typeof(SharedResource));
+    });
 
 // ✅ Session
 builder.Services.AddDistributedMemoryCache();
@@ -49,8 +54,8 @@ builder.Services.AddSingleton<FirebaseAdminService>();
 builder.Services.AddScoped<UnifiedAuthService>();
 builder.Services.AddSingleton<QrSecurityService>();
 builder.Services.AddSingleton<QrCodePdfService>();
-builder.Services.AddSingleton<QrGeneratorService>();        // ✅ جديد
-builder.Services.AddSingleton<QrTokenStoreService>();       // ✅ تأكد إنه موجود
+builder.Services.AddSingleton<QrGeneratorService>();
+builder.Services.AddSingleton<QrTokenStoreService>();
 builder.Services.AddSingleton<PollsService>();
 builder.Services.AddSingleton<MaintenanceService>();
 builder.Services.AddSingleton<NotificationsService>();
@@ -88,8 +93,8 @@ builder.Services.AddScoped<AdminManagementService>();
 // ✅ Memory Cache
 builder.Services.AddMemoryCache();
 
-// ✅ Localization
-builder.Services.AddLocalization();
+// ✅ Localization (معدّل)
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 
 builder.Services.Configure<RequestLocalizationOptions>(options =>
 {

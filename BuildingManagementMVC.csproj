@@ -25,17 +25,16 @@
 
   <!-- ✅ Localization Resources -->
   <ItemGroup>
-    <EmbeddedResource Update="Resources\Shared.*.resx">
+    <EmbeddedResource Update="Resources\Shared.resx">
       <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Shared.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Update="Shared.en.resx">
+    <EmbeddedResource Update="Resources\Shared.ar.resx">
       <Generator></Generator>
     </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Resources\" />
+    <EmbeddedResource Update="Resources\Shared.en.resx">
+      <Generator></Generator>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>
