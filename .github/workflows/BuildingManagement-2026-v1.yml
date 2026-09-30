@@ -1,4 +1,4 @@
-name: Build and deploy .NET Core application to Web App BuildingManagement
+name: Build and deploy .NET Core application to Web App BuildingManagement-2026-v1
 on:
   push:
     branches:
@@ -7,14 +7,14 @@ permissions:
   id-token: write
   contents: read
 env:
-  AZURE_WEBAPP_NAME: BuildingManagement
+  AZURE_WEBAPP_NAME: BuildingManagement-2026-v1
   AZURE_WEBAPP_PACKAGE_PATH: .\published
   CONFIGURATION: Release
   DOTNET_CORE_VERSION: 8.0.x
   WORKING_DIRECTORY: .
 jobs:
   build:
-    environment: BuildingManagement_Env
+    environment: BuildingManagement_2026_v1_Env
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
@@ -36,7 +36,7 @@ jobs:
         name: webapp
         path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
   deploy:
-    environment: BuildingManagement_Env
+    environment: BuildingManagement_2026_v1_Env
     runs-on: windows-latest
     needs: build
     steps:
@@ -48,9 +48,9 @@ jobs:
     - name: Azure Login
       uses: azure/login@v2
       with:
-        client-id: ${{ vars.BuildingManagement_CLIENT_ID_E465 }}
-        tenant-id: ${{ vars.BuildingManagement_TENANT_ID_9C1B }}
-        subscription-id: ${{ vars.BuildingManagement_SUBSCRIPTION_ID_9C1B }}
+        client-id: ${{ vars.BuildingManagement_2026_v1_CLIENT_ID_C8AF }}
+        tenant-id: ${{ vars.BuildingManagement_2026_v1_TENANT_ID_C8AF }}
+        subscription-id: ${{ vars.BuildingManagement_2026_v1_SUBSCRIPTION_ID_C8AF }}
     - name: Deploy to Azure WebApp
       uses: azure/webapps-deploy@v2
       with:
