@@ -48,9 +48,9 @@ jobs:
     - name: Azure Login
       uses: azure/login@v2
       with:
-        client-id: ${{ vars.BuildingManagement_2026_v1_CLIENT_ID_C8AF }}
-        tenant-id: ${{ vars.BuildingManagement_2026_v1_TENANT_ID_C8AF }}
-        subscription-id: ${{ vars.BuildingManagement_2026_v1_SUBSCRIPTION_ID_C8AF }}
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     - name: Deploy to Azure WebApp
       uses: azure/webapps-deploy@v2
       with:
