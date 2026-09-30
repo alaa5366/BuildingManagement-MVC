@@ -30,6 +30,32 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="@Localizer["App_ShortName"]" />
     <link rel="apple-touch-icon" href="~/icons/icon-192.png" />
+
+    @* ✅ Responsive tweaks *@
+    <style>
+        /* على الموبايل: الخط أصغر شوية، الحواف أنضف */
+        @@media (max-width: 768px) {
+            body { font-size: 14px; }
+            .app-navbar .navbar-brand { font-size: 1rem; }
+            main.container { padding-left: 12px; padding-right: 12px; }
+            .card { border-radius: 12px; }
+            .btn { padding: .5rem 1rem; }
+            table { font-size: 13px; }
+            .table-responsive { overflow-x: auto; }
+        }
+
+        /* اللينكات داخل القائمة المنسدلة على الموبايل */
+        .app-navbar .navbar-nav .nav-link {
+            padding: .5rem .75rem;
+            border-radius: 8px;
+        }
+        .app-navbar .navbar-nav .nav-link:hover {
+            background-color: rgba(255,255,255,.1);
+        }
+
+        /* منع تمرير الصفحة أفقيًا */
+        html, body { overflow-x: hidden; }
+    </style>
 </head>
 <body>
     @{
@@ -38,7 +64,7 @@
     @if (isImpersonating)
     {
         <div class="impersonation-banner">
-            <div class="container-fluid d-flex justify-content-between align-items-center">
+            <div class="container-fluid d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <div>
                     🚪 <strong>أنت في وضع Impersonation</strong>
                     — تتصفح كـ <strong>@User.Identity?.Name</strong>
@@ -52,6 +78,7 @@
             </div>
         </div>
     }
+
     <nav class="navbar navbar-expand-lg navbar-dark app-navbar">
         <div class="container-fluid">
             <a class="navbar-brand fw-bold" asp-controller="Home" asp-action="Index">
@@ -60,75 +87,87 @@
 
             @if (User.Identity?.IsAuthenticated == true)
             {
-                <div class="d-flex align-items-center gap-3 flex-wrap">
-                    @if (User.IsInRole("superadmin"))
-                    {
-                        <a class="nav-link text-white-50" asp-controller="SuperAdminHome" asp-action="Index">@Localizer["Nav_Buildings"]</a>
-                        <a class="nav-link text-white-50" asp-controller="Admins" asp-action="Index">@Localizer["Nav_Admins"]</a>
-                        <a class="nav-link text-white-50" asp-controller="Tools" asp-action="Index">@Localizer["Nav_Tools"]</a>
-                        <a class="nav-link text-white-50" asp-controller="Sync" asp-action="Index">@Localizer["Nav_Sync"]</a>
-                        <a class="nav-link text-white-50" asp-controller="Backup" asp-action="Index">@Localizer["Nav_Backup"]</a>
-                        <a class="nav-link text-white-50" asp-controller="Permissions" asp-action="Index">@Localizer["Nav_Permissions"]</a>
-                        <a class="nav-link text-white-50" asp-controller="Categories" asp-action="Index">@Localizer["Nav_Categories"]</a>
-                        <a class="nav-link text-white-50" asp-controller="AuditLog" asp-action="Index">@Localizer["Nav_AuditLog"]</a>
-                        <a class="nav-link text-white-50" asp-controller="Settings" asp-action="Index">⚙️ @Localizer["Nav_Settings"]</a>
-                    }
-                    @if (User.IsInRole("admin"))
-                    {
-                        <a class="nav-link text-white-50" asp-controller="AdminHome" asp-action="Index">@Localizer["Nav_Home"]</a>
-                        <a class="nav-link text-white-50" asp-controller="AdminApts" asp-action="Index">🏠 @Localizer["Nav_Apts"]</a>
-                        <a class="nav-link text-white-50" asp-controller="Wallet" asp-action="Index">@Localizer["Nav_Wallet"]</a>
-                        <a class="nav-link text-white-50" asp-controller="Expenses" asp-action="Index">@Localizer["Nav_Expenses"]</a>
-                        <a class="nav-link text-white-50" asp-controller="Revenues" asp-action="Index">@Localizer["Nav_Revenues"]</a>
-                        <a class="nav-link text-white-50" asp-controller="Categories" asp-action="Index">@Localizer["Nav_Categories"]</a>
-                        <a class="nav-link text-white-50" asp-controller="Polls" asp-action="Index">@Localizer["Nav_Polls"]</a>
-                        <a class="nav-link text-white-50" asp-controller="Maintenance" asp-action="Index">@Localizer["Nav_Maintenance"]</a>
-                        <a class="nav-link text-white-50" asp-controller="Notifications" asp-action="Index">@Localizer["Nav_Notifications"]</a>
-                        <a class="nav-link text-white-50" asp-controller="WhatsApp" asp-action="Index">@Localizer["Nav_WhatsApp"]</a>
-                        <a class="nav-link text-white-50" asp-controller="AuditLog" asp-action="Index">@Localizer["Nav_AuditLog"]</a>
-                        <a class="nav-link text-white-50" asp-controller="Settings" asp-action="Building">⚙️ @Localizer["Nav_Settings"]</a>
-                        <a class="nav-link text-white-50" asp-controller="Settings" asp-action="Own">👤 @Localizer["Nav_MySettings"]</a>
-                        <a class="nav-link text-white-50" asp-controller="Help" asp-action="Index">📖 @Localizer["Nav_Help"]</a>
-                    }
-                    @if (User.IsInRole("resident"))
-                    {
-                        <a class="nav-link text-white-50" asp-controller="ResidentHome" asp-action="Index">@Localizer["Nav_Home"]</a>
-                        <a class="nav-link text-white-50" asp-controller="ResidentWallet" asp-action="Index">@Localizer["Nav_MyWallet"]</a>
-                        <a class="nav-link text-white-50" asp-controller="ResidentPolls" asp-action="Index">@Localizer["Nav_Polls"]</a>
-                        <a class="nav-link text-white-50" asp-controller="ResidentMaintenance" asp-action="Index">@Localizer["Nav_Maintenance"]</a>
-                        <a class="nav-link text-white-50" asp-controller="Notifications" asp-action="Index">@Localizer["Nav_Notifications"]</a>
-                        <a class="nav-link text-white-50" asp-controller="AuditLog" asp-action="Index">@Localizer["Nav_MyLog"]</a>
-                        <a class="nav-link text-white-50" asp-controller="Settings" asp-action="Own">⚙️ @Localizer["Nav_Settings"]</a>
-                        <a class="nav-link text-white-50" asp-controller="Help" asp-action="Index">📖 @Localizer["Nav_Help"]</a>
-                    }
+                @* ✅ زر القائمة على الموبايل *@
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar"
+                        aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
 
-                    @* ✅ Language Switcher *@
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            🌐 @(isRtl ? "العربية" : "English")
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li>
-                                <a class="dropdown-item" href="/Language/Set?lang=ar&returnUrl=@Uri.EscapeDataString(returnUrl)">
-                                    🇪🇬 العربية
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="/Language/Set?lang=en&returnUrl=@Uri.EscapeDataString(returnUrl)">
-                                    🇬🇧 English
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
+                <div class="collapse navbar-collapse" id="mainNavbar">
+                    <ul class="navbar-nav ms-auto mb-2 mb-lg-0 flex-wrap align-items-lg-center gap-lg-1">
+                        @if (User.IsInRole("superadmin"))
+                        {
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="SuperAdminHome" asp-action="Index">@Localizer["Nav_Buildings"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Admins" asp-action="Index">@Localizer["Nav_Admins"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Tools" asp-action="Index">@Localizer["Nav_Tools"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Sync" asp-action="Index">@Localizer["Nav_Sync"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Backup" asp-action="Index">@Localizer["Nav_Backup"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Permissions" asp-action="Index">@Localizer["Nav_Permissions"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Categories" asp-action="Index">@Localizer["Nav_Categories"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="AuditLog" asp-action="Index">@Localizer["Nav_AuditLog"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Settings" asp-action="Index">⚙️ @Localizer["Nav_Settings"]</a></li>
+                        }
+                        @if (User.IsInRole("admin"))
+                        {
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="AdminHome" asp-action="Index">@Localizer["Nav_Home"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="AdminApts" asp-action="Index">🏠 @Localizer["Nav_Apts"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Wallet" asp-action="Index">@Localizer["Nav_Wallet"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Expenses" asp-action="Index">@Localizer["Nav_Expenses"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Revenues" asp-action="Index">@Localizer["Nav_Revenues"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Categories" asp-action="Index">@Localizer["Nav_Categories"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Polls" asp-action="Index">@Localizer["Nav_Polls"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Maintenance" asp-action="Index">@Localizer["Nav_Maintenance"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Notifications" asp-action="Index">@Localizer["Nav_Notifications"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="WhatsApp" asp-action="Index">@Localizer["Nav_WhatsApp"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="AuditLog" asp-action="Index">@Localizer["Nav_AuditLog"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Settings" asp-action="Building">⚙️ @Localizer["Nav_Settings"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Settings" asp-action="Own">👤 @Localizer["Nav_MySettings"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Help" asp-action="Index">📖 @Localizer["Nav_Help"]</a></li>
+                        }
+                        @if (User.IsInRole("resident"))
+                        {
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="ResidentHome" asp-action="Index">@Localizer["Nav_Home"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="ResidentWallet" asp-action="Index">@Localizer["Nav_MyWallet"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="ResidentPolls" asp-action="Index">@Localizer["Nav_Polls"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="ResidentMaintenance" asp-action="Index">@Localizer["Nav_Maintenance"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Notifications" asp-action="Index">@Localizer["Nav_Notifications"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="AuditLog" asp-action="Index">@Localizer["Nav_MyLog"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Settings" asp-action="Own">⚙️ @Localizer["Nav_Settings"]</a></li>
+                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Help" asp-action="Index">📖 @Localizer["Nav_Help"]</a></li>
+                        }
 
-                    <span class="text-white-50 small">
-                        @User.Identity.Name (@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value)
-                    </span>
+                        @* ✅ Language Switcher *@
+                        <li class="nav-item dropdown">
+                            <button class="btn btn-sm btn-outline-light dropdown-toggle mt-2 mt-lg-0" type="button" data-bs-toggle="dropdown">
+                                🌐 @(isRtl ? "العربية" : "English")
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item" href="/Language/Set?lang=ar&returnUrl=@Uri.EscapeDataString(returnUrl)">
+                                        🇪🇬 العربية
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/Language/Set?lang=en&returnUrl=@Uri.EscapeDataString(returnUrl)">
+                                        🇬🇧 English
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
 
-                    <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-sm btn-outline-light">@Localizer["Nav_Logout"]</button>
-                    </form>
+                        <li class="nav-item">
+                            <span class="text-white-50 small d-block mt-2 mt-lg-0">
+                                @User.Identity.Name
+                            </span>
+                        </li>
+
+                        <li class="nav-item">
+                            <form asp-controller="Account" asp-action="Logout" method="post" class="m-0 mt-2 mt-lg-0">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-light w-100 w-lg-auto">@Localizer["Nav_Logout"]</button>
+                            </form>
+                        </li>
+                    </ul>
                 </div>
             }
         </div>
