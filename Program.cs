@@ -1,11 +1,11 @@
-using BuildingManagementMvc.Services;
 using BuildingManagementMvc.Resources;
+using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.Extensions.Options;
 using QuestPDF.Drawing;
 using QuestPDF.Infrastructure;
 using System.Globalization;
-using Microsoft.AspNetCore.Localization;
-using Microsoft.Extensions.Options;
 
 // ✅ إعدادات QuestPDF
 QuestPDF.Settings.License = LicenseType.Community;
@@ -93,9 +93,8 @@ builder.Services.AddScoped<AdminManagementService>();
 // ✅ Memory Cache 
 builder.Services.AddMemoryCache();
 
-// ✅ Localization (معدّل)
+// ✅ Localization (معدّل - بدون ResourcesPath)
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
-
 builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
     var supportedCultures = new[]

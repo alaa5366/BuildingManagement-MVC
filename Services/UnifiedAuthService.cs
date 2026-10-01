@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using BuildingManagementMvc.Models;
+﻿using BuildingManagementMvc.Models;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace BuildingManagementMvc.Services;
@@ -139,7 +138,7 @@ public class UnifiedAuthService
                     BuildingNumber = building.BuildingNumber,
                     FloorOrder = floor.Order,
                     AptNumber = apt.Number,
-                    AptId = apt.Id,          
+                    AptId = apt.Id,
                     AptLabel = apt.Label,
                     Email = email,
                     Uid = signIn.Uid,

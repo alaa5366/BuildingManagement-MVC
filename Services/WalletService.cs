@@ -1,5 +1,5 @@
-using System.Text.RegularExpressions;
 using BuildingManagementMvc.Models;
+using System.Text.RegularExpressions;
 
 namespace BuildingManagementMvc.Services;
 
@@ -120,7 +120,7 @@ public class WalletService
         d.UpdateReason = reason;
 
         return d;
-    }  
+    }
 
     public double TotalConfirmedDeposits(Building building, string aptId, string monthKey)
     {

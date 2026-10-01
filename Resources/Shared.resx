@@ -1,64 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
-  <!-- 
-    Microsoft ResX Schema 
-    
-    Version 2.0
-    
-    The primary goals of this format is to allow a simple XML format 
-    that is mostly human readable. The generation and parsing of the 
-    various data types are done through the TypeConverter classes 
-    associated with the data types.
-    
-    Example:
-    
-    ... ado.net/XML headers & schema ...
-    <resheader name="resmimetype">text/microsoft-resx</resheader>
-    <resheader name="version">2.0</resheader>
-    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
-    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
-    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
-    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
-    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
-        <value>[base64 mime encoded serialized .NET Framework object]</value>
-    </data>
-    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
-        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
-        <comment>This is a comment</comment>
-    </data>
-                
-    There are any number of "resheader" rows that contain simple 
-    name/value pairs.
-    
-    Each data row contains a name, and value. The row also contains a 
-    type or mimetype. Type corresponds to a .NET class that support 
-    text/value conversion through the TypeConverter architecture. 
-    Classes that don't support this are serialized and stored with the 
-    mimetype set.
-    
-    The mimetype is used for serialized objects, and tells the 
-    ResXResourceReader how to depersist the object. This is currently not 
-    extensible. For a given mimetype the value must be set accordingly:
-    
-    Note - application/x-microsoft.net.object.binary.base64 is the format 
-    that the ResXResourceWriter will generate, however the reader can 
-    read any of the formats listed below.
-    
-    mimetype: application/x-microsoft.net.object.binary.base64
-    value   : The object must be serialized with 
-            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
-            : and then encoded with base64 encoding.
-    
-    mimetype: application/x-microsoft.net.object.soap.base64
-    value   : The object must be serialized with 
-            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
-            : and then encoded with base64 encoding.
-
-    mimetype: application/x-microsoft.net.object.bytearray.base64
-    value   : The object must be serialized into a byte array 
-            : using a System.ComponentModel.TypeConverter
-            : and then encoded with base64 encoding.
-    -->
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
     <xsd:element name="root" msdata:IsDataSet="true">
@@ -117,7 +58,78 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Nav_Apts" xml:space="preserve">
-    <value />
-  </data>
+
+  <data name="App_Name" xml:space="preserve"><value>نظام إدارة العمارات</value></data>
+  <data name="App_ShortName" xml:space="preserve"><value>إدارة العمارات</value></data>
+  <data name="Common_Back" xml:space="preserve"><value>رجوع</value></data>
+  <data name="Common_Cancel" xml:space="preserve"><value>إلغاء</value></data>
+  <data name="Common_Confirm" xml:space="preserve"><value>تأكيد</value></data>
+  <data name="Common_Delete" xml:space="preserve"><value>حذف</value></data>
+  <data name="Common_Edit" xml:space="preserve"><value>تعديل</value></data>
+  <data name="Common_Save" xml:space="preserve"><value>حفظ</value></data>
+  <data name="Common_Close" xml:space="preserve"><value>إغلاق</value></data>
+  <data name="Common_Add" xml:space="preserve"><value>إضافة</value></data>
+  <data name="Common_Loading" xml:space="preserve"><value>جاري التحميل...</value></data>
+  <data name="Common_Copy" xml:space="preserve"><value>نسخ</value></data>
+  <data name="Common_Copied" xml:space="preserve"><value>تم النسخ</value></data>
+  <data name="Footer_Copyright" xml:space="preserve"><value>نظام إدارة العمارات — نسخة C# MVC</value></data>
+  <data name="Login_Title" xml:space="preserve"><value>تسجيل الدخول</value></data>
+  <data name="Login_Subtitle" xml:space="preserve"><value>سجل دخولك للمتابعة</value></data>
+  <data name="Login_Identifier" xml:space="preserve"><value>الإيميل / رقم التليفون</value></data>
+  <data name="Login_IdentifierPlaceholder" xml:space="preserve"><value>you@example.com أو +201001234567</value></data>
+  <data name="Login_Credential" xml:space="preserve"><value>الباسورد / PIN</value></data>
+  <data name="Login_Submit" xml:space="preserve"><value>دخول</value></data>
+  <data name="Login_Or" xml:space="preserve"><value>أو</value></data>
+  <data name="Login_QrHint" xml:space="preserve"><value>عندك QR سريع؟ اضغط هنا</value></data>
+  <data name="Login_AutoRoleDetection" xml:space="preserve"><value>النظام بيتعرّف على دورك تلقائيًا</value></data>
+  <data name="Login_GoogleButton" xml:space="preserve"><value>الدخول بـ Google (Super Admin)</value></data>
+  <data name="Login_GoogleError" xml:space="preserve"><value>فشل الدخول بـ Google</value></data>
+  <data name="Login_GooglePopupClosed" xml:space="preserve"><value>تم إغلاق نافذة Google</value></data>
+  <data name="Login_GooglePopupBlocked" xml:space="preserve"><value>المتصفح منع النافذة</value></data>
+  <data name="Login_GoogleCancelled" xml:space="preserve"><value>تم إلغاء العملية</value></data>
+  <data name="Login_GoogleUnauthorizedDomain" xml:space="preserve"><value>الدومين غير مصرح به في Firebase</value></data>
+  <data name="Login_ConnectionError" xml:space="preserve"><value>خطأ في الاتصال</value></data>
+  <data name="Login_AdminTitle" xml:space="preserve"><value>دخول الأدمن</value></data>
+  <data name="Login_AdminSubtitle" xml:space="preserve"><value>اختار العمارة وأدخل رقم الهاتف والـ PIN</value></data>
+  <data name="Login_ResidentTitle" xml:space="preserve"><value>دخول الساكن</value></data>
+  <data name="Login_ResidentSubtitle" xml:space="preserve"><value>اختار العمارة والدور والشقة، وأدخل رقم الواتساب والـ PIN</value></data>
+  <data name="Login_SuperAdminTitle" xml:space="preserve"><value>دخول Super Admin</value></data>
+  <data name="Login_SuperAdminSubtitle" xml:space="preserve"><value>بالبريد الإلكتروني وكلمة المرور</value></data>
+  <data name="Login_Email" xml:space="preserve"><value>البريد الإلكتروني</value></data>
+  <data name="Login_Password" xml:space="preserve"><value>كلمة المرور</value></data>
+  <data name="Login_Building" xml:space="preserve"><value>العمارة</value></data>
+  <data name="Login_Whatsapp" xml:space="preserve"><value>رقم الواتساب</value></data>
+  <data name="Login_FloorNumber" xml:space="preserve"><value>رقم الدور</value></data>
+  <data name="Login_AptNumber" xml:space="preserve"><value>رقم الشقة</value></data>
+  <data name="Login_Choose" xml:space="preserve"><value>— اختار —</value></data>
+  <data name="Login_QrDetectedBuilding" xml:space="preserve"><value>📱 تم التعرف على العمارة تلقائياً</value></data>
+  <data name="Login_QrDetectedApt" xml:space="preserve"><value>📱 تم التعرف على شقتك تلقائياً</value></data>
+  <data name="Login_QrHintAdmin" xml:space="preserve"><value>💡 بس أدخل رقم الواتساب والـ PIN</value></data>
+  <data name="Nav_Home" xml:space="preserve"><value>الرئيسية</value></data>
+  <data name="Nav_Admins" xml:space="preserve"><value>الأدمنة</value></data>
+  <data name="Nav_Apts" xml:space="preserve"><value>الشقق</value></data>
+  <data name="Nav_AuditLog" xml:space="preserve"><value>السجل</value></data>
+  <data name="Nav_Backup" xml:space="preserve"><value>النسخ الاحتياطي</value></data>
+  <data name="Nav_Buildings" xml:space="preserve"><value>العمارات</value></data>
+  <data name="Nav_Categories" xml:space="preserve"><value>الفئات</value></data>
+  <data name="Nav_Expenses" xml:space="preserve"><value>المصروفات</value></data>
+  <data name="Nav_Help" xml:space="preserve"><value>الكتيب</value></data>
+  <data name="Nav_Logout" xml:space="preserve"><value>تسجيل الخروج</value></data>
+  <data name="Nav_Maintenance" xml:space="preserve"><value>الصيانة</value></data>
+  <data name="Nav_MyLog" xml:space="preserve"><value>سجلي</value></data>
+  <data name="Nav_MySettings" xml:space="preserve"><value>إعداداتي</value></data>
+  <data name="Nav_MyWallet" xml:space="preserve"><value>محفظتي</value></data>
+  <data name="Nav_Notifications" xml:space="preserve"><value>الإشعارات</value></data>
+  <data name="Nav_Permissions" xml:space="preserve"><value>الصلاحيات</value></data>
+  <data name="Nav_Polls" xml:space="preserve"><value>التصويتات</value></data>
+  <data name="Nav_Revenues" xml:space="preserve"><value>الإيرادات</value></data>
+  <data name="Nav_Settings" xml:space="preserve"><value>الإعدادات</value></data>
+  <data name="Nav_Sync" xml:space="preserve"><value>المزامنة</value></data>
+  <data name="Nav_Tools" xml:space="preserve"><value>الأدوات</value></data>
+  <data name="Nav_Wallet" xml:space="preserve"><value>المحفظة</value></data>
+  <data name="Nav_WhatsApp" xml:space="preserve"><value>واتساب</value></data>
+  <data name="Role_Admin" xml:space="preserve"><value>أدمن</value></data>
+  <data name="Role_Resident" xml:space="preserve"><value>ساكن</value></data>
+  <data name="Role_SuperAdmin" xml:space="preserve"><value>مدير عام</value></data>
+
 </root>

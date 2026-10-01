@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using BuildingManagementMvc.Models;
+﻿using BuildingManagementMvc.Models;
+using System.Text.Json;
 
 namespace BuildingManagementMvc.Services;
 

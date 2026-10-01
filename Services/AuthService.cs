@@ -118,8 +118,14 @@ public class AuthResult
     public static AuthResult Ok(string uid, string role, string email, string name, List<string> buildingIds,
         string? aptId = null, int? aptNumber = null) => new()
         {
-            Success = true, Uid = uid, Role = role, Email = email, Name = name,
-            BuildingIds = buildingIds, ApartmentId = aptId, ApartmentNumber = aptNumber
+            Success = true,
+            Uid = uid,
+            Role = role,
+            Email = email,
+            Name = name,
+            BuildingIds = buildingIds,
+            ApartmentId = aptId,
+            ApartmentNumber = aptNumber
         };
 
     public static AuthResult Fail(string error, string? reason = null) =>

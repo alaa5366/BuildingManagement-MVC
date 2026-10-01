@@ -1,5 +1,5 @@
-using Google.Cloud.Firestore;
 using BuildingManagementMvc.Models;
+using Google.Cloud.Firestore;
 
 namespace BuildingManagementMvc.Services;
 

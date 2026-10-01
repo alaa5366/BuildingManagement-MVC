@@ -1,10 +1,6 @@
 ﻿using BuildingManagementMvc.Models;
 using Google.Cloud.Firestore;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Services;
 
@@ -189,7 +185,7 @@ public class MigrationService
             UserRole = actorRole,
             Severity = "info",
             Details = details,
-            CreatedAt = Timestamp.FromDateTime(createdUtc),  
+            CreatedAt = Timestamp.FromDateTime(createdUtc),
             Metadata = new Dictionary<string, object>
             {
                 ["migratedFrom"] = "building.AuditLog",

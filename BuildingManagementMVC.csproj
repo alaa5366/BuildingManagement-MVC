@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>BuildingManagementMvc</RootNamespace>
+    <UserSecretsId>01de7570-ddd8-472d-b817-9e0f695e5024</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -33,18 +34,20 @@
     </None>
   </ItemGroup>
 
-  <!-- ✅ Localization Resources -->
-  <ItemGroup>
-    <EmbeddedResource Update="Resources\Shared.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Shared.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
-    <EmbeddedResource Update="Resources\Shared.ar.resx">
-      <Generator></Generator>
-    </EmbeddedResource>
-    <EmbeddedResource Update="Resources\Shared.en.resx">
-      <Generator></Generator>
-    </EmbeddedResource>
-  </ItemGroup>
+<!-- ✅ Localization Resources -->
+<ItemGroup>
+  <EmbeddedResource Update="Resources\Shared.resx">
+    <Generator>ResXFileCodeGenerator</Generator>
+    <LastGenOutput>Shared.Designer.cs</LastGenOutput>
+  </EmbeddedResource>
+  <EmbeddedResource Update="Resources\Shared.ar.resx">
+    <Generator></Generator>
+    <WithCulture>true</WithCulture>
+  </EmbeddedResource>
+  <EmbeddedResource Update="Resources\Shared.en.resx">
+    <Generator></Generator>
+    <WithCulture>true</WithCulture>
+  </EmbeddedResource>
+</ItemGroup>
 
 </Project>

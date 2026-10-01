@@ -70,7 +70,7 @@ public class ApartmentDetailsVm
     public string FloorLabel { get; set; } = "";
     public int FloorOrder { get; set; }
     public bool IsClosed { get; set; }
-    public string CloseDateText { get; set; } = "—";  
+    public string CloseDateText { get; set; } = "—";
     public string? AptLabel { get; set; }
     public string? Notes { get; set; }
 

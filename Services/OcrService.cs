@@ -1,5 +1,4 @@
 ﻿using Tesseract;
-using System.Text;
 
 namespace BuildingManagementMvc.Services;
 
