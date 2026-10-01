@@ -85,7 +85,7 @@ builder.Services.AddScoped<AuditLogQueryService>();
 // ✅ Phase 16 — الفئات المالية
 builder.Services.AddScoped<CategoriesService>();
 
-// ✅ Phase 15 — إدارة الأدمنة
+// ✅ Phase 15 — إدارة الأدمنة 
 builder.Services.AddSingleton<IAuditLogger, AuditLogger>();
 builder.Services.AddSingleton<AuditLogger>();
 builder.Services.AddScoped<AdminManagementService>();
