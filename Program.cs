@@ -62,7 +62,7 @@ builder.Services.AddSingleton<NotificationsService>();
 builder.Services.AddSingleton<WhatsAppTemplateService>();
 builder.Services.AddScoped<ImpersonationService>();
 
-// ✅ Phase 20 — الإعدادات
+// ✅ Phase 20 — الإعدادات  
 builder.Services.AddScoped<SettingsService>();
 
 // ✅ Phase 24 — Presence
