@@ -35,7 +35,7 @@ jobs:
   deploy:
     runs-on: windows-latest
     needs: build
-    environment: BuildingManagement_2026_v1_Env
+    environment: BuildingManagementMVC20260930173859_Env
     permissions:
       id-token: write
       contents: read
