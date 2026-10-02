@@ -1,27 +1,27 @@
 ﻿@model BuildingManagementMvc.Models.RestoreResult
 @{
-    ViewData["Title"] = "نتيجة الاستعادة";
+    ViewData["Title"] = Loc.T("Restore_Result");
 }
 
 <div class="container">
-    <h2>✅ نتيجة الاستعادة</h2>
+    <h2>@Loc.T("Restore_Result_2")</h2>
 
     <div class="row mb-3 text-center">
         <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">Collections</div><div class="fw-bold fs-4">@Model.TotalCollections</div></div></div>
-        <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">مستندات</div><div class="fw-bold fs-4">@Model.TotalDocuments</div></div></div>
-        <div class="col"><div class="bg-success text-white rounded shadow-sm p-3"><div class="small">✅ مستعادة</div><div class="fw-bold fs-4">@Model.Restored</div></div></div>
-        <div class="col"><div class="bg-warning rounded shadow-sm p-3"><div class="small">⏭️ متخطاة</div><div class="fw-bold fs-4">@Model.Skipped</div></div></div>
-        <div class="col"><div class="bg-danger text-white rounded shadow-sm p-3"><div class="small">❌ فشلت</div><div class="fw-bold fs-4">@Model.Failed</div></div></div>
+        <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">@Loc.T("Documents_2")</div><div class="fw-bold fs-4">@Model.TotalDocuments</div></div></div>
+        <div class="col"><div class="bg-success text-white rounded shadow-sm p-3"><div class="small">@Loc.T("Restored")</div><div class="fw-bold fs-4">@Model.Restored</div></div></div>
+        <div class="col"><div class="bg-warning rounded shadow-sm p-3"><div class="small">@Loc.T("Skipped")</div><div class="fw-bold fs-4">@Model.Skipped</div></div></div>
+        <div class="col"><div class="bg-danger text-white rounded shadow-sm p-3"><div class="small">@Loc.T("Failed_3")</div><div class="fw-bold fs-4">@Model.Failed</div></div></div>
     </div>
 
     <div class="alert alert-info">
-        <strong>المدة:</strong> @Model.Duration.TotalSeconds.ToString("0.00") ثانية
+        <strong>@Loc.T("Duration_2")</strong> @Loc.T("N_Seconds", Model.Duration.TotalSeconds.ToString("0.00"))
     </div>
 
     @if (Model.Errors.Count > 0)
     {
         <div class="card mb-3">
-            <div class="card-header bg-danger text-white">❌ أخطاء (@Model.Errors.Count)</div>
+            <div class="card-header bg-danger text-white">@Loc.T("Errors_N", Model.Errors.Count)</div>
             <div class="card-body">
                 <ul>@foreach (var err in Model.Errors.Take(50)) {
                     <li><small>@err</small></li>
@@ -34,7 +34,7 @@
 @if (Model.Details.Count > 0)
 {
     <div class="card mb-3">
-        <div class="card-header">📋 التفاصيل</div>
+        <div class="card-header">@Loc.T("Details_2")</div>
         <div class="card-body"><ul>@foreach (var d in Model.Details) {
             <li>@d</li>
         }
@@ -42,5 +42,5 @@
 </div>
     }
 
-<a asp-action="Index" class="btn btn-primary">← رجوع للرئيسية</a>
+<a asp-action="Index" class="btn btn-primary">@Loc.T("Back_To_Home")</a>
 </div>

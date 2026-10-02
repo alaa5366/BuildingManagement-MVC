@@ -1,14 +1,14 @@
 ﻿@{
-    ViewData["Title"] = "اختر العمارة";
+    ViewData["Title"] = Loc.T("Select_Building");
     var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Models.Building> ?? new();
 }
 
 <div class="container">
-    <h2>🏢 اختر العمارة لإعداداتها</h2>
+    <h2>@Loc.T("Select_The_Building_For_Its_Settings")</h2>
 
     @if (buildings.Count == 0)
     {
-        <div class="alert alert-info">لا توجد عمارات.</div>
+        <div class="alert alert-info">@Loc.T("No_Buildings_Found")</div>
     }
     else
     {

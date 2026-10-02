@@ -6,16 +6,16 @@
 }
 
 <div class="container">
-    <h2>🔄 Migration — تحويل السجل القديم</h2>
-    <p class="text-muted">تحويل <code>building.AuditLog</code> → <code>auditLogs</code> collection</p>
+    <h2>@Loc.T("Migration_Convert_The_Old_Log")</h2>
+    <p class="text-muted">@Html.Raw(Loc.T("Convert_Building_AuditLog_AuditLogs_Collection"))</p>
 
     <form method="post" asp-action="RunMigration" class="card mb-4">
         @Html.AntiForgeryToken()
         <div class="card-body">
             <div class="mb-3">
-                <label class="form-label">العمارة (اتركها فاضية = كل العمارات)</label>
+                <label class="form-label">@Loc.T("Building_Leave_Empty_All_Buildings")</label>
                 <select name="buildingId" class="form-select">
-                    <option value="">— كل العمارات —</option>
+                    <option value="">@Loc.T("All_Buildings")</option>
                     @foreach (var b in buildings)
                     {
                         <option value="@b.Id">@b.Name (@b.BuildingNumber)</option>
@@ -25,10 +25,10 @@
             <div class="mb-3 form-check">
                 <input type="checkbox" name="dryRun" value="true" class="form-check-input" id="dryRun" checked />
                 <label class="form-check-label" for="dryRun">
-                    🧪 Dry-run (تجربة بدون حفظ — موصى به أولاً)
+                    @Loc.T("Dry_Run_A_Test_Without_Saving")
                 </label>
             </div>
-            <button class="btn btn-primary">▶️ بدء Migration</button>
+            <button class="btn btn-primary">@Loc.T("Start_Migration")</button>
         </div>
     </form>
 
@@ -36,22 +36,22 @@
     {
         <div class="card">
             <div class="card-header @(isDryRun ? "bg-warning" : "bg-success text-white")">
-                @(isDryRun ? "🧪 نتيجة Dry-run" : "✅ نتيجة Migration")
+                @(isDryRun ? Loc.T("Dry_Run_Result") : Loc.T("Migration_Result"))
             </div>
             <div class="card-body">
                 <div class="row mb-3">
-                    <div class="col-md-3"><strong>عمارات:</strong> @result.BuildingsScanned</div>
-                    <div class="col-md-3"><strong>سجلات موجودة:</strong> @result.EntriesFound</div>
-                    <div class="col-md-3"><strong>تم ترحيلها:</strong> @result.EntriesMigrated</div>
-                    <div class="col-md-3"><strong>تم تخطيها:</strong> @result.EntriesSkipped</div>
-                    <div class="col-md-3"><strong>فشلت:</strong> @result.EntriesFailed</div>
-                    <div class="col-md-3"><strong>المدة:</strong> @result.Duration.TotalSeconds.ToString("0.00") ثانية</div>
+                    <div class="col-md-3"><strong>@Loc.T("Buildings_3")</strong> @result.BuildingsScanned</div>
+                    <div class="col-md-3"><strong>@Loc.T("Existing_Records")</strong> @result.EntriesFound</div>
+                    <div class="col-md-3"><strong>@Loc.T("Migrated")</strong> @result.EntriesMigrated</div>
+                    <div class="col-md-3"><strong>@Loc.T("Skipped_2")</strong> @result.EntriesSkipped</div>
+                    <div class="col-md-3"><strong>@Loc.T("Failed_4")</strong> @result.EntriesFailed</div>
+                    <div class="col-md-3"><strong>@Loc.T("Duration_2")</strong> @Loc.T("N_Seconds", result.Duration.TotalSeconds.ToString("0.00"))</div>
                 </div>
 
                 @if (result.Errors.Count > 0)
                 {
                     <div class="alert alert-danger">
-                        <strong>أخطاء:</strong>
+                        <strong>@Loc.T("Errors")</strong>
                         <ul>
                             @foreach (var err in result.Errors.Take(20))
                             {
@@ -64,7 +64,7 @@
                 @if (result.Details.Count > 0)
                 {
                     <details>
-                        <summary>التفاصيل (@result.Details.Count)</summary>
+                        <summary>@Loc.T("Details_N", result.Details.Count)</summary>
                         <pre style="font-size:11px;max-height:300px;overflow:auto;">@string.Join("\n", result.Details.Take(100))</pre>
                     </details>
                 }

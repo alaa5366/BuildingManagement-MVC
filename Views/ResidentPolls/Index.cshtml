@@ -1,13 +1,13 @@
 @model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Poll>
 @{
-    ViewData["Title"] = "التصويتات";
+    ViewData["Title"] = Loc.T("Polls_3");
     var building = (Building)ViewBag.Building;
     var apt = (Apartment)ViewBag.Apt;
     var openApts = building.Apartments.Count(a => !a.Closed);
     var routeValuesStr = ViewBag.RouteValues as Dictionary<string, string> ?? new();
 }
 
-<h3 class="mb-3">🗳️ التصويتات (@Model.TotalItems)</h3>
+<h3 class="mb-3">@Loc.T("Polls_N", Model.TotalItems)</h3>
 
 @if (TempData["Error"] != null)
 {
@@ -33,7 +33,7 @@
 
 @if (Model.Items.Count == 0)
 {
-    <div class="alert alert-info">لا توجد تصويتات نشطة حاليًا.</div>
+    <div class="alert alert-info">@Loc.T("No_Active_Polls_At_The_Moment")</div>
 }
 else
 {
@@ -51,7 +51,7 @@ else
             }
             @if (myVote != null)
             {
-                <span class="badge bg-success mb-2">✅ صوّتت</span>
+                <span class="badge bg-success mb-2">@Loc.T("Voted")</span>
             }
             <div class="mt-2">
                 @foreach (var opt in poll.Options)
@@ -67,13 +67,13 @@ else
                             <form method="post" asp-action="Vote">
                                 <input type="hidden" name="pollId" value="@poll.Id" />
                                 <input type="hidden" name="optionId" value="@opt.Id" />
-                                <button class="btn btn-sm btn-outline-secondary">صوّت لهذا الخيار</button>
+                                <button class="btn btn-sm btn-outline-secondary">@Loc.T("Vote_For_This_Option")</button>
                             </form>
                         }
                     </div>
                 }
             </div>
-            <div class="text-muted small mt-2">إجمالي الأصوات: @total / @openApts</div>
+            <div class="text-muted small mt-2">@Loc.T("Total_Votes_N_N", total, openApts)</div>
         </div>
     }
 }

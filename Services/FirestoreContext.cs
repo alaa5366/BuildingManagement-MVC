@@ -7,21 +7,18 @@ public class FirestoreContext
 {
     public FirestoreDb Db { get; }
 
-    public FirestoreContext(IConfiguration config)
+    public FirestoreContext(IConfiguration config, IWebHostEnvironment env)
     {
         var projectId = config["Firebase:ProjectId"]
             ?? throw new InvalidOperationException("Firebase:ProjectId غير موجود في appsettings.json");
 
-        var credPath = config["Firebase:ServiceAccountJsonPath"];
-
         var builder = new FirestoreDbBuilder { ProjectId = projectId };
 
-        // لو حطيت ملف حساب الخدمة (Service Account JSON) بيتقرأ منه،
-        // غير كده هيحاول ياخد الاعتماد من متغير البيئة
-        // GOOGLE_APPLICATION_CREDENTIALS (Application Default Credentials).
-        if (!string.IsNullOrWhiteSpace(credPath) && File.Exists(credPath))
+        // الأولوية: Firebase:ServiceAccountJson (متغير بيئة) ← ملف على القرص ← Application Default Credentials
+        var json = FirebaseCredentials.TryLoadJson(config, env.ContentRootPath);
+        if (json != null)
         {
-            builder.JsonCredentials = File.ReadAllText(credPath);
+            builder.JsonCredentials = json;
         }
 
         Db = builder.Build();

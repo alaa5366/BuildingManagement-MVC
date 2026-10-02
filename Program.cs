@@ -1,11 +1,14 @@
-using BuildingManagementMvc.Resources;
 using BuildingManagementMvc.Services;
+using BuildingManagementMvc.Resources;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Localization;
-using Microsoft.Extensions.Options;
 using QuestPDF.Drawing;
 using QuestPDF.Infrastructure;
 using System.Globalization;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Authentication;
+using System.Security.Claims;
 
 // ✅ إعدادات QuestPDF
 QuestPDF.Settings.License = LicenseType.Community;
@@ -13,24 +16,24 @@ QuestPDF.Settings.UseEnvironmentFonts = false;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ✅ الـ cookies لازم Secure في الإنتاج (محلياً على http بنسمح بـ SameAsRequest)
+var cookieSecurePolicy = builder.Environment.IsDevelopment()
+    ? CookieSecurePolicy.SameAsRequest
+    : CookieSecurePolicy.Always;
+
 // MVC + Localization
-builder.Services.AddControllersWithViews()
+builder.Services.AddControllersWithViews(options =>
+    {
+        // ✅ أي POST/PUT/DELETE لازم يعدّي anti-forgery تلقائياً (إلا لو action عامل [IgnoreAntiforgeryToken] زي Presence)
+        options.Filters.Add(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute());
+    })
     .AddViewLocalization()
     .AddDataAnnotationsLocalization(options =>
     {
+        // رسائل الـ validation (ErrorMessage = "Key") بتتقرا من Resources/Shared.*.resx عن طريق Loc
         options.DataAnnotationLocalizerProvider = (type, factory) =>
-            factory.Create(typeof(SharedResource));
+            new BuildingManagementMvc.Services.LocStringLocalizer();
     });
-
-// ✅ Session
-builder.Services.AddDistributedMemoryCache();
-builder.Services.AddSession(options =>
-{
-    options.IdleTimeout = TimeSpan.FromMinutes(30);
-    options.Cookie.HttpOnly = true;
-    options.Cookie.IsEssential = true;
-    options.Cookie.Name = "bm_session";
-});
 
 // Firebase / Firestore
 builder.Services.AddSingleton<FirestoreContext>();
@@ -53,6 +56,9 @@ builder.Services.AddSingleton<ExcelImportService>();
 builder.Services.AddSingleton<FirebaseAdminService>();
 builder.Services.AddScoped<UnifiedAuthService>();
 builder.Services.AddSingleton<QrSecurityService>();
+builder.Services.AddSingleton<QrAuthService>();
+builder.Services.AddSingleton<LoginThrottle>();
+builder.Services.AddSingleton<SessionRevalidator>();
 builder.Services.AddSingleton<QrCodePdfService>();
 builder.Services.AddSingleton<QrGeneratorService>();
 builder.Services.AddSingleton<QrTokenStoreService>();
@@ -93,14 +99,17 @@ builder.Services.AddScoped<AdminManagementService>();
 // ✅ Memory Cache 
 builder.Services.AddMemoryCache();
 
-// ✅ Localization (معدّل - بدون ResourcesPath)
+// ✅ Localization (معدّل)
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+
 builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
     var supportedCultures = new[]
     {
         new CultureInfo("ar"),
-        new CultureInfo("en")
+        new CultureInfo("en"),
+        new CultureInfo("fr"),
+        new CultureInfo("de")
     };
 
     options.DefaultRequestCulture = new RequestCulture("ar");
@@ -126,11 +135,74 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.ExpireTimeSpan = TimeSpan.FromDays(7);
         options.SlidingExpiration = true;
         options.Cookie.Name = "bm_auth";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = cookieSecurePolicy;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+
+        // ✅ مراجعة الجلسة: أدمن اتعطّل/اتحذف، أو سوبر أدمن اتشال من الـ config => الجلسة تبطل،
+        // وصلاحيات الأدمن بتتحدّث من غير login جديد (النتيجة بتتخزّن دقيقتين).
+        options.Events = new CookieAuthenticationEvents
+        {
+            OnValidatePrincipal = async ctx =>
+            {
+                var revalidator = ctx.HttpContext.RequestServices.GetRequiredService<SessionRevalidator>();
+                var result = await revalidator.ValidateAsync(ctx.Principal!);
+
+                if (!result.Valid)
+                {
+                    ctx.RejectPrincipal();
+                    await ctx.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                    return;
+                }
+
+                if (result.Permissions != null)
+                {
+                    var current = ctx.Principal!.FindAll("perm").Select(c => c.Value).OrderBy(x => x);
+                    var fresh = result.Permissions.Distinct().OrderBy(x => x);
+                    if (!current.SequenceEqual(fresh))
+                    {
+                        var old = ctx.Principal!.Identities.First();
+                        var updated = new ClaimsIdentity(
+                            old.Claims.Where(c => c.Type != "perm"),
+                            old.AuthenticationType, old.NameClaimType, old.RoleClaimType);
+                        foreach (var p in fresh) updated.AddClaim(new Claim("perm", p));
+
+                        ctx.ReplacePrincipal(new ClaimsPrincipal(updated));
+                        ctx.ShouldRenew = true;
+                    }
+                }
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddAntiforgery(options =>
+{
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = cookieSecurePolicy;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+});
+
+// ✅ ورا Azure App Service لازم نقرأ الـ IP الحقيقي (X-Forwarded-For) عشان الـ LoginThrottle
+// وعشان HTTPS redirect يشتغل صح. App Service هو الـ proxy الوحيد قدام التطبيق.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 var app = builder.Build();
+
+// ✅ يفشل التشغيل بدري لو أي سر ناقص (بدل ما يشتغل بمفتاح افتراضي)
+ConfigSecrets.Require(app.Configuration, "Firebase:ProjectId");
+ConfigSecrets.Require(app.Configuration, "Firebase:WebApiKey");
+ConfigSecrets.Require(app.Configuration, "Excel:SecretKey");
+ConfigSecrets.Require(app.Configuration, "Qr:SecretKey", "Excel:SecretKey");
+AuthService.ConfigureSuperAdmins(ConfigSecrets.Require(app.Configuration, "Auth:SuperAdminEmails"));
+
+app.UseForwardedHeaders();
 
 // ✅ سجّل خطوط Cairo
 var fontsDir = Path.Combine(app.Environment.WebRootPath, "fonts");
@@ -167,6 +239,7 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
 
 app.UseStaticFiles();
@@ -176,7 +249,6 @@ app.UseRequestLocalization(locOptions.Value);
 
 app.UseRouting();
 
-app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 

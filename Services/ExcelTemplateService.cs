@@ -1,6 +1,6 @@
-﻿using ClosedXML.Excel;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
+using ClosedXML.Excel;
 
 namespace BuildingManagementMvc.Services;
 
@@ -13,7 +13,7 @@ public class ExcelTemplateService
 
     public ExcelTemplateService(IConfiguration config, ILogger<ExcelTemplateService> logger)
     {
-        _secretKey = config["Excel:SecretKey"] ?? "CHANGE_ME_IN_APPSETTINGS";
+        _secretKey = ConfigSecrets.Require(config, "Excel:SecretKey");
         _logger = logger;
     }
 

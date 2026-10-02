@@ -1,23 +1,23 @@
 ﻿@{
-    ViewData["Title"] = "مزامنة الداتابيز";
+    ViewData["Title"] = Loc.T("Database_Sync");
 }
 
 <div class="container">
-    <h2>🔄 مزامنة الداتابيز</h2>
-    <p class="text-muted">فحص وإصلاح الفروقات بين Firebase Auth و Firestore</p>
+    <h2>@Loc.T("Database_Sync_2")</h2>
+    <p class="text-muted">@Loc.T("Check_And_Fix_Differences_Between_Firebase")</p>
 
     <div class="row g-3">
         <div class="col-md-4">
             <form method="post" asp-action="SyncAdmins" class="card h-100">
                 @Html.AntiForgeryToken()
                 <div class="card-body">
-                    <h5>👥 مزامنة الأدمنة</h5>
-                    <p class="text-muted">فحص الإيميلات + Firebase Auth</p>
+                    <h5>@Loc.T("Sync_Admins")</h5>
+                    <p class="text-muted">@Loc.T("Check_Emails_Firebase_Auth")</p>
                     <div class="form-check mb-2">
                         <input type="checkbox" name="autoFix" value="true" class="form-check-input" />
-                        <label class="form-check-label">إصلاح تلقائي</label>
+                        <label class="form-check-label">@Loc.T("Auto_Fix")</label>
                     </div>
-                    <button class="btn btn-primary w-100">▶️ تشغيل</button>
+                    <button class="btn btn-primary w-100">@Loc.T("Run")</button>
                 </div>
             </form>
         </div>
@@ -26,13 +26,13 @@
             <form method="post" asp-action="SyncResidents" class="card h-100">
                 @Html.AntiForgeryToken()
                 <div class="card-body">
-                    <h5>🏠 مزامنة السكان</h5>
-                    <p class="text-muted">فحص Firebase Auth للسكان</p>
+                    <h5>@Loc.T("Sync_Residents")</h5>
+                    <p class="text-muted">@Loc.T("Check_Firebase_Auth_For_Residents")</p>
                     <div class="form-check mb-2">
                         <input type="checkbox" name="autoFix" value="true" class="form-check-input" />
-                        <label class="form-check-label">إصلاح تلقائي</label>
+                        <label class="form-check-label">@Loc.T("Auto_Fix")</label>
                     </div>
-                    <button class="btn btn-primary w-100">▶️ تشغيل</button>
+                    <button class="btn btn-primary w-100">@Loc.T("Run")</button>
                 </div>
             </form>
         </div>
@@ -41,9 +41,9 @@
             <form method="post" asp-action="SyncPasswords" class="card h-100">
                 @Html.AntiForgeryToken()
                 <div class="card-body">
-                    <h5>🔑 مزامنة كلمات السر</h5>
-                    <p class="text-muted">تحديث Firebase Auth بالباسوردات الصحيحة</p>
-                    <button class="btn btn-warning w-100">▶️ تشغيل</button>
+                    <h5>@Loc.T("Sync_Passwords")</h5>
+                    <p class="text-muted">@Loc.T("Update_Firebase_Auth_With_The_Correct")</p>
+                    <button class="btn btn-warning w-100">@Loc.T("Run")</button>
                 </div>
             </form>
         </div>

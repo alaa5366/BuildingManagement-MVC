@@ -1,12 +1,14 @@
-using BuildingManagementMvc.Services;
+using BuildingManagementMvc.Attributes;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
 
 // نفس شاشات js/features/qr-generator.js و js/views/admin/modals/qr-access-modal.js
 [Authorize(Roles = "admin")]
+[AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageResidents)]
 public class QrController : Controller
 {
     private readonly BuildingsService _buildings;

@@ -14,22 +14,46 @@ public class FirebaseAdminService
 
         if (FirebaseApp.DefaultInstance == null)
         {
-            var serviceAccountPath = config["Firebase:ServiceAccountJsonPath"]
-                ?? "firebase-service-account.json";
-            var fullPath = Path.Combine(env.ContentRootPath, serviceAccountPath);
+            var json = FirebaseCredentials.TryLoadJson(config, env.ContentRootPath);
 
-            if (!File.Exists(fullPath))
+            if (json == null)
             {
-                _logger.LogError($"[FirebaseAdmin] Service account not found: {fullPath}");
+                _logger.LogError("[FirebaseAdmin] Service account credentials not found " +
+                                 "(set Firebase:ServiceAccountJson or provide firebase-service-account.json)");
                 return;
             }
 
             FirebaseApp.Create(new AppOptions
             {
-                Credential = GoogleCredential.FromFile(fullPath)
+                Credential = GoogleCredential.FromJson(json)
             });
 
-            _logger.LogInformation($"[FirebaseAdmin] Initialized");
+            _logger.LogInformation("[FirebaseAdmin] Initialized");
+        }
+    }
+
+    // ============================================================
+    // التحقق من Firebase ID Token (للدخول بجوجل)
+    // ============================================================
+    public async Task<VerifiedFirebaseUser?> VerifyIdTokenAsync(string idToken)
+    {
+        if (string.IsNullOrWhiteSpace(idToken) || FirebaseApp.DefaultInstance == null)
+            return null;
+
+        try
+        {
+            var decoded = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(idToken);
+
+            var email = decoded.Claims.TryGetValue("email", out var e) ? e?.ToString() : null;
+            var emailVerified = decoded.Claims.TryGetValue("email_verified", out var ev) && ev is bool b && b;
+
+            if (string.IsNullOrWhiteSpace(email)) return null;
+            return new VerifiedFirebaseUser(decoded.Uid, email, emailVerified);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[FirebaseAdmin] ID token verification failed");
+            return null;
         }
     }
 
@@ -144,3 +168,5 @@ public class FirebaseAdminService
         }
     }
 }
+
+public record VerifiedFirebaseUser(string Uid, string Email, bool EmailVerified);

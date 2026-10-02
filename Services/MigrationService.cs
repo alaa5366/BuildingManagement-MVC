@@ -1,6 +1,10 @@
 ﻿using BuildingManagementMvc.Models;
 using Google.Cloud.Firestore;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Services;
 
@@ -93,20 +97,20 @@ public class MigrationService
         var buildingDoc = await _db.Collection(BuildingsCollection).Document(buildingId).GetSnapshotAsync();
         if (!buildingDoc.Exists)
         {
-            result.Errors.Add("العمارة غير موجودة");
+            result.Errors.Add(Loc.T("The_Building_Does_Not_Exist"));
             return result;
         }
 
         var data = buildingDoc.ToDictionary();
         if (!data.TryGetValue("auditLog", out var auditLogObj) || auditLogObj == null)
         {
-            result.Errors.Add("لا يوجد auditLog قديم في العمارة");
+            result.Errors.Add(Loc.T("No_Old_AuditLog_Found_In_The"));
             return result;
         }
 
         if (!(auditLogObj is IEnumerable<object> auditLogList))
         {
-            result.Errors.Add("auditLog ليس قائمة");
+            result.Errors.Add(Loc.T("AuditLog_Is_Not_A_List"));
             return result;
         }
 
@@ -185,7 +189,7 @@ public class MigrationService
             UserRole = actorRole,
             Severity = "info",
             Details = details,
-            CreatedAt = Timestamp.FromDateTime(createdUtc),
+            CreatedAt = Timestamp.FromDateTime(createdUtc),  
             Metadata = new Dictionary<string, object>
             {
                 ["migratedFrom"] = "building.AuditLog",

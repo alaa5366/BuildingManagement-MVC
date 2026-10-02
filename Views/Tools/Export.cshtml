@@ -1,23 +1,23 @@
 ﻿@{
-    ViewData["Title"] = "تصدير شامل";
+    ViewData["Title"] = Loc.T("Full_Export");
     var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Models.Building> ?? new();
 }
 
 <div class="container">
-    <h2>📦 تصدير شامل</h2>
+    <h2>@Loc.T("Full_Export_2")</h2>
 
     <div class="card">
         <div class="card-body">
-            <p>سيتم تصدير:</p>
+            <p>@Loc.T("The_Following_Will_Be_Exported")</p>
             <ul>
-                <li><strong>buildings.json</strong> — @buildings.Count عمارة</li>
-                <li><strong>users.json</strong> — كل الأدمنة</li>
-                <li><strong>README.md</strong> — شرح المحتوى</li>
+                <li><strong>buildings.json</strong> @Loc.T("N_Buildings", buildings.Count)</li>
+                <li>@Html.Raw(Loc.T("Users_Json_All_Admins"))</li>
+                <li>@Html.Raw(Loc.T("README_Md_Content_Description"))</li>
             </ul>
 
             <form method="post" asp-action="ExportAll">
                 @Html.AntiForgeryToken()
-                <button class="btn btn-success">⬇️ تصدير ZIP</button>
+                <button class="btn btn-success">@Loc.T("Export_ZIP")</button>
             </form>
         </div>
     </div>

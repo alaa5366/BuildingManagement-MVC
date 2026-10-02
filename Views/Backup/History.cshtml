@@ -1,31 +1,31 @@
 ﻿@model List<BuildingManagementMvc.Models.BackupHistoryEntry>
 @{
-    ViewData["Title"] = "سجل النسخ";
+    ViewData["Title"] = Loc.T("Backup_History");
 }
 
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>📜 سجل النسخ الاحتياطية</h2>
-        <a asp-action="Scheduled" class="btn btn-outline-secondary">← النسخ المجدولة</a>
+        <h2>@Loc.T("Backup_History_2")</h2>
+        <a asp-action="Scheduled" class="btn btn-outline-secondary">@Loc.T("Scheduled_Backups")</a>
     </div>
 
     @if (Model.Count == 0)
     {
-        <div class="alert alert-info">لا يوجد سجل بعد.</div>
+        <div class="alert alert-info">@Loc.T("No_History_Yet")</div>
     }
     else
     {
         <table class="table table-sm table-hover">
             <thead class="table-dark">
                 <tr>
-                    <th>التاريخ</th>
-                    <th>الحالة</th>
-                    <th>المصدر</th>
-                    <th>الملف</th>
+                    <th>@Loc.T("Date")</th>
+                    <th>@Loc.T("Status")</th>
+                    <th>@Loc.T("Source")</th>
+                    <th>@Loc.T("File")</th>
                     <th>Collections</th>
-                    <th>المستندات</th>
-                    <th>الحجم</th>
-                    <th>المدة</th>
+                    <th>@Loc.T("Documents")</th>
+                    <th>@Loc.T("Size")</th>
+                    <th>@Loc.T("Duration")</th>
                 </tr>
             </thead>
             <tbody>
@@ -37,11 +37,11 @@
                         <td>
                             @if (h.Status == "success")
                             {
-                                <span class="badge bg-success">✅ نجح</span>
+                                <span class="badge bg-success">@Loc.T("Succeeded")</span>
                             }
                             else
                             {
-                                <span class="badge bg-danger" title="@h.ErrorMessage">❌ فشل</span>
+                                <span class="badge bg-danger" title="@h.ErrorMessage">@Loc.T("Failed")</span>
                             }
                         </td>
                         <td>

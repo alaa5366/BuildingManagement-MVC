@@ -3,6 +3,10 @@ using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Controllers;
 
@@ -75,12 +79,12 @@ public class SettingsController : Controller
         try
         {
             await _settings.SaveGlobalAsync(model, CurrentUserId);
-            TempData["Message"] = "✅ تم حفظ الإعدادات العامة";
+            TempData["Message"] = Loc.T("Global_Settings_Saved");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "SaveGlobal failed");
-            TempData["Error"] = "فشل الحفظ: " + ex.Message;
+            TempData["Error"] = Loc.T("Save_Failed_2") + ex.Message;
         }
         return RedirectToAction(nameof(Global));
     }
@@ -132,12 +136,12 @@ public class SettingsController : Controller
         try
         {
             await _settings.SaveBuildingAsync(buildingId, model, CurrentUserId, CurrentRole);
-            TempData["Message"] = "✅ تم حفظ إعدادات العمارة";
+            TempData["Message"] = Loc.T("Building_Settings_Saved");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "SaveBuilding failed");
-            TempData["Error"] = "فشل الحفظ: " + ex.Message;
+            TempData["Error"] = Loc.T("Save_Failed_2") + ex.Message;
         }
 
         return RedirectToAction(nameof(Building), new { id = buildingId });
@@ -201,7 +205,7 @@ public class SettingsController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Own GET failed");
-            TempData["Error"] = "خطأ: " + ex.Message;
+            TempData["Error"] = Loc.T("Error_2") + ex.Message;
             return View(new OwnSettings());
         }
     }
@@ -229,12 +233,12 @@ public class SettingsController : Controller
             await _settings.SaveOwnAsync(
                 CurrentUserId, model, CurrentUserId, CurrentRole,
                 CurrentBuildingId, CurrentApartmentId);
-            saveSuccess.Add("التفضيلات");
+            saveSuccess.Add(Loc.T("Preferences"));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "SaveOwn (settings) failed");
-            saveErrors.Add("التفضيلات: " + ex.Message);
+            saveErrors.Add(Loc.T("Preferences_2") + ex.Message);
         }
 
         // ============================================================
@@ -247,13 +251,13 @@ public class SettingsController : Controller
             if (pinChanged)
             {
                 if (NewPin != ConfirmNewPin)
-                    throw new InvalidOperationException("PIN الجديد وتأكيده مش متطابقين");
+                    throw new InvalidOperationException(Loc.T("The_New_PIN_And_Its_Confirmation_2"));
 
                 if (NewPin!.Length != 4 || !NewPin.All(char.IsDigit))
-                    throw new InvalidOperationException("PIN لازم يكون 4 أرقام بالظبط");
+                    throw new InvalidOperationException(Loc.T("PIN_Must_Be_Exactly_4_Digits"));
 
                 if (string.IsNullOrWhiteSpace(CurrentPin))
-                    throw new InvalidOperationException("لازم تدخل PIN الحالي لتأكيد التغيير");
+                    throw new InvalidOperationException(Loc.T("You_Must_Enter_The_Current_PIN"));
             }
 
             if (CurrentRole == "resident" &&
@@ -265,19 +269,19 @@ public class SettingsController : Controller
                     OwnerName ?? "", AptLabel ?? "", NewPhone ?? "",
                     pinChanged ? NewPin : null, CurrentPin ?? "",
                     CurrentUserId, CurrentRole);
-                saveSuccess.Add("بياناتك");
+                saveSuccess.Add(Loc.T("Your_Details"));
             }
             else if (CurrentRole == "admin")
             {
                 await _settings.UpdateAdminProfileAsync(
                     CurrentUserId, OwnerName ?? "", NewPhone ?? "", NewWhatsapp ?? "",
                     pinChanged ? NewPin : null, CurrentPin ?? "", CurrentRole);
-                saveSuccess.Add("بياناتك");
+                saveSuccess.Add(Loc.T("Your_Details"));
             }
             else if (CurrentRole == "superadmin")
             {
                 await _settings.UpdateSuperAdminNameAsync(CurrentUserId, OwnerName ?? "");
-                saveSuccess.Add("بياناتك");
+                saveSuccess.Add(Loc.T("Your_Details"));
             }
         }
         catch (Exception ex)
@@ -291,16 +295,16 @@ public class SettingsController : Controller
         // ============================================================
         if (saveErrors.Count == 0)
         {
-            TempData["Message"] = "✅ تم حفظ " + string.Join(" و ", saveSuccess);
+            TempData["Message"] = Loc.T("Saved") + string.Join(Loc.T("And"), saveSuccess);
         }
         else if (saveSuccess.Count > 0)
         {
-            TempData["Message"] = "⚠️ تم حفظ " + string.Join(" و ", saveSuccess) +
-                                 " — لكن فشل: " + string.Join(" | ", saveErrors);
+            TempData["Message"] = Loc.T("Saved_2") + string.Join(Loc.T("And"), saveSuccess) +
+                                 Loc.T("But_Failed") + string.Join(" | ", saveErrors);
         }
         else
         {
-            TempData["Error"] = "❌ فشل الحفظ: " + string.Join(" | ", saveErrors);
+            TempData["Error"] = Loc.T("Save_Failed_3") + string.Join(" | ", saveErrors);
         }
 
         // ============================================================

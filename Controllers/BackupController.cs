@@ -4,6 +4,11 @@ using BuildingManagementMvc.Services;
 using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Controllers;
 
@@ -86,20 +91,20 @@ public class BackupController : Controller
     {
         if (collections == null || collections.Count == 0)
         {
-            TempData["Error"] = "اختر على الأقل Collection واحد";
+            TempData["Error"] = Loc.T("Select_At_Least_One_Collection");
             return RedirectToAction(nameof(Index), new { tab = "backup" });
         }
 
         try
         {
             var (bytes, result) = await _backup.CreateBackupAsync(collections, CurrentUserId);
-            TempData["Message"] = $"✅ تم إنشاء النسخة ({result.Collections.Count} collections، {result.TotalDocuments} مستند)";
+            TempData["Message"] = Loc.T("Backup_Created_N_Collections_N_Documents", result.Collections.Count, result.TotalDocuments);
             return File(bytes, "application/zip", result.FileName);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Backup create failed");
-            TempData["Error"] = "فشل الإنشاء: " + ex.Message;
+            TempData["Error"] = Loc.T("Creation_Failed") + ex.Message;
             return RedirectToAction(nameof(Index), new { tab = "backup" });
         }
     }
@@ -114,13 +119,13 @@ public class BackupController : Controller
     {
         if (backupFile == null || backupFile.Length == 0)
         {
-            TempData["Error"] = "ارفع ملف ZIP أولاً";
+            TempData["Error"] = Loc.T("Upload_A_ZIP_File_First");
             return RedirectToAction(nameof(Index), new { tab = "restore" });
         }
 
         if (!backupFile.FileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
         {
-            TempData["Error"] = "الملف لازم يكون ZIP";
+            TempData["Error"] = Loc.T("The_File_Must_Be_A_ZIP");
             return RedirectToAction(nameof(Index), new { tab = "restore" });
         }
 
@@ -131,7 +136,7 @@ public class BackupController : Controller
 
             if (!preview.Success)
             {
-                TempData["Error"] = "فشل قراءة الملف: " + string.Join("، ", preview.Errors);
+                TempData["Error"] = Loc.T("Failed_To_Read_The_File") + string.Join(Loc.T("Text_8a78cc"), preview.Errors);
                 return RedirectToAction(nameof(Index), new { tab = "restore" });
             }
 
@@ -140,7 +145,7 @@ public class BackupController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Backup preview failed");
-            TempData["Error"] = "فشل: " + ex.Message;
+            TempData["Error"] = Loc.T("Failed_5") + ex.Message;
             return RedirectToAction(nameof(Index), new { tab = "restore" });
         }
     }
@@ -152,7 +157,7 @@ public class BackupController : Controller
     {
         if (string.IsNullOrEmpty(tempFilePath) || collections == null || collections.Count == 0)
         {
-            TempData["Error"] = "بيانات ناقصة";
+            TempData["Error"] = Loc.T("Incomplete_Data");
             return RedirectToAction(nameof(Index), new { tab = "restore" });
         }
 
@@ -164,7 +169,7 @@ public class BackupController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Restore failed");
-            TempData["Error"] = "فشل: " + ex.Message;
+            TempData["Error"] = Loc.T("Failed_5") + ex.Message;
             return RedirectToAction(nameof(Index), new { tab = "restore" });
         }
     }
@@ -178,19 +183,19 @@ public class BackupController : Controller
     {
         if (model.Enabled && (model.Collections == null || model.Collections.Count == 0))
         {
-            TempData["Error"] = "لازم تختار على الأقل Collection واحد";
+            TempData["Error"] = Loc.T("You_Must_Select_At_Least_One");
             return RedirectToAction(nameof(Index), new { tab = "scheduled" });
         }
 
         try
         {
             await _scheduled.SaveSettingsAsync(model, CurrentUserId);
-            TempData["Message"] = "✅ تم حفظ الإعدادات";
+            TempData["Message"] = Loc.T("Settings_Saved");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "SaveScheduledSettings failed");
-            TempData["Error"] = "فشل الحفظ: " + ex.Message;
+            TempData["Error"] = Loc.T("Save_Failed_2") + ex.Message;
         }
 
         return RedirectToAction(nameof(Index), new { tab = "scheduled" });
@@ -203,12 +208,12 @@ public class BackupController : Controller
         try
         {
             await _scheduled.RunScheduledBackupAsync(_env, forceRun: true);
-            TempData["Message"] = "✅ تم إنشاء النسخة";
+            TempData["Message"] = Loc.T("Backup_Created");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "RunNow failed");
-            TempData["Error"] = "فشل: " + ex.Message;
+            TempData["Error"] = Loc.T("Failed_5") + ex.Message;
         }
         return RedirectToAction(nameof(Index), new { tab = "scheduled" });
     }
@@ -228,7 +233,7 @@ public class BackupController : Controller
     public async Task<IActionResult> DeleteBackup(string fileName)
     {
         var ok = await _scheduled.DeleteBackupAsync(_env, fileName, CurrentUserId);
-        TempData[ok ? "Message" : "Error"] = ok ? "✅ تم الحذف" : "❌ لم يتم العثور على الملف";
+        TempData[ok ? "Message" : "Error"] = ok ? Loc.T("Deleted_2") : Loc.T("File_Not_Found");
         return RedirectToAction(nameof(Index), new { tab = "scheduled" });
     }
 
@@ -250,7 +255,7 @@ public class BackupController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "[Backup] DownloadTemplate failed");
-            TempData["Error"] = "فشل تنزيل القالب: " + ex.Message;
+            TempData["Error"] = Loc.T("Failed_To_Download_The_Template") + ex.Message;
             return RedirectToAction(nameof(Index), new { tab = "import" });
         }
     }
@@ -262,14 +267,14 @@ public class BackupController : Controller
     {
         if (excelFile == null || excelFile.Length == 0)
         {
-            TempData["Error"] = "لم يتم رفع أي ملف";
+            TempData["Error"] = Loc.T("No_File_Was_Uploaded");
             return RedirectToAction(nameof(Index), new { tab = "import" });
         }
 
         var ext = Path.GetExtension(excelFile.FileName).ToLowerInvariant();
         if (ext != ".xlsx")
         {
-            TempData["Error"] = "الملف لازم يكون بصيغة .xlsx";
+            TempData["Error"] = Loc.T("The_File_Must_Be_In_Xlsx");
             return RedirectToAction(nameof(Index), new { tab = "import" });
         }
 
@@ -280,7 +285,7 @@ public class BackupController : Controller
 
             if (!result.IsSuccess || result.Data == null)
             {
-                TempData["Error"] = result.Error ?? "الملف غير صالح";
+                TempData["Error"] = result.Error ?? Loc.T("The_File_Is_Invalid");
                 return RedirectToAction(nameof(Index), new { tab = "import" });
             }
 
@@ -292,7 +297,7 @@ public class BackupController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "[Backup] UploadExcel failed");
-            TempData["Error"] = "فشل قراءة الملف: " + ex.Message;
+            TempData["Error"] = Loc.T("Failed_To_Read_The_File") + ex.Message;
             return RedirectToAction(nameof(Index), new { tab = "import" });
         }
     }
@@ -304,7 +309,7 @@ public class BackupController : Controller
         var json = TempData["ImportDataJson"] as string;
         if (string.IsNullOrEmpty(json))
         {
-            TempData["Error"] = "انتهت صلاحية الجلسة. ارفع الملف تاني.";
+            TempData["Error"] = Loc.T("The_Session_Has_Expired_Upload_The");
             return RedirectToAction(nameof(Index), new { tab = "import" });
         }
 
@@ -315,13 +320,13 @@ public class BackupController : Controller
         }
         catch
         {
-            TempData["Error"] = "البيانات تالفة. ارفع الملف تاني.";
+            TempData["Error"] = Loc.T("The_Data_Is_Corrupted_Upload_The");
             return RedirectToAction(nameof(Index), new { tab = "import" });
         }
 
         if (data == null || data.Apartments.Count == 0)
         {
-            TempData["Error"] = "البيانات ناقصة. ارفع الملف تاني.";
+            TempData["Error"] = Loc.T("The_Data_Is_Incomplete_Upload_The");
             return RedirectToAction(nameof(Index), new { tab = "import" });
         }
 
@@ -335,7 +340,7 @@ public class BackupController : Controller
             var building = await _buildings.GetByIdAsync(buildingId);
             if (building == null)
             {
-                TempData["Error"] = "فشل إنشاء العمارة";
+                TempData["Error"] = Loc.T("Failed_To_Create_The_Building");
                 return RedirectToAction(nameof(Index), new { tab = "import" });
             }
 
@@ -386,13 +391,13 @@ public class BackupController : Controller
 
             await _buildings.SaveFullAsync(building);
 
-            TempData["Message"] = $"✅ تم استيراد العمارة '{data.Name}' بنجاح ({data.Apartments.Count} شقة)";
+            TempData["Message"] = Loc.T("Building_N_Imported_Successfully_N_Apartments", data.Name, data.Apartments.Count);
             return RedirectToAction("Details", "Buildings", new { id = buildingId });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[Backup] ConfirmImport failed");
-            TempData["Error"] = "فشل الاستيراد: " + ex.Message;
+            TempData["Error"] = Loc.T("Import_Failed") + ex.Message;
             return RedirectToAction(nameof(Index), new { tab = "import" });
         }
     }

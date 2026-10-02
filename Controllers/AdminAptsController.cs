@@ -1,10 +1,12 @@
-﻿using BuildingManagementMvc.Services;
+﻿using BuildingManagementMvc.Attributes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
 
 [Authorize(Roles = "admin")]
+[AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageResidents)]
 public class AdminAptsController : Controller
 {
     private readonly BuildingsService _buildings;
@@ -161,7 +163,7 @@ public class AdminAptsController : Controller
 
         if (!apt.Closed)
         {
-            TempData["Error"] = "الشقة مفتوحة بالفعل";
+            TempData["Error"] = Loc.T("The_Apartment_Is_Already_Open");
             return RedirectToAction("Index", "AdminHome");
         }
 
@@ -195,7 +197,7 @@ public class AdminAptsController : Controller
             },
             severity: "warning");
 
-        TempData["Message"] = $"✅ تم فتح شقة {apt.Number} — الساكن هيتنبّه";
+        TempData["Message"] = Loc.T("Apartment_N_Was_Opened_The_Resident", apt.Number);
         return RedirectToAction("Index", "AdminHome");
     }
 
@@ -214,7 +216,7 @@ public class AdminAptsController : Controller
 
         if (apt.Closed)
         {
-            TempData["Error"] = "الشقة مغلقة بالفعل";
+            TempData["Error"] = Loc.T("The_Apartment_Is_Already_Closed");
             return RedirectToAction("Index", "AdminHome");
         }
 
@@ -256,7 +258,7 @@ public class AdminAptsController : Controller
             },
             severity: "warning");
 
-        TempData["Message"] = $"✅ تم إغلاق شقة {apt.Number}";
+        TempData["Message"] = Loc.T("Apartment_N_Was_Closed", apt.Number);
         return RedirectToAction("Index", "AdminHome");
     }
 }

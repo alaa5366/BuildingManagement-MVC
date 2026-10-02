@@ -1,5 +1,5 @@
 @{
-    ViewData["Title"] = "محفظتي";
+    ViewData["Title"] = Loc.T("My_Wallet_4");
     var building = (Building)ViewBag.Building;
     var apt = (Apartment)ViewBag.Apartment;
     string month = ViewBag.Month;
@@ -14,7 +14,7 @@
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>💼 محفظتي — شقة @apt.Number، @building.Name</h3>
+    <h3>@Loc.T("My_Wallet_Apartment_N_N", apt.Number, building.Name)</h3>
     <form method="get" class="d-flex gap-2">
         <input type="hidden" name="pageSize" value="@transactions.PageSize" />
         <input type="month" name="month" value="@month" class="form-control" onchange="this.form.submit()" />
@@ -22,33 +22,33 @@
 </div>
 
 <div class="bg-white rounded shadow-sm p-4 mb-3 text-center">
-    <div class="text-muted small">رصيدك الحالي</div>
-    <div class="display-6 fw-bold @(balance < 0 ? "text-danger" : "text-success")">@balance.ToString("0.##") ج.م</div>
+    <div class="text-muted small">@Loc.T("Your_Current_Balance")</div>
+    <div class="display-6 fw-bold @(balance < 0 ? "text-danger" : "text-success")">@Loc.T("N_EGP", balance.ToString("0.##"))</div>
     @if (balance < 0)
     {
-        <div class="text-danger small">عليك مبلغ مستحق</div>
+        <div class="text-danger small">@Loc.T("You_Have_An_Amount_Due")</div>
     }
-    <a asp-controller="Invoice" asp-action="Download" asp-route-month="@month" class="btn btn-sm btn-outline-primary mt-2">🧾 تحميل فاتورة PDF</a>
+    <a asp-controller="Invoice" asp-action="Download" asp-route-month="@month" class="btn btn-sm btn-outline-primary mt-2">@Loc.T("Download_PDF_Invoice")</a>
 </div>
 
 <div class="bg-white rounded shadow-sm p-3 mb-3">
-    <h5>➕ تسجيل دفعة جديدة</h5>
-    <p class="text-muted small">هتتحول لحالة "معلقة" لحد ما الأدمن يأكدها</p>
+    <h5>@Loc.T("Submit_A_New_Payment_2")</h5>
+    <p class="text-muted small">@Loc.T("It_Will_Be_Set_To_Pending")</p>
 
     <div class="alert alert-info d-flex justify-content-between align-items-center">
         <div>
-            <strong>📷 عندك صورة التحويل؟</strong>
-            <div class="small text-muted">ارفعها وهنقرأ المبلغ والبيانات تلقائياً + هترفق مع الدفعة</div>
+            <strong>@Loc.T("Do_You_Have_The_Transfer_Image")</strong>
+            <div class="small text-muted">@Loc.T("Upload_It_And_We_Ll_Read")</div>
         </div>
         <button type="button" class="btn btn-brand" onclick="document.getElementById('receiptFile').click()">
-            اقرأ من صورة
+            @Loc.T("Read_From_Image")
         </button>
         <input type="file" id="receiptFile" accept="image/*" style="display:none" onchange="handleReceiptUpload(this)" />
     </div>
 
     <div id="ocrStatus" class="alert alert-secondary" style="display:none"></div>
     <div id="ocrResult" class="alert alert-success" style="display:none">
-        <strong>✅ تم قراءة الصورة بنجاح</strong>
+        <strong>@Loc.T("Image_Read_Successfully")</strong>
         <div id="ocrDetails" class="small mt-2"></div>
     </div>
     <div id="ocrError" class="alert alert-danger" style="display:none"></div>
@@ -58,15 +58,15 @@
         <input type="hidden" name="month" value="@month" />
 
         <div class="col-md-4">
-            <label class="form-label small">المبلغ</label>
+            <label class="form-label small">@Loc.T("Amount")</label>
             <input name="amount" id="amountInput" type="number" step="0.01" class="form-control" required />
         </div>
         <div class="col-md-5">
-            <label class="form-label small">ملاحظة</label>
+            <label class="form-label small">@Loc.T("Note")</label>
             <input name="note" id="noteInput" class="form-control" />
         </div>
         <div class="col-md-3">
-            <button class="btn btn-brand w-100">إرسال</button>
+            <button class="btn btn-brand w-100">@Loc.T("Submit")</button>
         </div>
 
         <input type="file" name="receiptImage" id="receiptFileInput" accept="image/*" style="display:none" />
@@ -76,12 +76,12 @@
 @if (pendingDeposits.TotalItems > 0)
 {
     <div class="alert alert-warning">
-        عندك @pendingDeposits.TotalItems دفعة/دفعات في انتظار تأكيد الأدمن.
+        @Loc.T("You_Have_N_Payment_S_Awaiting", pendingDeposits.TotalItems)
     </div>
 }
 
 <div class="bg-white rounded shadow-sm p-3">
-    <h5>كشف الحساب (@transactions.TotalItems)</h5>
+    <h5>@Loc.T("Account_Statement_N", transactions.TotalItems)</h5>
 
     @* ✅ Pagination (فوق) *@
     @{
@@ -102,18 +102,18 @@
 
     @if (transactions.Items.Count == 0)
     {
-        <div class="alert alert-info">لا توجد معاملات لهذا الشهر.</div>
+        <div class="alert alert-info">@Loc.T("No_Transactions_For_This_Month")</div>
     }
     else
     {
         <table class="table table-sm">
             <thead>
                 <tr>
-                    <th>التاريخ</th>
-                    <th>البيان</th>
-                    <th>المبلغ</th>
-                    <th>الحالة</th>
-                    <th>الإيصال</th>
+                    <th>@Loc.T("Date")</th>
+                    <th>@Loc.T("Description_2")</th>
+                    <th>@Loc.T("Amount")</th>
+                    <th>@Loc.T("Status")</th>
+                    <th>@Loc.T("Receipt")</th>
                 </tr>
             </thead>
             <tbody>
@@ -121,12 +121,12 @@
                 {
                     var label = tx.Type switch
                     {
-                        "deposit" => "دفعة " + tx.Number,
-                        "expense" => "نصيب من المصروفات",
-                        "revenue" => "نصيب من الإيرادات",
-                        "monthly_fee_due" => "رسم شهري مستحق",
-                        "monthly_fee_credit" => "زيادة في الرسم الشهري",
-                        "adjustment" => "تسوية: " + tx.Note,
+                        "deposit" => Loc.T("Payment") + tx.Number,
+                        "expense" => Loc.T("Share_Of_Expenses"),
+                        "revenue" => Loc.T("Share_Of_Revenues"),
+                        "monthly_fee_due" => Loc.T("Monthly_Fee_Due"),
+                        "monthly_fee_credit" => Loc.T("Increase_In_The_Monthly_Fee"),
+                        "adjustment" => Loc.T("Adjustment") + tx.Note,
                         _ => tx.Note
                     };
 
@@ -134,7 +134,7 @@
                         <td>@tx.CreatedAt.Substring(0, Math.Min(10, tx.CreatedAt.Length))</td>
                         <td>@label</td>
                         <td class="@(tx.Amount < 0 ? "text-danger" : "text-success")">@tx.Amount.ToString("0.##")</td>
-                        <td>@(tx.Status == "pending" ? "⏳ معلقة" : tx.Status == "cancelled" ? "❌ ملغاة" : "✅ مؤكدة")</td>
+                        <td>@(tx.Status == "pending" ? Loc.T("Pending") : tx.Status == "cancelled" ? Loc.T("Cancelled") : Loc.T("Confirmed"))</td>
                         <td>
                             @* ✅ هنا الإيصال مش متاح مباشرة لأننا في PagedResult — يقدر المستخدم يشوف في صفحة الدفعات *@
                             @if (tx.Type == "deposit")
@@ -167,7 +167,7 @@
                     }
 
                     document.getElementById('ocrStatus').style.display = 'block';
-                    document.getElementById('ocrStatus').innerText = '⏳ جاري قراءة الصورة... (قد يستغرق 5-15 ثانية)';
+                    document.getElementById('ocrStatus').innerText = '⏳ @Html.Raw(Loc.Js("Reading_The_Image_May_Take_5"))';
                     document.getElementById('ocrResult').style.display = 'none';
                     document.getElementById('ocrError').style.display = 'none';
 
@@ -198,11 +198,11 @@
 
                             document.getElementById('ocrResult').style.display = 'block';
                             document.getElementById('ocrDetails').innerHTML = `
-                                <div>💰 المبلغ: <strong>${data.amount}</strong> ج.م</div>
-                                <div>🔢 المرجع: ${data.reference || '—'}</div>
-                                <div>📅 التاريخ: ${data.date || '—'}</div>
-                                <div>🏦 حساب: ${data.recipientAccount || '—'}</div>
-                                <div class="mt-2 text-success">✅ الصورة هترفع مع الدفعة</div>
+                                <div>💰 @Html.Raw(Loc.Js("Amount_2")) <strong>${data.amount}</strong> @Html.Raw(Loc.Js("EGP"))</div>
+                                <div>🔢 @Html.Raw(Loc.Js("Reference")) ${data.reference || '—'}</div>
+                                <div>📅 @Html.Raw(Loc.Js("Date_2")) ${data.date || '—'}</div>
+                                <div>🏦 @Html.Raw(Loc.Js("Account")) ${data.recipientAccount || '—'}</div>
+                                <div class="mt-2 text-success">✅ @Html.Raw(Loc.Js("The_Image_Will_Be_Uploaded_With"))</div>
                             `;
                         } else {
                             document.getElementById('ocrError').style.display = 'block';
@@ -211,7 +211,7 @@
                     } catch (err) {
                         document.getElementById('ocrStatus').style.display = 'none';
                         document.getElementById('ocrError').style.display = 'block';
-                        document.getElementById('ocrError').innerText = '❌ خطأ: ' + err.message;
+                        document.getElementById('ocrError').innerText = '❌ @Html.Raw(Loc.Js("Error")) ' + err.message;
                     }
 
                     input.value = '';

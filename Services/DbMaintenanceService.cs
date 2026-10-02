@@ -1,5 +1,9 @@
 ﻿using BuildingManagementMvc.Models;
 using Google.Cloud.Firestore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Services;
 
@@ -30,7 +34,7 @@ public class DbMaintenanceService
     // ============================================================
     public async Task<MaintenanceResult> FindDuplicateUsersAsync(bool fix)
     {
-        var result = new MaintenanceResult { ToolName = "كشف تكرار المستخدمين" };
+        var result = new MaintenanceResult { ToolName = Loc.T("Duplicate_User_Detection") };
         var snapshot = await _db.Collection("users").GetSnapshotAsync();
 
         var allUsers = snapshot.Documents.Select(d => new
@@ -50,7 +54,7 @@ public class DbMaintenanceService
 
         foreach (var group in grouped)
         {
-            result.Details.Add($"📱 phone: {group.Key} → {group.Count()} مستند");
+            result.Details.Add(Loc.T("Phone_N_N_Documents", group.Key, group.Count()));
             foreach (var item in group)
             {
                 result.Details.Add($"   - {item.Doc.Id}");
@@ -81,7 +85,7 @@ public class DbMaintenanceService
     // ============================================================
     public async Task<MaintenanceResult> FindStalePendingDepositsAsync(int olderThanDays, bool cancel)
     {
-        var result = new MaintenanceResult { ToolName = $"دفعات معلقة > {olderThanDays} يوم" };
+        var result = new MaintenanceResult { ToolName = Loc.T("Pending_Payments_N_Days", olderThanDays) };
         var cutoff = DateTime.UtcNow.AddDays(-olderThanDays);
 
         var buildings = await _buildings.GetAllAsync();
@@ -95,7 +99,7 @@ public class DbMaintenanceService
                     if (DateTime.TryParse(deposit.CreatedAt, out var created) && created < cutoff)
                     {
                         result.ItemsFound++;
-                        result.Details.Add($"💰 {building.Name} — دفعة {deposit.Number} ({deposit.Amount:0.##} ج.م)");
+                        result.Details.Add(Loc.T("N_Payment_N_N_EGP", building.Name, deposit.Number, deposit.Amount));
 
                         if (cancel)
                         {
@@ -121,7 +125,7 @@ public class DbMaintenanceService
     // ============================================================
     public async Task<MaintenanceResult> RecalculateBalancesAsync(string buildingId)
     {
-        var result = new MaintenanceResult { ToolName = "إعادة حساب الأرصدة" };
+        var result = new MaintenanceResult { ToolName = Loc.T("Recalculate_Balances_2") };
 
         var building = await _buildings.GetByIdAsync(buildingId);
         if (building == null) return result;
@@ -142,7 +146,7 @@ public class DbMaintenanceService
             m.RevenueDistribution = newRevDist;
 
             result.ItemsFixed++;
-            result.Details.Add($"📅 {mk}: توزيع جديد = {newDist.Count} شقة");
+            result.Details.Add(Loc.T("N_New_Distribution_N_Apartments", mk, newDist.Count));
         }
 
         await _buildings.SaveFullAsync(building);
@@ -154,7 +158,7 @@ public class DbMaintenanceService
     // ============================================================
     public async Task<MaintenanceResult> FindOrphanedDepositsAsync(bool fix)
     {
-        var result = new MaintenanceResult { ToolName = "كشف المراجع اليتيمة" };
+        var result = new MaintenanceResult { ToolName = Loc.T("Orphan_Reference_Detection") };
         var buildings = await _buildings.GetAllAsync();
 
         foreach (var building in buildings)
@@ -168,7 +172,7 @@ public class DbMaintenanceService
                     if (!validAptIds.Contains(deposit.AptId))
                     {
                         result.ItemsFound++;
-                        result.Details.Add($"⚠️ {building.Name} — دفعة {deposit.Number} مرتبطة بشقة مش موجودة ({deposit.AptId})");
+                        result.Details.Add(Loc.T("N_Payment_N_Is_Linked_To", building.Name, deposit.Number, deposit.AptId));
 
                         if (fix)
                         {

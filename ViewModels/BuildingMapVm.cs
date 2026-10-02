@@ -33,7 +33,8 @@ public class ApartmentCardVm
 
     // Presence
     public bool IsOnline { get; set; }
-    public string LastSeenText { get; set; } = "لم يسجل دخول";
+    public bool IsRecent { get; set; }
+    public string LastSeenText { get; set; } = Loc.T("Never_Logged_In");
 
     // Status — للألوان والأيقونات
     public string Status { get; set; } = "offline";   // online | recent | offline | negative | closed
@@ -70,7 +71,7 @@ public class ApartmentDetailsVm
     public string FloorLabel { get; set; } = "";
     public int FloorOrder { get; set; }
     public bool IsClosed { get; set; }
-    public string CloseDateText { get; set; } = "—";
+    public string CloseDateText { get; set; } = "—";  
     public string? AptLabel { get; set; }
     public string? Notes { get; set; }
 
@@ -90,7 +91,8 @@ public class ApartmentDetailsVm
 
     // Presence
     public bool IsOnline { get; set; }
-    public string LastSeenText { get; set; } = "لم يسجل دخول";
+    public bool IsRecent { get; set; }
+    public string LastSeenText { get; set; } = Loc.T("Never_Logged_In");
     public string StatusIcon { get; set; } = "⚪";
     public string StatusLabel { get; set; } = "";
     public string StatusColor { get; set; } = "#999";
@@ -116,9 +118,9 @@ public class RecentDepositVm
 
     public string StatusLabel => Status switch
     {
-        "confirmed" => "✅ مؤكدة",
-        "pending" => "⏳ معلقة",
-        "cancelled" => "❌ ملغاة",
+        "confirmed" => Loc.T("Confirmed"),
+        "pending" => Loc.T("Pending"),
+        "cancelled" => Loc.T("Cancelled"),
         _ => Status
     };
 }

@@ -1,7 +1,7 @@
-﻿using Google.Cloud.Firestore;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Google.Cloud.Firestore;
 
 namespace BuildingManagementMvc.Services;
 
@@ -14,7 +14,7 @@ public class QrSecurityService
     public QrSecurityService(FirestoreContext ctx, IConfiguration config, ILogger<QrSecurityService> logger)
     {
         _db = ctx.Db;
-        _secretKey = config["Qr:SecretKey"] ?? config["Excel:SecretKey"] ?? "CHANGE_ME";
+        _secretKey = ConfigSecrets.Require(config, "Qr:SecretKey", "Excel:SecretKey");
         _logger = logger;
     }
 
@@ -73,7 +73,7 @@ public class QrSecurityService
         // 1. تحليل الـ token
         var parts = token.Split('.');
         if (parts.Length != 2)
-            return QuickTokenValidation.Fail("Token غير صالح");
+            return QuickTokenValidation.Fail(Loc.T("Invalid_Token"));
 
         var encrypted = parts[0];
         var signature = parts[1];
@@ -83,7 +83,7 @@ public class QrSecurityService
         var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(encrypted));
         var expectedSig = Convert.ToHexString(hash).ToLower()[..16];
         if (signature != expectedSig)
-            return QuickTokenValidation.Fail("Token تم التلاعب به");
+            return QuickTokenValidation.Fail(Loc.T("The_Token_Has_Been_Tampered_With"));
 
         // 3. فك التشفير
         QuickTokenPayload payload;
@@ -94,12 +94,12 @@ public class QrSecurityService
         }
         catch
         {
-            return QuickTokenValidation.Fail("Token تالف");
+            return QuickTokenValidation.Fail(Loc.T("Corrupted_Token"));
         }
 
         // 4. التحقق من الصلاحية
         if (DateTime.UtcNow > DateTime.Parse(payload.ExpiresAt))
-            return QuickTokenValidation.Fail("انتهت صلاحية الـ QR");
+            return QuickTokenValidation.Fail(Loc.T("The_QR_Has_Expired"));
 
         // 5. التحقق من الاستخدام
         var usageDoc = await _db.Collection("qr_usage").Document(payload.TokenId).GetSnapshotAsync();
@@ -109,15 +109,15 @@ public class QrSecurityService
             var usage = usageDoc.ConvertTo<QrUsage>();
 
             if (payload.OneTime && usage.UseCount >= 1)
-                return QuickTokenValidation.Fail("الـ QR ده اتستخدم قبل كده");
+                return QuickTokenValidation.Fail(Loc.T("This_QR_Has_Already_Been_Used"));
 
             if (payload.MaxUses > 0 && usage.UseCount >= payload.MaxUses)
-                return QuickTokenValidation.Fail("الـ QR ده وصل للحد الأقصى للاستخدام");
+                return QuickTokenValidation.Fail(Loc.T("This_QR_Has_Reached_Its_Maximum"));
 
             if (!string.IsNullOrEmpty(deviceFingerprint) &&
                 !string.IsNullOrEmpty(usage.DeviceFingerprint) &&
                 usage.DeviceFingerprint != deviceFingerprint)
-                return QuickTokenValidation.Fail("الـ QR ده مرتبط بجهاز تاني");
+                return QuickTokenValidation.Fail(Loc.T("This_QR_Is_Linked_To_Another"));
         }
 
         return QuickTokenValidation.Ok(payload);

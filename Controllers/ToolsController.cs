@@ -3,9 +3,13 @@ using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Controllers;
 
@@ -101,7 +105,7 @@ public class ToolsController : Controller
             case "recalc-balances":
                 if (string.IsNullOrWhiteSpace(buildingId))
                 {
-                    TempData["Error"] = "اختر عمارة أولاً";
+                    TempData["Error"] = Loc.T("Select_A_Building_First");
                     return RedirectToAction(nameof(Maintenance));
                 }
                 result = await _maintenance.RecalculateBalancesAsync(buildingId);
@@ -110,7 +114,7 @@ public class ToolsController : Controller
                 result = await _maintenance.FindOrphanedDepositsAsync(fix);
                 break;
             default:
-                TempData["Error"] = "أداة غير معروفة";
+                TempData["Error"] = Loc.T("Unknown_Tool");
                 return RedirectToAction(nameof(Maintenance));
         }
 

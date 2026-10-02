@@ -14,7 +14,7 @@
     <div class="apt-status" style="background: @Model.StatusColor;"></div>
 
     <div class="apt-header">
-        <span class="apt-number">🏠 شقة @apt.Number</span>
+        <span class="apt-number">@Loc.T("Apartment_N_2", apt.Number)</span>
         <span class="apt-status-icon" title="@Model.StatusLabel">@Model.StatusIcon</span>
     </div>
 
@@ -26,13 +26,13 @@
         <div class="apt-owner">@Model.OwnerDisplay</div>
 
         <div class="apt-balance @Model.BalanceClass">
-            @Model.Balance.ToString("N0") ج.م
+            @Loc.T("N_EGP", Model.Balance.ToString("N0"))
         </div>
 
         @if (Model.PendingDepositsCount > 0)
         {
             <div class="apt-pending">
-                ⏳ @Model.PendingDepositsCount معلقة
+                @Loc.T("N_Pending", Model.PendingDepositsCount)
             </div>
         }
 

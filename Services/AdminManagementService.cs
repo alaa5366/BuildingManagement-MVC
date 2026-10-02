@@ -1,5 +1,9 @@
 ﻿using BuildingManagementMvc.Models;
 using Google.Cloud.Firestore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Services;
 
@@ -51,7 +55,7 @@ public class AdminManagementService
         // 1. Firebase Auth
         var authResult = await _fbAuth.CreateUserAsync(email, password);
         if (!authResult.Success || string.IsNullOrEmpty(authResult.Uid))
-            throw new InvalidOperationException("فشل إنشاء حساب Firebase Auth: " + (authResult.Error ?? "unknown"));
+            throw new InvalidOperationException(Loc.T("Failed_To_Create_The_Firebase_Auth") + (authResult.Error ?? "unknown"));
 
         var uid = authResult.Uid;
 
@@ -109,7 +113,7 @@ public class AdminManagementService
         List<string> permissions, bool isActive, string updatedBy)
     {
         var existing = await _users.GetByUidAsync(uid)
-            ?? throw new InvalidOperationException("الأدمن غير موجود");
+            ?? throw new InvalidOperationException(Loc.T("The_Admin_Does_Not_Exist"));
 
         await _users.SetAsync(uid, new Dictionary<string, object>
         {
@@ -136,7 +140,7 @@ public class AdminManagementService
     public async Task ChangePinAsync(string uid, string newPin, string updatedBy)
     {
         var admin = await _users.GetByUidAsync(uid)
-            ?? throw new InvalidOperationException("الأدمن غير موجود");
+            ?? throw new InvalidOperationException(Loc.T("The_Admin_Does_Not_Exist"));
 
         // 1. Firestore
         await _users.SetAsync(uid, new Dictionary<string, object>
@@ -168,7 +172,7 @@ public class AdminManagementService
     public async Task DeactivateAsync(string uid, string updatedBy)
     {
         var admin = await _users.GetByUidAsync(uid)
-            ?? throw new InvalidOperationException("الأدمن غير موجود");
+            ?? throw new InvalidOperationException(Loc.T("The_Admin_Does_Not_Exist"));
 
         await _users.SetAsync(uid, new Dictionary<string, object>
         {
@@ -190,7 +194,7 @@ public class AdminManagementService
     public async Task ActivateAsync(string uid, string updatedBy)
     {
         var admin = await _users.GetByUidAsync(uid)
-            ?? throw new InvalidOperationException("الأدمن غير موجود");
+            ?? throw new InvalidOperationException(Loc.T("The_Admin_Does_Not_Exist"));
 
         await _users.SetAsync(uid, new Dictionary<string, object>
         {
@@ -215,7 +219,7 @@ public class AdminManagementService
     public async Task DeleteAsync(string uid, string deletedBy)
     {
         var admin = await _users.GetByUidAsync(uid)
-            ?? throw new InvalidOperationException("الأدمن غير موجود");
+            ?? throw new InvalidOperationException(Loc.T("The_Admin_Does_Not_Exist"));
 
         await _users.SetAsync(uid, new Dictionary<string, object>
         {

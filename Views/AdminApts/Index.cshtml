@@ -1,21 +1,18 @@
 ﻿@model Building
 @{
-    ViewData["Title"] = "إدارة الشقق";
+    ViewData["Title"] = Loc.T("Manage_Apartments");
 }
 
 @Html.AntiForgeryToken()
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>🏠 شقق @Model.Name (@Model.BuildingNumber)</h3>
+    <h3>@Loc.T("Apartments_Of_N_N", Model.Name, Model.BuildingNumber)</h3>
     <div class="d-flex gap-2">
-        <a asp-action="Index" asp-controller="AdminHome" class="btn btn-outline-secondary btn-sm">← رجوع</a>
+        <a asp-action="Index" asp-controller="AdminHome" class="btn btn-outline-secondary btn-sm">@Loc.T("Back")</a>
     </div>
 </div>
 
-<div class="alert alert-info">
-    💡 اضغط <strong>"⚡ QR سريع"</strong> عشان تولّد رابط دخول مؤقت للساكن،
-    أو <strong>"💌 ترحيب"</strong> لإرسال رسالة كاملة فيها بياناته + QR.
-</div>
+<div class="alert alert-info">@Html.Raw(Loc.T("Tap_Quick_QR_To_Generate_A"))</div>
 
 <div class="row">
     @foreach (var floor in Model.Floors.OrderBy(f => f.Order))
@@ -23,13 +20,13 @@
         var apts = Model.Apartments.Where(a => a.FloorId == floor.Id).OrderBy(a => a.Number).ToList();
         <div class="col-md-6 mb-3">
             <div class="bg-white rounded shadow-sm p-3">
-                <h5>@floor.Label <span class="text-muted small">(دور رقم @floor.Order)</span></h5>
+                <h5>@floor.Label <span class="text-muted small">@Loc.T("Floor_No_N", floor.Order)</span></h5>
                 <ul class="list-group list-group-flush">
                     @foreach (var apt in apts)
                     {
                         <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <div>
-                                <span>🏠 شقة @apt.Number @(string.IsNullOrEmpty(apt.Label) ? "" : "— " + apt.Label)</span>
+                                <span>@Loc.T("Apartment_N_N", apt.Number, string.IsNullOrEmpty(apt.Label) ? "" : "— " + apt.Label)</span>
                                 <div class="text-muted small">@apt.Owner</div>
                             </div>
                             <div class="d-flex gap-2 align-items-center flex-wrap">
@@ -38,7 +35,7 @@
                                 @* ✅ QR سريع *@
                                 <button type="button" class="btn btn-sm btn-outline-warning"
                                         onclick="openQuickQrModal('@apt.Id', '@apt.Number', '@floor.Label')">
-                                    ⚡ QR سريع
+                                    @Loc.T("Quick_QR_2")
                                 </button>
 
                                 @* ✅ جديد — رسالة ترحيب *@
@@ -47,8 +44,8 @@
                                     <input type="hidden" name="aptId" value="@apt.Id" />
                                     <input type="hidden" name="validityHours" value="24" />
                                     <button type="submit" class="btn btn-sm btn-outline-success"
-                                            title="رسالة ترحيب + QR للدخول السريع">
-                                        💌 ترحيب
+                                            title="@Loc.T("Welcome_Message_QR_For_Quick_Login")">
+                                        @Loc.T("Welcome_2")
                                     </button>
                                 </form>
                             </div>
@@ -67,78 +64,78 @@
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-warning bg-opacity-25">
-                <h5 class="modal-title">⚡ QR سريع — <span id="quickAptInfo"></span></h5>
+                <h5 class="modal-title">@Html.Raw(Loc.T("Quick_QR_5"))</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div id="quickQrForm">
                     <div class="alert alert-info small">
-                        💡 الـ QR السريع بيسمح للساكن يدخل مباشرة بدون إدخال أي بيانات. آمن ومشفّر.
+                        @Loc.T("The_Quick_QR_Lets_The_Resident")
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">⏱️ مدة الصلاحية</label>
+                        <label class="form-label fw-bold">@Loc.T("Validity_Period")</label>
                         <select id="validitySelect" class="form-select">
-                            <option value="5">5 دقائق</option>
-                            <option value="15">15 دقيقة</option>
-                            <option value="60" selected>ساعة واحدة</option>
-                            <option value="360">6 ساعات</option>
-                            <option value="1440">يوم واحد</option>
-                            <option value="10080">أسبوع</option>
+                            <option value="5">@Loc.T("5_Minutes")</option>
+                            <option value="15">@Loc.T("15_Minutes")</option>
+                            <option value="60" selected>@Loc.T("1_Hour")</option>
+                            <option value="360">@Loc.T("6_Hours")</option>
+                            <option value="1440">@Loc.T("1_Day")</option>
+                            <option value="10080">@Loc.T("1_Week")</option>
                         </select>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">🔢 نوع الاستخدام</label>
+                        <label class="form-label fw-bold">@Loc.T("Usage_Type")</label>
                         <div class="form-check">
                             <input type="radio" name="usageType" value="once" class="form-check-input" id="usageOnce" checked />
                             <label class="form-check-label" for="usageOnce">
-                                <strong>مرة واحدة فقط</strong>
-                                <div class="text-muted small">الأكثر أمانًا — الرابط يبطل بعد أول استخدام</div>
+                                <strong>@Loc.T("One_Time_Only")</strong>
+                                <div class="text-muted small">@Loc.T("Most_Secure_The_Link_Expires_After")</div>
                             </label>
                         </div>
                         <div class="form-check mt-2">
                             <input type="radio" name="usageType" value="multiple" class="form-check-input" id="usageMultiple" />
                             <label class="form-check-label" for="usageMultiple">
-                                <strong>متعدد حتى انتهاء الصلاحية</strong>
-                                <div class="text-muted small">مناسب لو الساكن هيدخل من أكتر من جهاز</div>
+                                <strong>@Loc.T("Multiple_Until_Expiry")</strong>
+                                <div class="text-muted small">@Loc.T("Suitable_If_The_Resident_Will_Log")</div>
                             </label>
                         </div>
                     </div>
 
                     <div class="mb-3" id="maxUsesField" style="display:none">
-                        <label class="form-label">الحد الأقصى للاستخدام</label>
+                        <label class="form-label">@Loc.T("Maximum_Uses")</label>
                         <input type="number" id="maxUsesInput" class="form-control" value="5" min="1" max="100" />
                     </div>
                 </div>
 
                 <div id="quickQrResult" style="display:none">
-                    <div class="alert alert-success text-center">✅ تم توليد QR السريع بنجاح</div>
+                    <div class="alert alert-success text-center">@Loc.T("Quick_QR_Generated_Successfully")</div>
 
                     <div class="text-center mb-3">
                         <img id="quickQrImage" src="" alt="QR" class="img-fluid border rounded p-2" style="max-width:280px" />
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">🔗 الرابط السريع</label>
+                        <label class="form-label small fw-bold">@Loc.T("Quick_Link")</label>
                         <div class="input-group">
                             <input type="text" id="quickQrUrl" class="form-control form-control-sm" readonly />
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="copyQuickUrl()">📋 نسخ</button>
-                            <a id="quickQrOpenLink" href="" target="_blank" class="btn btn-sm btn-outline-success">🔗 فتح</a>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="copyQuickUrl()">@Loc.T("Copy")</button>
+                            <a id="quickQrOpenLink" href="" target="_blank" class="btn btn-sm btn-outline-success">@Loc.T("Open")</a>
                         </div>
                     </div>
 
                     <div class="text-muted small" id="quickQrInfo"></div>
 
                     <div class="alert alert-warning small mt-3">
-                        ⚠️ ابعت الرابط ده للساكن عن طريق واتساب. بعد انتهاء الصلاحية أو استخدامه، مش هيعمل تاني.
+                        @Loc.T("Send_This_Link_To_The_Resident")
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" id="generateBtn" class="btn btn-warning" onclick="generateQuickQr()">⚡ توليد QR</button>
-                <button type="button" id="newQrBtn" class="btn btn-outline-warning" style="display:none" onclick="resetQuickQrForm()">🔄 توليد جديد</button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" id="generateBtn" class="btn btn-warning" onclick="generateQuickQr()">@Loc.T("Generate_QR")</button>
+                <button type="button" id="newQrBtn" class="btn btn-outline-warning" style="display:none" onclick="resetQuickQrForm()">@Loc.T("Generate_New")</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@Loc.T("Close")</button>
             </div>
         </div>
     </div>
@@ -150,7 +147,7 @@
 
         function openQuickQrModal(aptId, aptNum, floorLabel) {
             currentAptId = aptId;
-            document.getElementById('quickAptInfo').textContent = `${floorLabel} — شقة ${aptNum}`;
+            document.getElementById('quickAptInfo').textContent = `${floorLabel} — @Html.Raw(Loc.Js("Apt")) ${aptNum}`;
             resetQuickQrForm();
             new bootstrap.Modal(document.getElementById('quickQrModal')).show();
         }
@@ -180,7 +177,7 @@
 
             const btn = document.getElementById('generateBtn');
             btn.disabled = true;
-            btn.textContent = '⏳ جاري التوليد...';
+            btn.textContent = '⏳ @Html.Raw(Loc.Js("Generating"))';
 
             try {
                 const formData = new FormData();
@@ -198,7 +195,7 @@
 
                 const data = await res.json();
                 if (!data.success) {
-                    alert('❌ فشل توليد QR: ' + (data.error || 'خطأ غير معروف'));
+                    alert('❌ @Html.Raw(Loc.Js("Failed_To_Generate_QR")) ' + (data.error || '@Html.Raw(Loc.Js("Unknown_Error"))'));
                     return;
                 }
 
@@ -212,14 +209,14 @@
                 document.getElementById('quickQrUrl').value = data.url;
                 document.getElementById('quickQrOpenLink').href = data.url;
 
-                const usageText = data.oneTime ? 'مرة واحدة فقط' : `حتى ${data.maxUses} استخدام`;
+                const usageText = data.oneTime ? '@Html.Raw(Loc.Js("One_Time_Only"))' : `@Html.Raw(Loc.Js("Up_To")) ${data.maxUses} @Html.Raw(Loc.Js("Uses"))`;
                 document.getElementById('quickQrInfo').innerHTML =
-                    `⏱️ صالح لمدة <strong>${data.expiresIn}</strong> دقيقة &nbsp;|&nbsp; 🔢 ${usageText}`;
+                    `⏱️ @Html.Raw(Loc.Js("Valid_For")) <strong>${data.expiresIn}</strong> @Html.Raw(Loc.Js("Minutes")) ${usageText}`;
             } catch (err) {
-                alert('❌ خطأ: ' + err.message);
+                alert('❌ @Html.Raw(Loc.Js("Error")) ' + err.message);
             } finally {
                 btn.disabled = false;
-                btn.textContent = '⚡ توليد QR';
+                btn.textContent = '⚡ @Html.Raw(Loc.Js("Generate_QR_2"))';
             }
         }
 
@@ -228,7 +225,7 @@
             input.select();
             input.setSelectionRange(0, 99999);
             document.execCommand('copy');
-            alert('✅ تم نسخ الرابط');
+            alert('✅ @Html.Raw(Loc.Js("Link_Copied"))');
         }
     </script>
 }

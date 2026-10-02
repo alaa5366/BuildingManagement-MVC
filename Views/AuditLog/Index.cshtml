@@ -1,6 +1,6 @@
 ﻿@model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Services.AuditEntryDoc>
 @{
-    ViewData["Title"] = "السجل";
+    ViewData["Title"] = Loc.T("Log");
     var role = ViewBag.CurrentRole as string ?? "admin";
     var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Models.Building> ?? new();
     var knownActions = ViewBag.KnownActions as List<string> ?? new();
@@ -20,24 +20,24 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2>
-            📜 السجل
+            @Loc.T("Log_2")
             @if (role == "superadmin")
             {
-                <small class="text-muted">— كل السجلات</small>
+                <small class="text-muted">@Loc.T("All_Records")</small>
             }
             else if (role == "admin")
             {
 
-                <small class="text-muted">— سجل عمارتي</small>
+                <small class="text-muted">@Loc.T("My_Building_S_Log")</small>
             }
             else
             {
 
-                <small class="text-muted">— سجل شقتي</small>
+                <small class="text-muted">@Loc.T("My_Apartment_S_Log")</small>
             }
         </h2>
         <div>
-            <span class="badge bg-secondary">@Model.TotalItems عملية</span>
+            <span class="badge bg-secondary">@Loc.T("N_Operations", Model.TotalItems)</span>
             <a asp-action="ExportCsv"
                asp-route-buildingId="@ViewBag.SelectedBuildingId"
                asp-route-apartmentId="@ViewBag.SelectedApartmentId"
@@ -46,7 +46,7 @@
                asp-route-severity="@ViewBag.SelectedSeverity"
                asp-route-from="@ViewBag.From"
                asp-route-to="@ViewBag.To"
-               class="btn btn-outline-success">⬇️ تصدير CSV</a>
+               class="btn btn-outline-success">@Loc.T("Export_CSV")</a>
         </div>
     </div>
 
@@ -57,9 +57,9 @@
                 @if (canFilterBuilding && buildings.Count > 0)
                 {
                     <div class="col-md-3">
-                        <label class="form-label small">العمارة</label>
+                        <label class="form-label small">@Loc.T("Building")</label>
                         <select name="buildingId" class="form-select form-select-sm">
-                            <option value="">— كل العمارات —</option>
+                            <option value="">@Loc.T("All_Buildings")</option>
                             @foreach (var b in buildings)
                             {
                                 <option value="@b.Id" selected="@(ViewBag.SelectedBuildingId == b.Id)">@b.Name (@b.BuildingNumber)</option>
@@ -69,9 +69,9 @@
                 }
 
                 <div class="col-md-3">
-                    <label class="form-label small">العملية</label>
+                    <label class="form-label small">@Loc.T("Action")</label>
                     <select name="actionFilter" class="form-select form-select-sm">
-                        <option value="">— الكل —</option>
+                        <option value="">@Loc.T("All")</option>
                         @foreach (var a in knownActions)
                         {
                             <option value="@a" selected="@(ViewBag.SelectedAction == a)">
@@ -82,12 +82,12 @@
                 </div>
 
                 <div class="col-md-2">
-                    <label class="form-label small">الخطورة</label>
+                    <label class="form-label small">@Loc.T("Severity")</label>
                     <select name="severity" class="form-select form-select-sm">
-                        <option value="">— الكل —</option>
-                        <option value="info" selected="@(ViewBag.SelectedSeverity == "info")">🔵 معلومة</option>
-                        <option value="warning" selected="@(ViewBag.SelectedSeverity == "warning")">🟡 تحذير</option>
-                        <option value="critical" selected="@(ViewBag.SelectedSeverity == "critical")">🔴 حرج</option>
+                        <option value="">@Loc.T("All")</option>
+                        <option value="info" selected="@(ViewBag.SelectedSeverity == "info")">@Loc.T("Info")</option>
+                        <option value="warning" selected="@(ViewBag.SelectedSeverity == "warning")">@Loc.T("Warning")</option>
+                        <option value="critical" selected="@(ViewBag.SelectedSeverity == "critical")">@Loc.T("Critical")</option>
                     </select>
                 </div>
 
@@ -95,17 +95,17 @@
                 {
                     <div class="col-md-2">
                         <label class="form-label small">Apartment ID</label>
-                        <input name="apartmentId" value="@ViewBag.SelectedApartmentId" class="form-control form-control-sm" placeholder="اختياري" />
+                        <input name="apartmentId" value="@ViewBag.SelectedApartmentId" class="form-control form-control-sm" placeholder="@Loc.T("Optional")" />
                     </div>
                 }
 
                 <div class="col-md-2">
-                    <label class="form-label small">من تاريخ</label>
+                    <label class="form-label small">@Loc.T("From_Date")</label>
                     <input name="from" type="date" value="@ViewBag.From" class="form-control form-control-sm" />
                 </div>
 
                 <div class="col-md-2">
-                    <label class="form-label small">إلى تاريخ</label>
+                    <label class="form-label small">@Loc.T("To_Date")</label>
                     <input name="to" type="date" value="@ViewBag.To" class="form-control form-control-sm" />
                 </div>
 
@@ -113,10 +113,10 @@
                 <input type="hidden" name="pageSize" value="@Model.PageSize" />
 
                 <div class="col-md-2">
-                    <button class="btn btn-primary btn-sm w-100">🔍 فلترة</button>
+                    <button class="btn btn-primary btn-sm w-100">@Loc.T("Filter")</button>
                 </div>
                 <div class="col-md-2">
-                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm w-100">↻ إعادة تعيين</a>
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm w-100">@Loc.T("Reset")</a>
                 </div>
             </form>
         </div>
@@ -156,7 +156,7 @@
     @* ============ الجدول ============ *@
     @if (Model.Items.Count == 0)
     {
-        <div class="alert alert-info">لا توجد سجلات مطابقة للفلاتر.</div>
+        <div class="alert alert-info">@Loc.T("No_Records_Match_The_Filters")</div>
     }
     else
     {
@@ -164,14 +164,14 @@
             <table class="table table-sm table-striped table-hover">
                 <thead class="table-dark">
                     <tr>
-                        <th>التاريخ</th>
-                        <th>العملية</th>
-                        <th>الخطورة</th>
-                        <th>المستخدم</th>
-                        <th>الدور</th>
-                        <th>العمارة</th>
-                        <th>الشقة</th>
-                        <th>تفاصيل</th>
+                        <th>@Loc.T("Date")</th>
+                        <th>@Loc.T("Action")</th>
+                        <th>@Loc.T("Severity")</th>
+                        <th>@Loc.T("User")</th>
+                        <th>@Loc.T("Role")</th>
+                        <th>@Loc.T("Building")</th>
+                        <th>@Loc.T("Apartment")</th>
+                        <th>@Loc.T("Details")</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -204,7 +204,7 @@
                                 {
                                     <button class="btn btn-sm btn-outline-info" type="button"
                                             data-bs-toggle="collapse" data-bs-target="#meta-@e.Id">
-                                        عرض
+                                        @Loc.T("View")
                                     </button>
                                 }
                             </td>

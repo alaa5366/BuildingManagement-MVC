@@ -8,10 +8,10 @@ public class ReportsService
     private readonly WalletService _wallet;
     public ReportsService(WalletService wallet) => _wallet = wallet;
 
-    private static readonly string[] MonthNamesAr =
+    private static string[] MonthNamesAr => new[]
     {
-        "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
-        "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"
+        Loc.T("January"), Loc.T("February"), Loc.T("March"), Loc.T("April"), Loc.T("May"), Loc.T("June"),
+        Loc.T("July"), Loc.T("August"), Loc.T("September"), Loc.T("October"), Loc.T("November"), Loc.T("December")
     };
 
     public static string MonthLabel(string key)
@@ -100,7 +100,7 @@ public class ReportsService
 
         // توزيع المحفظة (الشقق المفتوحة فقط، الشهر الحالي)
         var wallet = building.Apartments.Where(a => !a.Closed)
-            .Select(a => new WalletPoint { Number = a.Number, Label = $"شقة {a.Number}", Balance = _wallet.ComputeWalletBalance(building, a.Id, currentMonth) })
+            .Select(a => new WalletPoint { Number = a.Number, Label = Loc.T("Apartment_N", a.Number), Balance = _wallet.ComputeWalletBalance(building, a.Id, currentMonth) })
             .OrderBy(w => w.Number).ToList();
 
         // أعلى مدينين ودائنين

@@ -146,20 +146,28 @@ public class PresenceService
         return DateTime.UtcNow - lastSeen <= OnlineThreshold;
     }
 
+    // آخر ظهور خلال آخر 24 ساعة (بالرقم — مش بمقارنة نص مترجم)
+    public static bool IsRecent(Presence? p)
+    {
+        if (p == null || p.Ts <= 0) return false;
+        var lastSeen = DateTimeOffset.FromUnixTimeMilliseconds(p.Ts).UtcDateTime;
+        return DateTime.UtcNow - lastSeen < TimeSpan.FromHours(24);
+    }
+
     // ============================================================
     // 5. Helper: وصف "منذ آخر ظهور"
     // ============================================================
     public static string TimeAgo(Presence? p)
     {
-        if (p == null || p.Ts <= 0) return "لم يسجل دخول";
+        if (p == null || p.Ts <= 0) return Loc.T("Never_Logged_In");
 
         var lastSeen = DateTimeOffset.FromUnixTimeMilliseconds(p.Ts).UtcDateTime;
         var diff = DateTime.UtcNow - lastSeen;
 
-        if (diff.TotalMinutes < 1) return "الآن";
-        if (diff.TotalMinutes < 60) return $"منذ {(int)diff.TotalMinutes} دقيقة";
-        if (diff.TotalHours < 24) return $"منذ {(int)diff.TotalHours} ساعة";
-        if (diff.TotalDays < 7) return $"منذ {(int)diff.TotalDays} يوم";
+        if (diff.TotalMinutes < 1) return Loc.T("Now");
+        if (diff.TotalMinutes < 60) return Loc.T("N_Minutes_Ago", (int)diff.TotalMinutes);
+        if (diff.TotalHours < 24) return Loc.T("N_Hours_Ago", (int)diff.TotalHours);
+        if (diff.TotalDays < 7) return Loc.T("N_Days_Ago", (int)diff.TotalDays);
         return lastSeen.ToString("yyyy-MM-dd");
     }
 

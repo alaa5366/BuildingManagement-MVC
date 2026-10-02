@@ -1,6 +1,6 @@
 @model Building
 @{
-    ViewData["Title"] = "تفاصيل العمارة";
+    ViewData["Title"] = Loc.T("Building_Details");
 }
 
 @Html.AntiForgeryToken()
@@ -11,22 +11,22 @@
         <a asp-action="QrCodes" asp-route-id="@Model.Id" class="btn btn-outline-primary btn-sm">
             📱 QR Codes
         </a>
-        <form method="post" asp-action="Delete" asp-route-id="@Model.Id" onsubmit="return confirm('تأكيد حذف العمارة نهائيًا؟');">
-            <button class="btn btn-outline-danger btn-sm">حذف العمارة</button>
+        <form method="post" asp-action="Delete" asp-route-id="@Model.Id" onsubmit="return confirm('@Loc.Js("Permanently_Delete_The_Building")');">
+            <button class="btn btn-outline-danger btn-sm">@Loc.T("Delete_Building")</button>
         </form>
-        <form method="post" asp-action="FixFirebaseAccounts" asp-route-id="@Model.Id" onsubmit="return confirm('إصلاح حسابات Firebase Auth لكل الشقق؟');"> @Html.AntiForgeryToken()
+        <form method="post" asp-action="FixFirebaseAccounts" asp-route-id="@Model.Id" onsubmit="return confirm('@Loc.Js("Fix_Firebase_Auth_Accounts_For_All")');"> @Html.AntiForgeryToken()
             <button class="btn btn-outline-warning btn-sm" type="submit">
-                🔧 إصلاح حسابات Firebase
+                @Loc.T("Fix_Firebase_Accounts")
             </button>
         </form>
-        <form method="post" asp-action="RecreateFirebaseAccounts" asp-route-id="@Model.Id" onsubmit="return confirm('إعادة إنشاء حسابات Firebase لكل الشقق؟');"> @Html.AntiForgeryToken()
+        <form method="post" asp-action="RecreateFirebaseAccounts" asp-route-id="@Model.Id" onsubmit="return confirm('@Loc.Js("Recreate_Firebase_Accounts_For_All_Apartments")');"> @Html.AntiForgeryToken()
             <button class="btn btn-outline-warning btn-sm" type="submit">
-                🔧 إعادة إنشاء حسابات Firebase
+                @Loc.T("Recreate_Firebase_Accounts")
             </button>
         </form>
-        <form method="post" asp-action="SyncFirebasePasswords" asp-route-id="@Model.Id" onsubmit="return confirm('مزامنة كلمات سر Firebase لكل الشقق؟');"> @Html.AntiForgeryToken()
+        <form method="post" asp-action="SyncFirebasePasswords" asp-route-id="@Model.Id" onsubmit="return confirm('@Loc.Js("Sync_Firebase_Passwords_For_All_Apartments")');"> @Html.AntiForgeryToken()
             <button class="btn btn-outline-success btn-sm" type="submit">
-                🔄 مزامنة كلمات سر Firebase
+                @Loc.T("Sync_Firebase_Passwords")
             </button>
         </form>
     </div>
@@ -38,17 +38,17 @@
         var apts = Model.Apartments.Where(a => a.FloorId == floor.Id).OrderBy(a => a.Number).ToList();
         <div class="col-md-6 mb-3">
             <div class="bg-white rounded shadow-sm p-3">
-                <h5>@floor.Label <span class="text-muted small">(دور رقم @floor.Order)</span></h5>
+                <h5>@floor.Label <span class="text-muted small">@Loc.T("Floor_No_N", floor.Order)</span></h5>
                 <ul class="list-group list-group-flush mb-2">
                     @foreach (var apt in apts)
                     {
                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>🏠 شقة @apt.Number @(string.IsNullOrEmpty(apt.Label) ? "" : "— " + apt.Label)</span>
+                            <span>@Loc.T("Apartment_N_N", apt.Number, string.IsNullOrEmpty(apt.Label) ? "" : "— " + apt.Label)</span>
                             <div class="d-flex gap-2 align-items-center">
-                                <span class="text-muted small">@apt.Phone @(apt.Closed ? "🔒 مغلقة" : "")</span>
+                                <span class="text-muted small">@apt.Phone @(apt.Closed ? Loc.T("Closed_2") : "")</span>
                                 <button type="button" class="btn btn-sm btn-outline-warning"
                                         onclick="openQuickQrModal('@apt.Id', '@apt.Number', '@floor.Label')">
-                                    ⚡ QR سريع
+                                    @Loc.T("Quick_QR_2")
                                 </button>
                             </div>
                         </li>
@@ -58,9 +58,9 @@
                 <form method="post" asp-action="AddApartment" class="d-flex gap-2">
                     <input type="hidden" name="buildingId" value="@Model.Id" />
                     <input type="hidden" name="floorId" value="@floor.Id" />
-                    <input name="phone" class="form-control form-control-sm" placeholder="واتساب الشقة الجديدة" required />
+                    <input name="phone" class="form-control form-control-sm" placeholder="@Loc.T("New_Apartment_WhatsApp")" required />
                     <input name="pin" class="form-control form-control-sm" placeholder="PIN" required />
-                    <button class="btn btn-sm btn-brand text-nowrap">+ شقة</button>
+                    <button class="btn btn-sm btn-brand text-nowrap">@Loc.T("Apartment_2")</button>
                 </form>
             </div>
         </div>
@@ -68,24 +68,24 @@
 </div>
 
 <div class="bg-white rounded shadow-sm p-3">
-    <h5>➕ إضافة دور جديد</h5>
+    <h5>@Loc.T("Add_A_New_Floor")</h5>
     <form method="post" asp-action="AddFloor">
         <input type="hidden" name="buildingId" value="@Model.Id" />
         <div class="row g-2 align-items-end">
             <div class="col-md-3">
-                <label class="form-label small">اسم الدور</label>
+                <label class="form-label small">@Loc.T("Floor_Name")</label>
                 <input name="label" class="form-control" required />
             </div>
             <div class="col-md-4">
-                <label class="form-label small">أرقام واتساب الشقق (مفصولة بفاصلة)</label>
+                <label class="form-label small">@Loc.T("Apartment_WhatsApp_Numbers_Comma_Separated")</label>
                 <input name="aptPhones" class="form-control" placeholder="+2010..., +2011..." required />
             </div>
             <div class="col-md-3">
-                <label class="form-label small">PIN لكل شقة (بنفس الترتيب)</label>
+                <label class="form-label small">@Loc.T("PIN_For_Each_Apartment_In_The")</label>
                 <input name="aptPins" class="form-control" placeholder="1234, 5678" required />
             </div>
             <div class="col-md-2">
-                <button class="btn btn-brand w-100">إضافة</button>
+                <button class="btn btn-brand w-100">@Loc.T("Add")</button>
             </div>
         </div>
     </form>
@@ -98,7 +98,7 @@
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-warning bg-opacity-25">
-                <h5 class="modal-title">⚡ QR سريع — <span id="quickAptInfo"></span></h5>
+                <h5 class="modal-title">@Html.Raw(Loc.T("Quick_QR_5"))</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -106,50 +106,50 @@
                 <!-- ============ الفورم ============ -->
                 <div id="quickQrForm">
                     <div class="alert alert-info small">
-                        💡 الـ QR السريع بيسمح للساكن يدخل مباشرة بدون إدخال أي بيانات. آمن ومشفّر.
+                        @Loc.T("The_Quick_QR_Lets_The_Resident")
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">⏱️ مدة الصلاحية</label>
+                        <label class="form-label fw-bold">@Loc.T("Validity_Period")</label>
                         <select id="validitySelect" class="form-select">
-                            <option value="5">5 دقائق</option>
-                            <option value="15">15 دقيقة</option>
-                            <option value="60" selected>ساعة واحدة</option>
-                            <option value="360">6 ساعات</option>
-                            <option value="1440">يوم واحد</option>
-                            <option value="10080">أسبوع</option>
+                            <option value="5">@Loc.T("5_Minutes")</option>
+                            <option value="15">@Loc.T("15_Minutes")</option>
+                            <option value="60" selected>@Loc.T("1_Hour")</option>
+                            <option value="360">@Loc.T("6_Hours")</option>
+                            <option value="1440">@Loc.T("1_Day")</option>
+                            <option value="10080">@Loc.T("1_Week")</option>
                         </select>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">🔢 نوع الاستخدام</label>
+                        <label class="form-label fw-bold">@Loc.T("Usage_Type")</label>
                         <div class="form-check">
                             <input type="radio" name="usageType" value="once" class="form-check-input" id="usageOnce" checked />
                             <label class="form-check-label" for="usageOnce">
-                                <strong>مرة واحدة فقط</strong>
-                                <div class="text-muted small">الأكثر أمانًا — الرابط يبطل بعد أول استخدام</div>
+                                <strong>@Loc.T("One_Time_Only")</strong>
+                                <div class="text-muted small">@Loc.T("Most_Secure_The_Link_Expires_After")</div>
                             </label>
                         </div>
                         <div class="form-check mt-2">
                             <input type="radio" name="usageType" value="multiple" class="form-check-input" id="usageMultiple" />
                             <label class="form-check-label" for="usageMultiple">
-                                <strong>متعدد حتى انتهاء الصلاحية</strong>
-                                <div class="text-muted small">مناسب لو الساكن هيدخل من أكتر من جهاز</div>
+                                <strong>@Loc.T("Multiple_Until_Expiry")</strong>
+                                <div class="text-muted small">@Loc.T("Suitable_If_The_Resident_Will_Log")</div>
                             </label>
                         </div>
                     </div>
 
                     <div class="mb-3" id="maxUsesField" style="display:none">
-                        <label class="form-label">الحد الأقصى للاستخدام</label>
+                        <label class="form-label">@Loc.T("Maximum_Uses")</label>
                         <input type="number" id="maxUsesInput" class="form-control" value="5" min="1" max="100" />
-                        <div class="form-text">عدد المرات المسموح بها خلال فترة الصلاحية</div>
+                        <div class="form-text">@Loc.T("Number_Of_Times_Allowed_During_The")</div>
                     </div>
                 </div>
 
                 <!-- ============ النتيجة ============ -->
                 <div id="quickQrResult" style="display:none">
                     <div class="alert alert-success text-center">
-                        ✅ تم توليد QR السريع بنجاح
+                        @Loc.T("Quick_QR_Generated_Successfully")
                     </div>
 
                     <div class="text-center mb-3">
@@ -157,14 +157,14 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">🔗 الرابط السريع</label>
+                        <label class="form-label small fw-bold">@Loc.T("Quick_Link")</label>
                         <div class="input-group">
                             <input type="text" id="quickQrUrl" class="form-control form-control-sm" readonly />
                             <button type="button" class="btn btn-sm btn-outline-primary" onclick="copyQuickUrl()">
-                                📋 نسخ
+                                @Loc.T("Copy")
                             </button>
                             <a id="quickQrOpenLink" href="" target="_blank" class="btn btn-sm btn-outline-success">
-                                🔗 فتح
+                                @Loc.T("Open")
                             </a>
                         </div>
                     </div>
@@ -172,20 +172,20 @@
                     <div class="text-muted small" id="quickQrInfo"></div>
 
                     <div class="alert alert-warning small mt-3">
-                        ⚠️ ابعت الرابط ده للساكن عن طريق واتساب. بعد انتهاء الصلاحية أو استخدامه، مش هيعمل تاني.
+                        @Loc.T("Send_This_Link_To_The_Resident")
                     </div>
                 </div>
 
             </div>
             <div class="modal-footer">
                 <button type="button" id="generateBtn" class="btn btn-warning" onclick="generateQuickQr()">
-                    ⚡ توليد QR
+                    @Loc.T("Generate_QR")
                 </button>
                 <button type="button" id="newQrBtn" class="btn btn-outline-warning" style="display:none"
                         onclick="resetQuickQrForm()">
-                    🔄 توليد جديد
+                    @Loc.T("Generate_New")
                 </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@Loc.T("Close")</button>
             </div>
         </div>
     </div>
@@ -201,7 +201,7 @@
         // ============================================================
         function openQuickQrModal(aptId, aptNum, floorLabel) {
             currentAptId = aptId;
-            document.getElementById('quickAptInfo').textContent = `${floorLabel} — شقة ${aptNum}`;
+            document.getElementById('quickAptInfo').textContent = `${floorLabel} — @Html.Raw(Loc.Js("Apt")) ${aptNum}`;
             resetQuickQrForm();
 
             new bootstrap.Modal(document.getElementById('quickQrModal')).show();
@@ -243,7 +243,7 @@
 
             const btn = document.getElementById('generateBtn');
             btn.disabled = true;
-            btn.textContent = '⏳ جاري التوليد...';
+            btn.textContent = '⏳ @Html.Raw(Loc.Js("Generating"))';
 
             try {
                 const formData = new FormData();
@@ -263,7 +263,7 @@
                 const data = await res.json();
 
                 if (!data.success) {
-                    alert('❌ فشل توليد QR: ' + (data.error || 'خطأ غير معروف'));
+                    alert('❌ @Html.Raw(Loc.Js("Failed_To_Generate_QR")) ' + (data.error || '@Html.Raw(Loc.Js("Unknown_Error"))'));
                     return;
                 }
 
@@ -279,17 +279,17 @@
                 document.getElementById('quickQrOpenLink').href = data.url;
 
                 const usageText = data.oneTime
-                    ? 'مرة واحدة فقط'
-                    : `حتى ${data.maxUses} استخدام`;
+                    ? '@Html.Raw(Loc.Js("One_Time_Only"))'
+                    : `@Html.Raw(Loc.Js("Up_To")) ${data.maxUses} @Html.Raw(Loc.Js("Uses"))`;
 
                 document.getElementById('quickQrInfo').innerHTML =
-                    `⏱️ صالح لمدة <strong>${data.expiresIn}</strong> دقيقة &nbsp;|&nbsp; 🔢 ${usageText}`;
+                    `⏱️ @Html.Raw(Loc.Js("Valid_For")) <strong>${data.expiresIn}</strong> @Html.Raw(Loc.Js("Minutes")) ${usageText}`;
 
             } catch (err) {
-                alert('❌ خطأ في الاتصال: ' + err.message);
+                alert('❌ @Html.Raw(Loc.Js("Connection_Error_2")) ' + err.message);
             } finally {
                 btn.disabled = false;
-                btn.textContent = '⚡ توليد QR';
+                btn.textContent = '⚡ @Html.Raw(Loc.Js("Generate_QR_2"))';
             }
         }
 
@@ -301,7 +301,7 @@
             input.select();
             input.setSelectionRange(0, 99999);
             document.execCommand('copy');
-            alert('✅ تم نسخ الرابط');
+            alert('✅ @Html.Raw(Loc.Js("Link_Copied"))');
         }
     </script>
 }

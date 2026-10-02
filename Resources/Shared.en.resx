@@ -1,5 +1,64 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
     <xsd:element name="root" msdata:IsDataSet="true">
@@ -58,89 +117,3879 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+      <data name="App_Name" xml:space="preserve">
+    <value>Building Management System</value>
+  </data>
+  <data name="App_ShortName" xml:space="preserve">
+    <value>Building Mgmt</value>
+  </data>
+  <data name="Nav_Home" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="Nav_Wallet" xml:space="preserve">
+    <value>Wallet</value>
+  </data>
+  <data name="Nav_Expenses" xml:space="preserve">
+    <value>Expenses</value>
+  </data>
+  <data name="Nav_Revenues" xml:space="preserve">
+    <value>Revenues</value>
+  </data>
+  <data name="Nav_Categories" xml:space="preserve">
+    <value>Categories</value>
+  </data>
+  <data name="Nav_Polls" xml:space="preserve">
+    <value>Polls</value>
+  </data>
+  <data name="Nav_Maintenance" xml:space="preserve">
+    <value>Maintenance</value>
+  </data>
+  <data name="Nav_Notifications" xml:space="preserve">
+    <value>Notifications</value>
+  </data>
+  <data name="Nav_WhatsApp" xml:space="preserve">
+    <value>WhatsApp</value>
+  </data>
+  <data name="Nav_AuditLog" xml:space="preserve">
+    <value>Audit Log</value>
+  </data>
+  <data name="Nav_Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Nav_MySettings" xml:space="preserve">
+    <value>My Settings</value>
+  </data>
+  <data name="Nav_MyWallet" xml:space="preserve">
+    <value>My Wallet</value>
+  </data>
+  <data name="Nav_MyLog" xml:space="preserve">
+    <value>My Log</value>
+  </data>
+  <data name="Nav_Help" xml:space="preserve">
+    <value>Help</value>
+  </data>
+  <data name="Nav_Logout" xml:space="preserve">
+    <value>Logout</value>
+  </data>
+  <data name="Nav_Buildings" xml:space="preserve">
+    <value>Buildings</value>
+  </data>
+  <data name="Nav_Admins" xml:space="preserve">
+    <value>Admins</value>
+  </data>
+  <data name="Nav_Tools" xml:space="preserve">
+    <value>Tools</value>
+  </data>
+  <data name="Nav_Sync" xml:space="preserve">
+    <value>Sync</value>
+  </data>
+  <data name="Nav_Backup" xml:space="preserve">
+    <value>Backup</value>
+  </data>
+  <data name="Nav_Permissions" xml:space="preserve">
+    <value>Permissions</value>
+  </data>
+  <data name="Footer_Copyright" xml:space="preserve">
+    <value>Building Management System — C# MVC</value>
+  </data>
+  <data name="Login_Title" xml:space="preserve">
+    <value>Sign In</value>
+  </data>
+  <data name="Login_Subtitle" xml:space="preserve">
+    <value>Sign in to continue</value>
+  </data>
+  <data name="Login_Identifier" xml:space="preserve">
+    <value>Email / Phone</value>
+  </data>
+  <data name="Login_Credential" xml:space="preserve">
+    <value>Password / PIN</value>
+  </data>
+  <data name="Login_Submit" xml:space="preserve">
+    <value>Sign In</value>
+  </data>
+  <data name="Login_Or" xml:space="preserve">
+    <value>or</value>
+  </data>
+  <data name="Login_QrHint" xml:space="preserve">
+    <value>Have a Quick QR? Click here</value>
+  </data>
+  <data name="Common_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Common_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Common_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Common_Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Common_Confirm" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
+  <data name="Common_Back" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Role_SuperAdmin" xml:space="preserve">
+    <value>Super Admin</value>
+  </data>
+  <data name="Role_Admin" xml:space="preserve">
+    <value>Admin</value>
+  </data>
+  <data name="Role_Resident" xml:space="preserve">
+    <value>Resident</value>
+  </data>
+  <data name="Nav_Apts" xml:space="preserve">
+    <value>Apartments</value>
+  </data>
+  <data name="Validation_IdentifierRequired" xml:space="preserve">
+    <value>Email or phone number is required</value>
+  </data>
+  <data name="Validation_CredentialRequired" xml:space="preserve">
+    <value>Password or PIN is required</value>
+  </data>
+  <data name="Select_Account" xml:space="preserve">
+    <value>Select account</value>
+  </data>
+  <data name="Welcome_N" xml:space="preserve">
+    <value>👋 Welcome, {0}</value>
+  </data>
+  <data name="You_Have_More_Than_One_Account" xml:space="preserve">
+    <value>You have more than one account — choose the one you want to enter</value>
+  </data>
+  <data name="Admin_N" xml:space="preserve">
+    <value>🏢 Admin ({0})</value>
+  </data>
+  <data name="Admin" xml:space="preserve">
+    <value>Admin</value>
+  </data>
+  <data name="Residents_N_Apartments_In_N_Buildings" xml:space="preserve">
+    <value>🏠 Residents ({0} apartments in {1} buildings)</value>
+  </data>
+  <data name="Apartment_N" xml:space="preserve">
+    <value>Apartment {0}</value>
+  </data>
+  <data name="No_Contexts_Available" xml:space="preserve">
+    <value>⚠️ No contexts available</value>
+  </data>
+  <data name="Back" xml:space="preserve">
+    <value>← Back</value>
+  </data>
+  <data name="Admin_Login" xml:space="preserve">
+    <value>Admin login</value>
+  </data>
+  <data name="Choose_The_Building_And_Enter_Your" xml:space="preserve">
+    <value>Choose the building and enter your phone number and PIN</value>
+  </data>
+  <data name="Building_Detected_Automatically" xml:space="preserve">
+    <value>📱 Building detected automatically</value>
+  </data>
+  <data name="Just_Enter_Your_WhatsApp_Number_And" xml:space="preserve">
+    <value>💡 Just enter your WhatsApp number and PIN</value>
+  </data>
+  <data name="Building" xml:space="preserve">
+    <value>Building</value>
+  </data>
+  <data name="Select" xml:space="preserve">
+    <value>— Select —</value>
+  </data>
+  <data name="WhatsApp_Number" xml:space="preserve">
+    <value>WhatsApp number</value>
+  </data>
+  <data name="Log_In" xml:space="preserve">
+    <value>Log in</value>
+  </data>
+  <data name="Resident_Login" xml:space="preserve">
+    <value>Resident login</value>
+  </data>
+  <data name="Choose_The_Building_Floor_And_Apartment" xml:space="preserve">
+    <value>Choose the building, floor and apartment, then enter your WhatsApp number and PIN</value>
+  </data>
+  <data name="Your_Apartment_Was_Detected_Automatically" xml:space="preserve">
+    <value>📱 Your apartment was detected automatically</value>
+  </data>
+  <data name="N_Apartment_N" xml:space="preserve">
+    <value>{0} — Apartment {1}</value>
+  </data>
+  <data name="Floor_Number" xml:space="preserve">
+    <value>Floor number</value>
+  </data>
+  <data name="Apartment_Number" xml:space="preserve">
+    <value>Apartment number</value>
+  </data>
+  <data name="Super_Admin_Login" xml:space="preserve">
+    <value>Super Admin login</value>
+  </data>
+  <data name="With_Email_And_Password" xml:space="preserve">
+    <value>With email and password</value>
+  </data>
+  <data name="Email" xml:space="preserve">
+    <value>Email</value>
+  </data>
+  <data name="Password" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="Login_Error" xml:space="preserve">
+    <value>Login error</value>
+  </data>
+  <data name="Could_Not_Log_In" xml:space="preserve">
+    <value>Could not log in</value>
+  </data>
+  <data name="Regular_Login" xml:space="preserve">
+    <value>→ Regular login</value>
+  </data>
+  <data name="Log_In_2" xml:space="preserve">
+    <value>Log in</value>
+  </data>
+  <data name="Building_Management_System" xml:space="preserve">
+    <value>Building Management System</value>
+  </data>
+  <data name="Sign_In_To_Continue" xml:space="preserve">
+    <value>Sign in to continue</value>
+  </data>
+  <data name="Sign_In_With_Google_Super_Admin" xml:space="preserve">
+    <value>Sign in with Google (Super Admin)</value>
+  </data>
+  <data name="Or" xml:space="preserve">
+    <value>─────── or ───────</value>
+  </data>
+  <data name="Email_Phone_Number" xml:space="preserve">
+    <value>📧 Email / phone number</value>
+  </data>
+  <data name="You_Example_Com_Or_201001234567" xml:space="preserve">
+    <value>you@example.com or +201001234567</value>
+  </data>
+  <data name="Password_PIN" xml:space="preserve">
+    <value>🔒 Password / PIN</value>
+  </data>
+  <data name="Log_In_3" xml:space="preserve">
+    <value>🚪 Log in</value>
+  </data>
+  <data name="Have_A_Quick_Access_QR_Tap" xml:space="preserve">
+    <value>📷 Have a quick-access QR? Tap here</value>
+  </data>
+  <data name="The_System_Recognizes_Your_Role_Automatically" xml:space="preserve">
+    <value>💡 The system recognizes your role automatically</value>
+  </data>
+  <data name="Google_Window_Was_Closed" xml:space="preserve">
+    <value>Google window was closed</value>
+  </data>
+  <data name="The_Browser_Blocked_The_Window" xml:space="preserve">
+    <value>The browser blocked the window</value>
+  </data>
+  <data name="The_Operation_Was_Cancelled" xml:space="preserve">
+    <value>The operation was cancelled</value>
+  </data>
+  <data name="The_Domain_Is_Not_Authorized_In" xml:space="preserve">
+    <value>The domain is not authorized in Firebase</value>
+  </data>
+  <data name="Google_Sign_In_Failed" xml:space="preserve">
+    <value>Google sign-in failed</value>
+  </data>
+  <data name="Login_Failed" xml:space="preserve">
+    <value>Login failed</value>
+  </data>
+  <data name="Connection_Error" xml:space="preserve">
+    <value>Connection error</value>
+  </data>
+  <data name="Manage_Apartments" xml:space="preserve">
+    <value>Manage apartments</value>
+  </data>
+  <data name="Apartments_Of_N_N" xml:space="preserve">
+    <value>🏠 Apartments of {0} ({1})</value>
+  </data>
+  <data name="Tap_Quick_QR_To_Generate_A" xml:space="preserve">
+    <value>💡 Tap &lt;strong&gt;"⚡ Quick QR"&lt;/strong&gt; to generate a temporary login link for the resident, or &lt;strong&gt;"💌 Welcome"&lt;/strong&gt; to send a full message with their details + QR.</value>
+  </data>
+  <data name="Floor_No_N" xml:space="preserve">
+    <value>(floor no. {0})</value>
+  </data>
+  <data name="Apartment_N_N" xml:space="preserve">
+    <value>🏠 Apartment {0} {1}</value>
+  </data>
+  <data name="Quick_QR_2" xml:space="preserve">
+    <value>⚡ Quick QR</value>
+  </data>
+  <data name="Welcome_Message_QR_For_Quick_Login" xml:space="preserve">
+    <value>Welcome message + QR for quick login</value>
+  </data>
+  <data name="Welcome_2" xml:space="preserve">
+    <value>💌 Welcome</value>
+  </data>
+  <data name="Quick_QR_5" xml:space="preserve">
+    <value>⚡ Quick QR — &lt;span id="quickAptInfo"&gt;&lt;/span&gt;</value>
+  </data>
+  <data name="The_Quick_QR_Lets_The_Resident" xml:space="preserve">
+    <value>💡 The quick QR lets the resident log in directly without entering any details. Secure and encrypted.</value>
+  </data>
+  <data name="Validity_Period" xml:space="preserve">
+    <value>⏱️ Validity period</value>
+  </data>
+  <data name="5_Minutes" xml:space="preserve">
+    <value>5 minutes</value>
+  </data>
+  <data name="15_Minutes" xml:space="preserve">
+    <value>15 minutes</value>
+  </data>
+  <data name="1_Hour" xml:space="preserve">
+    <value>1 hour</value>
+  </data>
+  <data name="6_Hours" xml:space="preserve">
+    <value>6 hours</value>
+  </data>
+  <data name="1_Day" xml:space="preserve">
+    <value>1 day</value>
+  </data>
+  <data name="1_Week" xml:space="preserve">
+    <value>1 week</value>
+  </data>
+  <data name="Usage_Type" xml:space="preserve">
+    <value>🔢 Usage type</value>
+  </data>
+  <data name="One_Time_Only" xml:space="preserve">
+    <value>One time only</value>
+  </data>
+  <data name="Most_Secure_The_Link_Expires_After" xml:space="preserve">
+    <value>Most secure — the link expires after the first use</value>
+  </data>
+  <data name="Multiple_Until_Expiry" xml:space="preserve">
+    <value>Multiple until expiry</value>
+  </data>
+  <data name="Suitable_If_The_Resident_Will_Log" xml:space="preserve">
+    <value>Suitable if the resident will log in from more than one device</value>
+  </data>
+  <data name="Maximum_Uses" xml:space="preserve">
+    <value>Maximum uses</value>
+  </data>
+  <data name="Quick_QR_Generated_Successfully" xml:space="preserve">
+    <value>✅ Quick QR generated successfully</value>
+  </data>
+  <data name="Quick_Link" xml:space="preserve">
+    <value>🔗 Quick link</value>
+  </data>
+  <data name="Copy" xml:space="preserve">
+    <value>📋 Copy</value>
+  </data>
+  <data name="Open" xml:space="preserve">
+    <value>🔗 Open</value>
+  </data>
+  <data name="Send_This_Link_To_The_Resident" xml:space="preserve">
+    <value>⚠️ Send this link to the resident via WhatsApp. After it expires or is used, it will no longer work.</value>
+  </data>
+  <data name="Generate_QR" xml:space="preserve">
+    <value>⚡ Generate QR</value>
+  </data>
+  <data name="Generate_New" xml:space="preserve">
+    <value>🔄 Generate new</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Apt" xml:space="preserve">
+    <value>Apt</value>
+  </data>
+  <data name="Generating" xml:space="preserve">
+    <value>Generating...</value>
+  </data>
+  <data name="Failed_To_Generate_QR" xml:space="preserve">
+    <value>Failed to generate QR:</value>
+  </data>
+  <data name="Unknown_Error" xml:space="preserve">
+    <value>Unknown error</value>
+  </data>
+  <data name="Up_To" xml:space="preserve">
+    <value>up to</value>
+  </data>
+  <data name="Uses" xml:space="preserve">
+    <value>uses</value>
+  </data>
+  <data name="Valid_For" xml:space="preserve">
+    <value>Valid for</value>
+  </data>
+  <data name="Minutes" xml:space="preserve">
+    <value>minutes &amp;nbsp;|&amp;nbsp; 🔢</value>
+  </data>
+  <data name="Error" xml:space="preserve">
+    <value>Error:</value>
+  </data>
+  <data name="Generate_QR_2" xml:space="preserve">
+    <value>Generate QR</value>
+  </data>
+  <data name="Link_Copied" xml:space="preserve">
+    <value>Link copied</value>
+  </data>
+  <data name="Welcome_Message" xml:space="preserve">
+    <value>Welcome message</value>
+  </data>
+  <data name="Welcome_Message_Apartment_N" xml:space="preserve">
+    <value>💌 Welcome message — Apartment {0}</value>
+  </data>
+  <data name="Steps_To_Send" xml:space="preserve">
+    <value>📋 Steps to send:</value>
+  </data>
+  <data name="Download_The_QR_Image_Button_Download" xml:space="preserve">
+    <value>Download the QR image (button &lt;strong&gt;📥 Download QR&lt;/strong&gt;)</value>
+  </data>
+  <data name="Tap_Send_Via_WhatsApp_The_Message" xml:space="preserve">
+    <value>Tap &lt;strong&gt;💬 Send via WhatsApp&lt;/strong&gt; — the message will open ready to send</value>
+  </data>
+  <data name="Send_The_Image_After_The_Message" xml:space="preserve">
+    <value>Send the image after the message (from Downloads)</value>
+  </data>
+  <data name="Quick_Login_QR" xml:space="preserve">
+    <value>📱 Quick-login QR</value>
+  </data>
+  <data name="Valid_For_N_Hours" xml:space="preserve">
+    <value>Valid for {0} hours</value>
+  </data>
+  <data name="Quick_Login_Link" xml:space="preserve">
+    <value>Quick login link:</value>
+  </data>
+  <data name="Download_QR_As_Image" xml:space="preserve">
+    <value>📥 Download QR as image</value>
+  </data>
+  <data name="Copy_Image_To_Clipboard" xml:space="preserve">
+    <value>📋 Copy image to clipboard</value>
+  </data>
+  <data name="Copy_Link" xml:space="preserve">
+    <value>🔗 Copy link</value>
+  </data>
+  <data name="Send_Message" xml:space="preserve">
+    <value>📤 Send message</value>
+  </data>
+  <data name="Tap_The_Button_To_Open_WhatsApp" xml:space="preserve">
+    <value>Tap the button to open WhatsApp with the message ready. After sending, attach the QR image.</value>
+  </data>
+  <data name="Send_Via_WhatsApp_N" xml:space="preserve">
+    <value>💬 Send via WhatsApp — {0}</value>
+  </data>
+  <data name="WhatsApp_Will_Open_On_Your_Device" xml:space="preserve">
+    <value>💡 WhatsApp will open on your device (or WhatsApp Web)</value>
+  </data>
+  <data name="Message_Preview" xml:space="preserve">
+    <value>📄 Message preview</value>
+  </data>
+  <data name="Back_2" xml:space="preserve">
+    <value>↩️ Back</value>
+  </data>
+  <data name="Image_Copied_You_Can_Paste_It" xml:space="preserve">
+    <value>Image copied — you can paste it in WhatsApp</value>
+  </data>
+  <data name="Your_Browser_Doesn_T_Support_Copying" xml:space="preserve">
+    <value>Your browser doesn't support copying images. Use</value>
+  </data>
+  <data name="Download_QR_As_Image_2" xml:space="preserve">
+    <value>Download QR as image</value>
+  </data>
+  <data name="Instead" xml:space="preserve">
+    <value>instead.</value>
+  </data>
+  <data name="Copied" xml:space="preserve">
+    <value>Copied</value>
+  </data>
+  <data name="Admin_Dashboard" xml:space="preserve">
+    <value>Admin dashboard</value>
+  </data>
+  <data name="N_Floors_N_Apartments_N_Open" xml:space="preserve">
+    <value>🏢 {0} floors | 🏠 {1} apartments ({2} open</value>
+  </data>
+  <data name="N_Closed" xml:space="preserve">
+    <value>— {0} closed</value>
+  </data>
+  <data name="Online" xml:space="preserve">
+    <value>Online</value>
+  </data>
+  <data name="Total_Balance" xml:space="preserve">
+    <value>Total balance</value>
+  </data>
+  <data name="Debtors" xml:space="preserve">
+    <value>Debtors</value>
+  </data>
+  <data name="Pending_Payments" xml:space="preserve">
+    <value>Pending payments</value>
+  </data>
+  <data name="Floor_N" xml:space="preserve">
+    <value>(floor {0})</value>
+  </data>
+  <data name="N_Apartments" xml:space="preserve">
+    <value>{0} apartments</value>
+  </data>
+  <data name="Legend" xml:space="preserve">
+    <value>🔑 Legend:</value>
+  </data>
+  <data name="Seen_Recently" xml:space="preserve">
+    <value>Seen recently</value>
+  </data>
+  <data name="Offline" xml:space="preserve">
+    <value>Offline</value>
+  </data>
+  <data name="Negative_Balance" xml:space="preserve">
+    <value>Negative balance</value>
+  </data>
+  <data name="Closed" xml:space="preserve">
+    <value>Closed</value>
+  </data>
+  <data name="Wallet" xml:space="preserve">
+    <value>💼 Wallet</value>
+  </data>
+  <data name="Manage_Apartments_2" xml:space="preserve">
+    <value>🏠 Manage apartments</value>
+  </data>
+  <data name="Reports" xml:space="preserve">
+    <value>📊 Reports</value>
+  </data>
+  <data name="Apartment_N_2" xml:space="preserve">
+    <value>🏠 Apartment {0}</value>
+  </data>
+  <data name="N_EGP" xml:space="preserve">
+    <value>{0} EGP</value>
+  </data>
+  <data name="N_Pending" xml:space="preserve">
+    <value>⏳ {0} pending</value>
+  </data>
+  <data name="N_Floor_N" xml:space="preserve">
+    <value>🏢 {0} (floor {1})</value>
+  </data>
+  <data name="Resident" xml:space="preserve">
+    <value>👤 Resident</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Mobile" xml:space="preserve">
+    <value>📱 Mobile</value>
+  </data>
+  <data name="Last_Seen" xml:space="preserve">
+    <value>🕐 Last seen</value>
+  </data>
+  <data name="Finance" xml:space="preserve">
+    <value>💰 Finance</value>
+  </data>
+  <data name="Current_Balance" xml:space="preserve">
+    <value>Current balance</value>
+  </data>
+  <data name="Collected_This_Month" xml:space="preserve">
+    <value>Collected this month</value>
+  </data>
+  <data name="Confirmed_Payments" xml:space="preserve">
+    <value>Confirmed payments</value>
+  </data>
+  <data name="Latest_Payments" xml:space="preserve">
+    <value>📜 Latest payments</value>
+  </data>
+  <data name="No" xml:space="preserve">
+    <value>No.</value>
+  </data>
+  <data name="Amount" xml:space="preserve">
+    <value>Amount</value>
+  </data>
+  <data name="Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Date" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="Quick_Actions" xml:space="preserve">
+    <value>⚡ Quick actions</value>
+  </data>
+  <data name="PDF_Invoice" xml:space="preserve">
+    <value>PDF invoice</value>
+  </data>
+  <data name="Edit_Apartment" xml:space="preserve">
+    <value>Edit apartment</value>
+  </data>
+  <data name="Wallet_2" xml:space="preserve">
+    <value>Wallet</value>
+  </data>
+  <data name="Quick_QR_4" xml:space="preserve">
+    <value>Quick QR</value>
+  </data>
+  <data name="Log_In_As_Resident" xml:space="preserve">
+    <value>Log in as resident</value>
+  </data>
+  <data name="Apartment_Is_Closed" xml:space="preserve">
+    <value>🔓 Apartment is closed</value>
+  </data>
+  <data name="Closing_Date" xml:space="preserve">
+    <value>📅 Closing date:</value>
+  </data>
+  <data name="When_You_Open_The_Apartment_It" xml:space="preserve">
+    <value>💡 When you open the apartment, it will be automatically added to the monthly expenses.</value>
+  </data>
+  <data name="Open_Apartment" xml:space="preserve">
+    <value>🔓 Open apartment</value>
+  </data>
+  <data name="Close_Apartment" xml:space="preserve">
+    <value>🔒 Close apartment</value>
+  </data>
+  <data name="Closing_The_Apartment_Means_It_Will" xml:space="preserve">
+    <value>⚠️ Closing the apartment means it will not be included in expense distribution, and no invoices will be issued for it.</value>
+  </data>
+  <data name="Add_Admin" xml:space="preserve">
+    <value>Add admin</value>
+  </data>
+  <data name="Add_Admin_2" xml:space="preserve">
+    <value>➕ Add admin</value>
+  </data>
+  <data name="Mobile_Number" xml:space="preserve">
+    <value>Mobile number</value>
+  </data>
+  <data name="Select_2" xml:space="preserve">
+    <value>— Select —</value>
+  </data>
+  <data name="Permissions" xml:space="preserve">
+    <value>Permissions</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Edit_Admin" xml:space="preserve">
+    <value>Edit admin</value>
+  </data>
+  <data name="Edit_N" xml:space="preserve">
+    <value>✏️ Edit: {0}</value>
+  </data>
+  <data name="Email_2" xml:space="preserve">
+    <value>Email</value>
+  </data>
+  <data name="Active" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="Change_PIN" xml:space="preserve">
+    <value>🔐 Change PIN</value>
+  </data>
+  <data name="New_PIN" xml:space="preserve">
+    <value>New PIN</value>
+  </data>
+  <data name="Change_PIN_2" xml:space="preserve">
+    <value>Change PIN</value>
+  </data>
+  <data name="Manage_Admins" xml:space="preserve">
+    <value>Manage admins</value>
+  </data>
+  <data name="Manage_Admins_N" xml:space="preserve">
+    <value>👥 Manage admins ({0})</value>
+  </data>
+  <data name="All_Buildings" xml:space="preserve">
+    <value>— All buildings —</value>
+  </data>
+  <data name="No_Matching_Admins_Found" xml:space="preserve">
+    <value>No matching admins found.</value>
+  </data>
+  <data name="Last_Login" xml:space="preserve">
+    <value>Last login</value>
+  </data>
+  <data name="Active_2" xml:space="preserve">
+    <value>🟢 Active</value>
+  </data>
+  <data name="Disabled" xml:space="preserve">
+    <value>🔴 Disabled</value>
+  </data>
+  <data name="Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Disable" xml:space="preserve">
+    <value>Disable?</value>
+  </data>
+  <data name="Disable_2" xml:space="preserve">
+    <value>Disable</value>
+  </data>
+  <data name="Activate" xml:space="preserve">
+    <value>Activate</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Delete?</value>
+  </data>
+  <data name="Delete_2" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Log" xml:space="preserve">
+    <value>Log</value>
+  </data>
+  <data name="Log_2" xml:space="preserve">
+    <value>📜 Log</value>
+  </data>
+  <data name="All_Records" xml:space="preserve">
+    <value>— All records</value>
+  </data>
+  <data name="My_Building_S_Log" xml:space="preserve">
+    <value>— My building's log</value>
+  </data>
+  <data name="My_Apartment_S_Log" xml:space="preserve">
+    <value>— My apartment's log</value>
+  </data>
+  <data name="N_Operations" xml:space="preserve">
+    <value>{0} operations</value>
+  </data>
+  <data name="Export_CSV" xml:space="preserve">
+    <value>⬇️ Export CSV</value>
+  </data>
+  <data name="Action" xml:space="preserve">
+    <value>Action</value>
+  </data>
+  <data name="All" xml:space="preserve">
+    <value>— All —</value>
+  </data>
+  <data name="Severity" xml:space="preserve">
+    <value>Severity</value>
+  </data>
+  <data name="Info" xml:space="preserve">
+    <value>🔵 Info</value>
+  </data>
+  <data name="Warning" xml:space="preserve">
+    <value>🟡 Warning</value>
+  </data>
+  <data name="Critical" xml:space="preserve">
+    <value>🔴 Critical</value>
+  </data>
+  <data name="Optional" xml:space="preserve">
+    <value>Optional</value>
+  </data>
+  <data name="From_Date" xml:space="preserve">
+    <value>From date</value>
+  </data>
+  <data name="To_Date" xml:space="preserve">
+    <value>To date</value>
+  </data>
+  <data name="Filter" xml:space="preserve">
+    <value>🔍 Filter</value>
+  </data>
+  <data name="Reset" xml:space="preserve">
+    <value>↻ Reset</value>
+  </data>
+  <data name="No_Records_Match_The_Filters" xml:space="preserve">
+    <value>No records match the filters.</value>
+  </data>
+  <data name="User" xml:space="preserve">
+    <value>User</value>
+  </data>
+  <data name="Role" xml:space="preserve">
+    <value>Role</value>
+  </data>
+  <data name="Apartment" xml:space="preserve">
+    <value>Apartment</value>
+  </data>
+  <data name="Details" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="View" xml:space="preserve">
+    <value>View</value>
+  </data>
+  <data name="Confirm_Import" xml:space="preserve">
+    <value>Confirm import</value>
+  </data>
+  <data name="Confirm_Building_Import" xml:space="preserve">
+    <value>✅ Confirm building import</value>
+  </data>
+  <data name="The_File_Is_Valid_Review_The" xml:space="preserve">
+    <value>✅ The file is valid! Review the following data before confirming.</value>
+  </data>
+  <data name="Building_Data" xml:space="preserve">
+    <value>🏢 Building data</value>
+  </data>
+  <data name="Building_Number" xml:space="preserve">
+    <value>Building number</value>
+  </data>
+  <data name="Automatic_BLD_XXX" xml:space="preserve">
+    <value>Automatic (BLD-XXX)</value>
+  </data>
+  <data name="Admin_PIN" xml:space="preserve">
+    <value>Admin PIN</value>
+  </data>
+  <data name="Admin_WhatsApp" xml:space="preserve">
+    <value>Admin WhatsApp</value>
+  </data>
+  <data name="Apartments_N" xml:space="preserve">
+    <value>🏠 Apartments ({0})</value>
+  </data>
+  <data name="Owner" xml:space="preserve">
+    <value>Owner</value>
+  </data>
+  <data name="WhatsApp" xml:space="preserve">
+    <value>WhatsApp</value>
+  </data>
+  <data name="Fee" xml:space="preserve">
+    <value>Fee</value>
+  </data>
+  <data name="Open_2" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="Final_Confirmation" xml:space="preserve">
+    <value>⚠️ Final confirmation</value>
+  </data>
+  <data name="Once_You_Click_Confirm_Import_A" xml:space="preserve">
+    <value>Once you click "Confirm import", a new building will be created in the database, and Firebase Auth accounts will be created for every apartment.</value>
+  </data>
+  <data name="Confirm_Import_2" xml:space="preserve">
+    <value>✅ Confirm import</value>
+  </data>
+  <data name="Backup_History" xml:space="preserve">
+    <value>Backup history</value>
+  </data>
+  <data name="Backup_History_2" xml:space="preserve">
+    <value>📜 Backup history</value>
+  </data>
+  <data name="Scheduled_Backups" xml:space="preserve">
+    <value>← Scheduled backups</value>
+  </data>
+  <data name="No_History_Yet" xml:space="preserve">
+    <value>No history yet.</value>
+  </data>
+  <data name="Source" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="File" xml:space="preserve">
+    <value>File</value>
+  </data>
+  <data name="Documents" xml:space="preserve">
+    <value>Documents</value>
+  </data>
+  <data name="Size" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="Duration" xml:space="preserve">
+    <value>Duration</value>
+  </data>
+  <data name="Succeeded" xml:space="preserve">
+    <value>✅ Succeeded</value>
+  </data>
+  <data name="Failed" xml:space="preserve">
+    <value>❌ Failed</value>
+  </data>
+  <data name="Backup" xml:space="preserve">
+    <value>Backup</value>
+  </data>
+  <data name="Backup_And_Import" xml:space="preserve">
+    <value>💾 Backup and import</value>
+  </data>
+  <data name="Overview" xml:space="preserve">
+    <value>📊 Overview</value>
+  </data>
+  <data name="Full_Backup" xml:space="preserve">
+    <value>📦 Full backup</value>
+  </data>
+  <data name="Excel_Import" xml:space="preserve">
+    <value>📥 Excel import</value>
+  </data>
+  <data name="Export" xml:space="preserve">
+    <value>📤 Export</value>
+  </data>
+  <data name="Scheduled" xml:space="preserve">
+    <value>⏰ Scheduled</value>
+  </data>
+  <data name="Total_Documents" xml:space="preserve">
+    <value>Total documents</value>
+  </data>
+  <data name="Number_Of_Buildings" xml:space="preserve">
+    <value>Number of buildings</value>
+  </data>
+  <data name="Saved_Backups" xml:space="preserve">
+    <value>Saved backups</value>
+  </data>
+  <data name="Last_Scheduled_Backup" xml:space="preserve">
+    <value>⏰ Last scheduled backup:</value>
+  </data>
+  <data name="Succeeded_2" xml:space="preserve">
+    <value>Succeeded</value>
+  </data>
+  <data name="Failed_2" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="Collections_Statistics" xml:space="preserve">
+    <value>📊 Collections statistics</value>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="Document_Count" xml:space="preserve">
+    <value>Document count</value>
+  </data>
+  <data name="Total" xml:space="preserve">
+    <value>Total:</value>
+  </data>
+  <data name="Full_Backup_ZIP" xml:space="preserve">
+    <value>📦 Full backup (ZIP)</value>
+  </data>
+  <data name="Choose_The_Collections_You_Want_To" xml:space="preserve">
+    <value>Choose the collections you want to export. A ZIP file will be generated containing one JSON file per collection.</value>
+  </data>
+  <data name="Select_All" xml:space="preserve">
+    <value>Select all</value>
+  </data>
+  <data name="Clear_All" xml:space="preserve">
+    <value>Clear all</value>
+  </data>
+  <data name="Create_Backup_Now" xml:space="preserve">
+    <value>💾 Create backup now</value>
+  </data>
+  <data name="Restore_From_Backup" xml:space="preserve">
+    <value>📥 Restore from backup</value>
+  </data>
+  <data name="Warning_Restoring_Writes_Data_To_Firestore" xml:space="preserve">
+    <value>⚠️ &lt;strong&gt;Warning:&lt;/strong&gt; Restoring writes data to Firestore. Use Preview first.</value>
+  </data>
+  <data name="ZIP_File" xml:space="preserve">
+    <value>ZIP file</value>
+  </data>
+  <data name="Maximum_100_MB" xml:space="preserve">
+    <value>Maximum: 100 MB</value>
+  </data>
+  <data name="Preview_Contents" xml:space="preserve">
+    <value>🔍 Preview contents</value>
+  </data>
+  <data name="Import_A_New_Building_From_Excel" xml:space="preserve">
+    <value>📥 Import a new building from Excel</value>
+  </data>
+  <data name="Download_The_Template_Fill_It_In" xml:space="preserve">
+    <value>Download the template, fill it in, then upload it here. The system validates the file before importing.</value>
+  </data>
+  <data name="Download_Empty_Template" xml:space="preserve">
+    <value>⬇️ Download empty template</value>
+  </data>
+  <data name="Excel_File_Xlsx" xml:space="preserve">
+    <value>Excel file (.xlsx)</value>
+  </data>
+  <data name="Validate_And_Import_File" xml:space="preserve">
+    <value>🔍 Validate and import file</value>
+  </data>
+  <data name="Export_All_Data" xml:space="preserve">
+    <value>📤 Export all data</value>
+  </data>
+  <data name="Download_A_Full_Backup_Of_All" xml:space="preserve">
+    <value>Download a full backup of all buildings as JSON.</value>
+  </data>
+  <data name="Export_All_Buildings_JSON" xml:space="preserve">
+    <value>⬇️ Export all buildings (JSON)</value>
+  </data>
+  <data name="Export_A_Specific_Building" xml:space="preserve">
+    <value>🏢 Export a specific building</value>
+  </data>
+  <data name="Apartments" xml:space="preserve">
+    <value>Apartments</value>
+  </data>
+  <data name="Floors" xml:space="preserve">
+    <value>Floors</value>
+  </data>
+  <data name="Actions" xml:space="preserve">
+    <value>Actions</value>
+  </data>
+  <data name="View_2" xml:space="preserve">
+    <value>👁️ View</value>
+  </data>
+  <data name="Scheduled_Backup_Settings" xml:space="preserve">
+    <value>⏰ Scheduled backup settings</value>
+  </data>
+  <data name="Enable_Automatic_Backups" xml:space="preserve">
+    <value>Enable automatic backups</value>
+  </data>
+  <data name="Frequency" xml:space="preserve">
+    <value>Frequency</value>
+  </data>
+  <data name="Daily" xml:space="preserve">
+    <value>📅 Daily</value>
+  </data>
+  <data name="Weekly" xml:space="preserve">
+    <value>📆 Weekly</value>
+  </data>
+  <data name="Monthly" xml:space="preserve">
+    <value>🗓️ Monthly</value>
+  </data>
+  <data name="Hour_UTC" xml:space="preserve">
+    <value>Hour (UTC)</value>
+  </data>
+  <data name="Day_For_Weekly" xml:space="preserve">
+    <value>Day (for weekly)</value>
+  </data>
+  <data name="Sunday" xml:space="preserve">
+    <value>Sunday</value>
+  </data>
+  <data name="Monday" xml:space="preserve">
+    <value>Monday</value>
+  </data>
+  <data name="Tuesday" xml:space="preserve">
+    <value>Tuesday</value>
+  </data>
+  <data name="Wednesday" xml:space="preserve">
+    <value>Wednesday</value>
+  </data>
+  <data name="Thursday" xml:space="preserve">
+    <value>Thursday</value>
+  </data>
+  <data name="Friday" xml:space="preserve">
+    <value>Friday</value>
+  </data>
+  <data name="Saturday" xml:space="preserve">
+    <value>Saturday</value>
+  </data>
+  <data name="Day_Of_Month_For_Monthly" xml:space="preserve">
+    <value>Day of month (for monthly)</value>
+  </data>
+  <data name="Number_Of_Backups_To_Keep" xml:space="preserve">
+    <value>Number of backups to keep</value>
+  </data>
+  <data name="The_Oldest_Is_Deleted_Automatically" xml:space="preserve">
+    <value>The oldest is deleted automatically</value>
+  </data>
+  <data name="Included_Collections" xml:space="preserve">
+    <value>📦 Included collections:</value>
+  </data>
+  <data name="All_2" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="None" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="Save_Settings" xml:space="preserve">
+    <value>💾 Save settings</value>
+  </data>
+  <data name="Last_Run_N" xml:space="preserve">
+    <value>Last run: {0}</value>
+  </data>
+  <data name="Run_A_Backup_Now_Manually" xml:space="preserve">
+    <value>Run a backup now manually?</value>
+  </data>
+  <data name="Run_Backup_Now_Manual" xml:space="preserve">
+    <value>⚡ Run backup now (manual)</value>
+  </data>
+  <data name="Saved_Backups_N" xml:space="preserve">
+    <value>📁 Saved backups ({0})</value>
+  </data>
+  <data name="No_Saved_Backups_Yet" xml:space="preserve">
+    <value>No saved backups yet.</value>
+  </data>
+  <data name="Download" xml:space="preserve">
+    <value>⬇️ Download</value>
+  </data>
+  <data name="Delete_The_File" xml:space="preserve">
+    <value>Delete the file?</value>
+  </data>
+  <data name="Backup_History_N" xml:space="preserve">
+    <value>📜 Backup history ({0})</value>
+  </data>
+  <data name="You_Can_Download_Delete_Scheduled_Backups" xml:space="preserve">
+    <value>💾 You can download/delete scheduled backups</value>
+  </data>
+  <data name="Download_2" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="File_Deleted" xml:space="preserve">
+    <value>File deleted</value>
+  </data>
+  <data name="Permanently_Delete_The_File_And_Its" xml:space="preserve">
+    <value>Permanently delete the file and its record?</value>
+  </data>
+  <data name="Restore_Backup" xml:space="preserve">
+    <value>Restore backup</value>
+  </data>
+  <data name="Warning_Restoring_Writes_Data_To_Firestore_2" xml:space="preserve">
+    <value>&lt;strong&gt;⚠️ Warning:&lt;/strong&gt; Restoring writes data to Firestore. Use the &lt;strong&gt;"Preview"&lt;/strong&gt; option first to see the contents before running it.</value>
+  </data>
+  <data name="Backup_File_Zip" xml:space="preserve">
+    <value>📁 Backup file (.zip)</value>
+  </data>
+  <data name="Restore_Preview" xml:space="preserve">
+    <value>Restore preview</value>
+  </data>
+  <data name="Restore_Preview_2" xml:space="preserve">
+    <value>🔍 Restore preview</value>
+  </data>
+  <data name="File_Information" xml:space="preserve">
+    <value>📄 File information</value>
+  </data>
+  <data name="File_2" xml:space="preserve">
+    <value>File:</value>
+  </data>
+  <data name="Size_2" xml:space="preserve">
+    <value>Size:</value>
+  </data>
+  <data name="Total_Documents_2" xml:space="preserve">
+    <value>Total documents:</value>
+  </data>
+  <data name="Warnings" xml:space="preserve">
+    <value>Warnings:</value>
+  </data>
+  <data name="Choose_Collections_To_Restore" xml:space="preserve">
+    <value>📦 Choose collections to restore</value>
+  </data>
+  <data name="Replace_Existing_Documents_Overwrite" xml:space="preserve">
+    <value>⚠️ &lt;strong&gt;Replace&lt;/strong&gt; existing documents (Overwrite)</value>
+  </data>
+  <data name="Confirm_The_Restore" xml:space="preserve">
+    <value>Confirm the restore?</value>
+  </data>
+  <data name="Run_Restore" xml:space="preserve">
+    <value>⚠️ Run restore</value>
+  </data>
+  <data name="Cancel_2" xml:space="preserve">
+    <value>← Cancel</value>
+  </data>
+  <data name="Restore_Result" xml:space="preserve">
+    <value>Restore result</value>
+  </data>
+  <data name="Restore_Result_2" xml:space="preserve">
+    <value>✅ Restore result</value>
+  </data>
+  <data name="Documents_2" xml:space="preserve">
+    <value>Documents</value>
+  </data>
+  <data name="Restored" xml:space="preserve">
+    <value>✅ Restored</value>
+  </data>
+  <data name="Skipped" xml:space="preserve">
+    <value>⏭️ Skipped</value>
+  </data>
+  <data name="Failed_3" xml:space="preserve">
+    <value>❌ Failed</value>
+  </data>
+  <data name="Duration_2" xml:space="preserve">
+    <value>Duration:</value>
+  </data>
+  <data name="N_Seconds" xml:space="preserve">
+    <value>{0} seconds</value>
+  </data>
+  <data name="Errors_N" xml:space="preserve">
+    <value>❌ Errors ({0})</value>
+  </data>
+  <data name="Details_2" xml:space="preserve">
+    <value>📋 Details</value>
+  </data>
+  <data name="Back_To_Home" xml:space="preserve">
+    <value>← Back to home</value>
+  </data>
+  <data name="Scheduled_Backups_2" xml:space="preserve">
+    <value>Scheduled backups</value>
+  </data>
+  <data name="Scheduled_Backup" xml:space="preserve">
+    <value>⏰ Scheduled backup</value>
+  </data>
+  <data name="Home" xml:space="preserve">
+    <value>← Home</value>
+  </data>
+  <data name="Schedule_Settings" xml:space="preserve">
+    <value>⚙️ Schedule settings</value>
+  </data>
+  <data name="0_23_E_G_2_2" xml:space="preserve">
+    <value>0-23 — e.g. 2 = 2 AM</value>
+  </data>
+  <data name="1_28_To_Avoid_Problems_With" xml:space="preserve">
+    <value>1-28 (to avoid problems with short months)</value>
+  </data>
+  <data name="Never" xml:space="preserve">
+    <value>Never</value>
+  </data>
+  <data name="New_Building" xml:space="preserve">
+    <value>New building</value>
+  </data>
+  <data name="Create_A_New_Building" xml:space="preserve">
+    <value>🏢 Create a new building</value>
+  </data>
+  <data name="Building_Name" xml:space="preserve">
+    <value>Building name &lt;span class="text-danger"&gt;*&lt;/span&gt;</value>
+  </data>
+  <data name="Example_Nile_Building" xml:space="preserve">
+    <value>Example: Nile Building</value>
+  </data>
+  <data name="2_To_100_Characters" xml:space="preserve">
+    <value>2 to 100 characters</value>
+  </data>
+  <data name="Leave_Empty_To_Auto_Generate_BLD" xml:space="preserve">
+    <value>Leave empty to auto-generate (BLD-XXX)</value>
+  </data>
+  <data name="Admin_PIN_2" xml:space="preserve">
+    <value>Admin PIN &lt;span class="text-danger"&gt;*&lt;/span&gt;</value>
+  </data>
+  <data name="Exactly_4_Digits" xml:space="preserve">
+    <value>Exactly 4 digits</value>
+  </data>
+  <data name="Admin_WhatsApp_Number" xml:space="preserve">
+    <value>Admin WhatsApp number &lt;span class="text-danger"&gt;*&lt;/span&gt;</value>
+  </data>
+  <data name="Example_201012345678" xml:space="preserve">
+    <value>Example: +201012345678</value>
+  </data>
+  <data name="Building_Logo_URL_Optional" xml:space="preserve">
+    <value>Building logo URL (optional)</value>
+  </data>
+  <data name="Must_Start_With_Http_Or_Https" xml:space="preserve">
+    <value>Must start with http:// or https://</value>
+  </data>
+  <data name="Default_Settings" xml:space="preserve">
+    <value>⚙️ Default settings</value>
+  </data>
+  <data name="Add_Default_Expense_Categories_Water_Electricity" xml:space="preserve">
+    <value>Add default expense categories (water, electricity, cleaning, maintenance, other)</value>
+  </data>
+  <data name="Add_Default_Revenue_Categories_Roof_Rental" xml:space="preserve">
+    <value>Add default revenue categories (roof rental, shop rental, scrap sales, other)</value>
+  </data>
+  <data name="Create_Building" xml:space="preserve">
+    <value>&lt;i class="bi bi-check-circle"&gt;&lt;/i&gt; Create building</value>
+  </data>
+  <data name="Or_Import_A_Full_Building_From" xml:space="preserve">
+    <value>📥 Or import a full building from Excel</value>
+  </data>
+  <data name="Do_You_Have_An_Excel_File" xml:space="preserve">
+    <value>Do you have an Excel file with all the data (floors + apartments + categories)? Use the ready-made template and upload it.</value>
+  </data>
+  <data name="Import_From_Excel" xml:space="preserve">
+    <value>📊 Import from Excel</value>
+  </data>
+  <data name="Building_Details" xml:space="preserve">
+    <value>Building details</value>
+  </data>
+  <data name="Permanently_Delete_The_Building" xml:space="preserve">
+    <value>Permanently delete the building?</value>
+  </data>
+  <data name="Delete_Building" xml:space="preserve">
+    <value>Delete building</value>
+  </data>
+  <data name="Fix_Firebase_Auth_Accounts_For_All" xml:space="preserve">
+    <value>Fix Firebase Auth accounts for all apartments?</value>
+  </data>
+  <data name="Fix_Firebase_Accounts" xml:space="preserve">
+    <value>🔧 Fix Firebase accounts</value>
+  </data>
+  <data name="Recreate_Firebase_Accounts_For_All_Apartments" xml:space="preserve">
+    <value>Recreate Firebase accounts for all apartments?</value>
+  </data>
+  <data name="Recreate_Firebase_Accounts" xml:space="preserve">
+    <value>🔧 Recreate Firebase accounts</value>
+  </data>
+  <data name="Sync_Firebase_Passwords_For_All_Apartments" xml:space="preserve">
+    <value>Sync Firebase passwords for all apartments?</value>
+  </data>
+  <data name="Sync_Firebase_Passwords" xml:space="preserve">
+    <value>🔄 Sync Firebase passwords</value>
+  </data>
+  <data name="Closed_2" xml:space="preserve">
+    <value>🔒 Closed</value>
+  </data>
+  <data name="New_Apartment_WhatsApp" xml:space="preserve">
+    <value>New apartment WhatsApp</value>
+  </data>
+  <data name="Apartment_2" xml:space="preserve">
+    <value>+ Apartment</value>
+  </data>
+  <data name="Add_A_New_Floor" xml:space="preserve">
+    <value>➕ Add a new floor</value>
+  </data>
+  <data name="Floor_Name" xml:space="preserve">
+    <value>Floor name</value>
+  </data>
+  <data name="Apartment_WhatsApp_Numbers_Comma_Separated" xml:space="preserve">
+    <value>Apartment WhatsApp numbers (comma-separated)</value>
+  </data>
+  <data name="PIN_For_Each_Apartment_In_The" xml:space="preserve">
+    <value>PIN for each apartment (in the same order)</value>
+  </data>
+  <data name="Add" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="Number_Of_Times_Allowed_During_The" xml:space="preserve">
+    <value>Number of times allowed during the validity period</value>
+  </data>
+  <data name="Connection_Error_2" xml:space="preserve">
+    <value>Connection error:</value>
+  </data>
+  <data name="Buildings" xml:space="preserve">
+    <value>Buildings</value>
+  </data>
+  <data name="Buildings_N" xml:space="preserve">
+    <value>Buildings ({0})</value>
+  </data>
+  <data name="New_Building_2" xml:space="preserve">
+    <value>+ New building</value>
+  </data>
+  <data name="No_Buildings_Found" xml:space="preserve">
+    <value>No buildings found.</value>
+  </data>
+  <data name="Download_PDF" xml:space="preserve">
+    <value>📄 Download PDF</value>
+  </data>
+  <data name="Print" xml:space="preserve">
+    <value>🖨️ Print</value>
+  </data>
+  <data name="Building_Admin" xml:space="preserve">
+    <value>👑 Building admin</value>
+  </data>
+  <data name="Scan_This_QR_To_Log_In" xml:space="preserve">
+    <value>Scan this QR to log in as the admin of this building directly</value>
+  </data>
+  <data name="Admin_2" xml:space="preserve">
+    <value>👑 Admin</value>
+  </data>
+  <data name="Open_Link" xml:space="preserve">
+    <value>🔗 Open link</value>
+  </data>
+  <data name="N_Apartments_Each_Resident_Scans_Their" xml:space="preserve">
+    <value>{0} apartments — each resident scans their QR and the details are filled in automatically</value>
+  </data>
+  <data name="Select_Building" xml:space="preserve">
+    <value>Select building</value>
+  </data>
+  <data name="Select_The_Building_To_Manage_Its" xml:space="preserve">
+    <value>🏢 Select the building to manage its financial categories</value>
+  </data>
+  <data name="Financial_Categories" xml:space="preserve">
+    <value>Financial categories</value>
+  </data>
+  <data name="Financial_Categories_N" xml:space="preserve">
+    <value>🏷️ Financial categories {0}</value>
+  </data>
+  <data name="Back_To_Buildings" xml:space="preserve">
+    <value>← Back to buildings</value>
+  </data>
+  <data name="Expense_Categories" xml:space="preserve">
+    <value>📉 Expense categories</value>
+  </data>
+  <data name="Add_2" xml:space="preserve">
+    <value>➕ Add</value>
+  </data>
+  <data name="No_Expense_Categories" xml:space="preserve">
+    <value>No expense categories.</value>
+  </data>
+  <data name="Color" xml:space="preserve">
+    <value>Color</value>
+  </data>
+  <data name="Active_3" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="Disabled_2" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="Confirm_Deletion" xml:space="preserve">
+    <value>Confirm deletion?</value>
+  </data>
+  <data name="Revenue_Categories" xml:space="preserve">
+    <value>📈 Revenue categories</value>
+  </data>
+  <data name="No_Revenue_Categories" xml:space="preserve">
+    <value>No revenue categories.</value>
+  </data>
+  <data name="Add_Expense_Category" xml:space="preserve">
+    <value>➕ Add expense category</value>
+  </data>
+  <data name="Category_Name" xml:space="preserve">
+    <value>Category name</value>
+  </data>
+  <data name="Add_Revenue_Category" xml:space="preserve">
+    <value>➕ Add revenue category</value>
+  </data>
+  <data name="Edit_Category" xml:space="preserve">
+    <value>✏️ Edit category</value>
+  </data>
+  <data name="Expenses" xml:space="preserve">
+    <value>Expenses</value>
+  </data>
+  <data name="Expenses_Of_N" xml:space="preserve">
+    <value>💰 Expenses of {0}</value>
+  </data>
+  <data name="Add_Expense" xml:space="preserve">
+    <value>➕ Add expense</value>
+  </data>
+  <data name="Item" xml:space="preserve">
+    <value>Item</value>
+  </data>
+  <data name="Note" xml:space="preserve">
+    <value>Note</value>
+  </data>
+  <data name="Expense_Log_N" xml:space="preserve">
+    <value>Expense log ({0})</value>
+  </data>
+  <data name="Total_N_EGP" xml:space="preserve">
+    <value>Total: {0} EGP</value>
+  </data>
+  <data name="No_Expenses_For_This_Month" xml:space="preserve">
+    <value>No expenses for this month.</value>
+  </data>
+  <data name="Delete_The_Expense" xml:space="preserve">
+    <value>Delete the expense?</value>
+  </data>
+  <data name="User_Guide" xml:space="preserve">
+    <value>User guide</value>
+  </data>
+  <data name="Contents" xml:space="preserve">
+    <value>📖 Contents</value>
+  </data>
+  <data name="Quick_Start" xml:space="preserve">
+    <value>🚀 Quick start</value>
+  </data>
+  <data name="For_Residents" xml:space="preserve">
+    <value>For residents</value>
+  </data>
+  <data name="My_Wallet" xml:space="preserve">
+    <value>— My wallet</value>
+  </data>
+  <data name="Submit_A_Payment" xml:space="preserve">
+    <value>— Submit a payment</value>
+  </data>
+  <data name="Notifications" xml:space="preserve">
+    <value>— Notifications</value>
+  </data>
+  <data name="Polls" xml:space="preserve">
+    <value>— Polls</value>
+  </data>
+  <data name="For_Admins" xml:space="preserve">
+    <value>For admins</value>
+  </data>
+  <data name="Wallet_3" xml:space="preserve">
+    <value>— Wallet</value>
+  </data>
+  <data name="Payments" xml:space="preserve">
+    <value>— Payments</value>
+  </data>
+  <data name="Expenses_2" xml:space="preserve">
+    <value>— Expenses</value>
+  </data>
+  <data name="Invoices" xml:space="preserve">
+    <value>— Invoices</value>
+  </data>
+  <data name="Reports_2" xml:space="preserve">
+    <value>— Reports</value>
+  </data>
+  <data name="For_The_Super_Admin" xml:space="preserve">
+    <value>For the super admin</value>
+  </data>
+  <data name="Buildings_2" xml:space="preserve">
+    <value>— Buildings</value>
+  </data>
+  <data name="Admins" xml:space="preserve">
+    <value>— Admins</value>
+  </data>
+  <data name="Backup_2" xml:space="preserve">
+    <value>— Backup</value>
+  </data>
+  <data name="FAQ" xml:space="preserve">
+    <value>❓ FAQ</value>
+  </data>
+  <data name="Quick_Info" xml:space="preserve">
+    <value>⌨️ Quick info</value>
+  </data>
+  <data name="Building_Management_System_User_Guide" xml:space="preserve">
+    <value>📖 Building Management System user guide</value>
+  </data>
+  <data name="Welcome_To_The_Building_Management_System" xml:space="preserve">
+    <value>Welcome to the Building Management System! This guide walks you step by step through everything you need to know about the system — from logging in to issuing invoices and managing wallets.</value>
+  </data>
+  <data name="When_You_Open_The_System_You" xml:space="preserve">
+    <value>When you open the system, you will find a unified login screen. Follow these steps:</value>
+  </data>
+  <data name="1_Enter_The_Mobile_Number_You" xml:space="preserve">
+    <value>&lt;span class="badge-step"&gt;1&lt;/span&gt; Enter the &lt;strong&gt;mobile number&lt;/strong&gt; you are registered with (e.g. &lt;code&gt;+201119221000&lt;/code&gt;)</value>
+  </data>
+  <data name="2_Enter_Your_PIN_4_Digits" xml:space="preserve">
+    <value>&lt;span class="badge-step"&gt;2&lt;/span&gt; Enter your &lt;strong&gt;PIN&lt;/strong&gt; (4 digits)</value>
+  </data>
+  <data name="3_Tap_Log_In" xml:space="preserve">
+    <value>&lt;span class="badge-step"&gt;3&lt;/span&gt; Tap &lt;strong&gt;"Log in"&lt;/strong&gt;</value>
+  </data>
+  <data name="4_If_You_Have_More_Than" xml:space="preserve">
+    <value>&lt;span class="badge-step"&gt;4&lt;/span&gt; If you have more than one role (admin + resident), the &lt;strong&gt;context selection&lt;/strong&gt; will appear — choose the one you want to enter with</value>
+  </data>
+  <data name="Tip_If_You_Forgot_Your_PIN" xml:space="preserve">
+    <value>💡 &lt;strong&gt;Tip&lt;/strong&gt;: If you forgot your PIN, ask the admin to set a new PIN for you.</value>
+  </data>
+  <data name="Login_With_QR" xml:space="preserve">
+    <value>Login with QR</value>
+  </data>
+  <data name="If_The_Admin_Sent_You_A" xml:space="preserve">
+    <value>If the admin sent you a QR on WhatsApp, scan it with any QR reader app and an automatic login page will open.</value>
+  </data>
+  <data name="Back_To_Top" xml:space="preserve">
+    <value>↑ Back to top</value>
+  </data>
+  <data name="For_Residents_2" xml:space="preserve">
+    <value>🏠 For residents</value>
+  </data>
+  <data name="My_Wallet_2" xml:space="preserve">
+    <value>💰 My wallet</value>
+  </data>
+  <data name="The_ResidentWallet_Page_Shows_You" xml:space="preserve">
+    <value>The &lt;code&gt;/ResidentWallet&lt;/code&gt; page shows you:</value>
+  </data>
+  <data name="Your_Current_Balance_In_The_Selected" xml:space="preserve">
+    <value>&lt;strong&gt;Your current balance&lt;/strong&gt; in the selected month</value>
+  </data>
+  <data name="Account_Statement_All_Transactions_Payments_Expe" xml:space="preserve">
+    <value>&lt;strong&gt;Account statement&lt;/strong&gt; — all transactions (payments, expenses, revenues, adjustments)</value>
+  </data>
+  <data name="Pending_Payments_Those_Not_Yet_Confirmed" xml:space="preserve">
+    <value>&lt;strong&gt;Pending payments&lt;/strong&gt; — those not yet confirmed by the admin</value>
+  </data>
+  <data name="Submit_A_New_Payment" xml:space="preserve">
+    <value>📤 Submit a new payment</value>
+  </data>
+  <data name="1_In_My_Wallet_Look_For" xml:space="preserve">
+    <value>&lt;span class="badge-step"&gt;1&lt;/span&gt; In My wallet, look for the &lt;strong&gt;"Submit payment"&lt;/strong&gt; option</value>
+  </data>
+  <data name="2_Enter_The_Amount_And_A" xml:space="preserve">
+    <value>&lt;span class="badge-step"&gt;2&lt;/span&gt; Enter the &lt;strong&gt;amount&lt;/strong&gt; and a note</value>
+  </data>
+  <data name="3_Optionally_Upload_A_Receipt_Image" xml:space="preserve">
+    <value>&lt;span class="badge-step"&gt;3&lt;/span&gt; Optionally, upload a &lt;strong&gt;receipt image&lt;/strong&gt; (InstaPay, bank transfer, etc.)</value>
+  </data>
+  <data name="4_Tap_Submit" xml:space="preserve">
+    <value>&lt;span class="badge-step"&gt;4&lt;/span&gt; Tap &lt;strong&gt;"Submit"&lt;/strong&gt;</value>
+  </data>
+  <data name="Receipt_Image_The_System_Uses_OCR" xml:space="preserve">
+    <value>📸 &lt;strong&gt;Receipt image&lt;/strong&gt;: The system uses OCR to read the amount from the image automatically. Still, double-check the amount before submitting.</value>
+  </data>
+  <data name="After_Submitting_The_Payment_Appears_With" xml:space="preserve">
+    <value>After submitting, the payment appears with the status &lt;strong&gt;"Awaiting confirmation"&lt;/strong&gt; until the admin reviews it.</value>
+  </data>
+  <data name="Notifications_2" xml:space="preserve">
+    <value>🔔 Notifications</value>
+  </data>
+  <data name="On_The_Notifications_Page_You_Will" xml:space="preserve">
+    <value>On the &lt;code&gt;/Notifications&lt;/code&gt; page, you will find all notifications addressed to you:</value>
+  </data>
+  <data name="Payment_Confirmed_When_The_Admin_Confirms" xml:space="preserve">
+    <value>✅ &lt;strong&gt;Payment confirmed&lt;/strong&gt; — when the admin confirms your payment</value>
+  </data>
+  <data name="Payment_Edited_If_The_Admin_Edits" xml:space="preserve">
+    <value>✏️ &lt;strong&gt;Payment edited&lt;/strong&gt; — if the admin edits the amount or note of a pending payment</value>
+  </data>
+  <data name="Payment_Cancelled_If_The_Admin_Cancels" xml:space="preserve">
+    <value>❌ &lt;strong&gt;Payment cancelled&lt;/strong&gt; — if the admin cancels a payment</value>
+  </data>
+  <data name="New_Expense_When_A_New_Expense" xml:space="preserve">
+    <value>💸 &lt;strong&gt;New expense&lt;/strong&gt; — when a new expense is recorded in the building</value>
+  </data>
+  <data name="Polls_2" xml:space="preserve">
+    <value>🗳️ Polls</value>
+  </data>
+  <data name="On_The_ResidentPolls_Page_You_Will" xml:space="preserve">
+    <value>On the &lt;code&gt;/ResidentPolls&lt;/code&gt; page, you will find the active polls. Each apartment has one vote per poll.</value>
+  </data>
+  <data name="Tap_The_Option_You_Want_Then" xml:space="preserve">
+    <value>Tap the option you want, then &lt;strong&gt;"Vote"&lt;/strong&gt;. &lt;strong&gt;You cannot change your vote afterwards&lt;/strong&gt;.</value>
+  </data>
+  <data name="For_Admins_2" xml:space="preserve">
+    <value>🏢 For admins</value>
+  </data>
+  <data name="The_Wallet_Page_Is_The_Heart" xml:space="preserve">
+    <value>The &lt;code&gt;/Wallet&lt;/code&gt; page is the heart of the system. It contains:</value>
+  </data>
+  <data name="Month_Summary_Collected_Expenses_Revenues_Wallet" xml:space="preserve">
+    <value>&lt;strong&gt;Month summary&lt;/strong&gt; — collected, expenses, revenues, wallet total</value>
+  </data>
+  <data name="Pending_Payments_All_Payments_That_Need" xml:space="preserve">
+    <value>&lt;strong&gt;Pending payments&lt;/strong&gt; — all payments that need review</value>
+  </data>
+  <data name="Apartment_Balances_Each_Apartment_And_Its" xml:space="preserve">
+    <value>&lt;strong&gt;Apartment balances&lt;/strong&gt; — each apartment and its balance in the selected month</value>
+  </data>
+  <data name="Managing_Payments" xml:space="preserve">
+    <value>💰 Managing payments</value>
+  </data>
+  <data name="For_Each_Pending_Payment_You_Have" xml:space="preserve">
+    <value>For each pending payment, you have 3 options:</value>
+  </data>
+  <data name="Button" xml:space="preserve">
+    <value>Button</value>
+  </data>
+  <data name="Action_2" xml:space="preserve">
+    <value>Action</value>
+  </data>
+  <data name="Confirm" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
+  <data name="The_Payment_Is_Counted_In_The" xml:space="preserve">
+    <value>The payment is counted in the apartment balance, and the resident gets a notification</value>
+  </data>
+  <data name="Edit_The_Amount_Or_Note_You" xml:space="preserve">
+    <value>Edit the amount or note (you must enter a reason for the edit)</value>
+  </data>
+  <data name="The_Payment_Is_Rejected_And_The" xml:space="preserve">
+    <value>The payment is rejected, and the resident gets a notification with the cancellation reason</value>
+  </data>
+  <data name="Editing_A_Payment_When_You_Edit" xml:space="preserve">
+    <value>📝 &lt;strong&gt;Editing a payment&lt;/strong&gt;: When you edit a pending payment, the system records the change in the &lt;strong&gt;edit history&lt;/strong&gt; (editHistory) and sends the &lt;strong&gt;resident a notification&lt;/strong&gt; with the old and new amount and the reason.</value>
+  </data>
+  <data name="Expenses_And_Revenues" xml:space="preserve">
+    <value>💸 Expenses and revenues</value>
+  </data>
+  <data name="In_Expenses_And_Revenues_You_Can" xml:space="preserve">
+    <value>In &lt;code&gt;/Expenses&lt;/code&gt; and &lt;code&gt;/Revenues&lt;/code&gt;, you can:</value>
+  </data>
+  <data name="Add_An_Expense_Revenue_With_An" xml:space="preserve">
+    <value>Add an expense/revenue with an item, a price and a note</value>
+  </data>
+  <data name="Delete_An_Expense_Revenue" xml:space="preserve">
+    <value>Delete an expense/revenue</value>
+  </data>
+  <data name="Choose_The_Month" xml:space="preserve">
+    <value>Choose the month</value>
+  </data>
+  <data name="Expenses_Are_Distributed_Automatically_Equally_A" xml:space="preserve">
+    <value>&lt;strong&gt;Expenses are distributed automatically&lt;/strong&gt; equally across all open apartments.</value>
+  </data>
+  <data name="Invoices_2" xml:space="preserve">
+    <value>🧾 Invoices</value>
+  </data>
+  <data name="From_The_Wallet_Page_Next_To" xml:space="preserve">
+    <value>From the Wallet page, next to each apartment, there is a &lt;strong&gt;"🧾 PDF invoice"&lt;/strong&gt; button.</value>
+  </data>
+  <data name="The_Invoice_Contains" xml:space="preserve">
+    <value>The invoice contains:</value>
+  </data>
+  <data name="Apartment_And_Resident_Details" xml:space="preserve">
+    <value>Apartment and resident details</value>
+  </data>
+  <data name="Wallet_Summary_Balance_Deposits_Share_Of" xml:space="preserve">
+    <value>Wallet summary (balance, deposits, share of expenses and revenues)</value>
+  </data>
+  <data name="Expense_Breakdown_By_Item" xml:space="preserve">
+    <value>Expense breakdown by item</value>
+  </data>
+  <data name="Transfer_Details_For_Payment" xml:space="preserve">
+    <value>Transfer details for payment</value>
+  </data>
+  <data name="A_QR_Code_To_Verify_The" xml:space="preserve">
+    <value>A &lt;strong&gt;QR code&lt;/strong&gt; to verify the invoice</value>
+  </data>
+  <data name="The_Reports_Page_Gives_You" xml:space="preserve">
+    <value>The &lt;code&gt;/Reports&lt;/code&gt; page gives you:</value>
+  </data>
+  <data name="Financial_Summary_Collected_Expenses_Revenues_Ne" xml:space="preserve">
+    <value>Financial summary (collected, expenses, revenues, net)</value>
+  </data>
+  <data name="3_Charts_Monthly_By_Item_Wallet" xml:space="preserve">
+    <value>3 charts (monthly, by item, wallet distribution)</value>
+  </data>
+  <data name="Top_5_Debtors_And_Creditors" xml:space="preserve">
+    <value>Top 5 debtors and creditors</value>
+  </data>
+  <data name="CSV_Export" xml:space="preserve">
+    <value>CSV export</value>
+  </data>
+  <data name="For_The_Super_Admin_2" xml:space="preserve">
+    <value>👑 For the super admin</value>
+  </data>
+  <data name="Managing_Buildings" xml:space="preserve">
+    <value>🏢 Managing buildings</value>
+  </data>
+  <data name="The_Buildings_Page_Gives_You" xml:space="preserve">
+    <value>The &lt;code&gt;/Buildings&lt;/code&gt; page gives you:</value>
+  </data>
+  <data name="Create_A_New_Building_Automatic_Number" xml:space="preserve">
+    <value>&lt;strong&gt;Create a new building&lt;/strong&gt; — automatic number (BLD-001, BLD-002, ...)</value>
+  </data>
+  <data name="Add_Floors_And_Apartments_With_Automatic" xml:space="preserve">
+    <value>&lt;strong&gt;Add floors and apartments&lt;/strong&gt; — with automatic Firebase Auth creation</value>
+  </data>
+  <data name="Generate_QRs_For_The_Admin_And" xml:space="preserve">
+    <value>&lt;strong&gt;Generate QRs&lt;/strong&gt; — for the admin and every apartment (PDF containing all QRs)</value>
+  </data>
+  <data name="Firebase_Sync_Recreate_Accounts_Update_Passwords" xml:space="preserve">
+    <value>&lt;strong&gt;Firebase sync&lt;/strong&gt; — recreate accounts, update passwords</value>
+  </data>
+  <data name="Managing_Admins_And_Permissions" xml:space="preserve">
+    <value>👥 Managing admins and permissions</value>
+  </data>
+  <data name="You_Have_22_Permissions_Grouped_Into" xml:space="preserve">
+    <value>You have &lt;strong&gt;22 permissions&lt;/strong&gt; grouped into 4 categories:</value>
+  </data>
+  <data name="Management_Buildings_Admins_Residents" xml:space="preserve">
+    <value>🏢 &lt;strong&gt;Management&lt;/strong&gt; — buildings, admins, residents</value>
+  </data>
+  <data name="Finance_Wallets_Expenses_Revenues_Reports" xml:space="preserve">
+    <value>💰 &lt;strong&gt;Finance&lt;/strong&gt; — wallets, expenses, revenues, reports</value>
+  </data>
+  <data name="Services_Polls_Maintenance_Notifications_WhatsAp" xml:space="preserve">
+    <value>🛎️ &lt;strong&gt;Services&lt;/strong&gt; — polls, maintenance, notifications, WhatsApp</value>
+  </data>
+  <data name="System_Log_Settings_Tools_Backup" xml:space="preserve">
+    <value>🛠️ &lt;strong&gt;System&lt;/strong&gt; — log, settings, tools, backup</value>
+  </data>
+  <data name="There_Are_4_Ready_Made_Templates" xml:space="preserve">
+    <value>There are &lt;strong&gt;4 ready-made templates&lt;/strong&gt;:</value>
+  </data>
+  <data name="Full_12_Permissions_The_Basics" xml:space="preserve">
+    <value>&lt;strong&gt;Full&lt;/strong&gt; — 12 permissions (the basics)</value>
+  </data>
+  <data name="Super_22_Permissions_Everything" xml:space="preserve">
+    <value>&lt;strong&gt;Super&lt;/strong&gt; — 22 permissions (everything)</value>
+  </data>
+  <data name="Financial_7_Permissions_Finance_Only" xml:space="preserve">
+    <value>&lt;strong&gt;Financial&lt;/strong&gt; — 7 permissions (finance only)</value>
+  </data>
+  <data name="Maintenance_4_Permissions_Maintenance_Only" xml:space="preserve">
+    <value>&lt;strong&gt;Maintenance&lt;/strong&gt; — 4 permissions (maintenance only)</value>
+  </data>
+  <data name="Backup_3" xml:space="preserve">
+    <value>💾 Backup</value>
+  </data>
+  <data name="The_Backup_Page_Gives_You_4" xml:space="preserve">
+    <value>The &lt;code&gt;/Backup&lt;/code&gt; page gives you 4 tabs:</value>
+  </data>
+  <data name="Overview_Document_Statistics_For_Each_Collection" xml:space="preserve">
+    <value>&lt;strong&gt;Overview&lt;/strong&gt; — document statistics for each collection</value>
+  </data>
+  <data name="Backup_Choose_Collections_And_Download_A" xml:space="preserve">
+    <value>&lt;strong&gt;Backup&lt;/strong&gt; — choose collections and download a ZIP</value>
+  </data>
+  <data name="Restore_Upload_A_ZIP_And_Choose" xml:space="preserve">
+    <value>&lt;strong&gt;Restore&lt;/strong&gt; — upload a ZIP and choose collections</value>
+  </data>
+  <data name="Scheduled_Backups_Automatic_Daily_Weekly_Monthly" xml:space="preserve">
+    <value>&lt;strong&gt;Scheduled backups&lt;/strong&gt; — automatic daily/weekly/monthly</value>
+  </data>
+  <data name="I_Forgot_My_PIN_What_Should" xml:space="preserve">
+    <value>I forgot my PIN, what should I do?</value>
+  </data>
+  <data name="Contact_The_Admin_They_Can_Set" xml:space="preserve">
+    <value>Contact the admin. They can set a new PIN for you from the apartments page or from their settings.</value>
+  </data>
+  <data name="My_Pending_Payment_Doesn_T_Show" xml:space="preserve">
+    <value>My pending payment doesn't show up as a resident, why?</value>
+  </data>
+  <data name="Make_Sure_You_Are_In_The" xml:space="preserve">
+    <value>Make sure you are in the &lt;strong&gt;same month&lt;/strong&gt; in which you submitted the payment. If it still doesn't show, refresh.</value>
+  </data>
+  <data name="When_I_Refresh_The_Page_I" xml:space="preserve">
+    <value>When I refresh the page I get a red "Save failed" message</value>
+  </data>
+  <data name="There_Is_Probably_A_Problem_Connecting" xml:space="preserve">
+    <value>There is probably a problem connecting to Firebase. Make sure that:</value>
+  </data>
+  <data name="Your_Internet_Connection_Is_Working" xml:space="preserve">
+    <value>Your internet connection is working</value>
+  </data>
+  <data name="You_Are_Not_Using_A_VPN" xml:space="preserve">
+    <value>You are not using a VPN (it may block Firebase)</value>
+  </data>
+  <data name="Try_Logging_Out_And_Logging_In" xml:space="preserve">
+    <value>Try logging out and logging in again</value>
+  </data>
+  <data name="Can_I_Use_The_System_From" xml:space="preserve">
+    <value>Can I use the system from my mobile?</value>
+  </data>
+  <data name="Yes_The_System_Is_Mobile_Friendly" xml:space="preserve">
+    <value>Yes! The system is mobile-friendly, and you can also &lt;strong&gt;install it as an app&lt;/strong&gt;:</value>
+  </data>
+  <data name="Android_Open_Chrome_Tap_Install_Or" xml:space="preserve">
+    <value>&lt;strong&gt;Android&lt;/strong&gt;: Open Chrome → tap "Install" or "Add to Home screen"</value>
+  </data>
+  <data name="IOS_Open_Safari_Share_Add_To" xml:space="preserve">
+    <value>&lt;strong&gt;iOS&lt;/strong&gt;: Open Safari → Share → "Add to Home Screen"</value>
+  </data>
+  <data name="The_QR_Won_T_Open_What" xml:space="preserve">
+    <value>The QR won't open, what should I do?</value>
+  </data>
+  <data name="Some_QRs_Are_Single_Use_If" xml:space="preserve">
+    <value>Some QRs are &lt;strong&gt;single-use&lt;/strong&gt;. If you already used one, it won't open again. Ask the admin for a new QR.</value>
+  </data>
+  <data name="How_Do_I_Change_My_Notification" xml:space="preserve">
+    <value>How do I change my notification settings?</value>
+  </data>
+  <data name="From_Settings_Own_You_Can_Turn" xml:space="preserve">
+    <value>From &lt;code&gt;/Settings/Own&lt;/code&gt;, you can turn on/off:</value>
+  </data>
+  <data name="WhatsApp_2" xml:space="preserve">
+    <value>💬 WhatsApp</value>
+  </data>
+  <data name="Email_3" xml:space="preserve">
+    <value>📧 Email</value>
+  </data>
+  <data name="In_App" xml:space="preserve">
+    <value>🔔 In-app</value>
+  </data>
+  <data name="Colors_And_Labels" xml:space="preserve">
+    <value>Colors and labels</value>
+  </data>
+  <data name="Symbol" xml:space="preserve">
+    <value>Symbol</value>
+  </data>
+  <data name="Meaning" xml:space="preserve">
+    <value>Meaning</value>
+  </data>
+  <data name="Open_Active" xml:space="preserve">
+    <value>Open / active</value>
+  </data>
+  <data name="Closed_Error_Overdue" xml:space="preserve">
+    <value>Closed / error / overdue</value>
+  </data>
+  <data name="Warning_Needs_Attention" xml:space="preserve">
+    <value>Warning / needs attention</value>
+  </data>
+  <data name="Neutral_Locked" xml:space="preserve">
+    <value>Neutral / locked</value>
+  </data>
+  <data name="Payment_Statuses" xml:space="preserve">
+    <value>Payment statuses</value>
+  </data>
+  <data name="Pending_Awaiting_Confirmation" xml:space="preserve">
+    <value>⏳ &lt;strong&gt;pending&lt;/strong&gt; — awaiting confirmation</value>
+  </data>
+  <data name="Confirmed_Confirmed" xml:space="preserve">
+    <value>✅ &lt;strong&gt;confirmed&lt;/strong&gt; — confirmed</value>
+  </data>
+  <data name="Cancelled_Cancelled" xml:space="preserve">
+    <value>❌ &lt;strong&gt;cancelled&lt;/strong&gt; — cancelled</value>
+  </data>
+  <data name="Support" xml:space="preserve">
+    <value>Support</value>
+  </data>
+  <data name="If_You_Have_A_Problem_Contact" xml:space="preserve">
+    <value>If you have a problem, contact &lt;strong&gt;your building's admin&lt;/strong&gt; first. If the problem is bigger, contact the &lt;strong&gt;super admin&lt;/strong&gt;.</value>
+  </data>
+  <data name="For_Technical_Support" xml:space="preserve">
+    <value>📧 For technical support:</value>
+  </data>
+  <data name="Maintenance" xml:space="preserve">
+    <value>Maintenance</value>
+  </data>
+  <data name="Open_3" xml:space="preserve">
+    <value>🔓 Open</value>
+  </data>
+  <data name="In_Progress" xml:space="preserve">
+    <value>🔧 In progress</value>
+  </data>
+  <data name="Done" xml:space="preserve">
+    <value>✅ Done</value>
+  </data>
+  <data name="Cancelled" xml:space="preserve">
+    <value>❌ Cancelled</value>
+  </data>
+  <data name="Maintenance_N_N" xml:space="preserve">
+    <value>🔧 Maintenance {0} ({1})</value>
+  </data>
+  <data name="New_Maintenance_Record" xml:space="preserve">
+    <value>➕ New maintenance record</value>
+  </data>
+  <data name="Title" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="Cost" xml:space="preserve">
+    <value>Cost</value>
+  </data>
+  <data name="Supplier" xml:space="preserve">
+    <value>Supplier</value>
+  </data>
+  <data name="No_Maintenance_Records_Yet" xml:space="preserve">
+    <value>No maintenance records yet.</value>
+  </data>
+  <data name="Add_To_Expenses" xml:space="preserve">
+    <value>Add to expenses</value>
+  </data>
+  <data name="Added_To_Expenses" xml:space="preserve">
+    <value>Added to expenses</value>
+  </data>
+  <data name="Delete_The_Record" xml:space="preserve">
+    <value>Delete the record?</value>
+  </data>
+  <data name="Notifications_3" xml:space="preserve">
+    <value>Notifications</value>
+  </data>
+  <data name="Notifications_N" xml:space="preserve">
+    <value>🔔 Notifications ({0})</value>
+  </data>
+  <data name="Mark_All_As_Read" xml:space="preserve">
+    <value>Mark all as read</value>
+  </data>
+  <data name="No_Notifications" xml:space="preserve">
+    <value>No notifications.</value>
+  </data>
+  <data name="Mark_As_Read" xml:space="preserve">
+    <value>Mark as read</value>
+  </data>
+  <data name="Permissions_Matrix" xml:space="preserve">
+    <value>Permissions matrix</value>
+  </data>
+  <data name="Permissions_Matrix_2" xml:space="preserve">
+    <value>🔐 Permissions matrix</value>
+  </data>
+  <data name="N_Admins" xml:space="preserve">
+    <value>{0} admins</value>
+  </data>
+  <data name="Technical_Reference_Table" xml:space="preserve">
+    <value>📋 Technical reference table</value>
+  </data>
+  <data name="There_Are_No_Admins_To_Show" xml:space="preserve">
+    <value>There are no admins to show permissions for.</value>
+  </data>
+  <data name="Search_By_Name_Or_Number" xml:space="preserve">
+    <value>🔍 Search by name or number...</value>
+  </data>
+  <data name="All_Buildings_2" xml:space="preserve">
+    <value>🏢 All buildings</value>
+  </data>
+  <data name="Expand_All" xml:space="preserve">
+    <value>📂 Expand all</value>
+  </data>
+  <data name="Collapse_All" xml:space="preserve">
+    <value>📁 Collapse all</value>
+  </data>
+  <data name="Text_8a78cc" xml:space="preserve">
+    <value>, </value>
+  </data>
+  <data name="Disabled_3" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="12_Permissions_For_A_Regular_Admin" xml:space="preserve">
+    <value>12 permissions — for a regular admin</value>
+  </data>
+  <data name="Full_Template_12" xml:space="preserve">
+    <value>⚡ Full template (12)</value>
+  </data>
+  <data name="22_Permissions_Super_Admin_Permissions" xml:space="preserve">
+    <value>22 permissions — ⚠️ Super Admin permissions</value>
+  </data>
+  <data name="Super_Template_22" xml:space="preserve">
+    <value>👑 Super template (22)</value>
+  </data>
+  <data name="7_Permissions_Financial_Management" xml:space="preserve">
+    <value>7 permissions — financial management</value>
+  </data>
+  <data name="Financial_Template_7" xml:space="preserve">
+    <value>💰 Financial template (7)</value>
+  </data>
+  <data name="4_Permissions_Maintenance_And_Notifications" xml:space="preserve">
+    <value>4 permissions — maintenance and notifications</value>
+  </data>
+  <data name="Maintenance_Template_4" xml:space="preserve">
+    <value>🔧 Maintenance template (4)</value>
+  </data>
+  <data name="Clear_All_2" xml:space="preserve">
+    <value>🗑️ Clear all</value>
+  </data>
+  <data name="Edit_Admin_Details" xml:space="preserve">
+    <value>✏️ Edit admin details</value>
+  </data>
+  <data name="No_Admins_Match_The_Search" xml:space="preserve">
+    <value>No admins match the search.</value>
+  </data>
+  <data name="Technical_Reference_Service_Controller_Actions" xml:space="preserve">
+    <value>📋 Technical reference: Service + Controller + Actions</value>
+  </data>
+  <data name="Permission" xml:space="preserve">
+    <value>Permission</value>
+  </data>
+  <data name="Save_Failed" xml:space="preserve">
+    <value>Save failed:</value>
+  </data>
+  <data name="Apply_Template" xml:space="preserve">
+    <value>Apply template</value>
+  </data>
+  <data name="All_Current_Permissions_Will_Be_Replaced" xml:space="preserve">
+    <value>? All current permissions will be replaced.</value>
+  </data>
+  <data name="Failed_To_Apply_The_Template" xml:space="preserve">
+    <value>Failed to apply the template</value>
+  </data>
+  <data name="Clear_All_Permissions" xml:space="preserve">
+    <value>Clear all permissions?</value>
+  </data>
+  <data name="Polls_3" xml:space="preserve">
+    <value>Polls</value>
+  </data>
+  <data name="Polls_Of_N_N" xml:space="preserve">
+    <value>🗳️ Polls of {0} ({1})</value>
+  </data>
+  <data name="New_Poll" xml:space="preserve">
+    <value>➕ New poll</value>
+  </data>
+  <data name="Question" xml:space="preserve">
+    <value>Question</value>
+  </data>
+  <data name="Description_Optional" xml:space="preserve">
+    <value>Description (optional)</value>
+  </data>
+  <data name="Options_At_Least_Two" xml:space="preserve">
+    <value>Options (at least two)</value>
+  </data>
+  <data name="Option_1" xml:space="preserve">
+    <value>Option 1</value>
+  </data>
+  <data name="Option_2" xml:space="preserve">
+    <value>Option 2</value>
+  </data>
+  <data name="Option_3_Optional" xml:space="preserve">
+    <value>Option 3 (optional)</value>
+  </data>
+  <data name="Option_4_Optional" xml:space="preserve">
+    <value>Option 4 (optional)</value>
+  </data>
+  <data name="Deadline_Optional" xml:space="preserve">
+    <value>Deadline (optional)</value>
+  </data>
+  <data name="Publish_Poll" xml:space="preserve">
+    <value>Publish poll</value>
+  </data>
+  <data name="No_Polls_Yet" xml:space="preserve">
+    <value>No polls yet.</value>
+  </data>
+  <data name="Closed_3" xml:space="preserve">
+    <value>Closed</value>
+  </data>
+  <data name="By_N" xml:space="preserve">
+    <value>By {0}</value>
+  </data>
+  <data name="Until_N" xml:space="preserve">
+    <value>⏰ Until {0}</value>
+  </data>
+  <data name="Reopen" xml:space="preserve">
+    <value>Reopen</value>
+  </data>
+  <data name="Delete_The_Poll" xml:space="preserve">
+    <value>Delete the poll?</value>
+  </data>
+  <data name="Total_Votes_N_N" xml:space="preserve">
+    <value>Total votes: {0} / {1}</value>
+  </data>
+  <data name="Temporary_Login_Link" xml:space="preserve">
+    <value>Temporary login link</value>
+  </data>
+  <data name="A_Temporary_Login_Link_Was_Created" xml:space="preserve">
+    <value>✅ A temporary login link was created</value>
+  </data>
+  <data name="Valid_Until_N" xml:space="preserve">
+    <value>Valid until: {0}</value>
+  </data>
+  <data name="Copy_2" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="Back_To_All_Codes" xml:space="preserve">
+    <value>Back to all codes</value>
+  </data>
+  <data name="QR_Codes" xml:space="preserve">
+    <value>QR codes</value>
+  </data>
+  <data name="Apartment_QR_Codes_N" xml:space="preserve">
+    <value>📱 Apartment QR codes — {0}</value>
+  </data>
+  <data name="Download_Door_QR" xml:space="preserve">
+    <value>⬇️ Download door QR</value>
+  </data>
+  <data name="Hour" xml:space="preserve">
+    <value>hour</value>
+  </data>
+  <data name="Day" xml:space="preserve">
+    <value>day</value>
+  </data>
+  <data name="Login_Link" xml:space="preserve">
+    <value>Login link</value>
+  </data>
+  <data name="Regular_Login_2" xml:space="preserve">
+    <value>Regular login</value>
+  </data>
+  <data name="Reports_3" xml:space="preserve">
+    <value>Reports</value>
+  </data>
+  <data name="Reports_Of_N" xml:space="preserve">
+    <value>📊 Reports of {0}</value>
+  </data>
+  <data name="6_Months" xml:space="preserve">
+    <value>6 months</value>
+  </data>
+  <data name="12_Months" xml:space="preserve">
+    <value>12 months</value>
+  </data>
+  <data name="Current_Year" xml:space="preserve">
+    <value>Current year</value>
+  </data>
+  <data name="Total_Collected" xml:space="preserve">
+    <value>Total collected</value>
+  </data>
+  <data name="Total_Revenues" xml:space="preserve">
+    <value>Total revenues</value>
+  </data>
+  <data name="Total_Expenses" xml:space="preserve">
+    <value>Total expenses</value>
+  </data>
+  <data name="Net_Balance" xml:space="preserve">
+    <value>Net balance</value>
+  </data>
+  <data name="Monthly_Average" xml:space="preserve">
+    <value>Monthly average</value>
+  </data>
+  <data name="Collected_Vs_Expenses_By_Month" xml:space="preserve">
+    <value>Collected vs. expenses by month</value>
+  </data>
+  <data name="Expenses_By_Item" xml:space="preserve">
+    <value>Expenses by item</value>
+  </data>
+  <data name="No_Data" xml:space="preserve">
+    <value>No data</value>
+  </data>
+  <data name="Wallet_Distribution_Current_Month" xml:space="preserve">
+    <value>Wallet distribution (current month)</value>
+  </data>
+  <data name="Most_Indebted_Apartments" xml:space="preserve">
+    <value>🔴 Most indebted apartments</value>
+  </data>
+  <data name="Apartment_N_N_2" xml:space="preserve">
+    <value>Apartment {0} {1}</value>
+  </data>
+  <data name="Apartments_With_The_Highest_Balance" xml:space="preserve">
+    <value>🟢 Apartments with the highest balance</value>
+  </data>
+  <data name="Collected" xml:space="preserve">
+    <value>Collected</value>
+  </data>
+  <data name="Revenues" xml:space="preserve">
+    <value>Revenues</value>
+  </data>
+  <data name="Expenses_3" xml:space="preserve">
+    <value>Expenses</value>
+  </data>
+  <data name="Balance" xml:space="preserve">
+    <value>Balance</value>
+  </data>
+  <data name="Resident_Dashboard" xml:space="preserve">
+    <value>Resident dashboard</value>
+  </data>
+  <data name="Your_Apartment_Details_Could_Not_Be" xml:space="preserve">
+    <value>Your apartment details could not be determined.</value>
+  </data>
+  <data name="Welcome_Apartment_N_N" xml:space="preserve">
+    <value>Welcome 👋 — Apartment {0}, {1}</value>
+  </data>
+  <data name="Monthly_Fee_N_EGP" xml:space="preserve">
+    <value>Monthly fee: {0} EGP</value>
+  </data>
+  <data name="My_Wallet_3" xml:space="preserve">
+    <value>💼 My wallet</value>
+  </data>
+  <data name="Download_My_Invoice_PDF" xml:space="preserve">
+    <value>🧾 Download my invoice (PDF)</value>
+  </data>
+  <data name="Maintenance_Log" xml:space="preserve">
+    <value>🔧 Maintenance log</value>
+  </data>
+  <data name="In_Progress_2" xml:space="preserve">
+    <value>In progress</value>
+  </data>
+  <data name="Done_2" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="Total_Cost" xml:space="preserve">
+    <value>Total cost</value>
+  </data>
+  <data name="No_Maintenance_Records_At_The_Moment" xml:space="preserve">
+    <value>No maintenance records at the moment.</value>
+  </data>
+  <data name="Polls_N" xml:space="preserve">
+    <value>🗳️ Polls ({0})</value>
+  </data>
+  <data name="No_Active_Polls_At_The_Moment" xml:space="preserve">
+    <value>No active polls at the moment.</value>
+  </data>
+  <data name="Voted" xml:space="preserve">
+    <value>✅ Voted</value>
+  </data>
+  <data name="Vote_For_This_Option" xml:space="preserve">
+    <value>Vote for this option</value>
+  </data>
+  <data name="My_Wallet_4" xml:space="preserve">
+    <value>My wallet</value>
+  </data>
+  <data name="My_Wallet_Apartment_N_N" xml:space="preserve">
+    <value>💼 My wallet — Apartment {0}, {1}</value>
+  </data>
+  <data name="Your_Current_Balance" xml:space="preserve">
+    <value>Your current balance</value>
+  </data>
+  <data name="You_Have_An_Amount_Due" xml:space="preserve">
+    <value>You have an amount due</value>
+  </data>
+  <data name="Download_PDF_Invoice" xml:space="preserve">
+    <value>🧾 Download PDF invoice</value>
+  </data>
+  <data name="Submit_A_New_Payment_2" xml:space="preserve">
+    <value>➕ Submit a new payment</value>
+  </data>
+  <data name="It_Will_Be_Set_To_Pending" xml:space="preserve">
+    <value>It will be set to "pending" until the admin confirms it</value>
+  </data>
+  <data name="Do_You_Have_The_Transfer_Image" xml:space="preserve">
+    <value>📷 Do you have the transfer image?</value>
+  </data>
+  <data name="Upload_It_And_We_Ll_Read" xml:space="preserve">
+    <value>Upload it and we'll read the amount and details automatically + attach it to the payment</value>
+  </data>
+  <data name="Read_From_Image" xml:space="preserve">
+    <value>Read from image</value>
+  </data>
+  <data name="Image_Read_Successfully" xml:space="preserve">
+    <value>✅ Image read successfully</value>
+  </data>
+  <data name="Submit" xml:space="preserve">
+    <value>Submit</value>
+  </data>
+  <data name="You_Have_N_Payment_S_Awaiting" xml:space="preserve">
+    <value>You have {0} payment(s) awaiting admin confirmation.</value>
+  </data>
+  <data name="Account_Statement_N" xml:space="preserve">
+    <value>Account statement ({0})</value>
+  </data>
+  <data name="No_Transactions_For_This_Month" xml:space="preserve">
+    <value>No transactions for this month.</value>
+  </data>
+  <data name="Description_2" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="Receipt" xml:space="preserve">
+    <value>Receipt</value>
+  </data>
+  <data name="Payment" xml:space="preserve">
+    <value>Payment </value>
+  </data>
+  <data name="Share_Of_Expenses" xml:space="preserve">
+    <value>Share of expenses</value>
+  </data>
+  <data name="Share_Of_Revenues" xml:space="preserve">
+    <value>Share of revenues</value>
+  </data>
+  <data name="Monthly_Fee_Due" xml:space="preserve">
+    <value>Monthly fee due</value>
+  </data>
+  <data name="Increase_In_The_Monthly_Fee" xml:space="preserve">
+    <value>Increase in the monthly fee</value>
+  </data>
+  <data name="Adjustment" xml:space="preserve">
+    <value>Adjustment: </value>
+  </data>
+  <data name="Pending" xml:space="preserve">
+    <value>⏳ Pending</value>
+  </data>
+  <data name="Confirmed" xml:space="preserve">
+    <value>✅ Confirmed</value>
+  </data>
+  <data name="Reading_The_Image_May_Take_5" xml:space="preserve">
+    <value>Reading the image... (may take 5-15 seconds)</value>
+  </data>
+  <data name="Amount_2" xml:space="preserve">
+    <value>Amount:</value>
+  </data>
+  <data name="EGP" xml:space="preserve">
+    <value>EGP</value>
+  </data>
+  <data name="Reference" xml:space="preserve">
+    <value>Reference:</value>
+  </data>
+  <data name="Date_2" xml:space="preserve">
+    <value>Date:</value>
+  </data>
+  <data name="Account" xml:space="preserve">
+    <value>Account:</value>
+  </data>
+  <data name="The_Image_Will_Be_Uploaded_With" xml:space="preserve">
+    <value>The image will be uploaded with the payment</value>
+  </data>
+  <data name="Revenues_2" xml:space="preserve">
+    <value>Revenues</value>
+  </data>
+  <data name="Revenues_Of_N" xml:space="preserve">
+    <value>📈 Revenues of {0}</value>
+  </data>
+  <data name="Add_Revenue" xml:space="preserve">
+    <value>➕ Add revenue</value>
+  </data>
+  <data name="Revenue_Log_N" xml:space="preserve">
+    <value>Revenue log ({0})</value>
+  </data>
+  <data name="No_Revenues_For_This_Month" xml:space="preserve">
+    <value>No revenues for this month.</value>
+  </data>
+  <data name="Delete_The_Revenue" xml:space="preserve">
+    <value>Delete the revenue?</value>
+  </data>
+  <data name="Building_Settings" xml:space="preserve">
+    <value>Building settings</value>
+  </data>
+  <data name="Settings_Of_N" xml:space="preserve">
+    <value>🏢 Settings of {0}</value>
+  </data>
+  <data name="All_Buildings_3" xml:space="preserve">
+    <value>← All buildings</value>
+  </data>
+  <data name="Building_Details_2" xml:space="preserve">
+    <value>📋 Building details</value>
+  </data>
+  <data name="Display_Name" xml:space="preserve">
+    <value>Display name</value>
+  </data>
+  <data name="Building_WhatsApp_Number" xml:space="preserve">
+    <value>Building WhatsApp number</value>
+  </data>
+  <data name="Invoice_Policy" xml:space="preserve">
+    <value>🧾 Invoice policy</value>
+  </data>
+  <data name="Invoice_Issue_Day_Of_The_Month" xml:space="preserve">
+    <value>Invoice issue day of the month</value>
+  </data>
+  <data name="Currency" xml:space="preserve">
+    <value>Currency</value>
+  </data>
+  <data name="EGP_2" xml:space="preserve">
+    <value>EGP</value>
+  </data>
+  <data name="SAR" xml:space="preserve">
+    <value>SAR</value>
+  </data>
+  <data name="AED" xml:space="preserve">
+    <value>AED</value>
+  </data>
+  <data name="Expense_Distribution" xml:space="preserve">
+    <value>⚖️ Expense distribution</value>
+  </data>
+  <data name="Equally_Equally_Across_All_Open_Apartments" xml:space="preserve">
+    <value>&lt;strong&gt;Equally&lt;/strong&gt; — equally across all open apartments</value>
+  </data>
+  <data name="By_Area_A_Share_For_Each" xml:space="preserve">
+    <value>&lt;strong&gt;By area&lt;/strong&gt; — a share for each apartment based on its area</value>
+  </data>
+  <data name="By_Number_Of_Residents_A_Share" xml:space="preserve">
+    <value>&lt;strong&gt;By number of residents&lt;/strong&gt; — a share based on the number of people in the apartment</value>
+  </data>
+  <data name="Open_And_Disabled_Apartments_Only_Closed" xml:space="preserve">
+    <value>&lt;strong&gt;Open and disabled apartments only&lt;/strong&gt; — closed ones are excluded</value>
+  </data>
+  <data name="Voting_Quorum" xml:space="preserve">
+    <value>Voting quorum (%)</value>
+  </data>
+  <data name="The_Percentage_Of_Residents_Required_For" xml:space="preserve">
+    <value>The percentage of residents required for a vote to be valid</value>
+  </data>
+  <data name="Select_The_Building_For_Its_Settings" xml:space="preserve">
+    <value>🏢 Select the building for its settings</value>
+  </data>
+  <data name="Global_Settings" xml:space="preserve">
+    <value>Global settings</value>
+  </data>
+  <data name="Global_Settings_2" xml:space="preserve">
+    <value>⚙️ Global settings</value>
+  </data>
+  <data name="App_Settings" xml:space="preserve">
+    <value>📱 App settings</value>
+  </data>
+  <data name="App_Name_2" xml:space="preserve">
+    <value>App name</value>
+  </data>
+  <data name="Default_Language" xml:space="preserve">
+    <value>Default language</value>
+  </data>
+  <data name="Text_26b1b2" xml:space="preserve">
+    <value>العربية</value>
+  </data>
+  <data name="Firebase_Read_Only" xml:space="preserve">
+    <value>🔥 Firebase (read only)</value>
+  </data>
+  <data name="Read_From_Appsettings_Json" xml:space="preserve">
+    <value>Read from appsettings.json</value>
+  </data>
+  <data name="OCR_Receipt_Reading" xml:space="preserve">
+    <value>OCR (receipt reading)</value>
+  </data>
+  <data name="Security" xml:space="preserve">
+    <value>🔒 Security</value>
+  </data>
+  <data name="Session_Duration_Days" xml:space="preserve">
+    <value>Session duration (days)</value>
+  </data>
+  <data name="Maximum_PIN_Attempts" xml:space="preserve">
+    <value>Maximum PIN attempts</value>
+  </data>
+  <data name="My_Settings" xml:space="preserve">
+    <value>My settings</value>
+  </data>
+  <data name="Super_Admin" xml:space="preserve">
+    <value>Super admin</value>
+  </data>
+  <data name="Resident_2" xml:space="preserve">
+    <value>Resident</value>
+  </data>
+  <data name="My_Settings_2" xml:space="preserve">
+    <value>⚙️ My settings</value>
+  </data>
+  <data name="My_Personal_Details" xml:space="preserve">
+    <value>My personal details</value>
+  </data>
+  <data name="Your_Name_And_Contact_Number_As" xml:space="preserve">
+    <value>Your name and contact number as they will appear on invoices</value>
+  </data>
+  <data name="Apartment_N_3" xml:space="preserve">
+    <value>• Apartment {0}</value>
+  </data>
+  <data name="Name_2" xml:space="preserve">
+    <value>📝 Name &lt;span class="text-danger"&gt;*&lt;/span&gt;</value>
+  </data>
+  <data name="Enter_Your_Name_Here" xml:space="preserve">
+    <value>Enter your name here</value>
+  </data>
+  <data name="The_Name_Shown_On_Invoices_And" xml:space="preserve">
+    <value>The name shown on invoices and notifications</value>
+  </data>
+  <data name="Apartment_Name_Optional" xml:space="preserve">
+    <value>🏠 Apartment name &lt;span class="badge bg-secondary" style="font-size: 10px;"&gt;optional&lt;/span&gt;</value>
+  </data>
+  <data name="Example_Alaa_S_Apartment" xml:space="preserve">
+    <value>Example: Alaa's apartment</value>
+  </data>
+  <data name="A_Short_Name_To_Identify_The" xml:space="preserve">
+    <value>A short name to identify the apartment</value>
+  </data>
+  <data name="Mobile_Number_Affects_Login" xml:space="preserve">
+    <value>📱 Mobile number &lt;span class="badge bg-warning text-dark" style="font-size: 10px;"&gt;affects login&lt;/span&gt;</value>
+  </data>
+  <data name="Changing_It_Automatically_Updates_The_Firebase" xml:space="preserve">
+    <value>⚠️ Changing it = automatically updates the Firebase Auth account</value>
+  </data>
+  <data name="WhatsApp_Number_Separate" xml:space="preserve">
+    <value>💬 WhatsApp number &lt;span class="badge bg-success" style="font-size: 10px;"&gt;separate&lt;/span&gt;</value>
+  </data>
+  <data name="Can_Be_Different_From_The_Mobile" xml:space="preserve">
+    <value>Can be different from the mobile number</value>
+  </data>
+  <data name="Security_Change_PIN" xml:space="preserve">
+    <value>Security — change PIN</value>
+  </data>
+  <data name="Leave_Empty_If_You_Don_T" xml:space="preserve">
+    <value>Leave empty if you don't want to change it</value>
+  </data>
+  <data name="Current_PIN" xml:space="preserve">
+    <value>🔒 Current PIN</value>
+  </data>
+  <data name="Required_Only_To_Change_The_Mobile" xml:space="preserve">
+    <value>Required only to change the mobile number or PIN</value>
+  </data>
+  <data name="New_PIN_2" xml:space="preserve">
+    <value>🔑 New PIN</value>
+  </data>
+  <data name="Confirm_New_PIN" xml:space="preserve">
+    <value>✅ Confirm new PIN</value>
+  </data>
+  <data name="Preferences" xml:space="preserve">
+    <value>Preferences</value>
+  </data>
+  <data name="Language_Notifications_Payment_Method" xml:space="preserve">
+    <value>Language, notifications, payment method</value>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>🌐 Language</value>
+  </data>
+  <data name="Preferred_Payment_Method" xml:space="preserve">
+    <value>💳 Preferred payment method</value>
+  </data>
+  <data name="Cash" xml:space="preserve">
+    <value>Cash</value>
+  </data>
+  <data name="Bank_Transfer" xml:space="preserve">
+    <value>Bank transfer</value>
+  </data>
+  <data name="Vodafone_Cash" xml:space="preserve">
+    <value>Vodafone Cash</value>
+  </data>
+  <data name="Notification_Preferences" xml:space="preserve">
+    <value>🔔 Notification preferences</value>
+  </data>
+  <data name="Cancel_3" xml:space="preserve">
+    <value>↩️ Cancel</value>
+  </data>
+  <data name="Save_Changes" xml:space="preserve">
+    <value>💾 Save changes</value>
+  </data>
+  <data name="Matching" xml:space="preserve">
+    <value>Matching</value>
+  </data>
+  <data name="Not_Matching" xml:space="preserve">
+    <value>Not matching</value>
+  </data>
+  <data name="The_New_One_Must_Be_4" xml:space="preserve">
+    <value>The new one must be 4 digits</value>
+  </data>
+  <data name="The_New_PIN_And_Its_Confirmation" xml:space="preserve">
+    <value>The new PIN and its confirmation do not match</value>
+  </data>
+  <data name="You_Must_Enter_The_Current_PIN" xml:space="preserve">
+    <value>You must enter the current PIN to confirm the change</value>
+  </data>
+  <data name="You_Are_In_Impersonation_Mode" xml:space="preserve">
+    <value>You are in Impersonation mode</value>
+  </data>
+  <data name="Browsing_As" xml:space="preserve">
+    <value>— browsing as</value>
+  </data>
+  <data name="Back_To_My_Account_Admin" xml:space="preserve">
+    <value>↩️ Back to my account (admin)</value>
+  </data>
+  <data name="Text_bbcf99" xml:space="preserve">
+    <value>🇪🇬 العربية</value>
+  </data>
+  <data name="Of_A_Total_Of" xml:space="preserve">
+    <value>of a total of</value>
+  </data>
+  <data name="Page" xml:space="preserve">
+    <value>— page</value>
+  </data>
+  <data name="Of" xml:space="preserve">
+    <value>of</value>
+  </data>
+  <data name="Page_Size" xml:space="preserve">
+    <value>Page size:</value>
+  </data>
+  <data name="Previous" xml:space="preserve">
+    <value>‹ Previous</value>
+  </data>
+  <data name="Next" xml:space="preserve">
+    <value>Next ›</value>
+  </data>
+  <data name="Super_Admin_Dashboard" xml:space="preserve">
+    <value>Super Admin dashboard</value>
+  </data>
+  <data name="No_Buildings_Yet" xml:space="preserve">
+    <value>No buildings yet.</value>
+  </data>
+  <data name="Database_Sync" xml:space="preserve">
+    <value>Database sync</value>
+  </data>
+  <data name="Database_Sync_2" xml:space="preserve">
+    <value>🔄 Database sync</value>
+  </data>
+  <data name="Check_And_Fix_Differences_Between_Firebase" xml:space="preserve">
+    <value>Check and fix differences between Firebase Auth and Firestore</value>
+  </data>
+  <data name="Sync_Admins" xml:space="preserve">
+    <value>👥 Sync admins</value>
+  </data>
+  <data name="Check_Emails_Firebase_Auth" xml:space="preserve">
+    <value>Check emails + Firebase Auth</value>
+  </data>
+  <data name="Auto_Fix" xml:space="preserve">
+    <value>Auto fix</value>
+  </data>
+  <data name="Run" xml:space="preserve">
+    <value>▶️ Run</value>
+  </data>
+  <data name="Sync_Residents" xml:space="preserve">
+    <value>🏠 Sync residents</value>
+  </data>
+  <data name="Check_Firebase_Auth_For_Residents" xml:space="preserve">
+    <value>Check Firebase Auth for residents</value>
+  </data>
+  <data name="Sync_Passwords" xml:space="preserve">
+    <value>🔑 Sync passwords</value>
+  </data>
+  <data name="Update_Firebase_Auth_With_The_Correct" xml:space="preserve">
+    <value>Update Firebase Auth with the correct passwords</value>
+  </data>
+  <data name="Sync_Result" xml:space="preserve">
+    <value>Sync result</value>
+  </data>
+  <data name="Result_Of_N_Sync" xml:space="preserve">
+    <value>Result of {0} sync</value>
+  </data>
+  <data name="Checked" xml:space="preserve">
+    <value>Checked:</value>
+  </data>
+  <data name="Issues" xml:space="preserve">
+    <value>Issues:</value>
+  </data>
+  <data name="Fixed" xml:space="preserve">
+    <value>Fixed:</value>
+  </data>
+  <data name="Duration_N_Seconds" xml:space="preserve">
+    <value>Duration: {0} seconds</value>
+  </data>
+  <data name="Type" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="Issue" xml:space="preserve">
+    <value>Issue</value>
+  </data>
+  <data name="Fixed_2" xml:space="preserve">
+    <value>Fixed?</value>
+  </data>
+  <data name="No_Issues_Found" xml:space="preserve">
+    <value>✅ No issues found</value>
+  </data>
+  <data name="Full_Export" xml:space="preserve">
+    <value>Full export</value>
+  </data>
+  <data name="Full_Export_2" xml:space="preserve">
+    <value>📦 Full export</value>
+  </data>
+  <data name="The_Following_Will_Be_Exported" xml:space="preserve">
+    <value>The following will be exported:</value>
+  </data>
+  <data name="N_Buildings" xml:space="preserve">
+    <value>— {0} buildings</value>
+  </data>
+  <data name="Users_Json_All_Admins" xml:space="preserve">
+    <value>&lt;strong&gt;users.json&lt;/strong&gt; — all admins</value>
+  </data>
+  <data name="README_Md_Content_Description" xml:space="preserve">
+    <value>&lt;strong&gt;README.md&lt;/strong&gt; — content description</value>
+  </data>
+  <data name="Export_ZIP" xml:space="preserve">
+    <value>⬇️ Export ZIP</value>
+  </data>
+  <data name="Advanced_Tools" xml:space="preserve">
+    <value>Advanced tools</value>
+  </data>
+  <data name="Advanced_Tools_2" xml:space="preserve">
+    <value>🧰 Advanced tools</value>
+  </data>
+  <data name="Convert_The_Old_Building_Log_Building" xml:space="preserve">
+    <value>Convert the old building log (building.AuditLog) to the auditLogs collection</value>
+  </data>
+  <data name="Open_Tool" xml:space="preserve">
+    <value>Open tool</value>
+  </data>
+  <data name="DB_Maintenance" xml:space="preserve">
+    <value>🔧 DB maintenance</value>
+  </data>
+  <data name="Duplicate_Detection_Cleaning_Up_Pending_Items" xml:space="preserve">
+    <value>Duplicate detection, cleaning up pending items, recalculating balances, orphan detection</value>
+  </data>
+  <data name="Export_All_Data_Buildings_Users_As" xml:space="preserve">
+    <value>Export all data (buildings + users) as a ZIP file</value>
+  </data>
+  <data name="DB_Maintenance_2" xml:space="preserve">
+    <value>DB maintenance</value>
+  </data>
+  <data name="Database_Maintenance" xml:space="preserve">
+    <value>🔧 Database maintenance</value>
+  </data>
+  <data name="Detect_Duplicate_Users" xml:space="preserve">
+    <value>👥 Detect duplicate users</value>
+  </data>
+  <data name="Users_With_The_Same_Mobile_Number" xml:space="preserve">
+    <value>Users with the same mobile number</value>
+  </data>
+  <data name="Auto_Fix_Delete_Duplicates" xml:space="preserve">
+    <value>Auto fix (delete duplicates)</value>
+  </data>
+  <data name="Scan" xml:space="preserve">
+    <value>🔍 Scan</value>
+  </data>
+  <data name="Old_Pending_Payments" xml:space="preserve">
+    <value>⏰ Old pending payments</value>
+  </data>
+  <data name="Older_Than_Days" xml:space="preserve">
+    <value>Older than (days)</value>
+  </data>
+  <data name="Auto_Cancel" xml:space="preserve">
+    <value>Auto cancel</value>
+  </data>
+  <data name="Recalculate_Balances" xml:space="preserve">
+    <value>🧮 Recalculate balances</value>
+  </data>
+  <data name="Select_A_Building" xml:space="preserve">
+    <value>— Select a building —</value>
+  </data>
+  <data name="Detect_Orphan_References" xml:space="preserve">
+    <value>🔗 Detect orphan references</value>
+  </data>
+  <data name="Payments_Linked_To_Apartments_That_Don" xml:space="preserve">
+    <value>Payments linked to apartments that don't exist</value>
+  </data>
+  <data name="Result_N" xml:space="preserve">
+    <value>Result: {0}</value>
+  </data>
+  <data name="Number_Of_Items" xml:space="preserve">
+    <value>Number of items:</value>
+  </data>
+  <data name="Fixed_3" xml:space="preserve">
+    <value>Fixed:</value>
+  </data>
+  <data name="Details_3" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="Migration_Convert_The_Old_Log" xml:space="preserve">
+    <value>🔄 Migration — convert the old log</value>
+  </data>
+  <data name="Convert_Building_AuditLog_AuditLogs_Collection" xml:space="preserve">
+    <value>Convert &lt;code&gt;building.AuditLog&lt;/code&gt; → &lt;code&gt;auditLogs&lt;/code&gt; collection</value>
+  </data>
+  <data name="Building_Leave_Empty_All_Buildings" xml:space="preserve">
+    <value>Building (leave empty = all buildings)</value>
+  </data>
+  <data name="Dry_Run_A_Test_Without_Saving" xml:space="preserve">
+    <value>🧪 Dry-run (a test without saving — recommended first)</value>
+  </data>
+  <data name="Start_Migration" xml:space="preserve">
+    <value>▶️ Start migration</value>
+  </data>
+  <data name="Dry_Run_Result" xml:space="preserve">
+    <value>🧪 Dry-run result</value>
+  </data>
+  <data name="Migration_Result" xml:space="preserve">
+    <value>✅ Migration result</value>
+  </data>
+  <data name="Buildings_3" xml:space="preserve">
+    <value>Buildings:</value>
+  </data>
+  <data name="Existing_Records" xml:space="preserve">
+    <value>Existing records:</value>
+  </data>
+  <data name="Migrated" xml:space="preserve">
+    <value>Migrated:</value>
+  </data>
+  <data name="Skipped_2" xml:space="preserve">
+    <value>Skipped:</value>
+  </data>
+  <data name="Failed_4" xml:space="preserve">
+    <value>Failed:</value>
+  </data>
+  <data name="Errors" xml:space="preserve">
+    <value>Errors:</value>
+  </data>
+  <data name="Details_N" xml:space="preserve">
+    <value>Details ({0})</value>
+  </data>
+  <data name="Wallet_Of_N" xml:space="preserve">
+    <value>💼 Wallet of {0}</value>
+  </data>
+  <data name="Wallet_Total" xml:space="preserve">
+    <value>Wallet total</value>
+  </data>
+  <data name="Payments_Awaiting_Confirmation_N" xml:space="preserve">
+    <value>⏳ Payments awaiting confirmation ({0})</value>
+  </data>
+  <data name="Payment_Number" xml:space="preserve">
+    <value>Payment number</value>
+  </data>
+  <data name="Edited_N" xml:space="preserve">
+    <value>✏️ Edited: {0}</value>
+  </data>
+  <data name="View_Receipt" xml:space="preserve">
+    <value>View receipt</value>
+  </data>
+  <data name="View_3" xml:space="preserve">
+    <value>📎 View</value>
+  </data>
+  <data name="Cancel_The_Payment" xml:space="preserve">
+    <value>Cancel the payment?</value>
+  </data>
+  <data name="Edit_2" xml:space="preserve">
+    <value>✏️ Edit</value>
+  </data>
+  <data name="Apartment_Balances_N" xml:space="preserve">
+    <value>Apartment balances ({0})</value>
+  </data>
+  <data name="Unknown_Floor" xml:space="preserve">
+    <value>Unknown floor</value>
+  </data>
+  <data name="Manual_Adjustment" xml:space="preserve">
+    <value>Manual adjustment</value>
+  </data>
+  <data name="Amount_3" xml:space="preserve">
+    <value>Amount (+/-)</value>
+  </data>
+  <data name="Reason" xml:space="preserve">
+    <value>Reason</value>
+  </data>
+  <data name="Adjustment_2" xml:space="preserve">
+    <value>Adjustment</value>
+  </data>
+  <data name="Payment_Receipt" xml:space="preserve">
+    <value>📎 Payment receipt</value>
+  </data>
+  <data name="Receipt_2" xml:space="preserve">
+    <value>Receipt</value>
+  </data>
+  <data name="Open_In_A_New_Tab" xml:space="preserve">
+    <value>🔗 Open in a new tab</value>
+  </data>
+  <data name="Edit_Payment" xml:space="preserve">
+    <value>✏️ Edit payment</value>
+  </data>
+  <data name="Amount_EGP" xml:space="preserve">
+    <value>💰 Amount (EGP)</value>
+  </data>
+  <data name="Reason_For_The_Edit" xml:space="preserve">
+    <value>📝 Reason for the edit &lt;span class="text-danger"&gt;*&lt;/span&gt;</value>
+  </data>
+  <data name="Example_Correcting_The_Amount_Based_On" xml:space="preserve">
+    <value>Example: correcting the amount based on the receipt</value>
+  </data>
+  <data name="Note_2" xml:space="preserve">
+    <value>📋 Note</value>
+  </data>
+  <data name="Note_On_The_Payment_Optional" xml:space="preserve">
+    <value>Note on the payment (optional)</value>
+  </data>
+  <data name="Save_Changes_2" xml:space="preserve">
+    <value>💾 Save changes</value>
+  </data>
+  <data name="WhatsApp_Messages" xml:space="preserve">
+    <value>WhatsApp messages</value>
+  </data>
+  <data name="WhatsApp_Messages_N" xml:space="preserve">
+    <value>💬 WhatsApp messages — {0}</value>
+  </data>
+  <data name="Template" xml:space="preserve">
+    <value>Template</value>
+  </data>
+  <data name="Amount_If_Needed" xml:space="preserve">
+    <value>Amount (if needed)</value>
+  </data>
+  <data name="Description_Note_If_Needed" xml:space="preserve">
+    <value>Description / note (if needed)</value>
+  </data>
+  <data name="Apartment_Share_If_Needed" xml:space="preserve">
+    <value>Apartment share (if needed)</value>
+  </data>
+  <data name="General_Message_If_You_Chose_General" xml:space="preserve">
+    <value>General message (if you chose "General message")</value>
+  </data>
+  <data name="Generate_Message" xml:space="preserve">
+    <value>Generate message</value>
+  </data>
+  <data name="Message_Ready" xml:space="preserve">
+    <value>Message ready</value>
+  </data>
+  <data name="Message_For_Apartment_N" xml:space="preserve">
+    <value>💬 Message for apartment {0}</value>
+  </data>
+  <data name="Open_WhatsApp_And_Send" xml:space="preserve">
+    <value>Open WhatsApp and send</value>
+  </data>
+  <data name="Back_3" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Too_Many_Failed_Login_Attempts_Try" xml:space="preserve">
+    <value>⛔ Too many failed login attempts. Try again in 15 minutes.</value>
+  </data>
+  <data name="This_Link_Has_Been_Modified_Or" xml:space="preserve">
+    <value>⚠️ This link has been modified or is not authentic. Scan the original QR.</value>
+  </data>
+  <data name="Invalid_Login_Details" xml:space="preserve">
+    <value>❌ Invalid login details</value>
+  </data>
+  <data name="The_Session_Has_Expired_Please_Try" xml:space="preserve">
+    <value>The session has expired. Please try logging in again.</value>
+  </data>
+  <data name="The_Session_Has_Expired" xml:space="preserve">
+    <value>The session has expired.</value>
+  </data>
+  <data name="The_Selected_Context_Does_Not_Exist" xml:space="preserve">
+    <value>The selected context does not exist.</value>
+  </data>
+  <data name="The_Building_Does_Not_Exist" xml:space="preserve">
+    <value>The building does not exist</value>
+  </data>
+  <data name="The_Apartment_Does_Not_Exist" xml:space="preserve">
+    <value>The apartment does not exist</value>
+  </data>
+  <data name="This_Email_Is_Not_Authorized_For" xml:space="preserve">
+    <value>This email is not authorized for Super Admin access</value>
+  </data>
+  <data name="Login_Error_2" xml:space="preserve">
+    <value>Login error</value>
+  </data>
+  <data name="No_Admin_Has_Been_Registered_Yet" xml:space="preserve">
+    <value>No admin has been registered yet</value>
+  </data>
+  <data name="Incorrect_Phone_Number_Or_PIN" xml:space="preserve">
+    <value>Incorrect phone number or PIN</value>
+  </data>
+  <data name="The_WhatsApp_Number_Does_Not_Match" xml:space="preserve">
+    <value>The WhatsApp number does not match the apartment's data</value>
+  </data>
+  <data name="Incorrect_PIN" xml:space="preserve">
+    <value>Incorrect PIN</value>
+  </data>
+  <data name="This_Email_Is_Not_Authorized_For_2" xml:space="preserve">
+    <value>This email is not authorized for Super Admin access</value>
+  </data>
+  <data name="This_Account_Is_Disabled" xml:space="preserve">
+    <value>🚫 This account is disabled</value>
+  </data>
+  <data name="Reason_N" xml:space="preserve">
+    <value> — Reason: {0}</value>
+  </data>
+  <data name="Invalid_Login_Details_2" xml:space="preserve">
+    <value>Invalid login details</value>
+  </data>
+  <data name="An_Unexpected_Error_Occurred" xml:space="preserve">
+    <value>An unexpected error occurred</value>
+  </data>
+  <data name="Could_Not_Log_In_2" xml:space="preserve">
+    <value>Could not log in: </value>
+  </data>
+  <data name="The_Apartment_Is_Already_Open" xml:space="preserve">
+    <value>The apartment is already open</value>
+  </data>
+  <data name="Apartment_N_Was_Opened_The_Resident" xml:space="preserve">
+    <value>✅ Apartment {0} was opened — the resident will be notified</value>
+  </data>
+  <data name="The_Apartment_Is_Already_Closed" xml:space="preserve">
+    <value>The apartment is already closed</value>
+  </data>
+  <data name="Apartment_N_Was_Closed" xml:space="preserve">
+    <value>✅ Apartment {0} was closed</value>
+  </data>
+  <data name="All_Fields_Are_Required" xml:space="preserve">
+    <value>All fields are required.</value>
+  </data>
+  <data name="Admin_Created_Successfully" xml:space="preserve">
+    <value>✅ Admin created successfully.</value>
+  </data>
+  <data name="Creation_Failed" xml:space="preserve">
+    <value>Creation failed: </value>
+  </data>
+  <data name="Updated" xml:space="preserve">
+    <value>✅ Updated.</value>
+  </data>
+  <data name="Update_Failed" xml:space="preserve">
+    <value>Update failed: </value>
+  </data>
+  <data name="PIN_Changed" xml:space="preserve">
+    <value>✅ PIN changed.</value>
+  </data>
+  <data name="PIN_Change_Failed" xml:space="preserve">
+    <value>PIN change failed: </value>
+  </data>
+  <data name="Disabled_4" xml:space="preserve">
+    <value>Disabled.</value>
+  </data>
+  <data name="Activated" xml:space="preserve">
+    <value>Activated.</value>
+  </data>
+  <data name="Deleted" xml:space="preserve">
+    <value>Deleted.</value>
+  </data>
+  <data name="Select_At_Least_One_Collection" xml:space="preserve">
+    <value>Select at least one collection</value>
+  </data>
+  <data name="Backup_Created_N_Collections_N_Documents" xml:space="preserve">
+    <value>✅ Backup created ({0} collections, {1} documents)</value>
+  </data>
+  <data name="Upload_A_ZIP_File_First" xml:space="preserve">
+    <value>Upload a ZIP file first</value>
+  </data>
+  <data name="The_File_Must_Be_A_ZIP" xml:space="preserve">
+    <value>The file must be a ZIP</value>
+  </data>
+  <data name="Failed_To_Read_The_File" xml:space="preserve">
+    <value>Failed to read the file: </value>
+  </data>
+  <data name="Failed_5" xml:space="preserve">
+    <value>Failed: </value>
+  </data>
+  <data name="Incomplete_Data" xml:space="preserve">
+    <value>Incomplete data</value>
+  </data>
+  <data name="You_Must_Select_At_Least_One" xml:space="preserve">
+    <value>You must select at least one collection</value>
+  </data>
+  <data name="Settings_Saved" xml:space="preserve">
+    <value>✅ Settings saved</value>
+  </data>
+  <data name="Save_Failed_2" xml:space="preserve">
+    <value>Save failed: </value>
+  </data>
+  <data name="Backup_Created" xml:space="preserve">
+    <value>✅ Backup created</value>
+  </data>
+  <data name="Deleted_2" xml:space="preserve">
+    <value>✅ Deleted</value>
+  </data>
+  <data name="File_Not_Found" xml:space="preserve">
+    <value>❌ File not found</value>
+  </data>
+  <data name="Failed_To_Download_The_Template" xml:space="preserve">
+    <value>Failed to download the template: </value>
+  </data>
+  <data name="No_File_Was_Uploaded" xml:space="preserve">
+    <value>No file was uploaded</value>
+  </data>
+  <data name="The_File_Must_Be_In_Xlsx" xml:space="preserve">
+    <value>The file must be in .xlsx format</value>
+  </data>
+  <data name="The_File_Is_Invalid" xml:space="preserve">
+    <value>The file is invalid</value>
+  </data>
+  <data name="The_Session_Has_Expired_Upload_The" xml:space="preserve">
+    <value>The session has expired. Upload the file again.</value>
+  </data>
+  <data name="The_Data_Is_Corrupted_Upload_The" xml:space="preserve">
+    <value>The data is corrupted. Upload the file again.</value>
+  </data>
+  <data name="The_Data_Is_Incomplete_Upload_The" xml:space="preserve">
+    <value>The data is incomplete. Upload the file again.</value>
+  </data>
+  <data name="Failed_To_Create_The_Building" xml:space="preserve">
+    <value>Failed to create the building</value>
+  </data>
+  <data name="Building_N_Imported_Successfully_N_Apartments" xml:space="preserve">
+    <value>✅ Building '{0}' imported successfully ({1} apartments)</value>
+  </data>
+  <data name="Import_Failed" xml:space="preserve">
+    <value>Import failed: </value>
+  </data>
+  <data name="Building_Name_Is_Required_2_To" xml:space="preserve">
+    <value>Building name is required (2 to 100 characters)</value>
+  </data>
+  <data name="Admin_PIN_Must_Be_Exactly_4" xml:space="preserve">
+    <value>Admin PIN must be exactly 4 digits</value>
+  </data>
+  <data name="Admin_WhatsApp_Number_Is_Required" xml:space="preserve">
+    <value>Admin WhatsApp number is required</value>
+  </data>
+  <data name="Admin_WhatsApp_Number_Is_Invalid_Digits" xml:space="preserve">
+    <value>Admin WhatsApp number is invalid (digits only, at least 7 digits)</value>
+  </data>
+  <data name="Building_Number_Must_Be_In_The" xml:space="preserve">
+    <value>Building number must be in the format BLD-XXX (e.g. BLD-001)</value>
+  </data>
+  <data name="Building_N_Created_Successfully" xml:space="preserve">
+    <value>✅ Building {0} created successfully</value>
+  </data>
+  <data name="You_Must_Enter_A_WhatsApp_Number" xml:space="preserve">
+    <value>You must enter a WhatsApp number and a PIN for each apartment (comma-separated)</value>
+  </data>
+  <data name="Floor_Added_Successfully" xml:space="preserve">
+    <value>Floor added successfully</value>
+  </data>
+  <data name="WhatsApp_Number_And_PIN_At_Least" xml:space="preserve">
+    <value>WhatsApp number and PIN (at least 4 digits) are required</value>
+  </data>
+  <data name="Apartment_Added_Successfully" xml:space="preserve">
+    <value>Apartment added successfully</value>
+  </data>
+  <data name="Fixed_N_Accounts_N_Failed" xml:space="preserve">
+    <value>✅ Fixed {0} accounts, {1} failed</value>
+  </data>
+  <data name="Apartment_N_Already_Exists" xml:space="preserve">
+    <value>✅ Apartment {0}: already exists</value>
+  </data>
+  <data name="Apartment_N_Created" xml:space="preserve">
+    <value>✅ Apartment {0}: created</value>
+  </data>
+  <data name="Apartment_N_Created_But_Sign_In" xml:space="preserve">
+    <value>⚠️ Apartment {0}: created but sign-in failed</value>
+  </data>
+  <data name="Apartment_N_N_3" xml:space="preserve">
+    <value>❌ Apartment {0}: {1}</value>
+  </data>
+  <data name="N_Succeeded_N_Failed" xml:space="preserve">
+    <value>✅ {0} succeeded, {1} failed</value>
+  </data>
+  <data name="Category_Name_Is_Required" xml:space="preserve">
+    <value>Category name is required.</value>
+  </data>
+  <data name="Category_Added" xml:space="preserve">
+    <value>✅ Category added.</value>
+  </data>
+  <data name="Category_Not_Found" xml:space="preserve">
+    <value>❌ Category not found.</value>
+  </data>
+  <data name="Deleted_Or_Disabled_If_In_Use" xml:space="preserve">
+    <value>✅ Deleted (or disabled if in use).</value>
+  </data>
+  <data name="Expense_Added" xml:space="preserve">
+    <value>Expense added</value>
+  </data>
+  <data name="Maintenance_Record_Added" xml:space="preserve">
+    <value>Maintenance record added</value>
+  </data>
+  <data name="Cost_Added_To_Expenses" xml:space="preserve">
+    <value>Cost added to expenses</value>
+  </data>
+  <data name="Full_12" xml:space="preserve">
+    <value>Full (12)</value>
+  </data>
+  <data name="Financial_7" xml:space="preserve">
+    <value>Financial (7)</value>
+  </data>
+  <data name="Maintenance_4" xml:space="preserve">
+    <value>Maintenance (4)</value>
+  </data>
+  <data name="Template_N_Applied_N_Permissions" xml:space="preserve">
+    <value>✅ Template {0} applied — {1} permissions.</value>
+  </data>
+  <data name="A_Question_And_At_Least_Two" xml:space="preserve">
+    <value>A question and at least two options are required</value>
+  </data>
+  <data name="Poll_Published" xml:space="preserve">
+    <value>Poll published</value>
+  </data>
+  <data name="Could_Not_Determine_The_Apartment" xml:space="preserve">
+    <value>Could not determine the apartment</value>
+  </data>
+  <data name="The_Link_Has_Expired" xml:space="preserve">
+    <value>⏰ The link has expired</value>
+  </data>
+  <data name="This_Link_Has_Already_Been_Used" xml:space="preserve">
+    <value>🚫 This link has already been used</value>
+  </data>
+  <data name="The_Link_Is_Invalid" xml:space="preserve">
+    <value>The link is invalid</value>
+  </data>
+  <data name="Could_Not_Log_In_With_This" xml:space="preserve">
+    <value>Could not log in with this link</value>
+  </data>
+  <data name="Report_N_N" xml:space="preserve">
+    <value>=== Report — {0} ({1}) ===</value>
+  </data>
+  <data name="Export_Date_N" xml:space="preserve">
+    <value>Export date: {0:O}</value>
+  </data>
+  <data name="Summary" xml:space="preserve">
+    <value>=== Summary ===</value>
+  </data>
+  <data name="Monthly_2" xml:space="preserve">
+    <value>=== Monthly ===</value>
+  </data>
+  <data name="Month" xml:space="preserve">
+    <value>Month</value>
+  </data>
+  <data name="Collected_2" xml:space="preserve">
+    <value>Collected</value>
+  </data>
+  <data name="Net" xml:space="preserve">
+    <value>Net</value>
+  </data>
+  <data name="Wallet_Distribution_Current_Month_2" xml:space="preserve">
+    <value>=== Wallet distribution (current month) ===</value>
+  </data>
+  <data name="The_Poll_Is_Closed_Or_You" xml:space="preserve">
+    <value>The poll is closed or you have already voted</value>
+  </data>
+  <data name="The_Payment_Was_Submitted_Awaiting_Admin" xml:space="preserve">
+    <value>The payment was submitted, awaiting admin confirmation</value>
+  </data>
+  <data name="No_Image_Was_Uploaded" xml:space="preserve">
+    <value>No image was uploaded</value>
+  </data>
+  <data name="The_Image_Is_Too_Large_Maximum" xml:space="preserve">
+    <value>The image is too large (maximum 10 MB)</value>
+  </data>
+  <data name="We_Couldn_T_Read_The_Image" xml:space="preserve">
+    <value>We couldn't read the image. Make sure it is clear or enter the data manually.</value>
+  </data>
+  <data name="This_Image_Shows_A_Failed_Or" xml:space="preserve">
+    <value>This image shows a failed or pending transfer. Upload the image of the successful transfer ✅</value>
+  </data>
+  <data name="Error_Reading_The_Image" xml:space="preserve">
+    <value>Error reading the image: </value>
+  </data>
+  <data name="Revenue_Added" xml:space="preserve">
+    <value>Revenue added</value>
+  </data>
+  <data name="Global_Settings_Saved" xml:space="preserve">
+    <value>✅ Global settings saved</value>
+  </data>
+  <data name="Building_Settings_Saved" xml:space="preserve">
+    <value>✅ Building settings saved</value>
+  </data>
+  <data name="Error_2" xml:space="preserve">
+    <value>Error: </value>
+  </data>
+  <data name="Preferences_2" xml:space="preserve">
+    <value>Preferences: </value>
+  </data>
+  <data name="The_New_PIN_And_Its_Confirmation_2" xml:space="preserve">
+    <value>The new PIN and its confirmation do not match</value>
+  </data>
+  <data name="PIN_Must_Be_Exactly_4_Digits" xml:space="preserve">
+    <value>PIN must be exactly 4 digits</value>
+  </data>
+  <data name="Your_Details" xml:space="preserve">
+    <value>Your details</value>
+  </data>
+  <data name="Saved" xml:space="preserve">
+    <value>✅ Saved </value>
+  </data>
+  <data name="And" xml:space="preserve">
+    <value> and </value>
+  </data>
+  <data name="Saved_2" xml:space="preserve">
+    <value>⚠️ Saved </value>
+  </data>
+  <data name="But_Failed" xml:space="preserve">
+    <value> — but failed: </value>
+  </data>
+  <data name="Save_Failed_3" xml:space="preserve">
+    <value>❌ Save failed: </value>
+  </data>
+  <data name="Admins_2" xml:space="preserve">
+    <value>Admins</value>
+  </data>
+  <data name="Residents" xml:space="preserve">
+    <value>Residents</value>
+  </data>
+  <data name="Passwords" xml:space="preserve">
+    <value>Passwords</value>
+  </data>
+  <data name="Select_A_Building_First" xml:space="preserve">
+    <value>Select a building first</value>
+  </data>
+  <data name="Unknown_Tool" xml:space="preserve">
+    <value>Unknown tool</value>
+  </data>
+  <data name="The_Payment_Does_Not_Exist" xml:space="preserve">
+    <value>The payment does not exist</value>
+  </data>
+  <data name="A_Payment_Cannot_Be_Edited_When" xml:space="preserve">
+    <value>A payment cannot be edited when it is </value>
+  </data>
+  <data name="Confirmed_2" xml:space="preserve">
+    <value>confirmed</value>
+  </data>
+  <data name="Cancelled_2" xml:space="preserve">
+    <value>cancelled</value>
+  </data>
+  <data name="Payment_Updated_Successfully" xml:space="preserve">
+    <value>✅ Payment updated successfully</value>
+  </data>
+  <data name="Update_Failed_2" xml:space="preserve">
+    <value>Update failed: </value>
+  </data>
+  <data name="Manage_Buildings" xml:space="preserve">
+    <value>Manage buildings</value>
+  </data>
+  <data name="Manage_Residents" xml:space="preserve">
+    <value>Manage residents</value>
+  </data>
+  <data name="Manage_Wallets" xml:space="preserve">
+    <value>Manage wallets</value>
+  </data>
+  <data name="Manage_Expenses" xml:space="preserve">
+    <value>Manage expenses</value>
+  </data>
+  <data name="Manage_Revenues" xml:space="preserve">
+    <value>Manage revenues</value>
+  </data>
+  <data name="View_Reports" xml:space="preserve">
+    <value>View reports</value>
+  </data>
+  <data name="Manage_Polls" xml:space="preserve">
+    <value>Manage polls</value>
+  </data>
+  <data name="Manage_Maintenance" xml:space="preserve">
+    <value>Manage maintenance</value>
+  </data>
+  <data name="Send_Notifications" xml:space="preserve">
+    <value>Send notifications</value>
+  </data>
+  <data name="Use_WhatsApp" xml:space="preserve">
+    <value>Use WhatsApp</value>
+  </data>
+  <data name="Full_Log" xml:space="preserve">
+    <value>Full log</value>
+  </data>
+  <data name="Building_Log" xml:space="preserve">
+    <value>Building log</value>
+  </data>
+  <data name="My_Log_Only" xml:space="preserve">
+    <value>My log only</value>
+  </data>
+  <data name="Secret_Access" xml:space="preserve">
+    <value>Secret access</value>
+  </data>
+  <data name="Management" xml:space="preserve">
+    <value>🏢 Management</value>
+  </data>
+  <data name="Finance_2" xml:space="preserve">
+    <value>💰 Finance</value>
+  </data>
+  <data name="Services" xml:space="preserve">
+    <value>🛎️ Services</value>
+  </data>
+  <data name="System" xml:space="preserve">
+    <value>🛠️ System</value>
+  </data>
+  <data name="Create_Edit_Delete_Buildings_Manage_The" xml:space="preserve">
+    <value>Create/edit/delete buildings + manage the structure (floors + apartments)</value>
+  </data>
+  <data name="Add_Edit_Disable_Admins_Manage_Permissions" xml:space="preserve">
+    <value>Add/edit/disable admins + manage permissions</value>
+  </data>
+  <data name="Add_Edit_Disable_Residents_Reset_PINs" xml:space="preserve">
+    <value>Add/edit/disable residents + reset PINs</value>
+  </data>
+  <data name="View_Balances_Confirm_Cancel_Payments_Manual" xml:space="preserve">
+    <value>View balances, confirm/cancel payments, manual adjustments, issue invoices</value>
+  </data>
+  <data name="Add_Edit_Delete_Monthly_Expenses" xml:space="preserve">
+    <value>Add/edit/delete monthly expenses</value>
+  </data>
+  <data name="Add_Edit_Delete_Monthly_Revenues" xml:space="preserve">
+    <value>Add/edit/delete monthly revenues</value>
+  </data>
+  <data name="Manage_Expense_And_Revenue_Categories_Colors" xml:space="preserve">
+    <value>Manage expense and revenue categories (colors, order, activation)</value>
+  </data>
+  <data name="View_Financial_Reports_CSV_Export" xml:space="preserve">
+    <value>View financial reports + CSV export</value>
+  </data>
+  <data name="Create_Close_Delete_Polls_Follow_Results" xml:space="preserve">
+    <value>Create/close/delete polls + follow results</value>
+  </data>
+  <data name="Add_Edit_Delete_Maintenance_Records_Add" xml:space="preserve">
+    <value>Add/edit/delete maintenance records + add the cost to expenses</value>
+  </data>
+  <data name="Send_In_App_Notifications_To_Admins" xml:space="preserve">
+    <value>Send in-app notifications to admins and residents</value>
+  </data>
+  <data name="Generate_WhatsApp_Messages_From_Templates_Open" xml:space="preserve">
+    <value>Generate WhatsApp messages from templates + open wa.me links</value>
+  </data>
+  <data name="View_All_Records_Across_All_Buildings" xml:space="preserve">
+    <value>View all records across all buildings (Super Admin)</value>
+  </data>
+  <data name="View_The_Building_Log_Only_Admin" xml:space="preserve">
+    <value>View the building log only (Admin)</value>
+  </data>
+  <data name="View_My_Apartment_S_Log_Only" xml:space="preserve">
+    <value>View my apartment's log only (Resident)</value>
+  </data>
+  <data name="Global_System_Settings_Super_Admin" xml:space="preserve">
+    <value>Global system settings (Super Admin)</value>
+  </data>
+  <data name="Building_Settings_Invoice_Policy_Expense_Distrib" xml:space="preserve">
+    <value>Building settings (invoice policy, expense distribution, …)</value>
+  </data>
+  <data name="My_Personal_Settings_Mobile_WhatsApp_PIN" xml:space="preserve">
+    <value>My personal settings (mobile, WhatsApp, PIN, language)</value>
+  </data>
+  <data name="Migration_DB_Maintenance_Full_ZIP_Export" xml:space="preserve">
+    <value>Migration + DB maintenance + full ZIP export</value>
+  </data>
+  <data name="Full_Backup_Restore" xml:space="preserve">
+    <value>Full backup + restore</value>
+  </data>
+  <data name="Sync_Firebase_Auth_With_Firestore_Check" xml:space="preserve">
+    <value>Sync Firebase Auth with Firestore (check/fix)</value>
+  </data>
+  <data name="Secret_Access_Impersonation_To_Buildings_And" xml:space="preserve">
+    <value>Secret access (impersonation) to buildings and apartments</value>
+  </data>
+  <data name="Index_Super_Admin_All_Records_ExportCsv" xml:space="preserve">
+    <value>Index (Super Admin — all records), ExportCsv</value>
+  </data>
+  <data name="Index_Admin_Own_Building_S_Log" xml:space="preserve">
+    <value>Index (Admin — own building's log)</value>
+  </data>
+  <data name="Index_Resident_Own_Apartment_S_Log" xml:space="preserve">
+    <value>Index (Resident — own apartment's log)</value>
+  </data>
+  <data name="Soon_SettingsService" xml:space="preserve">
+    <value>(soon) SettingsService</value>
+  </data>
+  <data name="Soon_SettingsController" xml:space="preserve">
+    <value>(soon) SettingsController</value>
+  </data>
+  <data name="Soon_BackupService" xml:space="preserve">
+    <value>(soon) BackupService</value>
+  </data>
+  <data name="Soon_BackupController" xml:space="preserve">
+    <value>(soon) BackupController</value>
+  </data>
+  <data name="Soon_SecretAccessService" xml:space="preserve">
+    <value>(soon) SecretAccessService</value>
+  </data>
+  <data name="Soon_SecretAccessController" xml:space="preserve">
+    <value>(soon) SecretAccessController</value>
+  </data>
+  <data name="Never_Logged_In" xml:space="preserve">
+    <value>Never logged in</value>
+  </data>
+  <data name="You_Don_T_Have_Permission_To" xml:space="preserve">
+    <value>⛔ You don't have permission to perform this action. Contact the super admin.</value>
+  </data>
+  <data name="Create_Admin" xml:space="preserve">
+    <value>Create admin</value>
+  </data>
+  <data name="Change_Admin_PIN" xml:space="preserve">
+    <value>Change admin PIN</value>
+  </data>
+  <data name="Disable_Admin" xml:space="preserve">
+    <value>Disable admin</value>
+  </data>
+  <data name="Activate_Admin" xml:space="preserve">
+    <value>Activate admin</value>
+  </data>
+  <data name="Delete_Admin" xml:space="preserve">
+    <value>Delete admin</value>
+  </data>
+  <data name="Sync_Permissions" xml:space="preserve">
+    <value>Sync permissions</value>
+  </data>
+  <data name="Update_Admin_Details" xml:space="preserve">
+    <value>Update admin details</value>
+  </data>
+  <data name="Add_Expense_Category_2" xml:space="preserve">
+    <value>Add expense category</value>
+  </data>
+  <data name="Edit_Expense_Category" xml:space="preserve">
+    <value>Edit expense category</value>
+  </data>
+  <data name="Delete_Expense_Category" xml:space="preserve">
+    <value>Delete expense category</value>
+  </data>
+  <data name="Disable_Expense_Category" xml:space="preserve">
+    <value>Disable expense category</value>
+  </data>
+  <data name="Reorder_Expense_Categories" xml:space="preserve">
+    <value>Reorder expense categories</value>
+  </data>
+  <data name="Add_Revenue_Category_2" xml:space="preserve">
+    <value>Add revenue category</value>
+  </data>
+  <data name="Edit_Revenue_Category" xml:space="preserve">
+    <value>Edit revenue category</value>
+  </data>
+  <data name="Delete_Revenue_Category" xml:space="preserve">
+    <value>Delete revenue category</value>
+  </data>
+  <data name="Disable_Revenue_Category" xml:space="preserve">
+    <value>Disable revenue category</value>
+  </data>
+  <data name="Reorder_Revenue_Categories" xml:space="preserve">
+    <value>Reorder revenue categories</value>
+  </data>
+  <data name="Create_Payment" xml:space="preserve">
+    <value>Create payment</value>
+  </data>
+  <data name="Confirm_Payment" xml:space="preserve">
+    <value>Confirm payment</value>
+  </data>
+  <data name="Cancel_Payment" xml:space="preserve">
+    <value>Cancel payment</value>
+  </data>
+  <data name="Edit_Payment_2" xml:space="preserve">
+    <value>Edit payment</value>
+  </data>
+  <data name="Add_Expense_2" xml:space="preserve">
+    <value>Add expense</value>
+  </data>
+  <data name="Delete_Expense" xml:space="preserve">
+    <value>Delete expense</value>
+  </data>
+  <data name="Add_Revenue_2" xml:space="preserve">
+    <value>Add revenue</value>
+  </data>
+  <data name="Delete_Revenue" xml:space="preserve">
+    <value>Delete revenue</value>
+  </data>
+  <data name="Wallet_Adjustment" xml:space="preserve">
+    <value>Wallet adjustment</value>
+  </data>
+  <data name="Export_Report" xml:space="preserve">
+    <value>Export report</value>
+  </data>
+  <data name="Download_Invoice" xml:space="preserve">
+    <value>Download invoice</value>
+  </data>
+  <data name="Add_Maintenance" xml:space="preserve">
+    <value>Add maintenance</value>
+  </data>
+  <data name="Edit_Maintenance" xml:space="preserve">
+    <value>Edit maintenance</value>
+  </data>
+  <data name="Delete_Maintenance" xml:space="preserve">
+    <value>Delete maintenance</value>
+  </data>
+  <data name="Add_Maintenance_Cost_As_Expense" xml:space="preserve">
+    <value>Add maintenance cost as expense</value>
+  </data>
+  <data name="Create_Poll" xml:space="preserve">
+    <value>Create poll</value>
+  </data>
+  <data name="Close_Poll" xml:space="preserve">
+    <value>Close poll</value>
+  </data>
+  <data name="Reopen_Poll" xml:space="preserve">
+    <value>Reopen poll</value>
+  </data>
+  <data name="Delete_Poll" xml:space="preserve">
+    <value>Delete poll</value>
+  </data>
+  <data name="Vote" xml:space="preserve">
+    <value>Vote</value>
+  </data>
+  <data name="Generate_QR_Login_Link" xml:space="preserve">
+    <value>Generate QR login link</value>
+  </data>
+  <data name="Add_Resident" xml:space="preserve">
+    <value>Add resident</value>
+  </data>
+  <data name="Edit_Resident" xml:space="preserve">
+    <value>Edit resident</value>
+  </data>
+  <data name="Update_Resident_Details" xml:space="preserve">
+    <value>Update resident details</value>
+  </data>
+  <data name="Create_Building_2" xml:space="preserve">
+    <value>Create building</value>
+  </data>
+  <data name="Delete_Building_2" xml:space="preserve">
+    <value>Delete building</value>
+  </data>
+  <data name="Update_My_Settings" xml:space="preserve">
+    <value>Update my settings</value>
+  </data>
+  <data name="Update_Building_Settings" xml:space="preserve">
+    <value>Update building settings</value>
+  </data>
+  <data name="Update_Global_Settings" xml:space="preserve">
+    <value>Update global settings</value>
+  </data>
+  <data name="Update_Super_Admin_Name" xml:space="preserve">
+    <value>Update super admin name</value>
+  </data>
+  <data name="Open_Apartment_2" xml:space="preserve">
+    <value>🔓 Open apartment</value>
+  </data>
+  <data name="Close_Apartment_2" xml:space="preserve">
+    <value>🔒 Close apartment</value>
+  </data>
+  <data name="Log_In_As_Resident_Impersonation" xml:space="preserve">
+    <value>🚪 Log in as resident (Impersonation)</value>
+  </data>
+  <data name="Return_From_Impersonation" xml:space="preserve">
+    <value>↩️ Return from Impersonation</value>
+  </data>
+  <data name="Building_Number_N" xml:space="preserve">
+    <value>Building number: {0}</value>
+  </data>
+  <data name="Wallet_Invoice" xml:space="preserve">
+    <value>Wallet invoice</value>
+  </data>
+  <data name="Invoice_Number_N" xml:space="preserve">
+    <value>Invoice number: {0}</value>
+  </data>
+  <data name="Issue_Date_N" xml:space="preserve">
+    <value>Issue date: {0}</value>
+  </data>
+  <data name="Resident_Name" xml:space="preserve">
+    <value>Resident name</value>
+  </data>
+  <data name="Wallet_Summary" xml:space="preserve">
+    <value>Wallet summary</value>
+  </data>
+  <data name="Previous_Balance" xml:space="preserve">
+    <value>Previous balance</value>
+  </data>
+  <data name="N_EGP_2" xml:space="preserve">
+    <value>{0:0.##} EGP</value>
+  </data>
+  <data name="Deposits_This_Month" xml:space="preserve">
+    <value>+ Deposits this month</value>
+  </data>
+  <data name="N_EGP_3" xml:space="preserve">
+    <value>+{0:0.##} EGP</value>
+  </data>
+  <data name="Your_Share_Of_Revenues" xml:space="preserve">
+    <value>+ Your share of revenues</value>
+  </data>
+  <data name="Your_Share_Of_Expenses" xml:space="preserve">
+    <value>- Your share of expenses</value>
+  </data>
+  <data name="N_EGP_4" xml:space="preserve">
+    <value>-{0:0.##} EGP</value>
+  </data>
+  <data name="Current_Balance_2" xml:space="preserve">
+    <value>= Current balance</value>
+  </data>
+  <data name="Expense_Breakdown" xml:space="preserve">
+    <value>Expense breakdown</value>
+  </data>
+  <data name="Method_N" xml:space="preserve">
+    <value>Method: {0}</value>
+  </data>
+  <data name="Account_Number_N" xml:space="preserve">
+    <value>Account number: {0}</value>
+  </data>
+  <data name="Phone_Number_N" xml:space="preserve">
+    <value>Phone number: {0}</value>
+  </data>
+  <data name="Note_N" xml:space="preserve">
+    <value>Note: {0}</value>
+  </data>
+  <data name="N_Building_Management_System" xml:space="preserve">
+    <value>{0} — Building Management System</value>
+  </data>
+  <data name="This_Is_An_Electronic_Invoice_Issued" xml:space="preserve">
+    <value>This is an electronic invoice issued by the Building Management System</value>
+  </data>
+  <data name="Scan_To_Verify" xml:space="preserve">
+    <value>Scan to verify</value>
+  </data>
+  <data name="Building_N" xml:space="preserve">
+    <value>Building: {0}</value>
+  </data>
+  <data name="Number_N" xml:space="preserve">
+    <value>Number: {0}</value>
+  </data>
+  <data name="Link" xml:space="preserve">
+    <value>Link:</value>
+  </data>
+  <data name="Generated_N" xml:space="preserve">
+    <value>Generated: {0:yyyy-MM-dd HH:mm}</value>
+  </data>
+  <data name="Users" xml:space="preserve">
+    <value>Users</value>
+  </data>
+  <data name="Audit_Log" xml:space="preserve">
+    <value>Audit log</value>
+  </data>
+  <data name="QR_Usage" xml:space="preserve">
+    <value>QR usage</value>
+  </data>
+  <data name="QR_Tokens" xml:space="preserve">
+    <value>QR tokens</value>
+  </data>
+  <data name="Presence" xml:space="preserve">
+    <value>Presence</value>
+  </data>
+  <data name="WhatsApp_Templates" xml:space="preserve">
+    <value>WhatsApp templates</value>
+  </data>
+  <data name="N_Invalid_JSON_N" xml:space="preserve">
+    <value>{0}: invalid JSON - {1}</value>
+  </data>
+  <data name="Error_N" xml:space="preserve">
+    <value>Error: {0}</value>
+  </data>
+  <data name="The_Temporary_File_Does_Not_Exist" xml:space="preserve">
+    <value>The temporary file does not exist</value>
+  </data>
+  <data name="N_Not_Found_In_The_ZIP" xml:space="preserve">
+    <value>{0}: not found in the ZIP</value>
+  </data>
+  <data name="N_N_Documents" xml:space="preserve">
+    <value>✅ {0}: {1} documents</value>
+  </data>
+  <data name="Indebted" xml:space="preserve">
+    <value>Indebted</value>
+  </data>
+  <data name="N_Minutes_Ago" xml:space="preserve">
+    <value>{0} minutes ago</value>
+  </data>
+  <data name="N_Hours_Ago" xml:space="preserve">
+    <value>{0} hours ago</value>
+  </data>
+  <data name="N_Days_Ago" xml:space="preserve">
+    <value>{0} days ago</value>
+  </data>
+  <data name="Now" xml:space="preserve">
+    <value>Now</value>
+  </data>
+  <data name="Duplicate_User_Detection" xml:space="preserve">
+    <value>Duplicate user detection</value>
+  </data>
+  <data name="Phone_N_N_Documents" xml:space="preserve">
+    <value>📱 phone: {0} → {1} documents</value>
+  </data>
+  <data name="Pending_Payments_N_Days" xml:space="preserve">
+    <value>Pending payments &gt; {0} days</value>
+  </data>
+  <data name="N_Payment_N_N_EGP" xml:space="preserve">
+    <value>💰 {0} — payment {1} ({2:0.##} EGP)</value>
+  </data>
+  <data name="Recalculate_Balances_2" xml:space="preserve">
+    <value>Recalculate balances</value>
+  </data>
+  <data name="N_New_Distribution_N_Apartments" xml:space="preserve">
+    <value>📅 {0}: new distribution = {1} apartments</value>
+  </data>
+  <data name="Orphan_Reference_Detection" xml:space="preserve">
+    <value>Orphan reference detection</value>
+  </data>
+  <data name="N_Payment_N_Is_Linked_To" xml:space="preserve">
+    <value>⚠️ {0} — payment {1} is linked to an apartment that doesn't exist ({2})</value>
+  </data>
+  <data name="Email_Mismatch_N_N" xml:space="preserve">
+    <value>Email mismatch: '{0}' ≠ '{1}'</value>
+  </data>
+  <data name="Firebase_Auth_Account_Does_Not_Exist" xml:space="preserve">
+    <value>Firebase Auth account does not exist</value>
+  </data>
+  <data name="UID_Mismatch_Firestore_N_Auth_N" xml:space="preserve">
+    <value>UID mismatch: Firestore={0}, Auth={1}</value>
+  </data>
+  <data name="Apartment_N_N_4" xml:space="preserve">
+    <value>Apartment {0} - {1}</value>
+  </data>
+  <data name="Admin_N_2" xml:space="preserve">
+    <value>Admin {0}</value>
+  </data>
+  <data name="Failed_To_Update_The_Password" xml:space="preserve">
+    <value>Failed to update the password</value>
+  </data>
+  <data name="No_Old_AuditLog_Found_In_The" xml:space="preserve">
+    <value>No old auditLog found in the building</value>
+  </data>
+  <data name="AuditLog_Is_Not_A_List" xml:space="preserve">
+    <value>auditLog is not a list</value>
+  </data>
+  <data name="A_Confirmed_Or_Cancelled_Payment_Cannot" xml:space="preserve">
+    <value>A confirmed or cancelled payment cannot be edited</value>
+  </data>
+  <data name="The_Amount_Must_Be_Greater_Than" xml:space="preserve">
+    <value>The amount must be greater than zero</value>
+  </data>
+  <data name="Your_Share_Of_This_Month_S" xml:space="preserve">
+    <value>Your share of this month's expenses</value>
+  </data>
+  <data name="Your_Share_Of_The_Building_S" xml:space="preserve">
+    <value>Your share of the building's revenues</value>
+  </data>
+  <data name="Building_Number_N_Is_Already_In" xml:space="preserve">
+    <value>Building number {0} is already in use</value>
+  </data>
+  <data name="Failed_To_Create_The_Firebase_Auth" xml:space="preserve">
+    <value>Failed to create the Firebase Auth account: </value>
+  </data>
+  <data name="The_Admin_Does_Not_Exist" xml:space="preserve">
+    <value>The admin does not exist</value>
+  </data>
+  <data name="The_Current_PIN_Is_Incorrect" xml:space="preserve">
+    <value>The current PIN is incorrect</value>
+  </data>
+  <data name="Invalid_Token" xml:space="preserve">
+    <value>Invalid token</value>
+  </data>
+  <data name="The_Token_Has_Been_Tampered_With" xml:space="preserve">
+    <value>The token has been tampered with</value>
+  </data>
+  <data name="Corrupted_Token" xml:space="preserve">
+    <value>Corrupted token</value>
+  </data>
+  <data name="The_QR_Has_Expired" xml:space="preserve">
+    <value>The QR has expired</value>
+  </data>
+  <data name="This_QR_Has_Already_Been_Used" xml:space="preserve">
+    <value>This QR has already been used</value>
+  </data>
+  <data name="This_QR_Has_Reached_Its_Maximum" xml:space="preserve">
+    <value>This QR has reached its maximum number of uses</value>
+  </data>
+  <data name="This_QR_Is_Linked_To_Another" xml:space="preserve">
+    <value>This QR is linked to another device</value>
+  </data>
+  <data name="January" xml:space="preserve">
+    <value>January</value>
+  </data>
+  <data name="February" xml:space="preserve">
+    <value>February</value>
+  </data>
+  <data name="March" xml:space="preserve">
+    <value>March</value>
+  </data>
+  <data name="April" xml:space="preserve">
+    <value>April</value>
+  </data>
+  <data name="May" xml:space="preserve">
+    <value>May</value>
+  </data>
+  <data name="June" xml:space="preserve">
+    <value>June</value>
+  </data>
+  <data name="July" xml:space="preserve">
+    <value>July</value>
+  </data>
+  <data name="August" xml:space="preserve">
+    <value>August</value>
+  </data>
+  <data name="September" xml:space="preserve">
+    <value>September</value>
+  </data>
+  <data name="October" xml:space="preserve">
+    <value>October</value>
+  </data>
+  <data name="November" xml:space="preserve">
+    <value>November</value>
+  </data>
+  <data name="December" xml:space="preserve">
+    <value>December</value>
+  </data>
+  <data name="This_File_Is_Not_From_The" xml:space="preserve">
+    <value>This file is not from the system. Download the template from the app.</value>
+  </data>
+  <data name="The_Template_Version_Is_Outdated_Download" xml:space="preserve">
+    <value>The template version is outdated. Download a new copy.</value>
+  </data>
+  <data name="The_File_Is_Corrupted" xml:space="preserve">
+    <value>The file is corrupted.</value>
+  </data>
+  <data name="This_Template_Expired_N_Days_Ago" xml:space="preserve">
+    <value>⚠️ This template expired {0} days ago. Download a new copy.</value>
+  </data>
+  <data name="The_File_Was_Modified_Or_Is" xml:space="preserve">
+    <value>The file was modified or is not authentic. Download a new copy.</value>
+  </data>
+  <data name="Sheet_N_Is_Missing" xml:space="preserve">
+    <value>Sheet '{0}' is missing</value>
+  </data>
+  <data name="Building_Name_Is_Required_In_The" xml:space="preserve">
+    <value>Building name is required in the Building Info sheet.</value>
+  </data>
+  <data name="There_Are_No_Apartments_In_The" xml:space="preserve">
+    <value>There are no apartments in the file. Fill in the data starting from row 6.</value>
+  </data>
+  <data name="Error_Reading_The_File_N" xml:space="preserve">
+    <value>Error reading the file: {0}</value>
+  </data>
+  <data name="Js_AptDetails_Title" xml:space="preserve">
+    <value>📋 Apartment details</value>
+  </data>
+  <data name="Js_Loading" xml:space="preserve">
+    <value>Loading...</value>
+  </data>
+  <data name="Js_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Js_LoadFailed" xml:space="preserve">
+    <value>❌ Failed to load data: {0}</value>
+  </data>
+  <data name="Js_ConfirmImpersonate" xml:space="preserve">
+    <value>⚠️ Do you want to log in as the resident of this apartment?
 
-  <!-- ===== App ===== -->
-  <data name="App_Name" xml:space="preserve"><value>Building Management System</value></data>
-  <data name="App_ShortName" xml:space="preserve"><value>Building Mgmt</value></data>
+Notes:
+• You will be logged out of the admin account
+• You can return to your account at any time from the red bar at the top of the page
+• This action will be recorded in the log</value>
+  </data>
+  <data name="Js_ConfirmOpenApt" xml:space="preserve">
+    <value>🔓 Do you want to open apartment {0}?
 
-  <!-- ===== Common ===== -->
-  <data name="Common_Back" xml:space="preserve"><value>Back</value></data>
-  <data name="Common_Cancel" xml:space="preserve"><value>Cancel</value></data>
-  <data name="Common_Confirm" xml:space="preserve"><value>Confirm</value></data>
-  <data name="Common_Delete" xml:space="preserve"><value>Delete</value></data>
-  <data name="Common_Edit" xml:space="preserve"><value>Edit</value></data>
-  <data name="Common_Save" xml:space="preserve"><value>Save</value></data>
-  <data name="Common_Close" xml:space="preserve"><value>Close</value></data>
-  <data name="Common_Add" xml:space="preserve"><value>Add</value></data>
-  <data name="Common_Loading" xml:space="preserve"><value>Loading...</value></data>
-  <data name="Common_Copy" xml:space="preserve"><value>Copy</value></data>
-  <data name="Common_Copied" xml:space="preserve"><value>Copied</value></data>
+Note:
+• The apartment will be added to the monthly expenses
+• You will be able to issue invoices for it
+• Any old payments it has will be counted</value>
+  </data>
+  <data name="Js_PromptCloseApt" xml:space="preserve">
+    <value>🔒 Close apartment {0}
 
-  <!-- ===== Footer ===== -->
-  <data name="Footer_Copyright" xml:space="preserve"><value>Building Management System — C# MVC</value></data>
+Enter the reason for closing (optional):
 
-  <!-- ===== Login ===== -->
-  <data name="Login_Title" xml:space="preserve"><value>Sign In</value></data>
-  <data name="Login_Subtitle" xml:space="preserve"><value>Sign in to continue</value></data>
-  <data name="Login_Identifier" xml:space="preserve"><value>Email / Phone</value></data>
-  <data name="Login_IdentifierPlaceholder" xml:space="preserve"><value>you@example.com or +201001234567</value></data>
-  <data name="Login_Credential" xml:space="preserve"><value>Password / PIN</value></data>
-  <data name="Login_Submit" xml:space="preserve"><value>Sign In</value></data>
-  <data name="Login_Or" xml:space="preserve"><value>or</value></data>
-  <data name="Login_QrHint" xml:space="preserve"><value>Have a Quick QR? Click here</value></data>
-  <data name="Login_AutoRoleDetection" xml:space="preserve"><value>System auto-detects your role</value></data>
-  <data name="Login_GoogleButton" xml:space="preserve"><value>Sign in with Google (Super Admin)</value></data>
-  <data name="Login_GoogleError" xml:space="preserve"><value>Google sign-in failed</value></data>
-  <data name="Login_GooglePopupClosed" xml:space="preserve"><value>Google popup closed</value></data>
-  <data name="Login_GooglePopupBlocked" xml:space="preserve"><value>Popup blocked</value></data>
-  <data name="Login_GoogleCancelled" xml:space="preserve"><value>Cancelled</value></data>
-  <data name="Login_GoogleUnauthorizedDomain" xml:space="preserve"><value>Domain not authorized in Firebase</value></data>
-  <data name="Login_ConnectionError" xml:space="preserve"><value>Connection error</value></data>
-  <data name="Login_AdminTitle" xml:space="preserve"><value>Admin Login</value></data>
-  <data name="Login_AdminSubtitle" xml:space="preserve"><value>Choose building and enter phone + PIN</value></data>
-  <data name="Login_ResidentTitle" xml:space="preserve"><value>Resident Login</value></data>
-  <data name="Login_ResidentSubtitle" xml:space="preserve"><value>Choose building, floor, apartment, and enter WhatsApp + PIN</value></data>
-  <data name="Login_SuperAdminTitle" xml:space="preserve"><value>Super Admin Login</value></data>
-  <data name="Login_SuperAdminSubtitle" xml:space="preserve"><value>With email and password</value></data>
-  <data name="Login_Email" xml:space="preserve"><value>Email</value></data>
-  <data name="Login_Password" xml:space="preserve"><value>Password</value></data>
-  <data name="Login_Building" xml:space="preserve"><value>Building</value></data>
-  <data name="Login_Whatsapp" xml:space="preserve"><value>WhatsApp Number</value></data>
-  <data name="Login_FloorNumber" xml:space="preserve"><value>Floor Number</value></data>
-  <data name="Login_AptNumber" xml:space="preserve"><value>Apartment Number</value></data>
-  <data name="Login_Choose" xml:space="preserve"><value>— Choose —</value></data>
-  <data name="Login_QrDetectedBuilding" xml:space="preserve"><value>📱 Building detected automatically</value></data>
-  <data name="Login_QrDetectedApt" xml:space="preserve"><value>📱 Apartment detected automatically</value></data>
-  <data name="Login_QrHintAdmin" xml:space="preserve"><value>💡 Just enter WhatsApp and PIN</value></data>
+Example: resident is traveling - empty apartment - maintenance</value>
+  </data>
+  <data name="Js_ConfirmCloseApt" xml:space="preserve">
+    <value>⚠️ Confirm closing apartment {0}?
 
-  <!-- ===== Nav ===== -->
-  <data name="Nav_Home" xml:space="preserve"><value>Home</value></data>
-  <data name="Nav_Admins" xml:space="preserve"><value>Admins</value></data>
-  <data name="Nav_Apts" xml:space="preserve"><value>Apartments</value></data>
-  <data name="Nav_AuditLog" xml:space="preserve"><value>Audit Log</value></data>
-  <data name="Nav_Backup" xml:space="preserve"><value>Backup</value></data>
-  <data name="Nav_Buildings" xml:space="preserve"><value>Buildings</value></data>
-  <data name="Nav_Categories" xml:space="preserve"><value>Categories</value></data>
-  <data name="Nav_Expenses" xml:space="preserve"><value>Expenses</value></data>
-  <data name="Nav_Help" xml:space="preserve"><value>Help</value></data>
-  <data name="Nav_Logout" xml:space="preserve"><value>Logout</value></data>
-  <data name="Nav_Maintenance" xml:space="preserve"><value>Maintenance</value></data>
-  <data name="Nav_MyLog" xml:space="preserve"><value>My Log</value></data>
-  <data name="Nav_MySettings" xml:space="preserve"><value>My Settings</value></data>
-  <data name="Nav_MyWallet" xml:space="preserve"><value>My Wallet</value></data>
-  <data name="Nav_Notifications" xml:space="preserve"><value>Notifications</value></data>
-  <data name="Nav_Permissions" xml:space="preserve"><value>Permissions</value></data>
-  <data name="Nav_Polls" xml:space="preserve"><value>Polls</value></data>
-  <data name="Nav_Revenues" xml:space="preserve"><value>Revenues</value></data>
-  <data name="Nav_Settings" xml:space="preserve"><value>Settings</value></data>
-  <data name="Nav_Sync" xml:space="preserve"><value>Sync</value></data>
-  <data name="Nav_Tools" xml:space="preserve"><value>Tools</value></data>
-  <data name="Nav_Wallet" xml:space="preserve"><value>Wallet</value></data>
-  <data name="Nav_WhatsApp" xml:space="preserve"><value>WhatsApp</value></data>
-
-  <!-- ===== Roles ===== -->
-  <data name="Role_Admin" xml:space="preserve"><value>Admin</value></data>
-  <data name="Role_Resident" xml:space="preserve"><value>Resident</value></data>
-  <data name="Role_SuperAdmin" xml:space="preserve"><value>Super Admin</value></data>
-
+• It will not be included in expense distribution
+• No invoices will be issued for it</value>
+  </data>
+  <data name="Js_PrivateAccess" xml:space="preserve">
+    <value>Private access</value>
+  </data>
+  <data name="Js_EnterSecret" xml:space="preserve">
+    <value>Enter the password to access the Super Admin panel</value>
+  </data>
+  <data name="Js_Password" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="Js_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Js_Confirm" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
+  <data name="Js_WrongSecret" xml:space="preserve">
+    <value>❌ Incorrect password</value>
+  </data>
 </root>

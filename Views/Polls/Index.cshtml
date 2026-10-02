@@ -1,36 +1,36 @@
 @model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Poll>
 @{
-    ViewData["Title"] = "التصويتات";
+    ViewData["Title"] = Loc.T("Polls_3");
     var building = (Building)ViewBag.Building;
     var openApts = building.Apartments.Count(a => !a.Closed);
     var routeValuesStr = ViewBag.RouteValues as Dictionary<string, string> ?? new();
 }
 
-<h3 class="mb-3">🗳️ تصويتات @building.Name (@Model.TotalItems)</h3>
+<h3 class="mb-3">@Loc.T("Polls_Of_N_N", building.Name, Model.TotalItems)</h3>
 
 <div class="bg-white rounded shadow-sm p-3 mb-3">
-    <h5>➕ تصويت جديد</h5>
+    <h5>@Loc.T("New_Poll")</h5>
     <form method="post" asp-action="Create">
         <div class="mb-2">
-            <label class="form-label small">السؤال</label>
+            <label class="form-label small">@Loc.T("Question")</label>
             <input name="question" class="form-control" required />
         </div>
         <div class="mb-2">
-            <label class="form-label small">وصف (اختياري)</label>
+            <label class="form-label small">@Loc.T("Description_Optional")</label>
             <input name="description" class="form-control" />
         </div>
         <div class="mb-2">
-            <label class="form-label small">الخيارات (خياران على الأقل)</label>
-            <input name="options" class="form-control mb-1" placeholder="خيار 1" />
-            <input name="options" class="form-control mb-1" placeholder="خيار 2" />
-            <input name="options" class="form-control mb-1" placeholder="خيار 3 (اختياري)" />
-            <input name="options" class="form-control" placeholder="خيار 4 (اختياري)" />
+            <label class="form-label small">@Loc.T("Options_At_Least_Two")</label>
+            <input name="options" class="form-control mb-1" placeholder="@Loc.T("Option_1")" />
+            <input name="options" class="form-control mb-1" placeholder="@Loc.T("Option_2")" />
+            <input name="options" class="form-control mb-1" placeholder="@Loc.T("Option_3_Optional")" />
+            <input name="options" class="form-control" placeholder="@Loc.T("Option_4_Optional")" />
         </div>
         <div class="mb-2">
-            <label class="form-label small">آخر موعد (اختياري)</label>
+            <label class="form-label small">@Loc.T("Deadline_Optional")</label>
             <input name="deadline" type="date" class="form-control" />
         </div>
-        <button class="btn btn-brand">نشر التصويت</button>
+        <button class="btn btn-brand">@Loc.T("Publish_Poll")</button>
     </form>
 </div>
 
@@ -53,7 +53,7 @@
 
 @if (Model.Items.Count == 0)
 {
-    <div class="alert alert-info">لا توجد تصويتات بعد.</div>
+    <div class="alert alert-info">@Loc.T("No_Polls_Yet")</div>
 }
 else
 {
@@ -69,23 +69,23 @@ else
                     {
                         <div class="text-muted small mb-2">@poll.Description</div>
                     }
-                    <span class="badge @(active ? "bg-success" : "bg-secondary")">@(active ? "نشط" : "مغلق")</span>
-                    <span class="text-muted small ms-2">بواسطة @poll.CreatedBy</span>
+                    <span class="badge @(active ? "bg-success" : "bg-secondary")">@(active ? Loc.T("Active") : Loc.T("Closed_3"))</span>
+                    <span class="text-muted small ms-2">@Loc.T("By_N", poll.CreatedBy)</span>
                     @if (!string.IsNullOrEmpty(poll.Deadline))
                     {
-                        <span class="text-muted small ms-2">⏰ حتى @poll.Deadline</span>
+                        <span class="text-muted small ms-2">@Loc.T("Until_N", poll.Deadline)</span>
                     }
                 </div>
                 <div class="d-flex gap-1">
                     @if (poll.Closed)
                     {
-                        <form method="post" asp-action="Reopen"><input type="hidden" name="id" value="@poll.Id" /><button class="btn btn-sm btn-outline-secondary">إعادة فتح</button></form>
+                        <form method="post" asp-action="Reopen"><input type="hidden" name="id" value="@poll.Id" /><button class="btn btn-sm btn-outline-secondary">@Loc.T("Reopen")</button></form>
                     }
                     else
                     {
-                        <form method="post" asp-action="Close"><input type="hidden" name="id" value="@poll.Id" /><button class="btn btn-sm btn-outline-secondary">إغلاق</button></form>
+                        <form method="post" asp-action="Close"><input type="hidden" name="id" value="@poll.Id" /><button class="btn btn-sm btn-outline-secondary">@Loc.T("Close")</button></form>
                     }
-                    <form method="post" asp-action="Delete" onsubmit="return confirm('حذف التصويت؟');"><input type="hidden" name="id" value="@poll.Id" /><button class="btn btn-sm btn-outline-danger">حذف</button></form>
+                    <form method="post" asp-action="Delete" onsubmit="return confirm('@Loc.Js("Delete_The_Poll")');"><input type="hidden" name="id" value="@poll.Id" /><button class="btn btn-sm btn-outline-danger">@Loc.T("Delete_2")</button></form>
                 </div>
             </div>
             <div class="mt-2">
@@ -99,7 +99,7 @@ else
                     </div>
                 }
             </div>
-            <div class="text-muted small mt-2">إجمالي الأصوات: @total / @openApts</div>
+            <div class="text-muted small mt-2">@Loc.T("Total_Votes_N_N", total, openApts)</div>
         </div>
     }
 }

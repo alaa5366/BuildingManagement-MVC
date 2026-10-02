@@ -1,5 +1,6 @@
-﻿using BuildingManagementMvc.Models;
-using System.Text.Json;
+﻿using System.Text.Json;
+using Microsoft.AspNetCore.DataProtection;
+using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Services;
 
@@ -9,13 +10,19 @@ public class ImpersonationService
     private const string BackupCookieName = "bm_admin_backup";
     private readonly IAuditLogger _audit;
     private readonly ILogger<ImpersonationService> _logger;
+    private readonly ITimeLimitedDataProtector _protector;
 
     public ImpersonationService(
         IAuditLogger audit,
-        ILogger<ImpersonationService> logger)
+        ILogger<ImpersonationService> logger,
+        IDataProtectionProvider dataProtection)
     {
         _audit = audit;
         _logger = logger;
+        // ✅ الكوكي مشفّر ومتوقّع (Data Protection) وبينتهي بعد ساعتين — مينفعش يتزوّر من المتصفح
+        _protector = dataProtection
+            .CreateProtector("BuildingManagementMvc.Impersonation.v1")
+            .ToTimeLimitedDataProtector();
     }
 
     // ============================================================
@@ -28,7 +35,7 @@ public class ImpersonationService
 
         try
         {
-            return JsonSerializer.Deserialize<AdminBackupData>(json);
+            return JsonSerializer.Deserialize<AdminBackupData>(_protector.Unprotect(json));
         }
         catch (Exception ex)
         {
@@ -42,7 +49,7 @@ public class ImpersonationService
     // ============================================================
     public void SaveBackup(HttpContext ctx, AdminBackupData data)
     {
-        var json = JsonSerializer.Serialize(data);
+        var json = _protector.Protect(JsonSerializer.Serialize(data), TimeSpan.FromHours(2));
 
         ctx.Response.Cookies.Append(BackupCookieName, json, new CookieOptions
         {
@@ -67,7 +74,8 @@ public class ImpersonationService
     // ============================================================
     public bool IsImpersonating(HttpContext ctx)
     {
-        return ctx.Request.Cookies.ContainsKey(BackupCookieName);
+        // ✅ المصدر الموثوق هو الـ claim اللي السيرفر وقّعه، مش وجود كوكي
+        return ctx.User.HasClaim("impersonated", "true");
     }
 
     // ============================================================

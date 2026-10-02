@@ -1,6 +1,6 @@
 ﻿@model BuildingManagementMvc.Models.OwnSettings
 @{
-    ViewData["Title"] = "إعداداتي";
+    ViewData["Title"] = Loc.T("My_Settings");
     var isResident = ViewBag.IsResident as bool? ?? false;
     var ownerName = ViewBag.OwnerName as string ?? "";
     var aptLabel = ViewBag.AptLabel as string ?? "";
@@ -10,9 +10,9 @@
     var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
     var roleLabel = role switch
     {
-        "superadmin" => "مدير عام",
-        "admin" => "أدمن",
-        "resident" => "ساكن",
+        "superadmin" => Loc.T("Super_Admin"),
+        "admin" => Loc.T("Admin"),
+        "resident" => Loc.T("Resident_2"),
         _ => role
     };
 
@@ -25,7 +25,7 @@
 <div class="container" style="max-width: 1000px;">
 
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">⚙️ إعداداتي</h2>
+        <h2 class="mb-0">@Loc.T("My_Settings_2")</h2>
         <span class="badge bg-secondary fs-6">@roleLabel</span>
     </div>
 
@@ -40,8 +40,8 @@
                 <div class="d-flex align-items-center gap-2">
                     <span style="font-size: 22px;">👤</span>
                     <div>
-                        <strong class="fs-5">بياناتي الشخصية</strong>
-                        <div class="small text-white-50">اسمك ورقم التواصل زي ما هيظهروا في الفواتير</div>
+                        <strong class="fs-5">@Loc.T("My_Personal_Details")</strong>
+                        <div class="small text-white-50">@Loc.T("Your_Name_And_Contact_Number_As")</div>
                     </div>
                 </div>
             </div>
@@ -62,7 +62,7 @@
                             @roleLabel
                             @if (isResident && aptNumber > 0)
                             {
-                                <text> • شقة @aptNumber</text>
+                                <text> @Loc.T("Apartment_N_3", aptNumber)</text>
                             }
                         </div>
                     </div>
@@ -71,53 +71,42 @@
                 @* ===== الحقول ===== *@
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">
-                            📝 الاسم <span class="text-danger">*</span>
-                        </label>
+                        <label class="form-label fw-semibold">@Html.Raw(Loc.T("Name_2"))</label>
                         <input name="OwnerName" value="@ownerName" required
                                maxlength="100" class="form-control form-control-lg"
-                               placeholder="اكتب اسمك هنا" />
-                        <div class="form-text">الاسم اللي هيظهر في الفواتير والإشعارات</div>
+                               placeholder="@Loc.T("Enter_Your_Name_Here")" />
+                        <div class="form-text">@Loc.T("The_Name_Shown_On_Invoices_And")</div>
                     </div>
 
                     @if (isResident)
                     {
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">
-                                🏠 اسم الشقة
-                                <span class="badge bg-secondary" style="font-size: 10px;">اختياري</span>
-                            </label>
+                            <label class="form-label fw-semibold">@Html.Raw(Loc.T("Apartment_Name_Optional"))</label>
                             <input name="AptLabel" value="@aptLabel" maxlength="60"
                                    class="form-control form-control-lg"
-                                   placeholder="مثال: شقة علاء" />
-                            <div class="form-text">اسم مختصر للشقة للتمييز</div>
+                                   placeholder="@Loc.T("Example_Alaa_S_Apartment")" />
+                            <div class="form-text">@Loc.T("A_Short_Name_To_Identify_The")</div>
                         </div>
                     }
 
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">
-                            📱 رقم الموبايل
-                            <span class="badge bg-warning text-dark" style="font-size: 10px;">يؤثر على الدخول</span>
-                        </label>
+                        <label class="form-label fw-semibold">@Html.Raw(Loc.T("Mobile_Number_Affects_Login"))</label>
                         <input name="NewPhone" value="@currentPhone"
                                class="form-control form-control-lg" dir="ltr"
                                placeholder="+201xxxxxxxxx" />
                         <div class="form-text text-warning small">
-                            ⚠️ تغييره = تحديث حساب Firebase Auth تلقائيًا
+                            @Loc.T("Changing_It_Automatically_Updates_The_Firebase")
                         </div>
                     </div>
 
                     @if (!isResident)
                     {
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">
-                                💬 رقم الواتساب
-                                <span class="badge bg-success" style="font-size: 10px;">مستقل</span>
-                            </label>
+                            <label class="form-label fw-semibold">@Html.Raw(Loc.T("WhatsApp_Number_Separate"))</label>
                             <input name="NewWhatsapp" value="@currentWhatsapp"
                                    class="form-control form-control-lg" dir="ltr"
                                    placeholder="+201xxxxxxxxx" />
-                            <div class="form-text">ممكن يكون مختلف عن رقم الموبايل</div>
+                            <div class="form-text">@Loc.T("Can_Be_Different_From_The_Mobile")</div>
                         </div>
                     }
                 </div>
@@ -132,15 +121,15 @@
                 <div class="d-flex align-items-center gap-2">
                     <span style="font-size: 22px;">🔐</span>
                     <div>
-                        <strong class="fs-5">الأمان — تغيير PIN</strong>
-                        <div class="small text-white-50">اتركه فاضي لو مش عايز تغييره</div>
+                        <strong class="fs-5">@Loc.T("Security_Change_PIN")</strong>
+                        <div class="small text-white-50">@Loc.T("Leave_Empty_If_You_Don_T")</div>
                     </div>
                 </div>
             </div>
             <div class="card-body p-4">
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">🔒 PIN الحالي</label>
+                        <label class="form-label fw-semibold">@Loc.T("Current_PIN")</label>
                         <div class="input-group">
                             <input name="CurrentPin" id="currentPin" type="password"
                                    maxlength="4" inputmode="numeric" pattern="\d*"
@@ -148,11 +137,11 @@
                             <button type="button" class="btn btn-outline-secondary toggle-pin"
                                     data-target="currentPin" tabindex="-1">👁</button>
                         </div>
-                        <div class="form-text">مطلوب فقط لتغيير الموبايل أو PIN</div>
+                        <div class="form-text">@Loc.T("Required_Only_To_Change_The_Mobile")</div>
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">🔑 PIN الجديد</label>
+                        <label class="form-label fw-semibold">@Loc.T("New_PIN_2")</label>
                         <div class="input-group">
                             <input name="NewPin" id="newPin" type="password"
                                    maxlength="4" inputmode="numeric" pattern="\d*"
@@ -163,11 +152,11 @@
                         <div class="progress mt-1" style="height: 4px;">
                             <div id="pinStrength" class="progress-bar" style="width: 0%;"></div>
                         </div>
-                        <div class="form-text">4 أرقام بالظبط</div>
+                        <div class="form-text">@Loc.T("Exactly_4_Digits")</div>
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">✅ تأكيد PIN الجديد</label>
+                        <label class="form-label fw-semibold">@Loc.T("Confirm_New_PIN")</label>
                         <div class="input-group">
                             <input name="ConfirmNewPin" id="confirmPin" type="password"
                                    maxlength="4" inputmode="numeric" pattern="\d*"
@@ -189,38 +178,38 @@
                 <div class="d-flex align-items-center gap-2">
                     <span style="font-size: 22px;">⚙️</span>
                     <div>
-                        <strong class="fs-5">التفضيلات</strong>
-                        <div class="small text-white-50">اللغة، الإشعارات، طريقة الدفع</div>
+                        <strong class="fs-5">@Loc.T("Preferences")</strong>
+                        <div class="small text-white-50">@Loc.T("Language_Notifications_Payment_Method")</div>
                     </div>
                 </div>
             </div>
             <div class="card-body p-4">
                 <div class="row g-3 mb-3">
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">🌐 اللغة</label>
+                        <label class="form-label fw-semibold">@Loc.T("Language")</label>
                         <select name="Language" class="form-select form-select-lg">
-                            <option value="ar" selected="@(Model.Language == "ar")">العربية</option>
+                            <option value="ar" selected="@(Model.Language == "ar")">@Loc.T("Text_26b1b2")</option>
                             <option value="en" selected="@(Model.Language == "en")">English</option>
                         </select>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">💳 طريقة الدفع المفضلة</label>
+                        <label class="form-label fw-semibold">@Loc.T("Preferred_Payment_Method")</label>
                         <select name="PreferredPaymentMethod" class="form-select form-select-lg">
                             <option value="instapay" selected="@(Model.PreferredPaymentMethod == "instapay")">InstaPay</option>
-                            <option value="cash" selected="@(Model.PreferredPaymentMethod == "cash")">نقدي</option>
-                            <option value="bank" selected="@(Model.PreferredPaymentMethod == "bank")">تحويل بنكي</option>
-                            <option value="vodafone" selected="@(Model.PreferredPaymentMethod == "vodafone")">فودافون كاش</option>
+                            <option value="cash" selected="@(Model.PreferredPaymentMethod == "cash")">@Loc.T("Cash")</option>
+                            <option value="bank" selected="@(Model.PreferredPaymentMethod == "bank")">@Loc.T("Bank_Transfer")</option>
+                            <option value="vodafone" selected="@(Model.PreferredPaymentMethod == "vodafone")">@Loc.T("Vodafone_Cash")</option>
                         </select>
                     </div>
                 </div>
 
-                <label class="form-label fw-semibold">🔔 تفضيلات الإشعارات</label>
+                <label class="form-label fw-semibold">@Loc.T("Notification_Preferences")</label>
                 <div class="row g-2">
                     <div class="col-md-4">
                         <div class="form-check form-switch p-3 border rounded">
                             <input asp-for="NotificationPreferences.WhatsApp" class="form-check-input" />
                             <label asp-for="NotificationPreferences.WhatsApp" class="form-check-label">
-                                💬 واتساب
+                                @Loc.T("WhatsApp_2")
                             </label>
                         </div>
                     </div>
@@ -228,7 +217,7 @@
                         <div class="form-check form-switch p-3 border rounded">
                             <input asp-for="NotificationPreferences.Email" class="form-check-input" />
                             <label asp-for="NotificationPreferences.Email" class="form-check-label">
-                                📧 البريد الإلكتروني
+                                @Loc.T("Email_3")
                             </label>
                         </div>
                     </div>
@@ -236,7 +225,7 @@
                         <div class="form-check form-switch p-3 border rounded">
                             <input asp-for="NotificationPreferences.InApp" class="form-check-input" />
                             <label asp-for="NotificationPreferences.InApp" class="form-check-label">
-                                🔔 داخل التطبيق
+                                @Loc.T("In_App")
                             </label>
                         </div>
                     </div>
@@ -246,9 +235,9 @@
 
         @* ===== أزرار ===== *@
         <div class="d-flex gap-2 justify-content-end mb-5">
-            <a href="javascript:history.back()" class="btn btn-outline-secondary btn-lg">↩️ إلغاء</a>
+            <a href="javascript:history.back()" class="btn btn-outline-secondary btn-lg">@Loc.T("Cancel_3")</a>
             <button type="submit" class="btn btn-primary btn-lg px-4">
-                💾 حفظ التغييرات
+                @Loc.T("Save_Changes")
             </button>
         </div>
 
@@ -310,12 +299,12 @@
             msg.textContent = '';
             cpEl.classList.remove('is-valid', 'is-invalid');
         } else if (cp === np) {
-            msg.textContent = '✅ متطابق';
+            msg.textContent = '✅ @Html.Raw(Loc.Js("Matching"))';
             msg.className = 'form-text text-success';
             cpEl.classList.remove('is-invalid');
             cpEl.classList.add('is-valid');
         } else {
-            msg.textContent = '❌ غير متطابق';
+            msg.textContent = '❌ @Html.Raw(Loc.Js("Not_Matching"))';
             msg.className = 'form-text text-danger';
             cpEl.classList.remove('is-valid');
             cpEl.classList.add('is-invalid');
@@ -331,17 +320,17 @@
         if (np.length > 0 || cp.length > 0) {
             if (np.length !== 4) {
                 e.preventDefault();
-                alert('⚠️ PIN الجديد لازم يكون 4 أرقام');
+                alert('⚠️ PIN @Html.Raw(Loc.Js("The_New_One_Must_Be_4"))');
                 return;
             }
             if (np !== cp) {
                 e.preventDefault();
-                alert('⚠️ PIN الجديد وتأكيده مش متطابقين');
+                alert('⚠️ PIN @Html.Raw(Loc.Js("The_New_PIN_And_Its_Confirmation"))');
                 return;
             }
             if (cur.length !== 4) {
                 e.preventDefault();
-                alert('⚠️ لازم تدخل PIN الحالي لتأكيد التغيير');
+                alert('⚠️ @Html.Raw(Loc.Js("You_Must_Enter_The_Current_PIN"))');
                 return;
             }
         }

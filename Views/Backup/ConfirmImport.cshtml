@@ -1,50 +1,50 @@
 ﻿@using BuildingManagementMvc.Services
 @model BuildingImportData
 @{
-    ViewData["Title"] = "تأكيد الاستيراد";
+    ViewData["Title"] = Loc.T("Confirm_Import");
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>✅ تأكيد استيراد العمارة</h3>
-    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">← رجوع</a>
+    <h3>@Loc.T("Confirm_Building_Import")</h3>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">@Loc.T("Back")</a>
 </div>
 
 <div class="alert alert-success">
-    ✅ الملف صالح! راجع البيانات التالية قبل التأكيد.
+    @Loc.T("The_File_Is_Valid_Review_The")
 </div>
 
 <div class="bg-white rounded shadow-sm p-4 mb-3">
-    <h5>🏢 بيانات العمارة</h5>
+    <h5>@Loc.T("Building_Data")</h5>
     <dl class="row mb-0">
-        <dt class="col-sm-3">الاسم</dt>
+        <dt class="col-sm-3">@Loc.T("Name")</dt>
         <dd class="col-sm-9">@Model.Name</dd>
 
-        <dt class="col-sm-3">رقم العمارة</dt>
+        <dt class="col-sm-3">@Loc.T("Building_Number")</dt>
         <dd class="col-sm-9">
-            @(string.IsNullOrEmpty(Model.BuildingNumber) ? "تلقائي (BLD-XXX)" : Model.BuildingNumber)
+            @(string.IsNullOrEmpty(Model.BuildingNumber) ? Loc.T("Automatic_BLD_XXX") : Model.BuildingNumber)
         </dd>
 
-        <dt class="col-sm-3">PIN الأدمن</dt>
+        <dt class="col-sm-3">@Loc.T("Admin_PIN")</dt>
         <dd class="col-sm-9">@Model.AdminPin</dd>
 
-        <dt class="col-sm-3">واتساب الأدمن</dt>
+        <dt class="col-sm-3">@Loc.T("Admin_WhatsApp")</dt>
         <dd class="col-sm-9">@Model.AdminWhatsapp</dd>
     </dl>
 </div>
 
 <div class="bg-white rounded shadow-sm p-4 mb-3">
-    <h5>🏠 الشقق (@Model.Apartments.Count)</h5>
+    <h5>@Loc.T("Apartments_N", Model.Apartments.Count)</h5>
     <table class="table table-sm">
         <thead>
             <tr>
                 <th>#</th>
-                <th>الدور</th>
-                <th>رقم الشقة</th>
-                <th>المالك</th>
-                <th>واتساب</th>
+                <th>@Loc.T("Role")</th>
+                <th>@Loc.T("Apartment_Number")</th>
+                <th>@Loc.T("Owner")</th>
+                <th>@Loc.T("WhatsApp")</th>
                 <th>PIN</th>
-                <th>الرسم</th>
-                <th>الحالة</th>
+                <th>@Loc.T("Fee")</th>
+                <th>@Loc.T("Status")</th>
             </tr>
         </thead>
         <tbody>
@@ -69,11 +69,11 @@
                         <td>
                             @if (apt.Status == "closed")
                             {
-                                <span class="badge bg-secondary">مغلقة</span>
+                                <span class="badge bg-secondary">@Loc.T("Closed")</span>
                             }
                             else
                             {
-                                <span class="badge bg-success">مفتوحة</span>
+                                <span class="badge bg-success">@Loc.T("Open_2")</span>
                             }
                         </td>
                     </tr>
@@ -85,9 +85,9 @@
 </div>
 
 <div class="bg-white rounded shadow-sm p-4">
-    <h5>⚠️ تأكيد نهائي</h5>
+    <h5>@Loc.T("Final_Confirmation")</h5>
     <p class="text-muted small">
-        بمجرد الضغط على "تأكيد الاستيراد"، هتتعمل عمارة جديدة في قاعدة البيانات، وهتتعمل حسابات Firebase Auth لكل شقة.
+        @Loc.T("Once_You_Click_Confirm_Import_A")
     </p>
 
     <form method="post" asp-action="ConfirmImport">
@@ -95,10 +95,10 @@
 
         <div class="d-flex gap-2">
             <button type="submit" class="btn btn-success">
-                ✅ تأكيد الاستيراد
+                @Loc.T("Confirm_Import_2")
             </button>
             <a asp-action="Index" class="btn btn-outline-secondary">
-                إلغاء
+                @Loc.T("Cancel")
             </a>
         </div>
     </form>

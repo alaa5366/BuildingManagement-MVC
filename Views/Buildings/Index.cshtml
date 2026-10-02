@@ -1,12 +1,12 @@
 @model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Building>
 @{
-    ViewData["Title"] = "العمارات";
+    ViewData["Title"] = Loc.T("Buildings");
     var routeValuesStr = ViewBag.RouteValues as Dictionary<string, string> ?? new();
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>العمارات (@Model.TotalItems)</h3>
-    <a asp-action="Create" class="btn btn-brand">+ عمارة جديدة</a>
+    <h3>@Loc.T("Buildings_N", Model.TotalItems)</h3>
+    <a asp-action="Create" class="btn btn-brand">@Loc.T("New_Building_2")</a>
 </div>
 
 @* ✅ Pagination (فوق) *@
@@ -28,20 +28,20 @@
 
 @if (Model.Items.Count == 0)
 {
-    <div class="alert alert-info">لا توجد عمارات.</div>
+    <div class="alert alert-info">@Loc.T("No_Buildings_Found")</div>
 }
 else
 {
     <div class="table-responsive">
         <table class="table table-hover bg-white">
-            <thead><tr><th>الرقم</th><th>الاسم</th><th></th></tr></thead>
+            <thead><tr><th>@Loc.T("No")</th><th>@Loc.T("Name")</th><th></th></tr></thead>
             <tbody>
                 @foreach (var b in Model.Items)
                 {
                     <tr>
                         <td>@b.BuildingNumber</td>
                         <td>@b.Name</td>
-                        <td><a asp-action="Details" asp-route-id="@b.Id" class="btn btn-sm btn-outline-secondary">تفاصيل</a></td>
+                        <td><a asp-action="Details" asp-route-id="@b.Id" class="btn btn-sm btn-outline-secondary">@Loc.T("Details")</a></td>
                     </tr>
                 }
             </tbody>

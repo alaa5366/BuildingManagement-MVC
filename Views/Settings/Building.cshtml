@@ -1,16 +1,16 @@
 ﻿@model BuildingManagementMvc.Models.BuildingSettings
 @{
-    ViewData["Title"] = "إعدادات العمارة";
+    ViewData["Title"] = Loc.T("Building_Settings");
     var building = ViewBag.Building as BuildingManagementMvc.Models.Building;
     var buildingId = ViewBag.BuildingId as string;
 }
 
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>🏢 إعدادات @building?.Name</h2>
+        <h2>@Loc.T("Settings_Of_N", building?.Name)</h2>
         @if (User.IsInRole("superadmin"))
         {
-            <a asp-action="Building" class="btn btn-outline-secondary">← كل العمارات</a>
+            <a asp-action="Building" class="btn btn-outline-secondary">@Loc.T("All_Buildings_3")</a>
         }
     </div>
 
@@ -21,20 +21,20 @@
         @* بيانات العمارة *@
         <div class="card mb-3">
             <div class="card-header bg-primary text-white">
-                <strong>📋 بيانات العمارة</strong>
+                <strong>@Loc.T("Building_Details_2")</strong>
             </div>
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label">الاسم الظاهر</label>
+                        <label class="form-label">@Loc.T("Display_Name")</label>
                         <input name="DisplayName" value="@Model.DisplayName" class="form-control" />
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">رقم واتساب العمارة</label>
+                        <label class="form-label">@Loc.T("Building_WhatsApp_Number")</label>
                         <input name="WhatsappNumber" value="@Model.WhatsappNumber" class="form-control" />
                     </div>
                     <div class="col-12">
-                        <label class="form-label">العنوان</label>
+                        <label class="form-label">@Loc.T("Title")</label>
                         <input name="Address" value="@Model.Address" class="form-control" />
                     </div>
                 </div>
@@ -44,22 +44,22 @@
         @* سياسة الفواتير *@
         <div class="card mb-3">
             <div class="card-header bg-success text-white">
-                <strong>🧾 سياسة الفواتير</strong>
+                <strong>@Loc.T("Invoice_Policy")</strong>
             </div>
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label">يوم إصدار الفاتورة من الشهر</label>
+                        <label class="form-label">@Loc.T("Invoice_Issue_Day_Of_The_Month")</label>
                         <input type="number" name="InvoiceDayOfMonth" min="1" max="28"
                                value="@Model.InvoiceDayOfMonth" class="form-control" />
-                        <div class="form-text">1-28 (لتجنب مشاكل الشهور القصيرة)</div>
+                        <div class="form-text">@Loc.T("1_28_To_Avoid_Problems_With")</div>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">العملة</label>
+                        <label class="form-label">@Loc.T("Currency")</label>
                         <select name="Currency" class="form-select">
-                            <option value="EGP" selected="@(Model.Currency == "EGP")">ج.م (EGP)</option>
-                            <option value="SAR" selected="@(Model.Currency == "SAR")">ر.س (SAR)</option>
-                            <option value="AED" selected="@(Model.Currency == "AED")">د.إ (AED)</option>
+                            <option value="EGP" selected="@(Model.Currency == "EGP")">@Loc.T("EGP_2")</option>
+                            <option value="SAR" selected="@(Model.Currency == "SAR")">@Loc.T("SAR")</option>
+                            <option value="AED" selected="@(Model.Currency == "AED")">@Loc.T("AED")</option>
                             <option value="USD" selected="@(Model.Currency == "USD")">$ (USD)</option>
                         </select>
                     </div>
@@ -70,36 +70,28 @@
         @* توزيع المصروفات *@
         <div class="card mb-3">
             <div class="card-header bg-info text-dark">
-                <strong>⚖️ توزيع المصروفات</strong>
+                <strong>@Loc.T("Expense_Distribution")</strong>
             </div>
             <div class="card-body">
                 <div class="form-check mb-2">
                     <input type="radio" name="ExpenseDistribution" value="equal" class="form-check-input"
                            id="dist-equal" @(Model.ExpenseDistribution == "equal" ? "checked" : "") />
-                    <label class="form-check-label" for="dist-equal">
-                        <strong>بالتساوي</strong> — على كل الشقق المفتوحة بالتساوي
-                    </label>
+                    <label class="form-check-label" for="dist-equal">@Html.Raw(Loc.T("Equally_Equally_Across_All_Open_Apartments"))</label>
                 </div>
                 <div class="form-check mb-2">
                     <input type="radio" name="ExpenseDistribution" value="by_area" class="form-check-input"
                            id="dist-area" @(Model.ExpenseDistribution == "by_area" ? "checked" : "") />
-                    <label class="form-check-label" for="dist-area">
-                        <strong>حسب المساحة</strong> — نسبة لكل شقة حسب المساحة
-                    </label>
+                    <label class="form-check-label" for="dist-area">@Html.Raw(Loc.T("By_Area_A_Share_For_Each"))</label>
                 </div>
                 <div class="form-check mb-2">
                     <input type="radio" name="ExpenseDistribution" value="by_residents" class="form-check-input"
                            id="dist-res" @(Model.ExpenseDistribution == "by_residents" ? "checked" : "") />
-                    <label class="form-check-label" for="dist-res">
-                        <strong>حسب عدد السكان</strong> — نسبة حسب عدد أفراد الشقة
-                    </label>
+                    <label class="form-check-label" for="dist-res">@Html.Raw(Loc.T("By_Number_Of_Residents_A_Share"))</label>
                 </div>
                 <div class="form-check">
                     <input type="radio" name="ExpenseDistribution" value="by_opened" class="form-check-input"
                            id="dist-open" @(Model.ExpenseDistribution == "by_opened" ? "checked" : "") />
-                    <label class="form-check-label" for="dist-open">
-                        <strong>على الشقق المفتوحة والمعطّلة فقط</strong> — المقفولة مستثناة
-                    </label>
+                    <label class="form-check-label" for="dist-open">@Html.Raw(Loc.T("Open_And_Disabled_Apartments_Only_Closed"))</label>
                 </div>
             </div>
         </div>
@@ -107,16 +99,16 @@
         @* التصويتات *@
         <div class="card mb-3">
             <div class="card-header bg-warning">
-                <strong>🗳️ التصويتات</strong>
+                <strong>@Loc.T("Polls_2")</strong>
             </div>
             <div class="card-body">
-                <label class="form-label">نصاب التصويت (%)</label>
+                <label class="form-label">@Loc.T("Voting_Quorum")</label>
                 <input type="number" name="VotingQuorumPercent" min="1" max="100"
                        value="@Model.VotingQuorumPercent" class="form-control" />
-                <div class="form-text">النسبة المطلوبة من السكان لاعتبار التصويت صحيحًا</div>
+                <div class="form-text">@Loc.T("The_Percentage_Of_Residents_Required_For")</div>
             </div>
         </div>
 
-        <button type="submit" class="btn btn-primary btn-lg">💾 حفظ الإعدادات</button>
+        <button type="submit" class="btn btn-primary btn-lg">@Loc.T("Save_Settings")</button>
     </form>
 </div>

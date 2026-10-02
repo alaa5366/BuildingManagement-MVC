@@ -96,28 +96,28 @@ public static class AdminPermissions
     // أسماء عربية للعرض
     public static string LabelAr(string key) => key switch
     {
-        ManageBuildings => "إدارة العمارات",
-        ManageAdmins => "إدارة الأدمنة",
-        ManageResidents => "إدارة السكان",
-        ManageWallet => "إدارة المحافظ",
-        ManageExpenses => "إدارة المصروفات",
-        ManageRevenues => "إدارة الإيرادات",
-        ManageCategories => "الفئات المالية",
-        ViewReports => "عرض التقارير",
-        ManagePolls => "إدارة التصويتات",
-        ManageMaintenance => "إدارة الصيانة",
-        SendNotifications => "إرسال الإشعارات",
-        UseWhatsApp => "استخدام واتساب",
-        ViewAuditLogAll => "السجل الكامل",
-        ViewAuditLogBuilding => "سجل العمارة",
-        ViewAuditLogOwn => "سجلي فقط",
-        ManageSettingsGlobal => "الإعدادات العامة",
-        ManageSettingsBuilding => "إعدادات العمارة",
-        ManageSettingsOwn => "إعداداتي",
-        ManageTools => "الأدوات المتقدمة",
-        ManageBackup => "النسخ الاحتياطي",
-        ManageSync => "مزامنة الداتابيز",
-        SecretAccess => "الدخول السري",
+        ManageBuildings => Loc.T("Manage_Buildings"),
+        ManageAdmins => Loc.T("Manage_Admins"),
+        ManageResidents => Loc.T("Manage_Residents"),
+        ManageWallet => Loc.T("Manage_Wallets"),
+        ManageExpenses => Loc.T("Manage_Expenses"),
+        ManageRevenues => Loc.T("Manage_Revenues"),
+        ManageCategories => Loc.T("Financial_Categories"),
+        ViewReports => Loc.T("View_Reports"),
+        ManagePolls => Loc.T("Manage_Polls"),
+        ManageMaintenance => Loc.T("Manage_Maintenance"),
+        SendNotifications => Loc.T("Send_Notifications"),
+        UseWhatsApp => Loc.T("Use_WhatsApp"),
+        ViewAuditLogAll => Loc.T("Full_Log"),
+        ViewAuditLogBuilding => Loc.T("Building_Log"),
+        ViewAuditLogOwn => Loc.T("My_Log_Only"),
+        ManageSettingsGlobal => Loc.T("Global_Settings"),
+        ManageSettingsBuilding => Loc.T("Building_Settings"),
+        ManageSettingsOwn => Loc.T("My_Settings"),
+        ManageTools => Loc.T("Advanced_Tools"),
+        ManageBackup => Loc.T("Backup"),
+        ManageSync => Loc.T("Database_Sync"),
+        SecretAccess => Loc.T("Secret_Access"),
         _ => key
     };
     // ============================================================
@@ -144,10 +144,10 @@ public static class AdminPermissions
 
     public static string CategoryLabelAr(PermissionCategory cat) => cat switch
     {
-        PermissionCategory.Admin => "🏢 إدارة",
-        PermissionCategory.Financial => "💰 مالية",
-        PermissionCategory.Services => "🛎️ خدمات",
-        PermissionCategory.System => "🛠️ نظام",
+        PermissionCategory.Admin => Loc.T("Management"),
+        PermissionCategory.Financial => Loc.T("Finance_2"),
+        PermissionCategory.Services => Loc.T("Services"),
+        PermissionCategory.System => Loc.T("System"),
         _ => cat.ToString()
     };
 
@@ -156,33 +156,33 @@ public static class AdminPermissions
     // ============================================================
     public static string DescriptionAr(string key) => key switch
     {
-        ManageBuildings => "إنشاء/تعديل/حذف العمارات + إدارة الهيكل (أدوار + شقق)",
-        ManageAdmins => "إضافة/تعديل/تعطيل الأدمنة + إدارة الصلاحيات",
-        ManageResidents => "إضافة/تعديل/تعطيل السكان + إعادة تعيين PIN",
+        ManageBuildings => Loc.T("Create_Edit_Delete_Buildings_Manage_The"),
+        ManageAdmins => Loc.T("Add_Edit_Disable_Admins_Manage_Permissions"),
+        ManageResidents => Loc.T("Add_Edit_Disable_Residents_Reset_PINs"),
 
-        ManageWallet => "عرض الأرصدة، تأكيد/إلغاء الدفعات، التسويات اليدوية، إصدار الفواتير",
-        ManageExpenses => "إضافة/تعديل/حذف المصروفات الشهرية",
-        ManageRevenues => "إضافة/تعديل/حذف الإيرادات الشهرية",
-        ManageCategories => "إدارة فئات المصروفات والإيرادات (ألوان، ترتيب، تفعيل)",
-        ViewReports => "عرض التقارير المالية + تصدير CSV",
+        ManageWallet => Loc.T("View_Balances_Confirm_Cancel_Payments_Manual"),
+        ManageExpenses => Loc.T("Add_Edit_Delete_Monthly_Expenses"),
+        ManageRevenues => Loc.T("Add_Edit_Delete_Monthly_Revenues"),
+        ManageCategories => Loc.T("Manage_Expense_And_Revenue_Categories_Colors"),
+        ViewReports => Loc.T("View_Financial_Reports_CSV_Export"),
 
-        ManagePolls => "إنشاء/إغلاق/حذف التصويتات + متابعة النتائج",
-        ManageMaintenance => "إضافة/تعديل/حذف سجلات الصيانة + إضافة التكلفة للمصروفات",
-        SendNotifications => "إرسال إشعارات داخل التطبيق للأدمنة والسكان",
-        UseWhatsApp => "توليد رسائل واتساب من القوالب + فتح روابط wa.me",
+        ManagePolls => Loc.T("Create_Close_Delete_Polls_Follow_Results"),
+        ManageMaintenance => Loc.T("Add_Edit_Delete_Maintenance_Records_Add"),
+        SendNotifications => Loc.T("Send_In_App_Notifications_To_Admins"),
+        UseWhatsApp => Loc.T("Generate_WhatsApp_Messages_From_Templates_Open"),
 
-        ViewAuditLogAll => "عرض كل السجلات في كل العمارات (Super Admin)",
-        ViewAuditLogBuilding => "عرض سجل العمارة فقط (Admin)",
-        ViewAuditLogOwn => "عرض سجل شقتي فقط (Resident)",
+        ViewAuditLogAll => Loc.T("View_All_Records_Across_All_Buildings"),
+        ViewAuditLogBuilding => Loc.T("View_The_Building_Log_Only_Admin"),
+        ViewAuditLogOwn => Loc.T("View_My_Apartment_S_Log_Only"),
 
-        ManageSettingsGlobal => "إعدادات النظام العامة (Super Admin)",
-        ManageSettingsBuilding => "إعدادات العمارة (سياسة فواتير، توزيع مصروفات، …)",
-        ManageSettingsOwn => "إعداداتي الشخصية (موبايل، واتساب، PIN، اللغة)",
+        ManageSettingsGlobal => Loc.T("Global_System_Settings_Super_Admin"),
+        ManageSettingsBuilding => Loc.T("Building_Settings_Invoice_Policy_Expense_Distrib"),
+        ManageSettingsOwn => Loc.T("My_Personal_Settings_Mobile_WhatsApp_PIN"),
 
-        ManageTools => "Migration + صيانة DB + تصدير شامل ZIP",
-        ManageBackup => "نسخ احتياطي كامل + استعادة",
-        ManageSync => "مزامنة Firebase Auth مع Firestore (فحص/إصلاح)",
-        SecretAccess => "الدخول السري (impersonation) للعمارات والشقق",
+        ManageTools => Loc.T("Migration_DB_Maintenance_Full_ZIP_Export"),
+        ManageBackup => Loc.T("Full_Backup_Restore"),
+        ManageSync => Loc.T("Sync_Firebase_Auth_With_Firestore_Check"),
+        SecretAccess => Loc.T("Secret_Access_Impersonation_To_Buildings_And"),
 
         _ => key
     };
@@ -229,27 +229,27 @@ public static class AdminPermissions
             "Index, Generate"),
 
         ViewAuditLogAll => ("AuditLogQueryService", "AuditLogController",
-            "Index (Super Admin — كل السجلات), ExportCsv"),
+            Loc.T("Index_Super_Admin_All_Records_ExportCsv")),
 
         ViewAuditLogBuilding => ("AuditLogQueryService", "AuditLogController",
-            "Index (Admin — سجل عمارته)"),
+            Loc.T("Index_Admin_Own_Building_S_Log")),
 
         ViewAuditLogOwn => ("AuditLogQueryService", "AuditLogController",
-            "Index (Resident — سجل شقته)"),
+            Loc.T("Index_Resident_Own_Apartment_S_Log")),
 
-        ManageSettingsGlobal => ("(قريبًا) SettingsService", "(قريبًا) SettingsController", "-"),
-        ManageSettingsBuilding => ("(قريبًا) SettingsService", "(قريبًا) SettingsController", "-"),
-        ManageSettingsOwn => ("(قريبًا) SettingsService", "(قريبًا) SettingsController", "-"),
+        ManageSettingsGlobal => (Loc.T("Soon_SettingsService"), Loc.T("Soon_SettingsController"), "-"),
+        ManageSettingsBuilding => (Loc.T("Soon_SettingsService"), Loc.T("Soon_SettingsController"), "-"),
+        ManageSettingsOwn => (Loc.T("Soon_SettingsService"), Loc.T("Soon_SettingsController"), "-"),
 
         ManageTools => ("MigrationService, DbMaintenanceService", "ToolsController",
             "Index, Migration, RunMigration, Maintenance, RunMaintenance, Export, ExportAll"),
 
-        ManageBackup => ("(قريبًا) BackupService", "(قريبًا) BackupController", "-"),
+        ManageBackup => (Loc.T("Soon_BackupService"), Loc.T("Soon_BackupController"), "-"),
 
         ManageSync => ("DbSyncService", "SyncController",
             "Index, SyncAdmins, SyncResidents, SyncPasswords"),
 
-        SecretAccess => ("(قريبًا) SecretAccessService", "(قريبًا) SecretAccessController", "-"),
+        SecretAccess => (Loc.T("Soon_SecretAccessService"), Loc.T("Soon_SecretAccessController"), "-"),
 
         _ => ("-", "-", "-")
     };

@@ -1,38 +1,38 @@
 ﻿@model BuildingManagementMvc.Models.AppUserDoc
 @{
-    ViewData["Title"] = "تعديل أدمن";
+    ViewData["Title"] = Loc.T("Edit_Admin");
     var allPerms = ViewBag.AllPermissions as List<string> ?? new();
     var current = Model.Permissions ?? new List<string>();
 }
 
 <div class="container">
-    <h2>✏️ تعديل: @Model.Name</h2>
+    <h2>@Loc.T("Edit_N", Model.Name)</h2>
 
     <form asp-action="Edit" method="post">
         @Html.AntiForgeryToken()
         <input type="hidden" name="id" value="@Model.Uid" />
 
         <div class="mb-3">
-            <label class="form-label">الاسم</label>
+            <label class="form-label">@Loc.T("Name")</label>
             <input name="name" class="form-control" value="@Model.Name" required />
         </div>
 
         <div class="mb-3">
-            <label class="form-label">رقم الموبايل</label>
+            <label class="form-label">@Loc.T("Mobile_Number")</label>
             <input name="phone" class="form-control" value="@Model.Phone" required />
         </div>
 
         <div class="mb-3">
-            <label class="form-label">البريد</label>
+            <label class="form-label">@Loc.T("Email_2")</label>
             <input class="form-control" value="@Model.Email" disabled />
         </div>
 
         <div class="mb-3">
-            <label><input type="checkbox" name="isActive" value="true" @(Model.IsActive && !Model.Disabled ? "checked" : "") /> نشط</label>
+            <label><input type="checkbox" name="isActive" value="true" @(Model.IsActive && !Model.Disabled ? "checked" : "") /> @Loc.T("Active")</label>
         </div>
 
         <div class="mb-3">
-            <label class="form-label">الصلاحيات</label>
+            <label class="form-label">@Loc.T("Permissions")</label>
             <div class="row">
                 @foreach (var p in allPerms)
                 {
@@ -45,21 +45,21 @@
             </div>
         </div>
 
-        <button class="btn btn-primary">حفظ</button>
-        <a asp-action="Index" class="btn btn-secondary">إلغاء</a>
+        <button class="btn btn-primary">@Loc.T("Save")</button>
+        <a asp-action="Index" class="btn btn-secondary">@Loc.T("Cancel")</a>
     </form>
 
     <hr />
 
-    <h4>🔐 تغيير PIN</h4>
+    <h4>@Loc.T("Change_PIN")</h4>
     <form asp-action="ChangePin" method="post" class="row g-2">
         @Html.AntiForgeryToken()
         <input type="hidden" name="id" value="@Model.Uid" />
         <div class="col-md-4">
-            <input name="newPin" type="password" class="form-control" placeholder="PIN جديد" required />
+            <input name="newPin" type="password" class="form-control" placeholder="@Loc.T("New_PIN")" required />
         </div>
         <div class="col-md-2">
-            <button class="btn btn-warning">تغيير PIN</button>
+            <button class="btn btn-warning">@Loc.T("Change_PIN_2")</button>
         </div>
     </form>
 </div>

@@ -1,6 +1,7 @@
-using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using BuildingManagementMvc.Services;
+using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Controllers;
 
@@ -46,26 +47,26 @@ public class BuildingsController : Controller
     {
         if (string.IsNullOrWhiteSpace(name) || name.Length < 2 || name.Length > 100)
         {
-            ModelState.AddModelError("", "اسم العمارة مطلوب (من 2 إلى 100 حرف)");
+            ModelState.AddModelError("", Loc.T("Building_Name_Is_Required_2_To"));
             return View();
         }
 
         if (string.IsNullOrWhiteSpace(adminPin) || adminPin.Length != 4 || !adminPin.All(char.IsDigit))
         {
-            ModelState.AddModelError("", "PIN الأدمن لازم يكون 4 أرقام بالظبط");
+            ModelState.AddModelError("", Loc.T("Admin_PIN_Must_Be_Exactly_4"));
             return View();
         }
 
         if (string.IsNullOrWhiteSpace(adminWhatsapp))
         {
-            ModelState.AddModelError("", "رقم واتساب الأدمن مطلوب");
+            ModelState.AddModelError("", Loc.T("Admin_WhatsApp_Number_Is_Required"));
             return View();
         }
 
         var phoneClean = adminWhatsapp.Replace("+", "").Trim();
         if (!phoneClean.All(char.IsDigit) || phoneClean.Length < 7)
         {
-            ModelState.AddModelError("", "رقم واتساب الأدمن غير صحيح (أرقام فقط، 7 خانات على الأقل)");
+            ModelState.AddModelError("", Loc.T("Admin_WhatsApp_Number_Is_Invalid_Digits"));
             return View();
         }
 
@@ -73,7 +74,7 @@ public class BuildingsController : Controller
         {
             if (!System.Text.RegularExpressions.Regex.IsMatch(buildingNumber.Trim(), @"^BLD-\d{3}$"))
             {
-                ModelState.AddModelError("", "رقم العمارة لازم يكون بصيغة BLD-XXX (مثال: BLD-001)");
+                ModelState.AddModelError("", Loc.T("Building_Number_Must_Be_In_The"));
                 return View();
             }
         }
@@ -88,7 +89,7 @@ public class BuildingsController : Controller
             addDefaultRevenueCategories
         );
 
-        TempData["Message"] = $"✅ تم إنشاء العمارة {number} بنجاح";
+        TempData["Message"] = Loc.T("Building_N_Created_Successfully", number);
         return RedirectToAction("Details", new { id });
     }
 
@@ -147,12 +148,12 @@ public class BuildingsController : Controller
 
         if (apts.Count == 0)
         {
-            TempData["Error"] = "لازم تدخل رقم واتساب و PIN لكل شقة (مفصولين بفاصلة)";
+            TempData["Error"] = Loc.T("You_Must_Enter_A_WhatsApp_Number");
             return RedirectToAction("Details", new { id = buildingId });
         }
 
         await _service.AddFloorAsync(buildingId, label, apts);
-        TempData["Message"] = "تمت إضافة الدور بنجاح";
+        TempData["Message"] = Loc.T("Floor_Added_Successfully");
         return RedirectToAction("Details", new { id = buildingId });
     }
 
@@ -162,12 +163,12 @@ public class BuildingsController : Controller
     {
         if (string.IsNullOrWhiteSpace(phone) || string.IsNullOrWhiteSpace(pin) || pin.Length < 4)
         {
-            TempData["Error"] = "رقم الواتساب و PIN (4 أرقام على الأقل) مطلوبين";
+            TempData["Error"] = Loc.T("WhatsApp_Number_And_PIN_At_Least");
             return RedirectToAction("Details", new { id = buildingId });
         }
 
         await _service.AddApartmentAsync(buildingId, floorId, phone, pin);
-        TempData["Message"] = "تمت إضافة الشقة بنجاح";
+        TempData["Message"] = Loc.T("Apartment_Added_Successfully");
         return RedirectToAction("Details", new { id = buildingId });
     }
     [HttpPost]
@@ -259,7 +260,7 @@ public class BuildingsController : Controller
             }
         }
 
-        TempData["Message"] = $"✅ تم إصلاح {successCount} حساب، فشل {failCount}";
+        TempData["Message"] = Loc.T("Fixed_N_Accounts_N_Failed", successCount, failCount);
         return RedirectToAction("Details", new { id });
     }
     // ============================================================
@@ -292,7 +293,7 @@ public class BuildingsController : Controller
             if (signIn.Success)
             {
                 successCount++;
-                results.Add($"✅ شقة {apt.Number}: موجود بالفعل");
+                results.Add(Loc.T("Apartment_N_Already_Exists", apt.Number));
                 logger.LogInformation($"[Recreate] Apt {apt.Number}: OK (already exists)");
                 continue;
             }
@@ -308,25 +309,25 @@ public class BuildingsController : Controller
                 if (verify.Success)
                 {
                     successCount++;
-                    results.Add($"✅ شقة {apt.Number}: تم الإنشاء");
+                    results.Add(Loc.T("Apartment_N_Created", apt.Number));
                     logger.LogInformation($"[Recreate] Apt {apt.Number}: Created + Verified");
                 }
                 else
                 {
                     failCount++;
-                    results.Add($"⚠️ شقة {apt.Number}: اتعمل بس SignIn فشل");
+                    results.Add(Loc.T("Apartment_N_Created_But_Sign_In", apt.Number));
                     logger.LogWarning($"[Recreate] Apt {apt.Number}: Created but SignIn failed");
                 }
             }
             catch (Exception ex)
             {
                 failCount++;
-                results.Add($"❌ شقة {apt.Number}: {ex.Message}");
+                results.Add(Loc.T("Apartment_N_N_3", apt.Number, ex.Message));
                 logger.LogError(ex, $"[Recreate] Apt {apt.Number}: Failed");
             }
         }
 
-        TempData["Message"] = $"✅ نجح {successCount}، فشل {failCount}";
+        TempData["Message"] = Loc.T("N_Succeeded_N_Failed", successCount, failCount);
         TempData["Details"] = string.Join(" | ", results);
 
         return RedirectToAction("Details", new { id });
@@ -378,7 +379,7 @@ public class BuildingsController : Controller
             }
         }
 
-        TempData["Message"] = $"✅ نجح {success}، فشل {fail}";
+        TempData["Message"] = Loc.T("N_Succeeded_N_Failed", success, fail);
         return RedirectToAction("Details", new { id });
     }
 }

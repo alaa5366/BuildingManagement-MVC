@@ -1,10 +1,10 @@
 ﻿@model List<BuildingManagementMvc.Models.Building>
 @{
-    ViewData["Title"] = "اختر العمارة";
+    ViewData["Title"] = Loc.T("Select_Building");
 }
 
 <div class="container">
-    <h2>🏢 اختر العمارة لإدارة فئاتها المالية</h2>
+    <h2>@Loc.T("Select_The_Building_To_Manage_Its")</h2>
     <div class="list-group mt-3">
         @foreach (var b in Model)
         {
@@ -15,7 +15,7 @@
         }
         @if (Model.Count == 0)
         {
-            <div class="alert alert-info">لا توجد عمارات.</div>
+            <div class="alert alert-info">@Loc.T("No_Buildings_Found")</div>
         }
     </div>
 </div>

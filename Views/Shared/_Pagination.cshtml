@@ -21,17 +21,17 @@
 
         @* عرض المعلومات *@
         <div class="text-muted small">
-            عرض <strong>@firstIdx</strong> – <strong>@lastIdx</strong>
-            من إجمالي <strong>@totalItems</strong>
+            @Loc.T("View")<strong>@firstIdx</strong> – <strong>@lastIdx</strong>
+            @Loc.T("Of_A_Total_Of")<strong>@totalItems</strong>
             @if (totalPages > 1)
             {
-                <span> — صفحة <strong>@currentPage</strong> من <strong>@totalPages</strong></span>
+                <span> @Loc.T("Page")<strong>@currentPage</strong> @Loc.T("Of")<strong>@totalPages</strong></span>
             }
         </div>
 
         @* تغيير حجم الصفحة *@
         <div class="d-flex align-items-center gap-2">
-            <label class="form-label mb-0 small">حجم الصفحة:</label>
+            <label class="form-label mb-0 small">@Loc.T("Page_Size")</label>
             <select class="form-select form-select-sm" style="width:auto;"
                     onchange="window.location.href = this.value;">
                 @foreach (var opt in pageSizeOptions)
@@ -59,7 +59,7 @@
                         var prevUrl = Url.Action(actionName, controllerName, prevRoute);
                     }
                     <li class="page-item @(hasPrev ? "" : "disabled")">
-                        <a class="page-link" href="@(hasPrev ? prevUrl : "#")">‹ السابق</a>
+                        <a class="page-link" href="@(hasPrev ? prevUrl : "#")">@Loc.T("Previous")</a>
                     </li>
 
                     @* أرقام الصفحات *@
@@ -102,7 +102,7 @@
                         var nextUrl = Url.Action(actionName, controllerName, nextRoute);
                     }
                     <li class="page-item @(hasNext ? "" : "disabled")">
-                        <a class="page-link" href="@(hasNext ? nextUrl : "#")">التالي ›</a>
+                        <a class="page-link" href="@(hasNext ? nextUrl : "#")">@Loc.T("Next")</a>
                     </li>
                 </ul>
             </nav>

@@ -1,6 +1,6 @@
 ﻿@model BuildingManagementMvc.Models.ScheduledBackupSettings
 @{
-    ViewData["Title"] = "النسخ المجدولة";
+    ViewData["Title"] = Loc.T("Scheduled_Backups_2");
     var collections = ViewBag.AvailableCollections as IReadOnlyDictionary<string, string>
                        ?? new Dictionary<string, string>();
     var backupFiles = ViewBag.BackupFiles as List<(string FileName, long FileSize, DateTime CreatedAt)>
@@ -9,10 +9,10 @@
 
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>⏰ النسخ الاحتياطي المجدول</h2>
+        <h2>@Loc.T("Scheduled_Backup")</h2>
         <div>
-            <a asp-action="Index" class="btn btn-outline-secondary">← الرئيسية</a>
-            <a asp-action="History" class="btn btn-outline-info">📜 السجل</a>
+            <a asp-action="Index" class="btn btn-outline-secondary">@Loc.T("Home")</a>
+            <a asp-action="History" class="btn btn-outline-info">@Loc.T("Log_2")</a>
         </div>
     </div>
 
@@ -33,64 +33,64 @@
 
         <div class="card mb-3">
             <div class="card-header bg-primary text-white">
-                <strong>⚙️ إعدادات الجدولة</strong>
+                <strong>@Loc.T("Schedule_Settings")</strong>
             </div>
             <div class="card-body">
                 <div class="form-check form-switch mb-3">
                     <input type="checkbox" name="Enabled" value="true" class="form-check-input"
                            id="enabled" @(Model.Enabled ? "checked" : "") />
                     <label class="form-check-label" for="enabled">
-                        <strong>تشغيل النسخ التلقائي</strong>
+                        <strong>@Loc.T("Enable_Automatic_Backups")</strong>
                     </label>
                 </div>
 
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label">التكرار</label>
+                        <label class="form-label">@Loc.T("Frequency")</label>
                         <select name="Frequency" class="form-select" id="frequency">
-                            <option value="daily" selected="@(Model.Frequency == "daily")">📅 يومي</option>
-                            <option value="weekly" selected="@(Model.Frequency == "weekly")">📆 أسبوعي</option>
-                            <option value="monthly" selected="@(Model.Frequency == "monthly")">🗓️ شهري</option>
+                            <option value="daily" selected="@(Model.Frequency == "daily")">@Loc.T("Daily")</option>
+                            <option value="weekly" selected="@(Model.Frequency == "weekly")">@Loc.T("Weekly")</option>
+                            <option value="monthly" selected="@(Model.Frequency == "monthly")">@Loc.T("Monthly")</option>
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">الساعة (UTC)</label>
+                        <label class="form-label">@Loc.T("Hour_UTC")</label>
                         <input type="number" name="Hour" min="0" max="23" value="@Model.Hour" class="form-control" />
-                        <div class="form-text">0-23 — مثلاً: 2 = 2 الفجر</div>
+                        <div class="form-text">@Loc.T("0_23_E_G_2_2")</div>
                     </div>
                     <div class="col-md-4" id="dowGroup" style="display:none;">
-                        <label class="form-label">اليوم (للأسبوعي)</label>
+                        <label class="form-label">@Loc.T("Day_For_Weekly")</label>
                         <select name="DayOfWeek" class="form-select">
-                            <option value="">— اختر —</option>
-                            <option value="0" selected="@(Model.DayOfWeek == 0)">الأحد</option>
-                            <option value="1" selected="@(Model.DayOfWeek == 1)">الاثنين</option>
-                            <option value="2" selected="@(Model.DayOfWeek == 2)">الثلاثاء</option>
-                            <option value="3" selected="@(Model.DayOfWeek == 3)">الأربعاء</option>
-                            <option value="4" selected="@(Model.DayOfWeek == 4)">الخميس</option>
-                            <option value="5" selected="@(Model.DayOfWeek == 5)">الجمعة</option>
-                            <option value="6" selected="@(Model.DayOfWeek == 6)">السبت</option>
+                            <option value="">@Loc.T("Select_2")</option>
+                            <option value="0" selected="@(Model.DayOfWeek == 0)">@Loc.T("Sunday")</option>
+                            <option value="1" selected="@(Model.DayOfWeek == 1)">@Loc.T("Monday")</option>
+                            <option value="2" selected="@(Model.DayOfWeek == 2)">@Loc.T("Tuesday")</option>
+                            <option value="3" selected="@(Model.DayOfWeek == 3)">@Loc.T("Wednesday")</option>
+                            <option value="4" selected="@(Model.DayOfWeek == 4)">@Loc.T("Thursday")</option>
+                            <option value="5" selected="@(Model.DayOfWeek == 5)">@Loc.T("Friday")</option>
+                            <option value="6" selected="@(Model.DayOfWeek == 6)">@Loc.T("Saturday")</option>
                         </select>
                     </div>
                     <div class="col-md-4" id="domGroup" style="display:none;">
-                        <label class="form-label">اليوم من الشهر (للشهري)</label>
+                        <label class="form-label">@Loc.T("Day_Of_Month_For_Monthly")</label>
                         <input type="number" name="DayOfMonth" min="1" max="28"
                                value="@(Model.DayOfMonth ?? 1)" class="form-control" />
-                        <div class="form-text">1-28 (لتجنب مشاكل الشهور القصيرة)</div>
+                        <div class="form-text">@Loc.T("1_28_To_Avoid_Problems_With")</div>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">عدد النسخ المحفوظة</label>
+                        <label class="form-label">@Loc.T("Number_Of_Backups_To_Keep")</label>
                         <input type="number" name="MaxBackupsToKeep" min="1" max="30"
                                value="@Model.MaxBackupsToKeep" class="form-control" />
-                        <div class="form-text">الأقدم بيتمسح تلقائيًا</div>
+                        <div class="form-text">@Loc.T("The_Oldest_Is_Deleted_Automatically")</div>
                     </div>
                 </div>
 
                 <hr />
 
                 <div class="mb-2">
-                    <strong>📦 Collections المشمولة:</strong>
-                    <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="selectAll(true)">الكل</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="selectAll(false)">لا شيء</button>
+                    <strong>@Loc.T("Included_Collections")</strong>
+                    <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="selectAll(true)">@Loc.T("All_2")</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="selectAll(false)">@Loc.T("None")</button>
                 </div>
 
                 <div class="row g-2">
@@ -111,11 +111,11 @@
                 </div>
             </div>
             <div class="card-footer">
-                <button type="submit" class="btn btn-primary">💾 حفظ الإعدادات</button>
+                <button type="submit" class="btn btn-primary">@Loc.T("Save_Settings")</button>
                 @if (Model.Enabled)
                 {
                     <span class="text-muted ms-3">
-                        آخر تشغيل: @(string.IsNullOrEmpty(Model.LastRunAt) ? "لم يتم" : DateTime.Parse(Model.LastRunAt).ToLocalTime().ToString("yyyy-MM-dd HH:mm"))
+                        @Loc.T("Last_Run_N", string.IsNullOrEmpty(Model.LastRunAt) ? Loc.T("Never") : DateTime.Parse(Model.LastRunAt).ToLocalTime().ToString("yyyy-MM-dd HH:mm"))
                     </span>
                 }
             </div>
@@ -126,10 +126,10 @@
     @* تشغيل يدوي                                    *@
     @* ============================================ *@
     <form method="post" asp-action="RunNow" class="mb-3"
-          onsubmit="return confirm('تشغيل نسخة الآن يدويًا؟');">
+          onsubmit="return confirm('@Loc.Js("Run_A_Backup_Now_Manually")');">
         @Html.AntiForgeryToken()
         <button class="btn btn-warning">
-            ⚡ تشغيل نسخة الآن (يدويًا)
+            @Loc.T("Run_Backup_Now_Manual")
         </button>
     </form>
 
@@ -138,21 +138,21 @@
     @* ============================================ *@
     <div class="card">
         <div class="card-header">
-            <strong>📁 النسخ المحفوظة (@backupFiles.Count)</strong>
+            <strong>@Loc.T("Saved_Backups_N", backupFiles.Count)</strong>
         </div>
         <div class="card-body">
             @if (backupFiles.Count == 0)
             {
-                <div class="alert alert-info mb-0">لا توجد نسخ محفوظة بعد.</div>
+                <div class="alert alert-info mb-0">@Loc.T("No_Saved_Backups_Yet")</div>
             }
             else
             {
                 <table class="table table-sm table-hover">
                     <thead>
                         <tr>
-                            <th>الملف</th>
-                            <th>الحجم</th>
-                            <th>التاريخ</th>
+                            <th>@Loc.T("File")</th>
+                            <th>@Loc.T("Size")</th>
+                            <th>@Loc.T("Date")</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -165,9 +165,9 @@
                                 <td>@f.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
                                 <td>
                                     <a asp-action="DownloadBackup" asp-route-fileName="@f.FileName"
-                                       class="btn btn-sm btn-outline-primary">⬇️ تحميل</a>
+                                       class="btn btn-sm btn-outline-primary">@Loc.T("Download")</a>
                                     <form method="post" asp-action="DeleteBackup" class="d-inline"
-                                          onsubmit="return confirm('حذف الملف؟');">
+                                          onsubmit="return confirm('@Loc.Js("Delete_The_File")');">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="fileName" value="@f.FileName" />
                                         <button class="btn btn-sm btn-outline-danger">🗑️</button>

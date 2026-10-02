@@ -1,5 +1,5 @@
-﻿using ClosedXML.Excel;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
+using ClosedXML.Excel;
 
 namespace BuildingManagementMvc.Services;
 
@@ -23,7 +23,7 @@ public class ExcelImportService
 
             // 1. تحقق من وجود _meta
             if (!workbook.Worksheets.Contains("_meta"))
-                return ImportValidationResult.Fail("الملف ده مش من النظام. حمّل القالب من التطبيق.");
+                return ImportValidationResult.Fail(Loc.T("This_File_Is_Not_From_The"));
 
             var metaSheet = workbook.Worksheet("_meta");
 
@@ -41,17 +41,17 @@ public class ExcelImportService
 
             // 2. تحقق من الـ TemplateId
             if (templateId != TemplateId)
-                return ImportValidationResult.Fail("إصدار القالب قديم. حمّل نسخة جديدة.");
+                return ImportValidationResult.Fail(Loc.T("The_Template_Version_Is_Outdated_Download"));
 
             // 3. تحقق من صحة التواريخ
             if (!DateTime.TryParse(expiresAtStr, out var expiresAt))
-                return ImportValidationResult.Fail("الملف تالف.");
+                return ImportValidationResult.Fail(Loc.T("The_File_Is_Corrupted"));
 
             // 4. تحقق من انتهاء الصلاحية
             if (DateTime.UtcNow > expiresAt)
             {
                 var days = (DateTime.UtcNow - expiresAt).Days;
-                return ImportValidationResult.Fail($"⚠️ القالب ده انتهت صلاحيته من {days} يوم. حمّل نسخة جديدة.");
+                return ImportValidationResult.Fail(Loc.T("This_Template_Expired_N_Days_Ago", days));
             }
 
             // 5. تحقق من الـ Signature (باستخدام النصوص الخام)
@@ -59,14 +59,14 @@ public class ExcelImportService
             Console.WriteLine($"[ExcelImport] Expected Signature: '{expectedSignature}'");
 
             if (signature != expectedSignature)
-                return ImportValidationResult.Fail("الملف اتعُدِّل أو مش أصلي. حمّل نسخة جديدة.");
+                return ImportValidationResult.Fail(Loc.T("The_File_Was_Modified_Or_Is"));
 
             // 6. تحقق من الـ Sheets المطلوبة
             var requiredSheets = new[] { "Building Info", "Floors & Apartments" };
             foreach (var sheet in requiredSheets)
             {
                 if (!workbook.Worksheets.Contains(sheet))
-                    return ImportValidationResult.Fail($"ورقة '{sheet}' مفقودة");
+                    return ImportValidationResult.Fail(Loc.T("Sheet_N_Is_Missing", sheet));
             }
 
             // 7. استخرج البيانات
@@ -79,17 +79,17 @@ public class ExcelImportService
             Console.WriteLine($"[ExcelImport] Apartments count: {data.Apartments.Count}");
 
             if (string.IsNullOrWhiteSpace(data.Name))
-                return ImportValidationResult.Fail("اسم العمارة مطلوب في ورقة Building Info.");
+                return ImportValidationResult.Fail(Loc.T("Building_Name_Is_Required_In_The"));
 
             if (data.Apartments.Count == 0)
-                return ImportValidationResult.Fail("مفيش شقق في الملف. املأ البيانات من الصف 6.");
+                return ImportValidationResult.Fail(Loc.T("There_Are_No_Apartments_In_The"));
 
             return ImportValidationResult.Success(data);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[ExcelImport] Validation failed");
-            return ImportValidationResult.Fail($"خطأ في قراءة الملف: {ex.Message}");
+            return ImportValidationResult.Fail(Loc.T("Error_Reading_The_File_N", ex.Message));
         }
     }
 

@@ -1,7 +1,7 @@
 @model Building
-@{ ViewData["Title"] = "أكواد QR"; }
+@{ ViewData["Title"] = Loc.T("QR_Codes"); }
 
-<h3 class="mb-3">📱 أكواد QR للشقق — @Model.Name</h3>
+<h3 class="mb-3">@Loc.T("Apartment_QR_Codes_N", Model.Name)</h3>
 
 <div class="row">
 @foreach (var floor in Model.Floors.OrderBy(f => f.Order))
@@ -11,19 +11,19 @@
     {
         <div class="col-md-4 col-lg-3 mb-3">
             <div class="bg-white rounded shadow-sm p-3 text-center">
-                <div class="fw-bold mb-1">شقة @apt.Number</div>
+                <div class="fw-bold mb-1">@Loc.T("Apartment_N", apt.Number)</div>
                 <div class="text-muted small mb-2">@floor.Label</div>
                 <a class="btn btn-sm btn-outline-secondary w-100 mb-2" asp-action="ApartmentBadge" asp-route-aptId="@apt.Id">
-                    ⬇️ تنزيل QR الباب
+                    @Loc.T("Download_Door_QR")
                 </a>
                 <form method="post" asp-action="GenerateAccessLink" class="d-flex gap-1">
                     <input type="hidden" name="aptId" value="@apt.Id" />
                     <select name="minutes" class="form-select form-select-sm">
-                        <option value="15">15 دقيقة</option>
-                        <option value="60">ساعة</option>
-                        <option value="1440">يوم</option>
+                        <option value="15">@Loc.T("15_Minutes")</option>
+                        <option value="60">@Loc.T("Hour")</option>
+                        <option value="1440">@Loc.T("Day")</option>
                     </select>
-                    <button class="btn btn-sm btn-brand text-nowrap">رابط دخول</button>
+                    <button class="btn btn-sm btn-brand text-nowrap">@Loc.T("Login_Link")</button>
                     <input type="hidden" name="oneTime" value="true" />
                 </form>
             </div>

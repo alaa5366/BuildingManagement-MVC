@@ -1,6 +1,6 @@
 ﻿@model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.AppUserDoc>
 @{
-    ViewData["Title"] = "إدارة الأدمنة";
+    ViewData["Title"] = Loc.T("Manage_Admins");
     var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Models.Building> ?? new();
     var selected = ViewBag.SelectedBuildingId as string;
     var routeValuesStr = ViewBag.RouteValues as Dictionary<string, string> ?? new();
@@ -8,15 +8,15 @@
 
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>👥 إدارة الأدمنة (@Model.TotalItems)</h2>
-        <a asp-action="Create" class="btn btn-primary">➕ إضافة أدمن</a>
+        <h2>@Loc.T("Manage_Admins_N", Model.TotalItems)</h2>
+        <a asp-action="Create" class="btn btn-primary">@Loc.T("Add_Admin_2")</a>
     </div>
 
     <form method="get" class="row g-2 mb-3">
         <input type="hidden" name="pageSize" value="@Model.PageSize" />
         <div class="col-md-4">
             <select name="buildingId" class="form-select" onchange="this.form.submit()">
-                <option value="">— كل العمارات —</option>
+                <option value="">@Loc.T("All_Buildings")</option>
                 @foreach (var b in buildings)
                 {
                     <option value="@b.Id" selected="@(selected == b.Id)">@b.Name</option>
@@ -44,19 +44,19 @@
 
     @if (Model.Items.Count == 0)
     {
-        <div class="alert alert-info">لا يوجد أدمنة مطابقين.</div>
+        <div class="alert alert-info">@Loc.T("No_Matching_Admins_Found")</div>
     }
     else
     {
         <table class="table table-striped">
             <thead>
                 <tr>
-                    <th>الاسم</th>
-                    <th>الرقم</th>
-                    <th>البريد</th>
-                    <th>الصلاحيات</th>
-                    <th>آخر دخول</th>
-                    <th>الحالة</th>
+                    <th>@Loc.T("Name")</th>
+                    <th>@Loc.T("No")</th>
+                    <th>@Loc.T("Email_2")</th>
+                    <th>@Loc.T("Permissions")</th>
+                    <th>@Loc.T("Last_Login")</th>
+                    <th>@Loc.T("Status")</th>
                     <th></th>
                 </tr>
             </thead>
@@ -69,15 +69,15 @@
                         <td><small>@a.Email</small></td>
                         <td>@(a.Permissions?.Count ?? 0)</td>
                         <td>@(string.IsNullOrEmpty(a.LastLoginAt) ? "—" : a.LastLoginAt)</td>
-                        <td>@(a.IsActive && !a.Disabled ? "🟢 نشط" : "🔴 معطّل")</td>
+                        <td>@(a.IsActive && !a.Disabled ? Loc.T("Active_2") : Loc.T("Disabled"))</td>
                         <td>
-                            <a asp-action="Edit" asp-route-id="@a.Uid" class="btn btn-sm btn-outline-primary">تعديل</a>
+                            <a asp-action="Edit" asp-route-id="@a.Uid" class="btn btn-sm btn-outline-primary">@Loc.T("Edit")</a>
                             @if (a.IsActive && !a.Disabled)
                             {
                                 <form asp-action="Deactivate" method="post" class="d-inline">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="id" value="@a.Uid" />
-                                    <button class="btn btn-sm btn-outline-warning" onclick="return confirm('تعطيل؟')">تعطيل</button>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="return confirm('@Loc.Js("Disable")')">@Loc.T("Disable_2")</button>
                                 </form>
                             }
                             else
@@ -85,13 +85,13 @@
                                 <form asp-action="Activate" method="post" class="d-inline">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="id" value="@a.Uid" />
-                                    <button class="btn btn-sm btn-outline-success">تنشيط</button>
+                                    <button class="btn btn-sm btn-outline-success">@Loc.T("Activate")</button>
                                 </form>
                             }
                             <form asp-action="Delete" method="post" class="d-inline">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="id" value="@a.Uid" />
-                                <button class="btn btn-sm btn-outline-danger" onclick="return confirm('حذف؟')">حذف</button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="return confirm('@Loc.Js("Delete")')">@Loc.T("Delete_2")</button>
                             </form>
                         </td>
                     </tr>

@@ -1,12 +1,14 @@
-using BuildingManagementMvc.Services;
+using BuildingManagementMvc.Attributes;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
 
 // نفس شاشة js/views/admin/admin-maintenance.js
 [Authorize(Roles = "admin")]
+[AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageMaintenance)]
 public class MaintenanceController : Controller
 {
     private readonly BuildingsService _buildings;
@@ -52,7 +54,7 @@ public class MaintenanceController : Controller
             var rec = _maint.Add(building, title.Trim(), description, date, cost, vendor, status, User.Identity?.Name ?? "admin");
             _audit.Push(building, "maint_add", rec.Title, "admin", User.Identity?.Name ?? "admin");
             await _buildings.SaveFullAsync(building);
-            TempData["Message"] = "تمت إضافة سجل الصيانة";
+            TempData["Message"] = Loc.T("Maintenance_Record_Added");
         }
 
         return RedirectToAction("Index");
@@ -106,7 +108,7 @@ public class MaintenanceController : Controller
             var catName = building.ExpenseCategories.FirstOrDefault(c => c.Id == expense.CategoryId)?.Name ?? expense.CategoryId;
             _notify.NotifyResidentsNewExpense(building, catName, expense.Amount);
             await _buildings.SaveFullAsync(building);
-            TempData["Message"] = "تمت إضافة التكلفة للمصروفات";
+            TempData["Message"] = Loc.T("Cost_Added_To_Expenses");
         }
 
         return RedirectToAction("Index");

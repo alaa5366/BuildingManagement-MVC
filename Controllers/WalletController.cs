@@ -1,3 +1,4 @@
+using BuildingManagementMvc.Attributes;
 using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -8,6 +9,7 @@ namespace BuildingManagementMvc.Controllers;
 
 // نفس شاشة js/views/admin/admin-wallet.js (أرصدة الشقق + الدفعات المعلقة)
 [Authorize(Roles = "admin")]
+[AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageWallet)]
 public class WalletController : Controller
 {
     private readonly BuildingsService _buildings;
@@ -146,14 +148,14 @@ public class WalletController : Controller
             var dep = m.Deposits.FirstOrDefault(d => d.Id == depositId);
             if (dep == null)
             {
-                TempData["Error"] = "الدفعة غير موجودة";
+                TempData["Error"] = Loc.T("The_Payment_Does_Not_Exist");
                 return RedirectToAction("Index", new { month = mk });
             }
 
             if (dep.Status != "pending")
             {
-                TempData["Error"] = "لا يمكن تعديل دفعة " +
-                    (dep.Status == "confirmed" ? "مؤكدة" : "ملغاة");
+                TempData["Error"] = Loc.T("A_Payment_Cannot_Be_Edited_When") +
+                    (dep.Status == "confirmed" ? Loc.T("Confirmed_2") : Loc.T("Cancelled_2"));
                 return RedirectToAction("Index", new { month = mk });
             }
 
@@ -177,7 +179,7 @@ public class WalletController : Controller
                     building,
                     "deposit_update",
                     $"تعديل دفعة {updated.Number}: {oldAmount:0.##} ← {updated.Amount:0.##} ج.م" +
-                        (string.IsNullOrWhiteSpace(reason) ? "" : $" — السبب: {reason}"),
+                        (string.IsNullOrWhiteSpace(reason) ? "" : Loc.T("Reason_N", reason)),
                     "admin",
                     User.Identity?.Name ?? "admin");
 
@@ -190,7 +192,7 @@ public class WalletController : Controller
                 }
 
                 await _buildings.SaveFullAsync(building);
-                TempData["Message"] = "✅ تم تعديل الدفعة بنجاح";
+                TempData["Message"] = Loc.T("Payment_Updated_Successfully");
             }
         }
         catch (InvalidOperationException ex)
@@ -199,7 +201,7 @@ public class WalletController : Controller
         }
         catch (Exception ex)
         {
-            TempData["Error"] = "فشل التعديل: " + ex.Message;
+            TempData["Error"] = Loc.T("Update_Failed_2") + ex.Message;
         }
 
         return RedirectToAction("Index", new { month = mk });

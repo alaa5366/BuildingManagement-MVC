@@ -1,7 +1,8 @@
-using BuildingManagementMvc.Services;
+using BuildingManagementMvc.Attributes;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
 
@@ -9,6 +10,7 @@ namespace BuildingManagementMvc.Controllers;
 // من قالب + فتح رابط wa.me (الإرسال الفعلي بيتم من واتساب الأدمن يدويًا،
 // زي أي رابط wa.me عادي).
 [Authorize(Roles = "admin")]
+[AdminPermission(BuildingManagementMvc.Models.AdminPermissions.UseWhatsApp)]
 public class WhatsAppController : Controller
 {
     private readonly BuildingsService _buildings;

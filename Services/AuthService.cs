@@ -5,11 +5,16 @@ namespace BuildingManagementMvc.Services;
 // رقم الشقة + واتساب + PIN)
 public class AuthService
 {
-    private static readonly string[] SuperAdminEmails =
+    // ✅ إيميلات السوبر أدمن من الـ configuration (Auth:SuperAdminEmails — مفصولة بفاصلة)، مش مكتوبة في الكود
+    private static string[] SuperAdminEmails = Array.Empty<string>();
+
+    public static void ConfigureSuperAdmins(string commaSeparated)
     {
-        "alaa5366@gmail.com",
-        "alaa5366@hotmail.com"
-    };
+        SuperAdminEmails = commaSeparated
+            .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(x => x.ToLowerInvariant())
+            .ToArray();
+    }
 
     private readonly BuildingsService _buildings;
     private readonly UsersService _users;
@@ -97,7 +102,7 @@ public class AuthService
         var signIn = await _fbAuth.SignInWithPasswordAsync(email, password);
         if (!signIn.Success) return AuthResult.Fail(signIn.Error ?? "signin-failed");
 
-        var name = string.IsNullOrWhiteSpace(apt.Owner) ? $"شقة {aptNumber}" : apt.Owner;
+        var name = string.IsNullOrWhiteSpace(apt.Owner) ? Loc.T("Apartment_N", aptNumber) : apt.Owner;
         return AuthResult.Ok(signIn.Uid!, "resident", email, name, new List<string> { building.Id }, apt.Id, aptNumber);
     }
 }
@@ -118,14 +123,8 @@ public class AuthResult
     public static AuthResult Ok(string uid, string role, string email, string name, List<string> buildingIds,
         string? aptId = null, int? aptNumber = null) => new()
         {
-            Success = true,
-            Uid = uid,
-            Role = role,
-            Email = email,
-            Name = name,
-            BuildingIds = buildingIds,
-            ApartmentId = aptId,
-            ApartmentNumber = aptNumber
+            Success = true, Uid = uid, Role = role, Email = email, Name = name,
+            BuildingIds = buildingIds, ApartmentId = aptId, ApartmentNumber = aptNumber
         };
 
     public static AuthResult Fail(string error, string? reason = null) =>

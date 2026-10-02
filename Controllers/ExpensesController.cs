@@ -1,3 +1,4 @@
+using BuildingManagementMvc.Attributes;
 using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -8,6 +9,7 @@ namespace BuildingManagementMvc.Controllers;
 
 // نفس شاشة js/views/admin/admin-expenses.js
 [Authorize(Roles = "admin")]
+[AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageExpenses)]
 public class ExpensesController : Controller
 {
     private readonly BuildingsService _buildings;
@@ -66,7 +68,7 @@ public class ExpensesController : Controller
             _wallet.RecalculateDistribution(building, mk);
             _audit.Push(building, "expense_add", $"{amount:0.##} ج.م — {note}", "admin", User.Identity?.Name ?? "admin");
             await _buildings.SaveFullAsync(building);
-            TempData["Message"] = "تمت إضافة المصروف";
+            TempData["Message"] = Loc.T("Expense_Added");
         }
 
         return RedirectToAction("Index", new { month = mk });

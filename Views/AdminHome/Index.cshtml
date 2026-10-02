@@ -1,6 +1,6 @@
 @model BuildingManagementMvc.ViewModels.BuildingMapVm
 @{
-    ViewData["Title"] = "لوحة الأدمن";
+    ViewData["Title"] = Loc.T("Admin_Dashboard");
     var stats = Model.Stats;
 }
 
@@ -12,12 +12,10 @@
     <div class="text-center mb-4">
         <h2>🏢 @Model.Building.Name — @Model.Building.BuildingNumber</h2>
         <p class="text-muted mb-1">
-            🏢 @stats.FloorsCount دور &nbsp;|&nbsp;
-            🏠 @stats.AptsCount شقة
-            (@stats.OpenAptsCount مفتوحة
+            @Loc.T("N_Floors_N_Apartments_N_Open", stats.FloorsCount, stats.AptsCount, stats.OpenAptsCount)
             @if (stats.ClosedAptsCount > 0)
             {
-                <text> — @stats.ClosedAptsCount مغلقة</text>
+                <text> @Loc.T("N_Closed", stats.ClosedAptsCount)</text>
             }
             )
         </p>
@@ -29,28 +27,28 @@
             <div class="stat-card stat-online">
                 <div class="stat-icon">🟢</div>
                 <div class="stat-value">@stats.OnlineCount</div>
-                <div class="stat-label">أونلاين</div>
+                <div class="stat-label">@Loc.T("Online")</div>
             </div>
         </div>
         <div class="col-md-2 col-6">
             <div class="stat-card stat-balance">
                 <div class="stat-icon">💰</div>
                 <div class="stat-value">@stats.TotalBalance.ToString("N0")</div>
-                <div class="stat-label">إجمالي الرصيد</div>
+                <div class="stat-label">@Loc.T("Total_Balance")</div>
             </div>
         </div>
         <div class="col-md-2 col-6">
             <div class="stat-card stat-debtors">
                 <div class="stat-icon">🔴</div>
                 <div class="stat-value">@stats.DebtorsCount</div>
-                <div class="stat-label">مدينون</div>
+                <div class="stat-label">@Loc.T("Debtors")</div>
             </div>
         </div>
         <div class="col-md-2 col-6">
             <div class="stat-card stat-pending">
                 <div class="stat-icon">⏳</div>
                 <div class="stat-value">@stats.PendingDepositsCount</div>
-                <div class="stat-label">دفعات معلقة</div>
+                <div class="stat-label">@Loc.T("Pending_Payments")</div>
             </div>
         </div>
     </div>
@@ -62,8 +60,8 @@
             <div class="floor-header">
                 <h5 class="mb-0">
                     🏢 @floor.Label
-                    <span class="text-muted small">(دور @floor.Order)</span>
-                    <span class="badge bg-secondary ms-2">@floor.Apartments.Count شقة</span>
+                    <span class="text-muted small">@Loc.T("Floor_N", floor.Order)</span>
+                    <span class="badge bg-secondary ms-2">@Loc.T("N_Apartments", floor.Apartments.Count)</span>
 
                     @if (floor.OnlineCount > 0)
                     {
@@ -86,33 +84,34 @@
 
     @* ===== Legend ===== *@
     <div class="legend-bar mt-4">
-        <strong>🔑 الرموز:</strong>
-        <span class="legend-item"><span class="legend-dot" style="background:#2E7D5B;"></span> أونلاين</span>
-        <span class="legend-item"><span class="legend-dot" style="background:#D9B34A;"></span> آخر ظهور قريب</span>
-        <span class="legend-item"><span class="legend-dot" style="background:#999;"></span> أوفلاين</span>
-        <span class="legend-item"><span class="legend-dot" style="background:#A0432A;"></span> رصيد سالب</span>
-        <span class="legend-item"><span class="legend-dot" style="background:#5B9BD5;"></span> مغلقة</span>
+        <strong>@Loc.T("Legend")</strong>
+        <span class="legend-item"><span class="legend-dot" style="background:#2E7D5B;"></span> @Loc.T("Online")</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#D9B34A;"></span> @Loc.T("Seen_Recently")</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#999;"></span> @Loc.T("Offline")</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#A0432A;"></span> @Loc.T("Negative_Balance")</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#5B9BD5;"></span> @Loc.T("Closed")</span>
     </div>
 
     @* ===== Quick Actions ===== *@
     <div class="row justify-content-center g-3 mt-4 mb-5">
         <div class="col-md-3">
             <a asp-controller="Wallet" asp-action="Index" class="btn btn-brand w-100 py-3">
-                💼 المحفظة
+                @Loc.T("Wallet")
             </a>
         </div>
         <div class="col-md-3">
             <a asp-controller="AdminApts" asp-action="Index" class="btn btn-outline-warning w-100 py-3">
-                🏠 إدارة الشقق
+                @Loc.T("Manage_Apartments_2")
             </a>
         </div>
         <div class="col-md-3">
             <a asp-controller="Reports" asp-action="Index" class="btn btn-outline-success w-100 py-3">
-                📊 التقارير
+                @Loc.T("Reports")
             </a>
         </div>
     </div>
     @section Scripts {
-        <script src="~/js/apartment-details.js" asp-append-version="true"></script>
+        <script>window.I18N = Object.assign(window.I18N || {}, @Html.Raw(Loc.JsonDict("Js_AptDetails_Title","Js_Loading","Js_Close","Js_LoadFailed","Js_ConfirmImpersonate","Js_ConfirmOpenApt","Js_PromptCloseApt","Js_ConfirmCloseApt")));</script>
+    <script src="~/js/apartment-details.js" asp-append-version="true"></script>
     }
 </div>

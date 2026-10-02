@@ -1,22 +1,22 @@
 ﻿@{
-    ViewData["Title"] = "نتيجة المزامنة";
+    ViewData["Title"] = Loc.T("Sync_Result");
     var result = ViewBag.Result as BuildingManagementMvc.Models.SyncResult;
     var syncType = ViewBag.SyncType as string ?? "";
 }
 
 <div class="container">
-    <h2>نتيجة مزامنة @syncType</h2>
+    <h2>@Loc.T("Result_Of_N_Sync", syncType)</h2>
 
     @if (result != null)
     {
         <div class="card mb-3">
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-4"><strong>تم الفحص:</strong> @result.TotalChecked</div>
-                    <div class="col-md-4"><strong>مشاكل:</strong> @result.TotalIssues</div>
-                    <div class="col-md-4"><strong>تم الإصلاح:</strong> @result.TotalFixed</div>
+                    <div class="col-md-4"><strong>@Loc.T("Checked")</strong> @result.TotalChecked</div>
+                    <div class="col-md-4"><strong>@Loc.T("Issues")</strong> @result.TotalIssues</div>
+                    <div class="col-md-4"><strong>@Loc.T("Fixed")</strong> @result.TotalFixed</div>
                 </div>
-                <p class="text-muted">المدة: @result.Duration.TotalSeconds.ToString("0.00") ثانية</p>
+                <p class="text-muted">@Loc.T("Duration_N_Seconds", result.Duration.TotalSeconds.ToString("0.00"))</p>
             </div>
         </div>
 
@@ -25,10 +25,10 @@
             <table class="table table-sm">
                 <thead>
                     <tr>
-                        <th>النوع</th>
-                        <th>الاسم</th>
-                        <th>المشكلة</th>
-                        <th>تم الإصلاح؟</th>
+                        <th>@Loc.T("Type")</th>
+                        <th>@Loc.T("Name")</th>
+                        <th>@Loc.T("Issue")</th>
+                        <th>@Loc.T("Fixed_2")</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -46,9 +46,9 @@
         }
         else
         {
-            <div class="alert alert-success">✅ لا توجد مشاكل</div>
+            <div class="alert alert-success">@Loc.T("No_Issues_Found")</div>
         }
     }
 
-    <a asp-action="Index" class="btn btn-secondary">← رجوع</a>
+    <a asp-action="Index" class="btn btn-secondary">@Loc.T("Back")</a>
 </div>

@@ -1,28 +1,28 @@
 ﻿@model BuildingManagementMvc.Models.RestorePreview
 @{
-    ViewData["Title"] = "معاينة الاستعادة";
+    ViewData["Title"] = Loc.T("Restore_Preview");
     var totalDocs = Model.Collections.Sum(c => c.DocCount);
 }
 
 <div class="container">
-    <h2>🔍 معاينة الاستعادة</h2>
+    <h2>@Loc.T("Restore_Preview_2")</h2>
 
     <div class="card mb-3">
         <div class="card-header bg-info">
-            <strong>📄 معلومات الملف</strong>
+            <strong>@Loc.T("File_Information")</strong>
         </div>
         <div class="card-body">
-            <div><strong>الملف:</strong> @Model.FileName</div>
-            <div><strong>الحجم:</strong> @(Model.FileSize / 1024) KB</div>
+            <div><strong>@Loc.T("File_2")</strong> @Model.FileName</div>
+            <div><strong>@Loc.T("Size_2")</strong> @(Model.FileSize / 1024) KB</div>
             <div><strong>Collections:</strong> @Model.Collections.Count</div>
-            <div><strong>إجمالي المستندات:</strong> @totalDocs</div>
+            <div><strong>@Loc.T("Total_Documents_2")</strong> @totalDocs</div>
         </div>
     </div>
 
     @if (Model.Errors.Count > 0)
     {
         <div class="alert alert-warning">
-            <strong>تحذيرات:</strong>
+            <strong>@Loc.T("Warnings")</strong>
             <ul>@foreach (var err in Model.Errors) {
                 <li>@err</li>
             }
@@ -36,10 +36,10 @@
 
     <div class="card mb-3">
         <div class="card-header">
-            <strong>📦 اختر Collections للاستعادة</strong>
+            <strong>@Loc.T("Choose_Collections_To_Restore")</strong>
             <div class="float-end">
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAll(true)">تحديد الكل</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAll(false)">إلغاء الكل</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAll(true)">@Loc.T("Select_All")</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAll(false)">@Loc.T("Clear_All")</button>
             </div>
         </div>
         <div class="card-body">
@@ -48,9 +48,9 @@
                     <tr>
                         <th style="width: 40px;"></th>
                         <th>Collection</th>
-                        <th>الوصف</th>
-                        <th>عدد المستندات</th>
-                        <th>الحجم</th>
+                        <th>@Loc.T("Description")</th>
+                        <th>@Loc.T("Document_Count")</th>
+                        <th>@Loc.T("Size")</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -71,16 +71,14 @@
 
     <div class="form-check mb-3">
         <input type="checkbox" name="overwrite" value="true" class="form-check-input" id="overwrite" />
-        <label class="form-check-label text-danger" for="overwrite">
-            ⚠️ <strong>استبدال</strong> المستندات الموجودة (Overwrite)
-        </label>
+        <label class="form-check-label text-danger" for="overwrite">@Html.Raw(Loc.T("Replace_Existing_Documents_Overwrite"))</label>
     </div>
 
     <button type="submit" class="btn btn-danger btn-lg"
-            onclick="return confirm('تأكيد الاستعادة؟');">
-        ⚠️ تنفيذ الاستعادة
+            onclick="return confirm('@Loc.Js("Confirm_The_Restore")');">
+        @Loc.T("Run_Restore")
     </button>
-    <a asp-action="Restore" class="btn btn-secondary">← إلغاء</a>
+    <a asp-action="Restore" class="btn btn-secondary">@Loc.T("Cancel_2")</a>
 </form>
 </div>
 

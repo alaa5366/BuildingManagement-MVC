@@ -1,7 +1,7 @@
-using BuildingManagementMvc.Services;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
 
@@ -61,7 +61,7 @@ public class ResidentPollsController : Controller
         }
         else
         {
-            TempData["Error"] = "التصويت مقفول أو أنت صوّت بالفعل";
+            TempData["Error"] = Loc.T("The_Poll_Is_Closed_Or_You");
         }
 
         return RedirectToAction("Index");

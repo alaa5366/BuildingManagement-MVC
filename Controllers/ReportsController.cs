@@ -1,13 +1,15 @@
-using BuildingManagementMvc.Services;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+using BuildingManagementMvc.Attributes;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
 
 // نفس شاشة js/features/reports.js
 [Authorize(Roles = "admin")]
+[AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ViewReports)]
 public class ReportsController : Controller
 {
     private readonly BuildingsService _buildings;
@@ -47,25 +49,25 @@ public class ReportsController : Controller
         sb.Append('\uFEFF');
         void Row(params string[] cells) => sb.AppendLine(string.Join(",", cells.Select(c => $"\"{(c ?? "").Replace("\"", "\"\"")}\"")));
 
-        Row($"=== تقرير — {building.Name} ({building.BuildingNumber}) ===");
-        Row($"تاريخ التصدير: {DateTime.UtcNow:O}");
+        Row(Loc.T("Report_N_N", building.Name, building.BuildingNumber));
+        Row(Loc.T("Export_Date_N", DateTime.UtcNow));
         Row("");
-        Row("=== الملخص ===");
-        Row("إجمالي المحصّل", vm.TotalCollected.ToString("0.##"));
-        Row("إجمالي الإيرادات", vm.TotalRevenues.ToString("0.##"));
-        Row("إجمالي المصروفات", vm.TotalExpenses.ToString("0.##"));
-        Row("صافي الرصيد", vm.NetBalance.ToString("0.##"));
-        Row("متوسط شهري", vm.AvgMonthly.ToString("0.##"));
+        Row(Loc.T("Summary"));
+        Row(Loc.T("Total_Collected"), vm.TotalCollected.ToString("0.##"));
+        Row(Loc.T("Total_Revenues"), vm.TotalRevenues.ToString("0.##"));
+        Row(Loc.T("Total_Expenses"), vm.TotalExpenses.ToString("0.##"));
+        Row(Loc.T("Net_Balance"), vm.NetBalance.ToString("0.##"));
+        Row(Loc.T("Monthly_Average"), vm.AvgMonthly.ToString("0.##"));
         Row("");
-        Row("=== شهريًا ===");
-        Row("الشهر", "المحصّل", "الإيرادات", "المصروفات", "الصافي");
+        Row(Loc.T("Monthly_2"));
+        Row(Loc.T("Month"), Loc.T("Collected_2"), Loc.T("Revenues_2"), Loc.T("Expenses"), Loc.T("Net"));
         foreach (var mp in vm.Monthly)
             Row(mp.Month, mp.Collected.ToString("0.##"), mp.Revenues.ToString("0.##"), mp.Expenses.ToString("0.##"),
                 (mp.Collected + mp.Revenues - mp.Expenses).ToString("0.##"));
 
         Row("");
-        Row("=== توزيع المحفظة (الشهر الحالي) ===");
-        Row("الشقة", "المالك", "الرصيد");
+        Row(Loc.T("Wallet_Distribution_Current_Month_2"));
+        Row(Loc.T("Apartment"), Loc.T("Owner"), Loc.T("Balance"));
         foreach (var a in building.Apartments)
         {
             var bal = _wallet.ComputeWalletBalance(building, a.Id, currentMonth);

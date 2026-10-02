@@ -100,6 +100,7 @@ public class BuildingMapService
         if (presenceMap.TryGetValue(apt.Id, out var presence))
         {
             card.IsOnline = PresenceService.IsOnline(presence);
+            card.IsRecent = PresenceService.IsRecent(presence);
             card.LastSeenText = PresenceService.TimeAgo(presence);
         }
 
@@ -120,7 +121,7 @@ public class BuildingMapService
             card.Status = "closed";
             card.StatusColor = "#5B9BD5";
             card.StatusIcon = "🔒";
-            card.StatusLabel = "مغلقة";
+            card.StatusLabel = Loc.T("Closed");
             return;
         }
 
@@ -130,7 +131,7 @@ public class BuildingMapService
             card.Status = "online";
             card.StatusColor = "#2E7D5B";
             card.StatusIcon = "🟢";
-            card.StatusLabel = "أونلاين";
+            card.StatusLabel = Loc.T("Online");
             return;
         }
 
@@ -140,20 +141,17 @@ public class BuildingMapService
             card.Status = "negative";
             card.StatusColor = "#A0432A";
             card.StatusIcon = "🔴";
-            card.StatusLabel = "مدين";
+            card.StatusLabel = Loc.T("Indebted");
             return;
         }
 
         // 4. آخر ظهور قريب (< 24 ساعة) → أصفر
-        var lastSeen = card.LastSeenText;
-        if (lastSeen.Contains("دقيقة") ||
-            lastSeen.Contains("ساعة") ||
-            lastSeen == "الآن")
+        if (card.IsRecent)
         {
             card.Status = "recent";
             card.StatusColor = "#D9B34A";
             card.StatusIcon = "🟡";
-            card.StatusLabel = "آخر ظهور قريب";
+            card.StatusLabel = Loc.T("Seen_Recently");
             return;
         }
 
@@ -161,7 +159,7 @@ public class BuildingMapService
         card.Status = "offline";
         card.StatusColor = "#999";
         card.StatusIcon = "⚪";
-        card.StatusLabel = "أوفلاين";
+        card.StatusLabel = Loc.T("Offline");
     }
 
     // ============================================================
@@ -235,6 +233,7 @@ public class BuildingMapService
         if (presenceMap.TryGetValue(apt.Id, out var presence))
         {
             vm.IsOnline = PresenceService.IsOnline(presence);
+            vm.IsRecent = PresenceService.IsRecent(presence);
             vm.LastSeenText = PresenceService.TimeAgo(presence);
         }
 
@@ -248,25 +247,25 @@ public class BuildingMapService
     {
         if (vm.IsClosed)
         {
-            vm.StatusIcon = "🔵"; vm.StatusLabel = "مغلقة";
+            vm.StatusIcon = "🔵"; vm.StatusLabel = Loc.T("Closed");
             vm.StatusColor = "#5B9BD5"; return;
         }
         if (vm.IsOnline)
         {
-            vm.StatusIcon = "🟢"; vm.StatusLabel = "أونلاين";
+            vm.StatusIcon = "🟢"; vm.StatusLabel = Loc.T("Online");
             vm.StatusColor = "#2E7D5B"; return;
         }
         if (vm.Balance < 0)
         {
-            vm.StatusIcon = "🔴"; vm.StatusLabel = "مدين";
+            vm.StatusIcon = "🔴"; vm.StatusLabel = Loc.T("Indebted");
             vm.StatusColor = "#A0432A"; return;
         }
-        if (vm.LastSeenText.Contains("دقيقة") || vm.LastSeenText.Contains("ساعة") || vm.LastSeenText == "الآن")
+        if (vm.IsRecent)
         {
-            vm.StatusIcon = "🟡"; vm.StatusLabel = "آخر ظهور قريب";
+            vm.StatusIcon = "🟡"; vm.StatusLabel = Loc.T("Seen_Recently");
             vm.StatusColor = "#D9B34A"; return;
         }
-        vm.StatusIcon = "⚪"; vm.StatusLabel = "أوفلاين";
+        vm.StatusIcon = "⚪"; vm.StatusLabel = Loc.T("Offline");
         vm.StatusColor = "#999";
     }
 
@@ -276,9 +275,9 @@ public class BuildingMapService
         if (DateTime.TryParse(iso, out var dt))
         {
             var diff = DateTime.UtcNow - dt.ToUniversalTime();
-            if (diff.TotalMinutes < 60) return $"منذ {(int)diff.TotalMinutes} دقيقة";
-            if (diff.TotalHours < 24) return $"منذ {(int)diff.TotalHours} ساعة";
-            if (diff.TotalDays < 7) return $"منذ {(int)diff.TotalDays} يوم";
+            if (diff.TotalMinutes < 60) return Loc.T("N_Minutes_Ago", (int)diff.TotalMinutes);
+            if (diff.TotalHours < 24) return Loc.T("N_Hours_Ago", (int)diff.TotalHours);
+            if (diff.TotalDays < 7) return Loc.T("N_Days_Ago", (int)diff.TotalDays);
             return dt.ToString("yyyy-MM-dd");
         }
         return "—";

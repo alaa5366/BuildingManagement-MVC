@@ -1,6 +1,6 @@
 ﻿@model ChooseContextVm
 @{
-    ViewData["Title"] = "اختيار الحساب";
+    ViewData["Title"] = Loc.T("Select_Account");
 
     // ✅ تجميع السياقات
     var superAdmins = Model.Contexts.Where(c => c.Type == "superadmin").ToList();
@@ -23,8 +23,8 @@
 
 <div class="container py-4" style="max-width: 1000px;">
     <div class="text-center mb-4">
-        <h2>👋 مرحبًا، @Model.FullName</h2>
-        <p class="text-muted">عندك أكتر من حساب — اختار اللي عايز تدخله</p>
+        <h2>@Loc.T("Welcome_N", Model.FullName)</h2>
+        <p class="text-muted">@Loc.T("You_Have_More_Than_One_Account")</p>
     </div>
 
     @if (TempData["Error"] != null)
@@ -72,7 +72,7 @@
         @if (admins.Any())
         {
             <div class="mb-4">
-                <h5 class="text-success mb-3">🏢 الأدمن (@admins.Count)</h5>
+                <h5 class="text-success mb-3">@Loc.T("Admin_N", admins.Count)</h5>
                 <div class="row g-3">
                     @foreach (var ctx in admins)
                     {
@@ -82,7 +82,7 @@
                                 <div class="d-flex align-items-center gap-3">
                                     <div style="font-size: 36px;">🏢</div>
                                     <div class="flex-grow-1">
-                                        <div class="fw-bold">أدمن</div>
+                                        <div class="fw-bold">@Loc.T("Admin")</div>
                                         <div class="text-muted small">@ctx.Subtitle</div>
                                     </div>
                                     <div style="color: #12433C;">→</div>
@@ -100,7 +100,7 @@
         @if (residentsByBuilding.Any())
         {
             <div class="mb-4">
-                <h5 class="text-primary mb-3">🏠 السكان (@residents.Count شقة في @residentsByBuilding.Count عمارة)</h5>
+                <h5 class="text-primary mb-3">@Loc.T("Residents_N_Apartments_In_N_Buildings", residents.Count, residentsByBuilding.Count)</h5>
                 <div class="row g-3">
                     @foreach (var buildingGroup in residentsByBuilding)
                     {
@@ -119,7 +119,7 @@
                                         <div class="apt-card" onclick="selectContext('@apt.Id')">
                                             <span style="font-size: 18px;">🏠</span>
                                             <div class="flex-grow-1">
-                                                <div class="fw-bold">شقة @apt.AptNumber</div>
+                                                <div class="fw-bold">@Loc.T("Apartment_N", apt.AptNumber)</div>
                                                 @if (!string.IsNullOrEmpty(apt.AptLabel))
                                                 {
                                                     <div class="text-muted small">@apt.AptLabel</div>
@@ -139,13 +139,13 @@
         @if (!superAdmins.Any() && !admins.Any() && !residents.Any())
         {
             <div class="alert alert-warning text-center">
-                ⚠️ مفيش سياقات متاحة
+                @Loc.T("No_Contexts_Available")
             </div>
         }
     </form>
 
     <div class="text-center mt-4">
-        <a asp-action="UnifiedLogin" class="text-muted small">← رجوع</a>
+        <a asp-action="UnifiedLogin" class="text-muted small">@Loc.T("Back")</a>
     </div>
 </div>
 

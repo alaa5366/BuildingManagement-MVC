@@ -2,8 +2,12 @@
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Controllers;
 
@@ -144,8 +148,8 @@ public class AuditLogController : Controller
         void Row(params string[] cells) => sb.AppendLine(string.Join(",",
             cells.Select(c => $"\"{(c ?? "").Replace("\"", "\"\"")}\"")));
 
-        Row("التاريخ", "العملية", "الوصف", "الخطورة",
-            "المستخدم", "الدور", "العمارة", "الشقة");
+        Row(Loc.T("Date"), Loc.T("Action"), Loc.T("Description"), Loc.T("Severity"),
+            Loc.T("User"), Loc.T("Role"), Loc.T("Building"), Loc.T("Apartment"));
 
         foreach (var e in entries)
         {

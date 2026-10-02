@@ -1,5 +1,6 @@
 using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
+using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -13,15 +14,21 @@ public class AccountController : Controller
 {
     private readonly AuthService _auth;
     private readonly BuildingsService _buildings;
-    private readonly UsersService _users;
+    private readonly UsersService _users;   
 
 
 
-    public AccountController(AuthService auth, BuildingsService buildings, UsersService users)
+    private readonly LoginThrottle _throttle;
+    private string? ClientIp => HttpContext.Connection.RemoteIpAddress?.ToString();
+    private static string LockedMsg => Loc.T("Too_Many_Failed_Login_Attempts_Try");
+
+    public AccountController(AuthService auth, BuildingsService buildings, UsersService users,
+        LoginThrottle throttle)
     {
         _auth = auth;
         _buildings = buildings;
         _users = users;
+        _throttle = throttle;
     }
 
     public IActionResult LoginChoice() => RedirectToAction("UnifiedLogin");
@@ -38,13 +45,22 @@ public class AccountController : Controller
     {
         if (!ModelState.IsValid) return View(vm);
 
+        var throttleKey = "sa:" + vm.Email;
+        if (_throttle.IsLocked(throttleKey, ClientIp))
+        {
+            ViewBag.Error = LockedMsg;
+            return View(vm);
+        }
+
         var res = await _auth.SignInSuperAdminAsync(vm.Email, vm.Password);
         if (!res.Success)
         {
+            _throttle.RegisterFailure(throttleKey, ClientIp);
             ViewBag.Error = MapError(res.Error, res.Reason);
             return View(vm);
         }
 
+        _throttle.Reset(throttleKey);
         await SignInCookieAsync(res);
         return RedirectToAction("Index", "SuperAdminHome");
     }
@@ -67,7 +83,7 @@ public class AccountController : Controller
                 var query = $"bld={bld}";
                 if (!qrSecurity.VerifyStableQr(path, query, sig))
                 {
-                    ViewBag.Error = "⚠️ الرابط ده اتعدّل أو مش أصلي. امسح الـ QR الأصلي.";
+                    ViewBag.Error = Loc.T("This_Link_Has_Been_Modified_Or");
                     return View(new AdminLoginVm());
                 }
             }
@@ -94,14 +110,24 @@ public class AccountController : Controller
             return View(vm);
         }
 
+        var throttleKey = $"adm:{vm.BuildingId}:{vm.Phone}";
+        if (_throttle.IsLocked(throttleKey, ClientIp))
+        {
+            ViewBag.Error = LockedMsg;
+            ViewBag.Buildings = await _buildings.GetAllAsync();
+            return View(vm);
+        }
+
         var res = await _auth.SignInAdminAsync(vm.BuildingId, vm.Phone, vm.Pin);
         if (!res.Success)
         {
+            _throttle.RegisterFailure(throttleKey, ClientIp);
             ViewBag.Error = MapError(res.Error, res.Reason);
             ViewBag.Buildings = await _buildings.GetAllAsync();
             return View(vm);
         }
 
+        _throttle.Reset(throttleKey);
         await SignInCookieAsync(res);
         return RedirectToAction("Index", "AdminHome");
     }
@@ -124,7 +150,7 @@ public class AccountController : Controller
                 var query = $"apt={apt}";
                 if (!qrSecurity.VerifyStableQr(path, query, sig))
                 {
-                    ViewBag.Error = "⚠️ الرابط ده اتعدّل أو مش أصلي. امسح الـ QR الأصلي.";
+                    ViewBag.Error = Loc.T("This_Link_Has_Been_Modified_Or");
                     return View(new ResidentLoginVm());
                 }
             }
@@ -164,14 +190,24 @@ public class AccountController : Controller
             return View(vm);
         }
 
+        var throttleKey = $"res:{vm.BuildingId}:{vm.FloorOrder}:{vm.AptNumber}";
+        if (_throttle.IsLocked(throttleKey, ClientIp))
+        {
+            ViewBag.Error = LockedMsg;
+            ViewBag.Buildings = await _buildings.GetAllAsync();
+            return View(vm);
+        }
+
         var res = await _auth.SignInResidentAsync(vm.BuildingId, vm.FloorOrder, vm.AptNumber, vm.Whatsapp, vm.Pin);
         if (!res.Success)
         {
+            _throttle.RegisterFailure(throttleKey, ClientIp);
             ViewBag.Error = MapError(res.Error, res.Reason);
             ViewBag.Buildings = await _buildings.GetAllAsync();
             return View(vm);
         }
 
+        _throttle.Reset(throttleKey);
         await SignInCookieAsync(res);
         return RedirectToAction("Index", "ResidentHome");
     }
@@ -207,13 +243,23 @@ public class AccountController : Controller
         var identifier = vm.Identifier.Trim();
         var credential = vm.Credential.Trim();
 
+        var throttleKey = "uni:" + identifier;
+        if (_throttle.IsLocked(throttleKey, ClientIp))
+        {
+            ViewBag.Error = LockedMsg;
+            return View(vm);
+        }
+
         var contexts = await unifiedAuth.FindAllContextsAsync(identifier, credential);
 
         if (contexts.Count == 0)
         {
-            ViewBag.Error = "❌ بيانات الدخول غير صحيحة";
+            _throttle.RegisterFailure(throttleKey, ClientIp);
+            ViewBag.Error = Loc.T("Invalid_Login_Details");
             return View(vm);
         }
+
+        _throttle.Reset(throttleKey);
 
         // ✅ لو سياق واحد → دخول مباشر
         if (contexts.Count == 1)
@@ -247,13 +293,13 @@ public class AccountController : Controller
 
         if (contexts == null)
         {
-            TempData["Error"] = "انتهت صلاحية الجلسة. حاول تسجّل دخول تاني.";
+            TempData["Error"] = Loc.T("The_Session_Has_Expired_Please_Try");
             return RedirectToAction("UnifiedLogin");
         }
 
         var vm = new ChooseContextVm
         {
-            FullName = fullName ?? "المستخدم",
+            FullName = fullName ?? Loc.T("User"),
             Contexts = contexts,
             SessionToken = token
         };
@@ -270,14 +316,14 @@ public class AccountController : Controller
 
         if (contexts == null)
         {
-            TempData["Error"] = "انتهت صلاحية الجلسة.";
+            TempData["Error"] = Loc.T("The_Session_Has_Expired");
             return RedirectToAction("UnifiedLogin");
         }
 
         var selected = contexts.FirstOrDefault(c => c.Id == contextId);
         if (selected == null)
         {
-            TempData["Error"] = "السياق المحدد غير موجود.";
+            TempData["Error"] = Loc.T("The_Selected_Context_Does_Not_Exist");
             return RedirectToAction("ChooseContext", new { token = sessionToken });
         }
 
@@ -326,14 +372,14 @@ public class AccountController : Controller
         var building = await _buildings.GetByIdAsync(payload.BuildingId);
         if (building == null)
         {
-            ViewBag.Error = "العمارة غير موجودة";
+            ViewBag.Error = Loc.T("The_Building_Does_Not_Exist");
             return View("QuickLoginError");
         }
 
         var apt = building.Apartments.FirstOrDefault(a => a.Id == payload.AptId);
         if (apt == null)
         {
-            ViewBag.Error = "الشقة غير موجودة";
+            ViewBag.Error = Loc.T("The_Apartment_Does_Not_Exist");
             return View("QuickLoginError");
         }
 
@@ -361,28 +407,31 @@ public class AccountController : Controller
     // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> GoogleSignIn(string idToken, string email,
-        [FromServices] FirebaseAuthRestService fbAuth,
+    public async Task<IActionResult> GoogleSignIn(string idToken, string? email,
+        [FromServices] FirebaseAdminService fbAdmin,
         [FromServices] ILogger<AccountController> logger)
     {
         try
         {
-            // 1. تأكد إن الإيميل من قايمة Super Admin
-            if (!AuthService.IsSuperAdminEmail(email))
+            var throttleKey = "google:" + (ClientIp ?? "unknown");
+            if (_throttle.IsLocked(throttleKey, ClientIp))
+                return Json(new { success = false, error = LockedMsg });
+
+            // ✅ الإيميل لازم ييجي من الـ ID Token بعد التحقق منه من Firebase،
+            // مش من الـ request (الـ email اللي في الـ form بنتجاهله).
+            var verified = await fbAdmin.VerifyIdTokenAsync(idToken);
+
+            if (verified == null || !verified.EmailVerified || !AuthService.IsSuperAdminEmail(verified.Email))
             {
-                return Json(new { success = false, error = "هذا الإيميل غير مصرح له بصلاحية Super Admin" });
+                _throttle.RegisterFailure(throttleKey, ClientIp);
+                return Json(new { success = false, error = Loc.T("This_Email_Is_Not_Authorized_For") });
             }
 
-            // 2. Firebase Admin: تأكد من الـ idToken
-            // (مش محتاجين نعمل ده لو استخدمنا Firebase Admin SDK)
-            // بس ممكن نتأكد من الإيميل بس
-
-            // 3. سجّل الدخول
             var result = AuthResult.Ok(
-                uid: "google_" + Guid.NewGuid().ToString("N"),
+                uid: verified.Uid,
                 role: "superadmin",
-                email: email,
-                name: email.Split('@')[0],
+                email: verified.Email,
+                name: verified.Email.Split('@')[0],
                 buildingIds: new List<string>()
             );
 
@@ -393,7 +442,7 @@ public class AccountController : Controller
         catch (Exception ex)
         {
             logger.LogError(ex, "GoogleSignIn failed");
-            return Json(new { success = false, error = "خطأ في تسجيل الدخول" });
+            return Json(new { success = false, error = Loc.T("Login_Error_2") });
         }
     }
 
@@ -451,16 +500,16 @@ public class AccountController : Controller
 
     private static string MapError(string? error, string? reason = null) => error switch
     {
-        "building-not-found" => "العمارة غير موجودة",
-        "no-admin" => "لا يوجد أي أدمن مسجل بعد",
-        "wrong-credentials" => "رقم الهاتف أو الـ PIN غير صحيح",
-        "wrong-wa" => "رقم الواتساب غير مطابق لبيانات الشقة",
-        "wrong-pin" => "الـ PIN غير صحيح",
-        "apt-not-found" => "الشقة غير موجودة",
-        "not-superadmin" => "هذا البريد غير مصرح له بصلاحية Super Admin",
-        "account-disabled" => "🚫 هذا الحساب معطّل" + (string.IsNullOrWhiteSpace(reason) ? "" : $" — السبب: {reason}"),
-        "EMAIL_NOT_FOUND" or "INVALID_PASSWORD" or "INVALID_LOGIN_CREDENTIALS" => "بيانات الدخول غير صحيحة",
-        null => "حدث خطأ غير متوقع",
-        _ => "تعذّر تسجيل الدخول: " + error
+        "building-not-found" => Loc.T("The_Building_Does_Not_Exist"),
+        "no-admin" => Loc.T("No_Admin_Has_Been_Registered_Yet"),
+        "wrong-credentials" => Loc.T("Incorrect_Phone_Number_Or_PIN"),
+        "wrong-wa" => Loc.T("The_WhatsApp_Number_Does_Not_Match"),
+        "wrong-pin" => Loc.T("Incorrect_PIN"),
+        "apt-not-found" => Loc.T("The_Apartment_Does_Not_Exist"),
+        "not-superadmin" => Loc.T("This_Email_Is_Not_Authorized_For_2"),
+        "account-disabled" => Loc.T("This_Account_Is_Disabled") + (string.IsNullOrWhiteSpace(reason) ? "" : Loc.T("Reason_N", reason)),
+        "EMAIL_NOT_FOUND" or "INVALID_PASSWORD" or "INVALID_LOGIN_CREDENTIALS" => Loc.T("Invalid_Login_Details_2"),
+        null => Loc.T("An_Unexpected_Error_Occurred"),
+        _ => Loc.T("Could_Not_Log_In_2") + error
     };
 }

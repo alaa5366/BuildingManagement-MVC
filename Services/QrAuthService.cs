@@ -1,21 +1,26 @@
-using BuildingManagementMvc.Models;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Services;
 
 // ترجمة حرفية لـ js/features/qr-auth.js (توليد والتحقق من توكن الدخول السريع)
 public class QrAuthService
 {
-    // ⚠️ نفس المفتاح السري بالظبط اللي في الأصل، عشان أي توكن اتولّد من نسخة
-    // الـ JS القديمة يفضل صالح، والعكس. غيّره لو عايز تفصل النسختين تمامًا.
-    private const string SecretKey = "BM-qr-secret-2026-alaa-building-management-v1";
+    // المفتاح السري من الـ configuration (Qr:TokenSecretKey أو Qr:SecretKey) — مش مكتوب في الكود.
+    // ⚠️ التوكنات القديمة اللي اتولّدت بالمفتاح المكتوب في الكود هتبطل (مدتها قصيرة أصلاً).
+    private readonly byte[] _key;
 
-    private static string Sign(string data)
+    public QrAuthService(IConfiguration config)
     {
-        using var sha = SHA256.Create();
-        var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(data + SecretKey));
+        _key = Encoding.UTF8.GetBytes(ConfigSecrets.Require(config, "Qr:TokenSecretKey", "Qr:SecretKey"));
+    }
+
+    private string Sign(string data)
+    {
+        using var hmac = new HMACSHA256(_key);
+        var bytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
         return Convert.ToHexString(bytes).ToLower()[..16];
     }
 
@@ -55,7 +60,10 @@ public class QrAuthService
             if (payload == null || string.IsNullOrEmpty(payload.Sig)) return (false, null, "invalid-format");
 
             var dataToSign = $"{payload.Bld}|{payload.Apt}|{payload.Exp}|{payload.Use}|{payload.Uid}";
-            if (Sign(dataToSign) != payload.Sig) return (false, null, "invalid-signature");
+            if (!CryptographicOperations.FixedTimeEquals(
+                    Encoding.UTF8.GetBytes(Sign(dataToSign)),
+                    Encoding.UTF8.GetBytes(payload.Sig)))
+                return (false, null, "invalid-signature");
 
             if (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() > payload.Exp) return (false, null, "expired");
 

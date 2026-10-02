@@ -13,14 +13,14 @@
             </div>
             <div class="flex-grow-1">
                 <h4 class="mb-1">
-                    🏠 شقة @Model.AptNumber
+                    @Loc.T("Apartment_N_2", Model.AptNumber)
                     @if (!string.IsNullOrWhiteSpace(Model.AptLabel))
                     {
                         <small class="text-muted">— @Model.AptLabel</small>
                     }
                 </h4>
                 <div class="text-muted small">
-                    🏢 @Model.FloorLabel (دور @Model.FloorOrder)
+                    @Loc.T("N_Floor_N", Model.FloorLabel, Model.FloorOrder)
                     <span class="ms-2 badge" style="background: @Model.StatusColor;">
                         @Model.StatusIcon @Model.StatusLabel
                     </span>
@@ -34,14 +34,14 @@
 
         @* ===== Owner Info ===== *@
         <div class="details-section">
-            <h6 class="details-section-title">👤 الساكن</h6>
+            <h6 class="details-section-title">@Loc.T("Resident")</h6>
             <div class="details-grid">
                 <div class="detail-item">
-                    <label>الاسم</label>
+                    <label>@Loc.T("Name")</label>
                     <span>@(string.IsNullOrWhiteSpace(Model.Owner) ? "—" : Model.Owner)</span>
                 </div>
                 <div class="detail-item">
-                    <label>📱 الموبايل</label>
+                    <label>@Loc.T("Mobile")</label>
                     <span dir="ltr">@Model.Phone</span>
                 </div>
                 <div class="detail-item">
@@ -49,7 +49,7 @@
                     <span class="pin-value">@Model.Pin</span>
                 </div>
                 <div class="detail-item">
-                    <label>🕐 آخر ظهور</label>
+                    <label>@Loc.T("Last_Seen")</label>
                     <span>@Model.LastSeenText</span>
                 </div>
             </div>
@@ -57,24 +57,24 @@
 
         @* ===== Financial ===== *@
         <div class="details-section">
-            <h6 class="details-section-title">💰 المالية</h6>
+            <h6 class="details-section-title">@Loc.T("Finance")</h6>
             <div class="financial-cards">
                 <div class="fin-card fin-balance">
-                    <div class="fin-label">الرصيد الحالي</div>
+                    <div class="fin-label">@Loc.T("Current_Balance")</div>
                     <div class="fin-value @balanceClass">
-                        @Model.Balance.ToString("N0") ج.م
+                        @Loc.T("N_EGP", Model.Balance.ToString("N0"))
                     </div>
                 </div>
                 <div class="fin-card fin-collected">
-                    <div class="fin-label">محصّل هذا الشهر</div>
-                    <div class="fin-value">@Model.TotalCollectedThisMonth.ToString("N0") ج.م</div>
+                    <div class="fin-label">@Loc.T("Collected_This_Month")</div>
+                    <div class="fin-value">@Loc.T("N_EGP", Model.TotalCollectedThisMonth.ToString("N0"))</div>
                 </div>
                 <div class="fin-card fin-pending">
-                    <div class="fin-label">دفعات معلقة</div>
+                    <div class="fin-label">@Loc.T("Pending_Payments")</div>
                     <div class="fin-value">@Model.PendingDepositsCount</div>
                 </div>
                 <div class="fin-card fin-confirmed">
-                    <div class="fin-label">دفعات مؤكدة</div>
+                    <div class="fin-label">@Loc.T("Confirmed_Payments")</div>
                     <div class="fin-value">@Model.ConfirmedDepositsCount</div>
                 </div>
             </div>
@@ -84,14 +84,14 @@
         @if (Model.RecentDeposits.Any())
         {
             <div class="details-section">
-                <h6 class="details-section-title">📜 آخر الدفعات</h6>
+                <h6 class="details-section-title">@Loc.T("Latest_Payments")</h6>
                 <table class="table table-sm details-table">
                     <thead>
                         <tr>
-                            <th>الرقم</th>
-                            <th>المبلغ</th>
-                            <th>الحالة</th>
-                            <th>التاريخ</th>
+                            <th>@Loc.T("No")</th>
+                            <th>@Loc.T("Amount")</th>
+                            <th>@Loc.T("Status")</th>
+                            <th>@Loc.T("Date")</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -99,7 +99,7 @@
                         {
                             <tr>
                                 <td>@dep.Number</td>
-                                <td>@dep.Amount.ToString("N0") ج.م</td>
+                                <td>@Loc.T("N_EGP", dep.Amount.ToString("N0"))</td>
                                 <td>@dep.StatusLabel</td>
                                 <td class="text-muted small">@dep.DateText</td>
                             </tr>
@@ -110,7 +110,7 @@
         }
         @* ===== Quick Actions ===== *@
         <div class="details-section">
-            <h6 class="details-section-title">⚡ إجراءات سريعة</h6>
+            <h6 class="details-section-title">@Loc.T("Quick_Actions")</h6>
             <div class="quick-actions-grid">
 
                 <a asp-controller="Invoice" asp-action="Download"
@@ -119,38 +119,38 @@
                    target="_blank"
                    class="qa-btn qa-invoice">
                     <span class="qa-icon">🧾</span>
-                    <span>فاتورة PDF</span>
+                    <span>@Loc.T("PDF_Invoice")</span>
                 </a>
 
                 <a asp-controller="AdminApts" asp-action="Index"
                    class="qa-btn qa-edit">
                     <span class="qa-icon">✏️</span>
-                    <span>تعديل الشقة</span>
+                    <span>@Loc.T("Edit_Apartment")</span>
                 </a>
 
                 <a asp-controller="Wallet" asp-action="Index"
                    asp-route-month="@Model.CurrentMonth"
                    class="qa-btn qa-wallet">
                     <span class="qa-icon">💼</span>
-                    <span>المحفظة</span>
+                    <span>@Loc.T("Wallet_2")</span>
                 </a>
 
                 <button type="button" class="qa-btn qa-welcome"
                         onclick="sendWelcomeFromDetails('@Model.AptId')">
                     <span class="qa-icon">💌</span>
-                    <span>رسالة ترحيب</span>
+                    <span>@Loc.T("Welcome_Message")</span>
                 </button>
 
                 <button type="button" class="qa-btn qa-qr"
                         onclick="quickQrFromDetails('@Model.AptId')">
                     <span class="qa-icon">⚡</span>
-                    <span>QR سريع</span>
+                    <span>@Loc.T("Quick_QR_4")</span>
                 </button>
 
                 <button type="button" class="qa-btn qa-impersonate"
                         onclick="impersonateResident('@Model.AptId')">
                     <span class="qa-icon">🚪</span>
-                    <span>دخول كساكن</span>
+                    <span>@Loc.T("Log_In_As_Resident")</span>
                 </button>
 
             </div>
@@ -161,28 +161,28 @@
     @if (Model.IsClosed)
     {
         <div class="details-section">
-            <h6 class="details-section-title">🔓 الشقة مغلقة</h6>
+            <h6 class="details-section-title">@Loc.T("Apartment_Is_Closed")</h6>
             <div class="alert alert-info small mb-3">
-                📅 تاريخ الإغلاق: <strong>@Model.CloseDateText</strong>
+                @Loc.T("Closing_Date")<strong>@Model.CloseDateText</strong>
                 <br />
-                💡 لما تفتح الشقة، هتضاف تلقائيًا للمصروفات الشهرية.
+                @Loc.T("When_You_Open_The_Apartment_It")
             </div>
             <button type="button" class="btn btn-success btn-lg w-100"
                     onclick="openApartment('@Model.AptId', '@Model.AptNumber')">
-                🔓 فتح الشقة
+                @Loc.T("Open_Apartment")
             </button>
         </div>
     }
     else
     {
         <div class="details-section">
-            <h6 class="details-section-title">🔒 إغلاق الشقة</h6>
+            <h6 class="details-section-title">@Loc.T("Close_Apartment")</h6>
             <div class="alert alert-warning small mb-3">
-                ⚠️ إغلاق الشقة يعني إنها مش هتتضمن في توزيع المصروفات، ومش هيتم إصدار فواتير ليها.
+                @Loc.T("Closing_The_Apartment_Means_It_Will")
             </div>
             <button type="button" class="btn btn-outline-danger w-100"
                     onclick="closeApartment('@Model.AptId', '@Model.AptNumber')">
-                🔒 إغلاق الشقة
+                @Loc.T("Close_Apartment")
             </button>
         </div>
     }

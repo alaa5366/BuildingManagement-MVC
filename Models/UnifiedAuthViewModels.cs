@@ -7,10 +7,10 @@ namespace BuildingManagementMvc.Models;
 // ============================================================
 public class UnifiedLoginVm
 {
-    [Required(ErrorMessage = "الإيميل أو رقم التليفون مطلوب")]
+    [Required(ErrorMessage = "Validation_IdentifierRequired")]
     public string Identifier { get; set; } = "";
 
-    [Required(ErrorMessage = "الباسورد أو PIN مطلوب")]
+    [Required(ErrorMessage = "Validation_CredentialRequired")]
     [DataType(DataType.Password)]
     public string Credential { get; set; } = "";
 }

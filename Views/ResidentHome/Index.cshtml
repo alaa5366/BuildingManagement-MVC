@@ -1,17 +1,17 @@
 @model Apartment
-@{ ViewData["Title"] = "لوحة الساكن"; }
+@{ ViewData["Title"] = Loc.T("Resident_Dashboard"); }
 @{ var building = ViewBag.Building as Building; }
 
 @if (Model == null || building == null)
 {
-    <div class="alert alert-warning">لا يمكن تحديد بيانات شقتك.</div>
+    <div class="alert alert-warning">@Loc.T("Your_Apartment_Details_Could_Not_Be")</div>
 }
 else
 {
-    <h3>مرحبًا 👋 — شقة @Model.Number، @building.Name</h3>
-    <p class="text-muted">الرسم الشهري: @Model.MonthlyFee ج.م</p>
+    <h3>@Loc.T("Welcome_Apartment_N_N", Model.Number, building.Name)</h3>
+    <p class="text-muted">@Loc.T("Monthly_Fee_N_EGP", Model.MonthlyFee)</p>
     <div class="mb-3 d-flex gap-2">
-        <a asp-controller="ResidentWallet" asp-action="Index" class="btn btn-brand">💼 محفظتي</a>
-        <a asp-controller="Invoice" asp-action="Download" class="btn btn-outline-secondary">🧾 تنزيل فاتورتي (PDF)</a>
+        <a asp-controller="ResidentWallet" asp-action="Index" class="btn btn-brand">@Loc.T("My_Wallet_3")</a>
+        <a asp-controller="Invoice" asp-action="Download" class="btn btn-outline-secondary">@Loc.T("Download_My_Invoice_PDF")</a>
     </div>
 }

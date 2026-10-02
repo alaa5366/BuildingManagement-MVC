@@ -1,4 +1,9 @@
-﻿using Google.Cloud.Firestore;
+﻿using BuildingManagementMvc.Models;
+using Google.Cloud.Firestore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Services;
 
@@ -263,70 +268,70 @@ public class AuditLogQueryService
     // ============================================================
     public static string LabelAr(string action) => action switch
     {
-        "admin.create" => "إنشاء أدمن",
-        "admin.update" => "تعديل أدمن",
-        "admin.change_pin" => "تغيير PIN أدمن",
-        "admin.deactivate" => "تعطيل أدمن",
-        "admin.activate" => "تنشيط أدمن",
-        "admin.delete" => "حذف أدمن",
-        "admin.sync_permissions" => "مزامنة صلاحيات",
-        "admin.profile_update" => "تحديث بيانات أدمن",
+        "admin.create" => Loc.T("Create_Admin"),
+        "admin.update" => Loc.T("Edit_Admin"),
+        "admin.change_pin" => Loc.T("Change_Admin_PIN"),
+        "admin.deactivate" => Loc.T("Disable_Admin"),
+        "admin.activate" => Loc.T("Activate_Admin"),
+        "admin.delete" => Loc.T("Delete_Admin"),
+        "admin.sync_permissions" => Loc.T("Sync_Permissions"),
+        "admin.profile_update" => Loc.T("Update_Admin_Details"),
 
-        "category.expense.add" => "إضافة فئة مصروف",
-        "category.expense.update" => "تعديل فئة مصروف",
-        "category.expense.delete" => "حذف فئة مصروف",
-        "category.expense.deactivate" => "تعطيل فئة مصروف",
-        "category.expense.reorder" => "إعادة ترتيب فئات المصروفات",
-        "category.revenue.add" => "إضافة فئة إيراد",
-        "category.revenue.update" => "تعديل فئة إيراد",
-        "category.revenue.delete" => "حذف فئة إيراد",
-        "category.revenue.deactivate" => "تعطيل فئة إيراد",
-        "category.revenue.reorder" => "إعادة ترتيب فئات الإيرادات",
+        "category.expense.add" => Loc.T("Add_Expense_Category_2"),
+        "category.expense.update" => Loc.T("Edit_Expense_Category"),
+        "category.expense.delete" => Loc.T("Delete_Expense_Category"),
+        "category.expense.deactivate" => Loc.T("Disable_Expense_Category"),
+        "category.expense.reorder" => Loc.T("Reorder_Expense_Categories"),
+        "category.revenue.add" => Loc.T("Add_Revenue_Category_2"),
+        "category.revenue.update" => Loc.T("Edit_Revenue_Category"),
+        "category.revenue.delete" => Loc.T("Delete_Revenue_Category"),
+        "category.revenue.deactivate" => Loc.T("Disable_Revenue_Category"),
+        "category.revenue.reorder" => Loc.T("Reorder_Revenue_Categories"),
 
-        "deposit_create" => "إنشاء دفعة",
-        "deposit_confirm" => "تأكيد دفعة",
-        "deposit_cancel" => "إلغاء دفعة",
-        "deposit_update" => "تعديل دفعة",
+        "deposit_create" => Loc.T("Create_Payment"),
+        "deposit_confirm" => Loc.T("Confirm_Payment"),
+        "deposit_cancel" => Loc.T("Cancel_Payment"),
+        "deposit_update" => Loc.T("Edit_Payment_2"),
 
-        "expense_add" => "إضافة مصروف",
-        "expense_delete" => "حذف مصروف",
-        "revenue_add" => "إضافة إيراد",
-        "revenue_delete" => "حذف إيراد",
+        "expense_add" => Loc.T("Add_Expense_2"),
+        "expense_delete" => Loc.T("Delete_Expense"),
+        "revenue_add" => Loc.T("Add_Revenue_2"),
+        "revenue_delete" => Loc.T("Delete_Revenue"),
 
-        "wallet_adjustment" => "تسوية محفظة",
-        "report_export" => "تصدير تقرير",
-        "invoice_download" => "تحميل فاتورة",
+        "wallet_adjustment" => Loc.T("Wallet_Adjustment"),
+        "report_export" => Loc.T("Export_Report"),
+        "invoice_download" => Loc.T("Download_Invoice"),
 
-        "maint_add" => "إضافة صيانة",
-        "maint_update" => "تعديل صيانة",
-        "maint_delete" => "حذف صيانة",
-        "maint_add_expense" => "إضافة تكلفة صيانة كمصروف",
+        "maint_add" => Loc.T("Add_Maintenance"),
+        "maint_update" => Loc.T("Edit_Maintenance"),
+        "maint_delete" => Loc.T("Delete_Maintenance"),
+        "maint_add_expense" => Loc.T("Add_Maintenance_Cost_As_Expense"),
 
-        "poll_create" => "إنشاء تصويت",
-        "poll_close" => "إغلاق تصويت",
-        "poll_reopen" => "إعادة فتح تصويت",
-        "poll_delete" => "حذف تصويت",
-        "poll_vote" => "تصويت",
+        "poll_create" => Loc.T("Create_Poll"),
+        "poll_close" => Loc.T("Close_Poll"),
+        "poll_reopen" => Loc.T("Reopen_Poll"),
+        "poll_delete" => Loc.T("Delete_Poll"),
+        "poll_vote" => Loc.T("Vote"),
 
-        "qr_access_generate" => "توليد رابط دخول QR",
+        "qr_access_generate" => Loc.T("Generate_QR_Login_Link"),
 
-        "resident.create" => "إضافة ساكن",
-        "resident.update" => "تعديل ساكن",
-        "resident.profile_update" => "تحديث بيانات ساكن",
+        "resident.create" => Loc.T("Add_Resident"),
+        "resident.update" => Loc.T("Edit_Resident"),
+        "resident.profile_update" => Loc.T("Update_Resident_Details"),
 
-        "building.create" => "إنشاء عمارة",
-        "building.delete" => "حذف عمارة",
+        "building.create" => Loc.T("Create_Building_2"),
+        "building.delete" => Loc.T("Delete_Building_2"),
 
-        "settings.own.update" => "تحديث إعداداتي",
-        "settings.building.update" => "تحديث إعدادات العمارة",
-        "settings.global.update" => "تحديث الإعدادات العامة",
-        "superadmin.name_update" => "تحديث اسم السوبر أدمن",
+        "settings.own.update" => Loc.T("Update_My_Settings"),
+        "settings.building.update" => Loc.T("Update_Building_Settings"),
+        "settings.global.update" => Loc.T("Update_Global_Settings"),
+        "superadmin.name_update" => Loc.T("Update_Super_Admin_Name"),
 
         // ✅ Phase 24.4-24.5
-        "apartment.opened" => "🔓 فتح شقة",
-        "apartment.closed" => "🔒 إغلاق شقة",
-        "impersonation.enter" => "🚪 دخول كساكن (Impersonation)",
-        "impersonation.exit" => "↩️ رجوع من Impersonation",
+        "apartment.opened" => Loc.T("Open_Apartment_2"),
+        "apartment.closed" => Loc.T("Close_Apartment_2"),
+        "impersonation.enter" => Loc.T("Log_In_As_Resident_Impersonation"),
+        "impersonation.exit" => Loc.T("Return_From_Impersonation"),
 
         _ => action
     };
@@ -344,9 +349,9 @@ public class AuditLogQueryService
 
     public static string SeverityLabelAr(string severity) => severity switch
     {
-        "critical" => "🔴 حرج",
-        "warning" => "🟡 تحذير",
-        "info" => "🔵 معلومة",
+        "critical" => Loc.T("Critical"),
+        "warning" => Loc.T("Warning"),
+        "info" => Loc.T("Info"),
         _ => severity
     };
 }

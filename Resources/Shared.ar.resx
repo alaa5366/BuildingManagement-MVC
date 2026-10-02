@@ -1,5 +1,64 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
     <xsd:element name="root" msdata:IsDataSet="true">
@@ -58,89 +117,3879 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+    <data name="App_Name" xml:space="preserve">
+    <value>نظام إدارة العمارات</value>
+  </data>
+  <data name="App_ShortName" xml:space="preserve">
+    <value>إدارة العمارات</value>
+  </data>
+  <data name="Nav_Home" xml:space="preserve">
+    <value>الرئيسية</value>
+  </data>
+  <data name="Nav_Wallet" xml:space="preserve">
+    <value>المحفظة</value>
+  </data>
+  <data name="Nav_Expenses" xml:space="preserve">
+    <value>المصروفات</value>
+  </data>
+  <data name="Nav_Revenues" xml:space="preserve">
+    <value>الإيرادات</value>
+  </data>
+  <data name="Nav_Categories" xml:space="preserve">
+    <value>الفئات</value>
+  </data>
+  <data name="Nav_Polls" xml:space="preserve">
+    <value>التصويتات</value>
+  </data>
+  <data name="Nav_Maintenance" xml:space="preserve">
+    <value>الصيانة</value>
+  </data>
+  <data name="Nav_Notifications" xml:space="preserve">
+    <value>الإشعارات</value>
+  </data>
+  <data name="Nav_WhatsApp" xml:space="preserve">
+    <value>واتساب</value>
+  </data>
+  <data name="Nav_AuditLog" xml:space="preserve">
+    <value>السجل</value>
+  </data>
+  <data name="Nav_Settings" xml:space="preserve">
+    <value>الإعدادات</value>
+  </data>
+  <data name="Nav_MySettings" xml:space="preserve">
+    <value>إعداداتي</value>
+  </data>
+  <data name="Nav_MyWallet" xml:space="preserve">
+    <value>محفظتي</value>
+  </data>
+  <data name="Nav_MyLog" xml:space="preserve">
+    <value>سجلي</value>
+  </data>
+  <data name="Nav_Help" xml:space="preserve">
+    <value>الكتيب</value>
+  </data>
+  <data name="Nav_Logout" xml:space="preserve">
+    <value>تسجيل الخروج</value>
+  </data>
+  <data name="Nav_Buildings" xml:space="preserve">
+    <value>العمارات</value>
+  </data>
+  <data name="Nav_Admins" xml:space="preserve">
+    <value>الأدمنة</value>
+  </data>
+  <data name="Nav_Tools" xml:space="preserve">
+    <value>الأدوات</value>
+  </data>
+  <data name="Nav_Sync" xml:space="preserve">
+    <value>المزامنة</value>
+  </data>
+  <data name="Nav_Backup" xml:space="preserve">
+    <value>النسخ الاحتياطي</value>
+  </data>
+  <data name="Nav_Permissions" xml:space="preserve">
+    <value>الصلاحيات</value>
+  </data>
+  <data name="Footer_Copyright" xml:space="preserve">
+    <value>نظام إدارة العمارات — نسخة C# MVC</value>
+  </data>
+  <data name="Login_Title" xml:space="preserve">
+    <value>تسجيل الدخول</value>
+  </data>
+  <data name="Login_Subtitle" xml:space="preserve">
+    <value>سجل دخولك للمتابعة</value>
+  </data>
+  <data name="Login_Identifier" xml:space="preserve">
+    <value>الإيميل / رقم التليفون</value>
+  </data>
+  <data name="Login_Credential" xml:space="preserve">
+    <value>الباسورد / PIN</value>
+  </data>
+  <data name="Login_Submit" xml:space="preserve">
+    <value>دخول</value>
+  </data>
+  <data name="Login_Or" xml:space="preserve">
+    <value>أو</value>
+  </data>
+  <data name="Login_QrHint" xml:space="preserve">
+    <value>عندك QR سريع؟ اضغط هنا</value>
+  </data>
+  <data name="Common_Save" xml:space="preserve">
+    <value>حفظ</value>
+  </data>
+  <data name="Common_Cancel" xml:space="preserve">
+    <value>إلغاء</value>
+  </data>
+  <data name="Common_Delete" xml:space="preserve">
+    <value>حذف</value>
+  </data>
+  <data name="Common_Edit" xml:space="preserve">
+    <value>تعديل</value>
+  </data>
+  <data name="Common_Confirm" xml:space="preserve">
+    <value>تأكيد</value>
+  </data>
+  <data name="Common_Back" xml:space="preserve">
+    <value>رجوع</value>
+  </data>
+  <data name="Role_SuperAdmin" xml:space="preserve">
+    <value>مدير عام</value>
+  </data>
+  <data name="Role_Admin" xml:space="preserve">
+    <value>أدمن</value>
+  </data>
+  <data name="Role_Resident" xml:space="preserve">
+    <value>ساكن</value>
+  </data>
+  <data name="Nav_Apts" xml:space="preserve">
+    <value>الشقق</value>
+  </data>
+  <data name="Validation_IdentifierRequired" xml:space="preserve">
+    <value>الإيميل أو رقم التليفون مطلوب</value>
+  </data>
+  <data name="Validation_CredentialRequired" xml:space="preserve">
+    <value>الباسورد أو PIN مطلوب</value>
+  </data>
+  <data name="Select_Account" xml:space="preserve">
+    <value>اختيار الحساب</value>
+  </data>
+  <data name="Welcome_N" xml:space="preserve">
+    <value>👋 مرحبًا، {0}</value>
+  </data>
+  <data name="You_Have_More_Than_One_Account" xml:space="preserve">
+    <value>عندك أكتر من حساب — اختار اللي عايز تدخله</value>
+  </data>
+  <data name="Admin_N" xml:space="preserve">
+    <value>🏢 الأدمن ({0})</value>
+  </data>
+  <data name="Admin" xml:space="preserve">
+    <value>أدمن</value>
+  </data>
+  <data name="Residents_N_Apartments_In_N_Buildings" xml:space="preserve">
+    <value>🏠 السكان ({0} شقة في {1} عمارة)</value>
+  </data>
+  <data name="Apartment_N" xml:space="preserve">
+    <value>شقة {0}</value>
+  </data>
+  <data name="No_Contexts_Available" xml:space="preserve">
+    <value>⚠️ مفيش سياقات متاحة</value>
+  </data>
+  <data name="Back" xml:space="preserve">
+    <value>← رجوع</value>
+  </data>
+  <data name="Admin_Login" xml:space="preserve">
+    <value>دخول الأدمن</value>
+  </data>
+  <data name="Choose_The_Building_And_Enter_Your" xml:space="preserve">
+    <value>اختار العمارة وأدخل رقم الهاتف والـ PIN</value>
+  </data>
+  <data name="Building_Detected_Automatically" xml:space="preserve">
+    <value>📱 تم التعرف على العمارة تلقائياً</value>
+  </data>
+  <data name="Just_Enter_Your_WhatsApp_Number_And" xml:space="preserve">
+    <value>💡 بس أدخل رقم الواتساب والـ PIN</value>
+  </data>
+  <data name="Building" xml:space="preserve">
+    <value>العمارة</value>
+  </data>
+  <data name="Select" xml:space="preserve">
+    <value>— اختار —</value>
+  </data>
+  <data name="WhatsApp_Number" xml:space="preserve">
+    <value>رقم الواتساب</value>
+  </data>
+  <data name="Log_In" xml:space="preserve">
+    <value>دخول</value>
+  </data>
+  <data name="Resident_Login" xml:space="preserve">
+    <value>دخول الساكن</value>
+  </data>
+  <data name="Choose_The_Building_Floor_And_Apartment" xml:space="preserve">
+    <value>اختار العمارة والدور والشقة، وأدخل رقم الواتساب والـ PIN</value>
+  </data>
+  <data name="Your_Apartment_Was_Detected_Automatically" xml:space="preserve">
+    <value>📱 تم التعرف على شقتك تلقائياً</value>
+  </data>
+  <data name="N_Apartment_N" xml:space="preserve">
+    <value>{0} — شقة {1}</value>
+  </data>
+  <data name="Floor_Number" xml:space="preserve">
+    <value>رقم الدور</value>
+  </data>
+  <data name="Apartment_Number" xml:space="preserve">
+    <value>رقم الشقة</value>
+  </data>
+  <data name="Super_Admin_Login" xml:space="preserve">
+    <value>دخول Super Admin</value>
+  </data>
+  <data name="With_Email_And_Password" xml:space="preserve">
+    <value>بالبريد الإلكتروني وكلمة المرور</value>
+  </data>
+  <data name="Email" xml:space="preserve">
+    <value>البريد الإلكتروني</value>
+  </data>
+  <data name="Password" xml:space="preserve">
+    <value>كلمة المرور</value>
+  </data>
+  <data name="Login_Error" xml:space="preserve">
+    <value>خطأ في الدخول</value>
+  </data>
+  <data name="Could_Not_Log_In" xml:space="preserve">
+    <value>تعذّر الدخول</value>
+  </data>
+  <data name="Regular_Login" xml:space="preserve">
+    <value>→ دخول عادي</value>
+  </data>
+  <data name="Log_In_2" xml:space="preserve">
+    <value>تسجيل الدخول</value>
+  </data>
+  <data name="Building_Management_System" xml:space="preserve">
+    <value>نظام إدارة العمارات</value>
+  </data>
+  <data name="Sign_In_To_Continue" xml:space="preserve">
+    <value>سجّل دخولك للمتابعة</value>
+  </data>
+  <data name="Sign_In_With_Google_Super_Admin" xml:space="preserve">
+    <value>الدخول بـ Google (Super Admin)</value>
+  </data>
+  <data name="Or" xml:space="preserve">
+    <value>─────── أو ───────</value>
+  </data>
+  <data name="Email_Phone_Number" xml:space="preserve">
+    <value>📧 الإيميل / رقم التليفون</value>
+  </data>
+  <data name="You_Example_Com_Or_201001234567" xml:space="preserve">
+    <value>you@example.com أو +201001234567</value>
+  </data>
+  <data name="Password_PIN" xml:space="preserve">
+    <value>🔒 الباسورد / PIN</value>
+  </data>
+  <data name="Log_In_3" xml:space="preserve">
+    <value>🚪 دخول</value>
+  </data>
+  <data name="Have_A_Quick_Access_QR_Tap" xml:space="preserve">
+    <value>📷 عندك QR سريع؟ اضغط هنا</value>
+  </data>
+  <data name="The_System_Recognizes_Your_Role_Automatically" xml:space="preserve">
+    <value>💡 النظام بيتعرّف على دورك تلقائياً</value>
+  </data>
+  <data name="Google_Window_Was_Closed" xml:space="preserve">
+    <value>تم إغلاق نافذة Google</value>
+  </data>
+  <data name="The_Browser_Blocked_The_Window" xml:space="preserve">
+    <value>المتصفح منع النافذة</value>
+  </data>
+  <data name="The_Operation_Was_Cancelled" xml:space="preserve">
+    <value>تم إلغاء العملية</value>
+  </data>
+  <data name="The_Domain_Is_Not_Authorized_In" xml:space="preserve">
+    <value>الدومين غير مصرح به في Firebase</value>
+  </data>
+  <data name="Google_Sign_In_Failed" xml:space="preserve">
+    <value>فشل الدخول بـ Google</value>
+  </data>
+  <data name="Login_Failed" xml:space="preserve">
+    <value>فشل تسجيل الدخول</value>
+  </data>
+  <data name="Connection_Error" xml:space="preserve">
+    <value>خطأ في الاتصال</value>
+  </data>
+  <data name="Manage_Apartments" xml:space="preserve">
+    <value>إدارة الشقق</value>
+  </data>
+  <data name="Apartments_Of_N_N" xml:space="preserve">
+    <value>🏠 شقق {0} ({1})</value>
+  </data>
+  <data name="Tap_Quick_QR_To_Generate_A" xml:space="preserve">
+    <value>💡 اضغط &lt;strong&gt;"⚡ QR سريع"&lt;/strong&gt; عشان تولّد رابط دخول مؤقت للساكن، أو &lt;strong&gt;"💌 ترحيب"&lt;/strong&gt; لإرسال رسالة كاملة فيها بياناته + QR.</value>
+  </data>
+  <data name="Floor_No_N" xml:space="preserve">
+    <value>(دور رقم {0})</value>
+  </data>
+  <data name="Apartment_N_N" xml:space="preserve">
+    <value>🏠 شقة {0} {1}</value>
+  </data>
+  <data name="Quick_QR_2" xml:space="preserve">
+    <value>⚡ QR سريع</value>
+  </data>
+  <data name="Welcome_Message_QR_For_Quick_Login" xml:space="preserve">
+    <value>رسالة ترحيب + QR للدخول السريع</value>
+  </data>
+  <data name="Welcome_2" xml:space="preserve">
+    <value>💌 ترحيب</value>
+  </data>
+  <data name="Quick_QR_5" xml:space="preserve">
+    <value>⚡ QR سريع — &lt;span id="quickAptInfo"&gt;&lt;/span&gt;</value>
+  </data>
+  <data name="The_Quick_QR_Lets_The_Resident" xml:space="preserve">
+    <value>💡 الـ QR السريع بيسمح للساكن يدخل مباشرة بدون إدخال أي بيانات. آمن ومشفّر.</value>
+  </data>
+  <data name="Validity_Period" xml:space="preserve">
+    <value>⏱️ مدة الصلاحية</value>
+  </data>
+  <data name="5_Minutes" xml:space="preserve">
+    <value>5 دقائق</value>
+  </data>
+  <data name="15_Minutes" xml:space="preserve">
+    <value>15 دقيقة</value>
+  </data>
+  <data name="1_Hour" xml:space="preserve">
+    <value>ساعة واحدة</value>
+  </data>
+  <data name="6_Hours" xml:space="preserve">
+    <value>6 ساعات</value>
+  </data>
+  <data name="1_Day" xml:space="preserve">
+    <value>يوم واحد</value>
+  </data>
+  <data name="1_Week" xml:space="preserve">
+    <value>أسبوع</value>
+  </data>
+  <data name="Usage_Type" xml:space="preserve">
+    <value>🔢 نوع الاستخدام</value>
+  </data>
+  <data name="One_Time_Only" xml:space="preserve">
+    <value>مرة واحدة فقط</value>
+  </data>
+  <data name="Most_Secure_The_Link_Expires_After" xml:space="preserve">
+    <value>الأكثر أمانًا — الرابط يبطل بعد أول استخدام</value>
+  </data>
+  <data name="Multiple_Until_Expiry" xml:space="preserve">
+    <value>متعدد حتى انتهاء الصلاحية</value>
+  </data>
+  <data name="Suitable_If_The_Resident_Will_Log" xml:space="preserve">
+    <value>مناسب لو الساكن هيدخل من أكتر من جهاز</value>
+  </data>
+  <data name="Maximum_Uses" xml:space="preserve">
+    <value>الحد الأقصى للاستخدام</value>
+  </data>
+  <data name="Quick_QR_Generated_Successfully" xml:space="preserve">
+    <value>✅ تم توليد QR السريع بنجاح</value>
+  </data>
+  <data name="Quick_Link" xml:space="preserve">
+    <value>🔗 الرابط السريع</value>
+  </data>
+  <data name="Copy" xml:space="preserve">
+    <value>📋 نسخ</value>
+  </data>
+  <data name="Open" xml:space="preserve">
+    <value>🔗 فتح</value>
+  </data>
+  <data name="Send_This_Link_To_The_Resident" xml:space="preserve">
+    <value>⚠️ ابعت الرابط ده للساكن عن طريق واتساب. بعد انتهاء الصلاحية أو استخدامه، مش هيعمل تاني.</value>
+  </data>
+  <data name="Generate_QR" xml:space="preserve">
+    <value>⚡ توليد QR</value>
+  </data>
+  <data name="Generate_New" xml:space="preserve">
+    <value>🔄 توليد جديد</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>إغلاق</value>
+  </data>
+  <data name="Apt" xml:space="preserve">
+    <value>شقة</value>
+  </data>
+  <data name="Generating" xml:space="preserve">
+    <value>جاري التوليد...</value>
+  </data>
+  <data name="Failed_To_Generate_QR" xml:space="preserve">
+    <value>فشل توليد QR:</value>
+  </data>
+  <data name="Unknown_Error" xml:space="preserve">
+    <value>خطأ غير معروف</value>
+  </data>
+  <data name="Up_To" xml:space="preserve">
+    <value>حتى</value>
+  </data>
+  <data name="Uses" xml:space="preserve">
+    <value>استخدام</value>
+  </data>
+  <data name="Valid_For" xml:space="preserve">
+    <value>صالح لمدة</value>
+  </data>
+  <data name="Minutes" xml:space="preserve">
+    <value>دقيقة &amp;nbsp;|&amp;nbsp; 🔢</value>
+  </data>
+  <data name="Error" xml:space="preserve">
+    <value>خطأ:</value>
+  </data>
+  <data name="Generate_QR_2" xml:space="preserve">
+    <value>توليد QR</value>
+  </data>
+  <data name="Link_Copied" xml:space="preserve">
+    <value>تم نسخ الرابط</value>
+  </data>
+  <data name="Welcome_Message" xml:space="preserve">
+    <value>رسالة ترحيب</value>
+  </data>
+  <data name="Welcome_Message_Apartment_N" xml:space="preserve">
+    <value>💌 رسالة ترحيب — شقة {0}</value>
+  </data>
+  <data name="Steps_To_Send" xml:space="preserve">
+    <value>📋 خطوات الإرسال:</value>
+  </data>
+  <data name="Download_The_QR_Image_Button_Download" xml:space="preserve">
+    <value>حمّل صورة الـ QR (زر &lt;strong&gt;📥 تحميل QR&lt;/strong&gt;)</value>
+  </data>
+  <data name="Tap_Send_Via_WhatsApp_The_Message" xml:space="preserve">
+    <value>اضغط &lt;strong&gt;💬 إرسال عبر واتساب&lt;/strong&gt; — الرسالة هتفتح جاهزة</value>
+  </data>
+  <data name="Send_The_Image_After_The_Message" xml:space="preserve">
+    <value>ابعت الصورة بعد الرسالة (من الـ Downloads)</value>
+  </data>
+  <data name="Quick_Login_QR" xml:space="preserve">
+    <value>📱 QR للدخول السريع</value>
+  </data>
+  <data name="Valid_For_N_Hours" xml:space="preserve">
+    <value>صالح {0} ساعة</value>
+  </data>
+  <data name="Quick_Login_Link" xml:space="preserve">
+    <value>رابط الدخول السريع:</value>
+  </data>
+  <data name="Download_QR_As_Image" xml:space="preserve">
+    <value>📥 تحميل QR كصورة</value>
+  </data>
+  <data name="Copy_Image_To_Clipboard" xml:space="preserve">
+    <value>📋 نسخ الصورة للحافظة</value>
+  </data>
+  <data name="Copy_Link" xml:space="preserve">
+    <value>🔗 نسخ الرابط</value>
+  </data>
+  <data name="Send_Message" xml:space="preserve">
+    <value>📤 إرسال الرسالة</value>
+  </data>
+  <data name="Tap_The_Button_To_Open_WhatsApp" xml:space="preserve">
+    <value>اضغط الزر لفتح واتساب مع الرسالة جاهزة. بعد الإرسال، ارفق صورة الـ QR.</value>
+  </data>
+  <data name="Send_Via_WhatsApp_N" xml:space="preserve">
+    <value>💬 إرسال عبر واتساب — {0}</value>
+  </data>
+  <data name="WhatsApp_Will_Open_On_Your_Device" xml:space="preserve">
+    <value>💡 هيتم فتح واتساب على جهازك (أو WhatsApp Web)</value>
+  </data>
+  <data name="Message_Preview" xml:space="preserve">
+    <value>📄 معاينة الرسالة</value>
+  </data>
+  <data name="Back_2" xml:space="preserve">
+    <value>↩️ رجوع</value>
+  </data>
+  <data name="Image_Copied_You_Can_Paste_It" xml:space="preserve">
+    <value>تم نسخ الصورة — تقدر تلصقها في واتساب</value>
+  </data>
+  <data name="Your_Browser_Doesn_T_Support_Copying" xml:space="preserve">
+    <value>المتصفح مش بيدعم نسخ الصور. استخدم</value>
+  </data>
+  <data name="Download_QR_As_Image_2" xml:space="preserve">
+    <value>تحميل QR كصورة</value>
+  </data>
+  <data name="Instead" xml:space="preserve">
+    <value>بدل.</value>
+  </data>
+  <data name="Copied" xml:space="preserve">
+    <value>تم النسخ</value>
+  </data>
+  <data name="Admin_Dashboard" xml:space="preserve">
+    <value>لوحة الأدمن</value>
+  </data>
+  <data name="N_Floors_N_Apartments_N_Open" xml:space="preserve">
+    <value>🏢 {0} دور | 🏠 {1} شقة ({2} مفتوحة</value>
+  </data>
+  <data name="N_Closed" xml:space="preserve">
+    <value>— {0} مغلقة</value>
+  </data>
+  <data name="Online" xml:space="preserve">
+    <value>أونلاين</value>
+  </data>
+  <data name="Total_Balance" xml:space="preserve">
+    <value>إجمالي الرصيد</value>
+  </data>
+  <data name="Debtors" xml:space="preserve">
+    <value>مدينون</value>
+  </data>
+  <data name="Pending_Payments" xml:space="preserve">
+    <value>دفعات معلقة</value>
+  </data>
+  <data name="Floor_N" xml:space="preserve">
+    <value>(دور {0})</value>
+  </data>
+  <data name="N_Apartments" xml:space="preserve">
+    <value>{0} شقة</value>
+  </data>
+  <data name="Legend" xml:space="preserve">
+    <value>🔑 الرموز:</value>
+  </data>
+  <data name="Seen_Recently" xml:space="preserve">
+    <value>آخر ظهور قريب</value>
+  </data>
+  <data name="Offline" xml:space="preserve">
+    <value>أوفلاين</value>
+  </data>
+  <data name="Negative_Balance" xml:space="preserve">
+    <value>رصيد سالب</value>
+  </data>
+  <data name="Closed" xml:space="preserve">
+    <value>مغلقة</value>
+  </data>
+  <data name="Wallet" xml:space="preserve">
+    <value>💼 المحفظة</value>
+  </data>
+  <data name="Manage_Apartments_2" xml:space="preserve">
+    <value>🏠 إدارة الشقق</value>
+  </data>
+  <data name="Reports" xml:space="preserve">
+    <value>📊 التقارير</value>
+  </data>
+  <data name="Apartment_N_2" xml:space="preserve">
+    <value>🏠 شقة {0}</value>
+  </data>
+  <data name="N_EGP" xml:space="preserve">
+    <value>{0} ج.م</value>
+  </data>
+  <data name="N_Pending" xml:space="preserve">
+    <value>⏳ {0} معلقة</value>
+  </data>
+  <data name="N_Floor_N" xml:space="preserve">
+    <value>🏢 {0} (دور {1})</value>
+  </data>
+  <data name="Resident" xml:space="preserve">
+    <value>👤 الساكن</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>الاسم</value>
+  </data>
+  <data name="Mobile" xml:space="preserve">
+    <value>📱 الموبايل</value>
+  </data>
+  <data name="Last_Seen" xml:space="preserve">
+    <value>🕐 آخر ظهور</value>
+  </data>
+  <data name="Finance" xml:space="preserve">
+    <value>💰 المالية</value>
+  </data>
+  <data name="Current_Balance" xml:space="preserve">
+    <value>الرصيد الحالي</value>
+  </data>
+  <data name="Collected_This_Month" xml:space="preserve">
+    <value>محصّل هذا الشهر</value>
+  </data>
+  <data name="Confirmed_Payments" xml:space="preserve">
+    <value>دفعات مؤكدة</value>
+  </data>
+  <data name="Latest_Payments" xml:space="preserve">
+    <value>📜 آخر الدفعات</value>
+  </data>
+  <data name="No" xml:space="preserve">
+    <value>الرقم</value>
+  </data>
+  <data name="Amount" xml:space="preserve">
+    <value>المبلغ</value>
+  </data>
+  <data name="Status" xml:space="preserve">
+    <value>الحالة</value>
+  </data>
+  <data name="Date" xml:space="preserve">
+    <value>التاريخ</value>
+  </data>
+  <data name="Quick_Actions" xml:space="preserve">
+    <value>⚡ إجراءات سريعة</value>
+  </data>
+  <data name="PDF_Invoice" xml:space="preserve">
+    <value>فاتورة PDF</value>
+  </data>
+  <data name="Edit_Apartment" xml:space="preserve">
+    <value>تعديل الشقة</value>
+  </data>
+  <data name="Wallet_2" xml:space="preserve">
+    <value>المحفظة</value>
+  </data>
+  <data name="Quick_QR_4" xml:space="preserve">
+    <value>QR سريع</value>
+  </data>
+  <data name="Log_In_As_Resident" xml:space="preserve">
+    <value>دخول كساكن</value>
+  </data>
+  <data name="Apartment_Is_Closed" xml:space="preserve">
+    <value>🔓 الشقة مغلقة</value>
+  </data>
+  <data name="Closing_Date" xml:space="preserve">
+    <value>📅 تاريخ الإغلاق:</value>
+  </data>
+  <data name="When_You_Open_The_Apartment_It" xml:space="preserve">
+    <value>💡 لما تفتح الشقة، هتضاف تلقائيًا للمصروفات الشهرية.</value>
+  </data>
+  <data name="Open_Apartment" xml:space="preserve">
+    <value>🔓 فتح الشقة</value>
+  </data>
+  <data name="Close_Apartment" xml:space="preserve">
+    <value>🔒 إغلاق الشقة</value>
+  </data>
+  <data name="Closing_The_Apartment_Means_It_Will" xml:space="preserve">
+    <value>⚠️ إغلاق الشقة يعني إنها مش هتتضمن في توزيع المصروفات، ومش هيتم إصدار فواتير ليها.</value>
+  </data>
+  <data name="Add_Admin" xml:space="preserve">
+    <value>إضافة أدمن</value>
+  </data>
+  <data name="Add_Admin_2" xml:space="preserve">
+    <value>➕ إضافة أدمن</value>
+  </data>
+  <data name="Mobile_Number" xml:space="preserve">
+    <value>رقم الموبايل</value>
+  </data>
+  <data name="Select_2" xml:space="preserve">
+    <value>— اختر —</value>
+  </data>
+  <data name="Permissions" xml:space="preserve">
+    <value>الصلاحيات</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>حفظ</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>إلغاء</value>
+  </data>
+  <data name="Edit_Admin" xml:space="preserve">
+    <value>تعديل أدمن</value>
+  </data>
+  <data name="Edit_N" xml:space="preserve">
+    <value>✏️ تعديل: {0}</value>
+  </data>
+  <data name="Email_2" xml:space="preserve">
+    <value>البريد</value>
+  </data>
+  <data name="Active" xml:space="preserve">
+    <value>نشط</value>
+  </data>
+  <data name="Change_PIN" xml:space="preserve">
+    <value>🔐 تغيير PIN</value>
+  </data>
+  <data name="New_PIN" xml:space="preserve">
+    <value>PIN جديد</value>
+  </data>
+  <data name="Change_PIN_2" xml:space="preserve">
+    <value>تغيير PIN</value>
+  </data>
+  <data name="Manage_Admins" xml:space="preserve">
+    <value>إدارة الأدمنة</value>
+  </data>
+  <data name="Manage_Admins_N" xml:space="preserve">
+    <value>👥 إدارة الأدمنة ({0})</value>
+  </data>
+  <data name="All_Buildings" xml:space="preserve">
+    <value>— كل العمارات —</value>
+  </data>
+  <data name="No_Matching_Admins_Found" xml:space="preserve">
+    <value>لا يوجد أدمنة مطابقين.</value>
+  </data>
+  <data name="Last_Login" xml:space="preserve">
+    <value>آخر دخول</value>
+  </data>
+  <data name="Active_2" xml:space="preserve">
+    <value>🟢 نشط</value>
+  </data>
+  <data name="Disabled" xml:space="preserve">
+    <value>🔴 معطّل</value>
+  </data>
+  <data name="Edit" xml:space="preserve">
+    <value>تعديل</value>
+  </data>
+  <data name="Disable" xml:space="preserve">
+    <value>تعطيل؟</value>
+  </data>
+  <data name="Disable_2" xml:space="preserve">
+    <value>تعطيل</value>
+  </data>
+  <data name="Activate" xml:space="preserve">
+    <value>تنشيط</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>حذف؟</value>
+  </data>
+  <data name="Delete_2" xml:space="preserve">
+    <value>حذف</value>
+  </data>
+  <data name="Log" xml:space="preserve">
+    <value>السجل</value>
+  </data>
+  <data name="Log_2" xml:space="preserve">
+    <value>📜 السجل</value>
+  </data>
+  <data name="All_Records" xml:space="preserve">
+    <value>— كل السجلات</value>
+  </data>
+  <data name="My_Building_S_Log" xml:space="preserve">
+    <value>— سجل عمارتي</value>
+  </data>
+  <data name="My_Apartment_S_Log" xml:space="preserve">
+    <value>— سجل شقتي</value>
+  </data>
+  <data name="N_Operations" xml:space="preserve">
+    <value>{0} عملية</value>
+  </data>
+  <data name="Export_CSV" xml:space="preserve">
+    <value>⬇️ تصدير CSV</value>
+  </data>
+  <data name="Action" xml:space="preserve">
+    <value>العملية</value>
+  </data>
+  <data name="All" xml:space="preserve">
+    <value>— الكل —</value>
+  </data>
+  <data name="Severity" xml:space="preserve">
+    <value>الخطورة</value>
+  </data>
+  <data name="Info" xml:space="preserve">
+    <value>🔵 معلومة</value>
+  </data>
+  <data name="Warning" xml:space="preserve">
+    <value>🟡 تحذير</value>
+  </data>
+  <data name="Critical" xml:space="preserve">
+    <value>🔴 حرج</value>
+  </data>
+  <data name="Optional" xml:space="preserve">
+    <value>اختياري</value>
+  </data>
+  <data name="From_Date" xml:space="preserve">
+    <value>من تاريخ</value>
+  </data>
+  <data name="To_Date" xml:space="preserve">
+    <value>إلى تاريخ</value>
+  </data>
+  <data name="Filter" xml:space="preserve">
+    <value>🔍 فلترة</value>
+  </data>
+  <data name="Reset" xml:space="preserve">
+    <value>↻ إعادة تعيين</value>
+  </data>
+  <data name="No_Records_Match_The_Filters" xml:space="preserve">
+    <value>لا توجد سجلات مطابقة للفلاتر.</value>
+  </data>
+  <data name="User" xml:space="preserve">
+    <value>المستخدم</value>
+  </data>
+  <data name="Role" xml:space="preserve">
+    <value>الدور</value>
+  </data>
+  <data name="Apartment" xml:space="preserve">
+    <value>الشقة</value>
+  </data>
+  <data name="Details" xml:space="preserve">
+    <value>تفاصيل</value>
+  </data>
+  <data name="View" xml:space="preserve">
+    <value>عرض</value>
+  </data>
+  <data name="Confirm_Import" xml:space="preserve">
+    <value>تأكيد الاستيراد</value>
+  </data>
+  <data name="Confirm_Building_Import" xml:space="preserve">
+    <value>✅ تأكيد استيراد العمارة</value>
+  </data>
+  <data name="The_File_Is_Valid_Review_The" xml:space="preserve">
+    <value>✅ الملف صالح! راجع البيانات التالية قبل التأكيد.</value>
+  </data>
+  <data name="Building_Data" xml:space="preserve">
+    <value>🏢 بيانات العمارة</value>
+  </data>
+  <data name="Building_Number" xml:space="preserve">
+    <value>رقم العمارة</value>
+  </data>
+  <data name="Automatic_BLD_XXX" xml:space="preserve">
+    <value>تلقائي (BLD-XXX)</value>
+  </data>
+  <data name="Admin_PIN" xml:space="preserve">
+    <value>PIN الأدمن</value>
+  </data>
+  <data name="Admin_WhatsApp" xml:space="preserve">
+    <value>واتساب الأدمن</value>
+  </data>
+  <data name="Apartments_N" xml:space="preserve">
+    <value>🏠 الشقق ({0})</value>
+  </data>
+  <data name="Owner" xml:space="preserve">
+    <value>المالك</value>
+  </data>
+  <data name="WhatsApp" xml:space="preserve">
+    <value>واتساب</value>
+  </data>
+  <data name="Fee" xml:space="preserve">
+    <value>الرسم</value>
+  </data>
+  <data name="Open_2" xml:space="preserve">
+    <value>مفتوحة</value>
+  </data>
+  <data name="Final_Confirmation" xml:space="preserve">
+    <value>⚠️ تأكيد نهائي</value>
+  </data>
+  <data name="Once_You_Click_Confirm_Import_A" xml:space="preserve">
+    <value>بمجرد الضغط على "تأكيد الاستيراد"، هتتعمل عمارة جديدة في قاعدة البيانات، وهتتعمل حسابات Firebase Auth لكل شقة.</value>
+  </data>
+  <data name="Confirm_Import_2" xml:space="preserve">
+    <value>✅ تأكيد الاستيراد</value>
+  </data>
+  <data name="Backup_History" xml:space="preserve">
+    <value>سجل النسخ</value>
+  </data>
+  <data name="Backup_History_2" xml:space="preserve">
+    <value>📜 سجل النسخ الاحتياطية</value>
+  </data>
+  <data name="Scheduled_Backups" xml:space="preserve">
+    <value>← النسخ المجدولة</value>
+  </data>
+  <data name="No_History_Yet" xml:space="preserve">
+    <value>لا يوجد سجل بعد.</value>
+  </data>
+  <data name="Source" xml:space="preserve">
+    <value>المصدر</value>
+  </data>
+  <data name="File" xml:space="preserve">
+    <value>الملف</value>
+  </data>
+  <data name="Documents" xml:space="preserve">
+    <value>المستندات</value>
+  </data>
+  <data name="Size" xml:space="preserve">
+    <value>الحجم</value>
+  </data>
+  <data name="Duration" xml:space="preserve">
+    <value>المدة</value>
+  </data>
+  <data name="Succeeded" xml:space="preserve">
+    <value>✅ نجح</value>
+  </data>
+  <data name="Failed" xml:space="preserve">
+    <value>❌ فشل</value>
+  </data>
+  <data name="Backup" xml:space="preserve">
+    <value>النسخ الاحتياطي</value>
+  </data>
+  <data name="Backup_And_Import" xml:space="preserve">
+    <value>💾 النسخ الاحتياطي والاستيراد</value>
+  </data>
+  <data name="Overview" xml:space="preserve">
+    <value>📊 نظرة عامة</value>
+  </data>
+  <data name="Full_Backup" xml:space="preserve">
+    <value>📦 Backup كامل</value>
+  </data>
+  <data name="Excel_Import" xml:space="preserve">
+    <value>📥 استيراد Excel</value>
+  </data>
+  <data name="Export" xml:space="preserve">
+    <value>📤 تصدير</value>
+  </data>
+  <data name="Scheduled" xml:space="preserve">
+    <value>⏰ مجدول</value>
+  </data>
+  <data name="Total_Documents" xml:space="preserve">
+    <value>إجمالي المستندات</value>
+  </data>
+  <data name="Number_Of_Buildings" xml:space="preserve">
+    <value>عدد العمارات</value>
+  </data>
+  <data name="Saved_Backups" xml:space="preserve">
+    <value>النسخ المحفوظة</value>
+  </data>
+  <data name="Last_Scheduled_Backup" xml:space="preserve">
+    <value>⏰ آخر نسخة مجدولة:</value>
+  </data>
+  <data name="Succeeded_2" xml:space="preserve">
+    <value>نجح</value>
+  </data>
+  <data name="Failed_2" xml:space="preserve">
+    <value>فشل</value>
+  </data>
+  <data name="Collections_Statistics" xml:space="preserve">
+    <value>📊 إحصائيات Collections</value>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>الوصف</value>
+  </data>
+  <data name="Document_Count" xml:space="preserve">
+    <value>عدد المستندات</value>
+  </data>
+  <data name="Total" xml:space="preserve">
+    <value>الإجمالي:</value>
+  </data>
+  <data name="Full_Backup_ZIP" xml:space="preserve">
+    <value>📦 Backup كامل (ZIP)</value>
+  </data>
+  <data name="Choose_The_Collections_You_Want_To" xml:space="preserve">
+    <value>اختر الـ Collections اللي عايز تصدّرها. هيتولّد ملف ZIP فيه ملف JSON لكل Collection.</value>
+  </data>
+  <data name="Select_All" xml:space="preserve">
+    <value>تحديد الكل</value>
+  </data>
+  <data name="Clear_All" xml:space="preserve">
+    <value>إلغاء الكل</value>
+  </data>
+  <data name="Create_Backup_Now" xml:space="preserve">
+    <value>💾 إنشاء نسخة احتياطية الآن</value>
+  </data>
+  <data name="Restore_From_Backup" xml:space="preserve">
+    <value>📥 استعادة من نسخة احتياطية</value>
+  </data>
+  <data name="Warning_Restoring_Writes_Data_To_Firestore" xml:space="preserve">
+    <value>⚠️ &lt;strong&gt;تحذير:&lt;/strong&gt; الاستعادة بتكتب بيانات في Firestore. استخدم Preview الأول.</value>
+  </data>
+  <data name="ZIP_File" xml:space="preserve">
+    <value>ملف ZIP</value>
+  </data>
+  <data name="Maximum_100_MB" xml:space="preserve">
+    <value>الحد الأقصى: 100 MB</value>
+  </data>
+  <data name="Preview_Contents" xml:space="preserve">
+    <value>🔍 معاينة المحتوى</value>
+  </data>
+  <data name="Import_A_New_Building_From_Excel" xml:space="preserve">
+    <value>📥 استيراد عمارة جديدة من Excel</value>
+  </data>
+  <data name="Download_The_Template_Fill_It_In" xml:space="preserve">
+    <value>حمّل القالب، املأه بالبيانات، ثم ارفعه هنا. النظام هيتحقق من صحة الملف قبل الاستيراد.</value>
+  </data>
+  <data name="Download_Empty_Template" xml:space="preserve">
+    <value>⬇️ تحميل القالب الفاضي</value>
+  </data>
+  <data name="Excel_File_Xlsx" xml:space="preserve">
+    <value>ملف Excel (.xlsx)</value>
+  </data>
+  <data name="Validate_And_Import_File" xml:space="preserve">
+    <value>🔍 فحص الملف واستيراده</value>
+  </data>
+  <data name="Export_All_Data" xml:space="preserve">
+    <value>📤 تصدير كل البيانات</value>
+  </data>
+  <data name="Download_A_Full_Backup_Of_All" xml:space="preserve">
+    <value>حمّل نسخة احتياطية كاملة من كل العمارات بصيغة JSON.</value>
+  </data>
+  <data name="Export_All_Buildings_JSON" xml:space="preserve">
+    <value>⬇️ تصدير كل العمارات (JSON)</value>
+  </data>
+  <data name="Export_A_Specific_Building" xml:space="preserve">
+    <value>🏢 تصدير عمارة محددة</value>
+  </data>
+  <data name="Apartments" xml:space="preserve">
+    <value>الشقق</value>
+  </data>
+  <data name="Floors" xml:space="preserve">
+    <value>الأدوار</value>
+  </data>
+  <data name="Actions" xml:space="preserve">
+    <value>الإجراءات</value>
+  </data>
+  <data name="View_2" xml:space="preserve">
+    <value>👁️ عرض</value>
+  </data>
+  <data name="Scheduled_Backup_Settings" xml:space="preserve">
+    <value>⏰ إعدادات النسخ المجدولة</value>
+  </data>
+  <data name="Enable_Automatic_Backups" xml:space="preserve">
+    <value>تشغيل النسخ التلقائي</value>
+  </data>
+  <data name="Frequency" xml:space="preserve">
+    <value>التكرار</value>
+  </data>
+  <data name="Daily" xml:space="preserve">
+    <value>📅 يومي</value>
+  </data>
+  <data name="Weekly" xml:space="preserve">
+    <value>📆 أسبوعي</value>
+  </data>
+  <data name="Monthly" xml:space="preserve">
+    <value>🗓️ شهري</value>
+  </data>
+  <data name="Hour_UTC" xml:space="preserve">
+    <value>الساعة (UTC)</value>
+  </data>
+  <data name="Day_For_Weekly" xml:space="preserve">
+    <value>اليوم (للأسبوعي)</value>
+  </data>
+  <data name="Sunday" xml:space="preserve">
+    <value>الأحد</value>
+  </data>
+  <data name="Monday" xml:space="preserve">
+    <value>الاثنين</value>
+  </data>
+  <data name="Tuesday" xml:space="preserve">
+    <value>الثلاثاء</value>
+  </data>
+  <data name="Wednesday" xml:space="preserve">
+    <value>الأربعاء</value>
+  </data>
+  <data name="Thursday" xml:space="preserve">
+    <value>الخميس</value>
+  </data>
+  <data name="Friday" xml:space="preserve">
+    <value>الجمعة</value>
+  </data>
+  <data name="Saturday" xml:space="preserve">
+    <value>السبت</value>
+  </data>
+  <data name="Day_Of_Month_For_Monthly" xml:space="preserve">
+    <value>اليوم من الشهر (للشهري)</value>
+  </data>
+  <data name="Number_Of_Backups_To_Keep" xml:space="preserve">
+    <value>عدد النسخ المحفوظة</value>
+  </data>
+  <data name="The_Oldest_Is_Deleted_Automatically" xml:space="preserve">
+    <value>الأقدم بيتمسح تلقائيًا</value>
+  </data>
+  <data name="Included_Collections" xml:space="preserve">
+    <value>📦 Collections المشمولة:</value>
+  </data>
+  <data name="All_2" xml:space="preserve">
+    <value>الكل</value>
+  </data>
+  <data name="None" xml:space="preserve">
+    <value>لا شيء</value>
+  </data>
+  <data name="Save_Settings" xml:space="preserve">
+    <value>💾 حفظ الإعدادات</value>
+  </data>
+  <data name="Last_Run_N" xml:space="preserve">
+    <value>آخر تشغيل: {0}</value>
+  </data>
+  <data name="Run_A_Backup_Now_Manually" xml:space="preserve">
+    <value>تشغيل نسخة الآن يدويًا؟</value>
+  </data>
+  <data name="Run_Backup_Now_Manual" xml:space="preserve">
+    <value>⚡ تشغيل نسخة الآن (يدويًا)</value>
+  </data>
+  <data name="Saved_Backups_N" xml:space="preserve">
+    <value>📁 النسخ المحفوظة ({0})</value>
+  </data>
+  <data name="No_Saved_Backups_Yet" xml:space="preserve">
+    <value>لا توجد نسخ محفوظة بعد.</value>
+  </data>
+  <data name="Download" xml:space="preserve">
+    <value>⬇️ تحميل</value>
+  </data>
+  <data name="Delete_The_File" xml:space="preserve">
+    <value>حذف الملف؟</value>
+  </data>
+  <data name="Backup_History_N" xml:space="preserve">
+    <value>📜 سجل النسخ الاحتياطية ({0})</value>
+  </data>
+  <data name="You_Can_Download_Delete_Scheduled_Backups" xml:space="preserve">
+    <value>💾 يمكنك تحميل/حذف النسخ المجدولة</value>
+  </data>
+  <data name="Download_2" xml:space="preserve">
+    <value>تحميل</value>
+  </data>
+  <data name="File_Deleted" xml:space="preserve">
+    <value>الملف محذوف</value>
+  </data>
+  <data name="Permanently_Delete_The_File_And_Its" xml:space="preserve">
+    <value>حذف الملف والسجل نهائيًا؟</value>
+  </data>
+  <data name="Restore_Backup" xml:space="preserve">
+    <value>استعادة نسخة احتياطية</value>
+  </data>
+  <data name="Warning_Restoring_Writes_Data_To_Firestore_2" xml:space="preserve">
+    <value>&lt;strong&gt;⚠️ تحذير:&lt;/strong&gt; الاستعادة بتكتب بيانات في Firestore. استخدم خيار &lt;strong&gt;"Preview"&lt;/strong&gt; الأول عشان تشوف المحتوى قبل التنفيذ.</value>
+  </data>
+  <data name="Backup_File_Zip" xml:space="preserve">
+    <value>📁 ملف النسخة الاحتياطية (.zip)</value>
+  </data>
+  <data name="Restore_Preview" xml:space="preserve">
+    <value>معاينة الاستعادة</value>
+  </data>
+  <data name="Restore_Preview_2" xml:space="preserve">
+    <value>🔍 معاينة الاستعادة</value>
+  </data>
+  <data name="File_Information" xml:space="preserve">
+    <value>📄 معلومات الملف</value>
+  </data>
+  <data name="File_2" xml:space="preserve">
+    <value>الملف:</value>
+  </data>
+  <data name="Size_2" xml:space="preserve">
+    <value>الحجم:</value>
+  </data>
+  <data name="Total_Documents_2" xml:space="preserve">
+    <value>إجمالي المستندات:</value>
+  </data>
+  <data name="Warnings" xml:space="preserve">
+    <value>تحذيرات:</value>
+  </data>
+  <data name="Choose_Collections_To_Restore" xml:space="preserve">
+    <value>📦 اختر Collections للاستعادة</value>
+  </data>
+  <data name="Replace_Existing_Documents_Overwrite" xml:space="preserve">
+    <value>⚠️ &lt;strong&gt;استبدال&lt;/strong&gt; المستندات الموجودة (Overwrite)</value>
+  </data>
+  <data name="Confirm_The_Restore" xml:space="preserve">
+    <value>تأكيد الاستعادة؟</value>
+  </data>
+  <data name="Run_Restore" xml:space="preserve">
+    <value>⚠️ تنفيذ الاستعادة</value>
+  </data>
+  <data name="Cancel_2" xml:space="preserve">
+    <value>← إلغاء</value>
+  </data>
+  <data name="Restore_Result" xml:space="preserve">
+    <value>نتيجة الاستعادة</value>
+  </data>
+  <data name="Restore_Result_2" xml:space="preserve">
+    <value>✅ نتيجة الاستعادة</value>
+  </data>
+  <data name="Documents_2" xml:space="preserve">
+    <value>مستندات</value>
+  </data>
+  <data name="Restored" xml:space="preserve">
+    <value>✅ مستعادة</value>
+  </data>
+  <data name="Skipped" xml:space="preserve">
+    <value>⏭️ متخطاة</value>
+  </data>
+  <data name="Failed_3" xml:space="preserve">
+    <value>❌ فشلت</value>
+  </data>
+  <data name="Duration_2" xml:space="preserve">
+    <value>المدة:</value>
+  </data>
+  <data name="N_Seconds" xml:space="preserve">
+    <value>{0} ثانية</value>
+  </data>
+  <data name="Errors_N" xml:space="preserve">
+    <value>❌ أخطاء ({0})</value>
+  </data>
+  <data name="Details_2" xml:space="preserve">
+    <value>📋 التفاصيل</value>
+  </data>
+  <data name="Back_To_Home" xml:space="preserve">
+    <value>← رجوع للرئيسية</value>
+  </data>
+  <data name="Scheduled_Backups_2" xml:space="preserve">
+    <value>النسخ المجدولة</value>
+  </data>
+  <data name="Scheduled_Backup" xml:space="preserve">
+    <value>⏰ النسخ الاحتياطي المجدول</value>
+  </data>
+  <data name="Home" xml:space="preserve">
+    <value>← الرئيسية</value>
+  </data>
+  <data name="Schedule_Settings" xml:space="preserve">
+    <value>⚙️ إعدادات الجدولة</value>
+  </data>
+  <data name="0_23_E_G_2_2" xml:space="preserve">
+    <value>0-23 — مثلاً: 2 = 2 الفجر</value>
+  </data>
+  <data name="1_28_To_Avoid_Problems_With" xml:space="preserve">
+    <value>1-28 (لتجنب مشاكل الشهور القصيرة)</value>
+  </data>
+  <data name="Never" xml:space="preserve">
+    <value>لم يتم</value>
+  </data>
+  <data name="New_Building" xml:space="preserve">
+    <value>عمارة جديدة</value>
+  </data>
+  <data name="Create_A_New_Building" xml:space="preserve">
+    <value>🏢 إنشاء عمارة جديدة</value>
+  </data>
+  <data name="Building_Name" xml:space="preserve">
+    <value>اسم العمارة &lt;span class="text-danger"&gt;*&lt;/span&gt;</value>
+  </data>
+  <data name="Example_Nile_Building" xml:space="preserve">
+    <value>مثال: عمارة النيل</value>
+  </data>
+  <data name="2_To_100_Characters" xml:space="preserve">
+    <value>من 2 إلى 100 حرف</value>
+  </data>
+  <data name="Leave_Empty_To_Auto_Generate_BLD" xml:space="preserve">
+    <value>اتركه فاضي للتوليد التلقائي (BLD-XXX)</value>
+  </data>
+  <data name="Admin_PIN_2" xml:space="preserve">
+    <value>PIN الأدمن &lt;span class="text-danger"&gt;*&lt;/span&gt;</value>
+  </data>
+  <data name="Exactly_4_Digits" xml:space="preserve">
+    <value>4 أرقام بالظبط</value>
+  </data>
+  <data name="Admin_WhatsApp_Number" xml:space="preserve">
+    <value>رقم واتساب الأدمن &lt;span class="text-danger"&gt;*&lt;/span&gt;</value>
+  </data>
+  <data name="Example_201012345678" xml:space="preserve">
+    <value>مثال: +201012345678</value>
+  </data>
+  <data name="Building_Logo_URL_Optional" xml:space="preserve">
+    <value>رابط شعار العمارة (اختياري)</value>
+  </data>
+  <data name="Must_Start_With_Http_Or_Https" xml:space="preserve">
+    <value>لازم يبدأ بـ http:// أو https://</value>
+  </data>
+  <data name="Default_Settings" xml:space="preserve">
+    <value>⚙️ الإعدادات الافتراضية</value>
+  </data>
+  <data name="Add_Default_Expense_Categories_Water_Electricity" xml:space="preserve">
+    <value>إضافة فئات المصروفات الافتراضية (مياه، كهرباء، نظافة، صيانة، أخرى)</value>
+  </data>
+  <data name="Add_Default_Revenue_Categories_Roof_Rental" xml:space="preserve">
+    <value>إضافة فئات الإيرادات الافتراضية (تأجير السطح، تأجير محل، بيع خردة، أخرى)</value>
+  </data>
+  <data name="Create_Building" xml:space="preserve">
+    <value>&lt;i class="bi bi-check-circle"&gt;&lt;/i&gt; إنشاء العمارة</value>
+  </data>
+  <data name="Or_Import_A_Full_Building_From" xml:space="preserve">
+    <value>📥 أو استورد عمارة كاملة من Excel</value>
+  </data>
+  <data name="Do_You_Have_An_Excel_File" xml:space="preserve">
+    <value>عندك ملف Excel فيه كل البيانات (الأدوار + الشقق + الفئات)؟ استخدم القالب الجاهز وارفعه.</value>
+  </data>
+  <data name="Import_From_Excel" xml:space="preserve">
+    <value>📊 استيراد من Excel</value>
+  </data>
+  <data name="Building_Details" xml:space="preserve">
+    <value>تفاصيل العمارة</value>
+  </data>
+  <data name="Permanently_Delete_The_Building" xml:space="preserve">
+    <value>تأكيد حذف العمارة نهائيًا؟</value>
+  </data>
+  <data name="Delete_Building" xml:space="preserve">
+    <value>حذف العمارة</value>
+  </data>
+  <data name="Fix_Firebase_Auth_Accounts_For_All" xml:space="preserve">
+    <value>إصلاح حسابات Firebase Auth لكل الشقق؟</value>
+  </data>
+  <data name="Fix_Firebase_Accounts" xml:space="preserve">
+    <value>🔧 إصلاح حسابات Firebase</value>
+  </data>
+  <data name="Recreate_Firebase_Accounts_For_All_Apartments" xml:space="preserve">
+    <value>إعادة إنشاء حسابات Firebase لكل الشقق؟</value>
+  </data>
+  <data name="Recreate_Firebase_Accounts" xml:space="preserve">
+    <value>🔧 إعادة إنشاء حسابات Firebase</value>
+  </data>
+  <data name="Sync_Firebase_Passwords_For_All_Apartments" xml:space="preserve">
+    <value>مزامنة كلمات سر Firebase لكل الشقق؟</value>
+  </data>
+  <data name="Sync_Firebase_Passwords" xml:space="preserve">
+    <value>🔄 مزامنة كلمات سر Firebase</value>
+  </data>
+  <data name="Closed_2" xml:space="preserve">
+    <value>🔒 مغلقة</value>
+  </data>
+  <data name="New_Apartment_WhatsApp" xml:space="preserve">
+    <value>واتساب الشقة الجديدة</value>
+  </data>
+  <data name="Apartment_2" xml:space="preserve">
+    <value>+ شقة</value>
+  </data>
+  <data name="Add_A_New_Floor" xml:space="preserve">
+    <value>➕ إضافة دور جديد</value>
+  </data>
+  <data name="Floor_Name" xml:space="preserve">
+    <value>اسم الدور</value>
+  </data>
+  <data name="Apartment_WhatsApp_Numbers_Comma_Separated" xml:space="preserve">
+    <value>أرقام واتساب الشقق (مفصولة بفاصلة)</value>
+  </data>
+  <data name="PIN_For_Each_Apartment_In_The" xml:space="preserve">
+    <value>PIN لكل شقة (بنفس الترتيب)</value>
+  </data>
+  <data name="Add" xml:space="preserve">
+    <value>إضافة</value>
+  </data>
+  <data name="Number_Of_Times_Allowed_During_The" xml:space="preserve">
+    <value>عدد المرات المسموح بها خلال فترة الصلاحية</value>
+  </data>
+  <data name="Connection_Error_2" xml:space="preserve">
+    <value>خطأ في الاتصال:</value>
+  </data>
+  <data name="Buildings" xml:space="preserve">
+    <value>العمارات</value>
+  </data>
+  <data name="Buildings_N" xml:space="preserve">
+    <value>العمارات ({0})</value>
+  </data>
+  <data name="New_Building_2" xml:space="preserve">
+    <value>+ عمارة جديدة</value>
+  </data>
+  <data name="No_Buildings_Found" xml:space="preserve">
+    <value>لا توجد عمارات.</value>
+  </data>
+  <data name="Download_PDF" xml:space="preserve">
+    <value>📄 تحميل PDF</value>
+  </data>
+  <data name="Print" xml:space="preserve">
+    <value>🖨️ طباعة</value>
+  </data>
+  <data name="Building_Admin" xml:space="preserve">
+    <value>👑 أدمن العمارة</value>
+  </data>
+  <data name="Scan_This_QR_To_Log_In" xml:space="preserve">
+    <value>امسح الـ QR ده لدخول الأدمن مباشرة على العمارة دي</value>
+  </data>
+  <data name="Admin_2" xml:space="preserve">
+    <value>👑 أدمن</value>
+  </data>
+  <data name="Open_Link" xml:space="preserve">
+    <value>🔗 افتح الرابط</value>
+  </data>
+  <data name="N_Apartments_Each_Resident_Scans_Their" xml:space="preserve">
+    <value>{0} شقة — كل QR للساكن يمسحه فيملّي البيانات تلقائياً</value>
+  </data>
+  <data name="Select_Building" xml:space="preserve">
+    <value>اختر العمارة</value>
+  </data>
+  <data name="Select_The_Building_To_Manage_Its" xml:space="preserve">
+    <value>🏢 اختر العمارة لإدارة فئاتها المالية</value>
+  </data>
+  <data name="Financial_Categories" xml:space="preserve">
+    <value>الفئات المالية</value>
+  </data>
+  <data name="Financial_Categories_N" xml:space="preserve">
+    <value>🏷️ الفئات المالية {0}</value>
+  </data>
+  <data name="Back_To_Buildings" xml:space="preserve">
+    <value>← رجوع للعمارات</value>
+  </data>
+  <data name="Expense_Categories" xml:space="preserve">
+    <value>📉 فئات المصروفات</value>
+  </data>
+  <data name="Add_2" xml:space="preserve">
+    <value>➕ إضافة</value>
+  </data>
+  <data name="No_Expense_Categories" xml:space="preserve">
+    <value>لا توجد فئات مصروفات.</value>
+  </data>
+  <data name="Color" xml:space="preserve">
+    <value>اللون</value>
+  </data>
+  <data name="Active_3" xml:space="preserve">
+    <value>نشطة</value>
+  </data>
+  <data name="Disabled_2" xml:space="preserve">
+    <value>معطّلة</value>
+  </data>
+  <data name="Confirm_Deletion" xml:space="preserve">
+    <value>تأكيد الحذف؟</value>
+  </data>
+  <data name="Revenue_Categories" xml:space="preserve">
+    <value>📈 فئات الإيرادات</value>
+  </data>
+  <data name="No_Revenue_Categories" xml:space="preserve">
+    <value>لا توجد فئات إيرادات.</value>
+  </data>
+  <data name="Add_Expense_Category" xml:space="preserve">
+    <value>➕ إضافة فئة مصروف</value>
+  </data>
+  <data name="Category_Name" xml:space="preserve">
+    <value>اسم الفئة</value>
+  </data>
+  <data name="Add_Revenue_Category" xml:space="preserve">
+    <value>➕ إضافة فئة إيراد</value>
+  </data>
+  <data name="Edit_Category" xml:space="preserve">
+    <value>✏️ تعديل الفئة</value>
+  </data>
+  <data name="Expenses" xml:space="preserve">
+    <value>المصروفات</value>
+  </data>
+  <data name="Expenses_Of_N" xml:space="preserve">
+    <value>💰 مصروفات {0}</value>
+  </data>
+  <data name="Add_Expense" xml:space="preserve">
+    <value>➕ إضافة مصروف</value>
+  </data>
+  <data name="Item" xml:space="preserve">
+    <value>البند</value>
+  </data>
+  <data name="Note" xml:space="preserve">
+    <value>ملاحظة</value>
+  </data>
+  <data name="Expense_Log_N" xml:space="preserve">
+    <value>سجل المصروفات ({0})</value>
+  </data>
+  <data name="Total_N_EGP" xml:space="preserve">
+    <value>الإجمالي: {0} ج.م</value>
+  </data>
+  <data name="No_Expenses_For_This_Month" xml:space="preserve">
+    <value>لا توجد مصروفات لهذا الشهر.</value>
+  </data>
+  <data name="Delete_The_Expense" xml:space="preserve">
+    <value>حذف المصروف؟</value>
+  </data>
+  <data name="User_Guide" xml:space="preserve">
+    <value>كتيب الاستخدام</value>
+  </data>
+  <data name="Contents" xml:space="preserve">
+    <value>📖 المحتويات</value>
+  </data>
+  <data name="Quick_Start" xml:space="preserve">
+    <value>🚀 البداية السريعة</value>
+  </data>
+  <data name="For_Residents" xml:space="preserve">
+    <value>للسكان</value>
+  </data>
+  <data name="My_Wallet" xml:space="preserve">
+    <value>— محفظتي</value>
+  </data>
+  <data name="Submit_A_Payment" xml:space="preserve">
+    <value>— إرسال دفعة</value>
+  </data>
+  <data name="Notifications" xml:space="preserve">
+    <value>— الإشعارات</value>
+  </data>
+  <data name="Polls" xml:space="preserve">
+    <value>— التصويتات</value>
+  </data>
+  <data name="For_Admins" xml:space="preserve">
+    <value>للأدمنة</value>
+  </data>
+  <data name="Wallet_3" xml:space="preserve">
+    <value>— المحفظة</value>
+  </data>
+  <data name="Payments" xml:space="preserve">
+    <value>— الدفعات</value>
+  </data>
+  <data name="Expenses_2" xml:space="preserve">
+    <value>— المصروفات</value>
+  </data>
+  <data name="Invoices" xml:space="preserve">
+    <value>— الفواتير</value>
+  </data>
+  <data name="Reports_2" xml:space="preserve">
+    <value>— التقارير</value>
+  </data>
+  <data name="For_The_Super_Admin" xml:space="preserve">
+    <value>للمدير العام</value>
+  </data>
+  <data name="Buildings_2" xml:space="preserve">
+    <value>— العمارات</value>
+  </data>
+  <data name="Admins" xml:space="preserve">
+    <value>— الأدمنة</value>
+  </data>
+  <data name="Backup_2" xml:space="preserve">
+    <value>— النسخ الاحتياطي</value>
+  </data>
+  <data name="FAQ" xml:space="preserve">
+    <value>❓ الأسئلة الشائعة</value>
+  </data>
+  <data name="Quick_Info" xml:space="preserve">
+    <value>⌨️ معلومات سريعة</value>
+  </data>
+  <data name="Building_Management_System_User_Guide" xml:space="preserve">
+    <value>📖 كتيب استخدام نظام إدارة العمارات</value>
+  </data>
+  <data name="Welcome_To_The_Building_Management_System" xml:space="preserve">
+    <value>مرحبًا بك في نظام إدارة العمارات! هذا الكتيب هيشرحلك خطوة بخطوة كل حاجة محتاج تعرفها عن النظام — من تسجيل الدخول لحد إصدار الفواتير وإدارة المحافظ.</value>
+  </data>
+  <data name="When_You_Open_The_System_You" xml:space="preserve">
+    <value>عند فتح النظام، هتلاقي شاشة دخول موحّدة. اتبع الخطوات:</value>
+  </data>
+  <data name="1_Enter_The_Mobile_Number_You" xml:space="preserve">
+    <value>&lt;span class="badge-step"&gt;1&lt;/span&gt; اكتب &lt;strong&gt;رقم الموبايل&lt;/strong&gt; اللي مسجّل بيه (مثال: &lt;code&gt;+201119221000&lt;/code&gt;)</value>
+  </data>
+  <data name="2_Enter_Your_PIN_4_Digits" xml:space="preserve">
+    <value>&lt;span class="badge-step"&gt;2&lt;/span&gt; اكتب &lt;strong&gt;PIN&lt;/strong&gt; (4 أرقام)</value>
+  </data>
+  <data name="3_Tap_Log_In" xml:space="preserve">
+    <value>&lt;span class="badge-step"&gt;3&lt;/span&gt; اضغط &lt;strong&gt;"دخول"&lt;/strong&gt;</value>
+  </data>
+  <data name="4_If_You_Have_More_Than" xml:space="preserve">
+    <value>&lt;span class="badge-step"&gt;4&lt;/span&gt; لو عندك أكتر من دور (أدمن + ساكن)، هيظهرلك &lt;strong&gt;اختيار السياق&lt;/strong&gt; — اختار اللي عايز تدخل بيه</value>
+  </data>
+  <data name="Tip_If_You_Forgot_Your_PIN" xml:space="preserve">
+    <value>💡 &lt;strong&gt;نصيحة&lt;/strong&gt;: لو نسيت PIN، كلّم الأدمن يعملك PIN جديد.</value>
+  </data>
+  <data name="Login_With_QR" xml:space="preserve">
+    <value>الدخول بالـ QR</value>
+  </data>
+  <data name="If_The_Admin_Sent_You_A" xml:space="preserve">
+    <value>لو الأدمن باعتلك QR على واتساب، امسحه من أي تطبيق QR reader، هيفتحلك صفحة دخول تلقائية.</value>
+  </data>
+  <data name="Back_To_Top" xml:space="preserve">
+    <value>↑ رجوع للأعلى</value>
+  </data>
+  <data name="For_Residents_2" xml:space="preserve">
+    <value>🏠 للسكان</value>
+  </data>
+  <data name="My_Wallet_2" xml:space="preserve">
+    <value>💰 محفظتي</value>
+  </data>
+  <data name="The_ResidentWallet_Page_Shows_You" xml:space="preserve">
+    <value>صفحة &lt;code&gt;/ResidentWallet&lt;/code&gt; بتوريك:</value>
+  </data>
+  <data name="Your_Current_Balance_In_The_Selected" xml:space="preserve">
+    <value>&lt;strong&gt;رصيدك الحالي&lt;/strong&gt; في الشهر المختار</value>
+  </data>
+  <data name="Account_Statement_All_Transactions_Payments_Expe" xml:space="preserve">
+    <value>&lt;strong&gt;كشف الحساب&lt;/strong&gt; — كل المعاملات (دفعات، مصروفات، إيرادات، تسويات)</value>
+  </data>
+  <data name="Pending_Payments_Those_Not_Yet_Confirmed" xml:space="preserve">
+    <value>&lt;strong&gt;الدفعات المعلقة&lt;/strong&gt; — اللي لسه ما اتأكدتش من الأدمن</value>
+  </data>
+  <data name="Submit_A_New_Payment" xml:space="preserve">
+    <value>📤 إرسال دفعة جديدة</value>
+  </data>
+  <data name="1_In_My_Wallet_Look_For" xml:space="preserve">
+    <value>&lt;span class="badge-step"&gt;1&lt;/span&gt; في محفظتي، دوّر على خيار &lt;strong&gt;"إرسال دفعة"&lt;/strong&gt;</value>
+  </data>
+  <data name="2_Enter_The_Amount_And_A" xml:space="preserve">
+    <value>&lt;span class="badge-step"&gt;2&lt;/span&gt; اكتب &lt;strong&gt;المبلغ&lt;/strong&gt; والملاحظة</value>
+  </data>
+  <data name="3_Optionally_Upload_A_Receipt_Image" xml:space="preserve">
+    <value>&lt;span class="badge-step"&gt;3&lt;/span&gt; اختياريًا، ارفع &lt;strong&gt;صورة الإيصال&lt;/strong&gt; (InstaPay، تحويل بنكي، إلخ)</value>
+  </data>
+  <data name="4_Tap_Submit" xml:space="preserve">
+    <value>&lt;span class="badge-step"&gt;4&lt;/span&gt; اضغط &lt;strong&gt;"إرسال"&lt;/strong&gt;</value>
+  </data>
+  <data name="Receipt_Image_The_System_Uses_OCR" xml:space="preserve">
+    <value>📸 &lt;strong&gt;صورة الإيصال&lt;/strong&gt;: النظام بيستخدم OCR يقرأ المبلغ من الصورة تلقائيًا. بس للتأكيد، راجع المبلغ قبل الإرسال.</value>
+  </data>
+  <data name="After_Submitting_The_Payment_Appears_With" xml:space="preserve">
+    <value>بعد الإرسال، الدفعة بتظهر بحالة &lt;strong&gt;"في انتظار التأكيد"&lt;/strong&gt; لحد ما الأدمن يراجعها.</value>
+  </data>
+  <data name="Notifications_2" xml:space="preserve">
+    <value>🔔 الإشعارات</value>
+  </data>
+  <data name="On_The_Notifications_Page_You_Will" xml:space="preserve">
+    <value>في صفحة &lt;code&gt;/Notifications&lt;/code&gt;، هتلاقي كل الإشعارات الموجهة ليك:</value>
+  </data>
+  <data name="Payment_Confirmed_When_The_Admin_Confirms" xml:space="preserve">
+    <value>✅ &lt;strong&gt;تأكيد دفعة&lt;/strong&gt; — لما الأدمن يأكد دفعتك</value>
+  </data>
+  <data name="Payment_Edited_If_The_Admin_Edits" xml:space="preserve">
+    <value>✏️ &lt;strong&gt;تعديل دفعة&lt;/strong&gt; — لو الأدمن عدّل مبلغ أو ملاحظة دفعة معلقة</value>
+  </data>
+  <data name="Payment_Cancelled_If_The_Admin_Cancels" xml:space="preserve">
+    <value>❌ &lt;strong&gt;إلغاء دفعة&lt;/strong&gt; — لو الأدمن ألغى دفعة</value>
+  </data>
+  <data name="New_Expense_When_A_New_Expense" xml:space="preserve">
+    <value>💸 &lt;strong&gt;مصروف جديد&lt;/strong&gt; — لما يتسجّل مصروف جديد في العمارة</value>
+  </data>
+  <data name="Polls_2" xml:space="preserve">
+    <value>🗳️ التصويتات</value>
+  </data>
+  <data name="On_The_ResidentPolls_Page_You_Will" xml:space="preserve">
+    <value>في صفحة &lt;code&gt;/ResidentPolls&lt;/code&gt;، هتلاقي التصويتات النشطة. كل شقة ليها صوت واحد في كل تصويت.</value>
+  </data>
+  <data name="Tap_The_Option_You_Want_Then" xml:space="preserve">
+    <value>اضغط على الخيار اللي عايزه، وبعدها &lt;strong&gt;"تصويت"&lt;/strong&gt;. &lt;strong&gt;مش هتقدر تغيّر صوتك بعد كده&lt;/strong&gt;.</value>
+  </data>
+  <data name="For_Admins_2" xml:space="preserve">
+    <value>🏢 للأدمنة</value>
+  </data>
+  <data name="The_Wallet_Page_Is_The_Heart" xml:space="preserve">
+    <value>صفحة &lt;code&gt;/Wallet&lt;/code&gt; هي قلب النظام. فيها:</value>
+  </data>
+  <data name="Month_Summary_Collected_Expenses_Revenues_Wallet" xml:space="preserve">
+    <value>&lt;strong&gt;ملخص الشهر&lt;/strong&gt; — محصّل، مصروفات، إيرادات، إجمالي المحفظة</value>
+  </data>
+  <data name="Pending_Payments_All_Payments_That_Need" xml:space="preserve">
+    <value>&lt;strong&gt;الدفعات المعلقة&lt;/strong&gt; — كل الدفعات اللي محتاجة مراجعة</value>
+  </data>
+  <data name="Apartment_Balances_Each_Apartment_And_Its" xml:space="preserve">
+    <value>&lt;strong&gt;أرصدة الشقق&lt;/strong&gt; — كل شقة ورصيدها في الشهر المختار</value>
+  </data>
+  <data name="Managing_Payments" xml:space="preserve">
+    <value>💰 إدارة الدفعات</value>
+  </data>
+  <data name="For_Each_Pending_Payment_You_Have" xml:space="preserve">
+    <value>لكل دفعة معلقة، عندك 3 خيارات:</value>
+  </data>
+  <data name="Button" xml:space="preserve">
+    <value>الزر</value>
+  </data>
+  <data name="Action_2" xml:space="preserve">
+    <value>الإجراء</value>
+  </data>
+  <data name="Confirm" xml:space="preserve">
+    <value>تأكيد</value>
+  </data>
+  <data name="The_Payment_Is_Counted_In_The" xml:space="preserve">
+    <value>الدفعة بتتحسب في رصيد الشقة، والساكن بياخد إشعار</value>
+  </data>
+  <data name="Edit_The_Amount_Or_Note_You" xml:space="preserve">
+    <value>تعديل المبلغ أو الملاحظة (لازم تكتب سبب التعديل)</value>
+  </data>
+  <data name="The_Payment_Is_Rejected_And_The" xml:space="preserve">
+    <value>الدفعة بتترفض، والساكن بياخد إشعار بسبب الإلغاء</value>
+  </data>
+  <data name="Editing_A_Payment_When_You_Edit" xml:space="preserve">
+    <value>📝 &lt;strong&gt;تعديل الدفعة&lt;/strong&gt;: لما تعدّل دفعة معلقة، النظام بيسجّل التعديل في &lt;strong&gt;سجل التعديلات&lt;/strong&gt; (editHistory) وبيبعت &lt;strong&gt;إشعار للساكن&lt;/strong&gt; بالمبلغ القديم والجديد والسبب.</value>
+  </data>
+  <data name="Expenses_And_Revenues" xml:space="preserve">
+    <value>💸 المصروفات والإيرادات</value>
+  </data>
+  <data name="In_Expenses_And_Revenues_You_Can" xml:space="preserve">
+    <value>في &lt;code&gt;/Expenses&lt;/code&gt; و &lt;code&gt;/Revenues&lt;/code&gt;، تقدر:</value>
+  </data>
+  <data name="Add_An_Expense_Revenue_With_An" xml:space="preserve">
+    <value>تضيف مصروف/إيراد ببند وسعر وملاحظة</value>
+  </data>
+  <data name="Delete_An_Expense_Revenue" xml:space="preserve">
+    <value>تحذف مصروف/إيراد</value>
+  </data>
+  <data name="Choose_The_Month" xml:space="preserve">
+    <value>تختار الشهر</value>
+  </data>
+  <data name="Expenses_Are_Distributed_Automatically_Equally_A" xml:space="preserve">
+    <value>&lt;strong&gt;المصروفات بتتوزّع تلقائيًا&lt;/strong&gt; على كل الشقق المفتوحة بالتساوي.</value>
+  </data>
+  <data name="Invoices_2" xml:space="preserve">
+    <value>🧾 الفواتير</value>
+  </data>
+  <data name="From_The_Wallet_Page_Next_To" xml:space="preserve">
+    <value>من صفحة المحفظة، جنب كل شقة، فيه زر &lt;strong&gt;"🧾 فاتورة PDF"&lt;/strong&gt;.</value>
+  </data>
+  <data name="The_Invoice_Contains" xml:space="preserve">
+    <value>الفاتورة فيها:</value>
+  </data>
+  <data name="Apartment_And_Resident_Details" xml:space="preserve">
+    <value>بيانات الشقة والساكن</value>
+  </data>
+  <data name="Wallet_Summary_Balance_Deposits_Share_Of" xml:space="preserve">
+    <value>ملخص المحفظة (الرصيد، الإيداعات، نصيب المصروفات والإيرادات)</value>
+  </data>
+  <data name="Expense_Breakdown_By_Item" xml:space="preserve">
+    <value>تفصيل المصروفات حسب البند</value>
+  </data>
+  <data name="Transfer_Details_For_Payment" xml:space="preserve">
+    <value>بيانات التحويل للدفع</value>
+  </data>
+  <data name="A_QR_Code_To_Verify_The" xml:space="preserve">
+    <value>&lt;strong&gt;QR code&lt;/strong&gt; للتحقق من الفاتورة</value>
+  </data>
+  <data name="The_Reports_Page_Gives_You" xml:space="preserve">
+    <value>صفحة &lt;code&gt;/Reports&lt;/code&gt; بتديك:</value>
+  </data>
+  <data name="Financial_Summary_Collected_Expenses_Revenues_Ne" xml:space="preserve">
+    <value>ملخص مالي (محصّل، مصروفات، إيرادات، صافي)</value>
+  </data>
+  <data name="3_Charts_Monthly_By_Item_Wallet" xml:space="preserve">
+    <value>3 رسوم بيانية (شهريًا، حسب البند، توزيع المحفظة)</value>
+  </data>
+  <data name="Top_5_Debtors_And_Creditors" xml:space="preserve">
+    <value>أعلى 5 مدينين ودائنين</value>
+  </data>
+  <data name="CSV_Export" xml:space="preserve">
+    <value>تصدير CSV</value>
+  </data>
+  <data name="For_The_Super_Admin_2" xml:space="preserve">
+    <value>👑 للمدير العام</value>
+  </data>
+  <data name="Managing_Buildings" xml:space="preserve">
+    <value>🏢 إدارة العمارات</value>
+  </data>
+  <data name="The_Buildings_Page_Gives_You" xml:space="preserve">
+    <value>صفحة &lt;code&gt;/Buildings&lt;/code&gt; بتديك:</value>
+  </data>
+  <data name="Create_A_New_Building_Automatic_Number" xml:space="preserve">
+    <value>&lt;strong&gt;إنشاء عمارة جديدة&lt;/strong&gt; — رقم تلقائي (BLD-001، BLD-002، ...)</value>
+  </data>
+  <data name="Add_Floors_And_Apartments_With_Automatic" xml:space="preserve">
+    <value>&lt;strong&gt;إضافة أدوار وشقق&lt;/strong&gt; — مع إنشاء Firebase Auth تلقائي</value>
+  </data>
+  <data name="Generate_QRs_For_The_Admin_And" xml:space="preserve">
+    <value>&lt;strong&gt;توليد QRs&lt;/strong&gt; — للأدمن وكل شقة (PDF فيه كل الـ QRs)</value>
+  </data>
+  <data name="Firebase_Sync_Recreate_Accounts_Update_Passwords" xml:space="preserve">
+    <value>&lt;strong&gt;مزامنة Firebase&lt;/strong&gt; — إعادة إنشاء حسابات، تحديث كلمات السر</value>
+  </data>
+  <data name="Managing_Admins_And_Permissions" xml:space="preserve">
+    <value>👥 إدارة الأدمنة والصلاحيات</value>
+  </data>
+  <data name="You_Have_22_Permissions_Grouped_Into" xml:space="preserve">
+    <value>عندك &lt;strong&gt;22 صلاحية&lt;/strong&gt; موزّعة على 4 تصنيفات:</value>
+  </data>
+  <data name="Management_Buildings_Admins_Residents" xml:space="preserve">
+    <value>🏢 &lt;strong&gt;إدارة&lt;/strong&gt; — العمارات، الأدمنة، السكان</value>
+  </data>
+  <data name="Finance_Wallets_Expenses_Revenues_Reports" xml:space="preserve">
+    <value>💰 &lt;strong&gt;مالية&lt;/strong&gt; — المحافظ، المصروفات، الإيرادات، التقارير</value>
+  </data>
+  <data name="Services_Polls_Maintenance_Notifications_WhatsAp" xml:space="preserve">
+    <value>🛎️ &lt;strong&gt;خدمات&lt;/strong&gt; — التصويتات، الصيانة، الإشعارات، واتساب</value>
+  </data>
+  <data name="System_Log_Settings_Tools_Backup" xml:space="preserve">
+    <value>🛠️ &lt;strong&gt;نظام&lt;/strong&gt; — السجل، الإعدادات، الأدوات، النسخ الاحتياطي</value>
+  </data>
+  <data name="There_Are_4_Ready_Made_Templates" xml:space="preserve">
+    <value>فيه &lt;strong&gt;4 قوالب جاهزة&lt;/strong&gt;:</value>
+  </data>
+  <data name="Full_12_Permissions_The_Basics" xml:space="preserve">
+    <value>&lt;strong&gt;Full&lt;/strong&gt; — 12 صلاحية (الأساسية)</value>
+  </data>
+  <data name="Super_22_Permissions_Everything" xml:space="preserve">
+    <value>&lt;strong&gt;Super&lt;/strong&gt; — 22 صلاحية (كل حاجة)</value>
+  </data>
+  <data name="Financial_7_Permissions_Finance_Only" xml:space="preserve">
+    <value>&lt;strong&gt;Financial&lt;/strong&gt; — 7 صلاحيات (مالية بس)</value>
+  </data>
+  <data name="Maintenance_4_Permissions_Maintenance_Only" xml:space="preserve">
+    <value>&lt;strong&gt;Maintenance&lt;/strong&gt; — 4 صلاحيات (صيانة بس)</value>
+  </data>
+  <data name="Backup_3" xml:space="preserve">
+    <value>💾 النسخ الاحتياطي</value>
+  </data>
+  <data name="The_Backup_Page_Gives_You_4" xml:space="preserve">
+    <value>صفحة &lt;code&gt;/Backup&lt;/code&gt; بتديك 4 تبويبات:</value>
+  </data>
+  <data name="Overview_Document_Statistics_For_Each_Collection" xml:space="preserve">
+    <value>&lt;strong&gt;نظرة عامة&lt;/strong&gt; — إحصائيات المستندات في كل Collection</value>
+  </data>
+  <data name="Backup_Choose_Collections_And_Download_A" xml:space="preserve">
+    <value>&lt;strong&gt;نسخة احتياطية&lt;/strong&gt; — اختار Collections ونزّل ZIP</value>
+  </data>
+  <data name="Restore_Upload_A_ZIP_And_Choose" xml:space="preserve">
+    <value>&lt;strong&gt;الاستعادة&lt;/strong&gt; — ارفع ZIP واختار Collections</value>
+  </data>
+  <data name="Scheduled_Backups_Automatic_Daily_Weekly_Monthly" xml:space="preserve">
+    <value>&lt;strong&gt;النسخ المجدولة&lt;/strong&gt; — يومي/أسبوعي/شهري تلقائي</value>
+  </data>
+  <data name="I_Forgot_My_PIN_What_Should" xml:space="preserve">
+    <value>نسيت الـ PIN بتاعي، أعمل إيه؟</value>
+  </data>
+  <data name="Contact_The_Admin_They_Can_Set" xml:space="preserve">
+    <value>كلّم الأدمن. هو يقدر يعملك PIN جديد من صفحة الشقق أو من إعداداتك.</value>
+  </data>
+  <data name="My_Pending_Payment_Doesn_T_Show" xml:space="preserve">
+    <value>الدفعة المعلقة مش بتظهر عندي كساكن، ليه؟</value>
+  </data>
+  <data name="Make_Sure_You_Are_In_The" xml:space="preserve">
+    <value>تأكد إنك في &lt;strong&gt;نفس الشهر&lt;/strong&gt; اللي أرسلت فيه الدفعة. لو لسه مش ظاهرة، اعمل Refresh.</value>
+  </data>
+  <data name="When_I_Refresh_The_Page_I" xml:space="preserve">
+    <value>بعمل Refresh الصفحة وبتطلعلي رسالة حمراء "فشل الحفظ"</value>
+  </data>
+  <data name="There_Is_Probably_A_Problem_Connecting" xml:space="preserve">
+    <value>غالبًا فيه مشكلة في الاتصال بـ Firebase. تأكد من:</value>
+  </data>
+  <data name="Your_Internet_Connection_Is_Working" xml:space="preserve">
+    <value>الإنترنت شغال</value>
+  </data>
+  <data name="You_Are_Not_Using_A_VPN" xml:space="preserve">
+    <value>ما استخدمتش VPN (ممكن يحجب Firebase)</value>
+  </data>
+  <data name="Try_Logging_Out_And_Logging_In" xml:space="preserve">
+    <value>جرّب تعمل Logout + Login تاني</value>
+  </data>
+  <data name="Can_I_Use_The_System_From" xml:space="preserve">
+    <value>ينفع أستخدم النظام من الموبايل؟</value>
+  </data>
+  <data name="Yes_The_System_Is_Mobile_Friendly" xml:space="preserve">
+    <value>أيوة! النظام متوافق مع الموبايل، وكمان تقدر &lt;strong&gt;تثبّته كتطبيق&lt;/strong&gt;:</value>
+  </data>
+  <data name="Android_Open_Chrome_Tap_Install_Or" xml:space="preserve">
+    <value>&lt;strong&gt;Android&lt;/strong&gt;: افتح Chrome → اضغط "Install" أو "Add to Home screen"</value>
+  </data>
+  <data name="IOS_Open_Safari_Share_Add_To" xml:space="preserve">
+    <value>&lt;strong&gt;iOS&lt;/strong&gt;: افتح Safari → Share → "Add to Home Screen"</value>
+  </data>
+  <data name="The_QR_Won_T_Open_What" xml:space="preserve">
+    <value>الـ QR مش بيفتح، أعمل إيه؟</value>
+  </data>
+  <data name="Some_QRs_Are_Single_Use_If" xml:space="preserve">
+    <value>بعض الـ QRs بيكونوا &lt;strong&gt;لمرة واحدة&lt;/strong&gt;. لو استخدمتهم، مش هيفتحوا تاني. كلّم الأدمن يعملك QR جديد.</value>
+  </data>
+  <data name="How_Do_I_Change_My_Notification" xml:space="preserve">
+    <value>عايز أعدّل إعدادات الإشعارات، إزاي؟</value>
+  </data>
+  <data name="From_Settings_Own_You_Can_Turn" xml:space="preserve">
+    <value>من &lt;code&gt;/Settings/Own&lt;/code&gt;، تقدر تفتح/تقفل:</value>
+  </data>
+  <data name="WhatsApp_2" xml:space="preserve">
+    <value>💬 واتساب</value>
+  </data>
+  <data name="Email_3" xml:space="preserve">
+    <value>📧 البريد الإلكتروني</value>
+  </data>
+  <data name="In_App" xml:space="preserve">
+    <value>🔔 داخل التطبيق</value>
+  </data>
+  <data name="Colors_And_Labels" xml:space="preserve">
+    <value>الألوان والتسميات</value>
+  </data>
+  <data name="Symbol" xml:space="preserve">
+    <value>الرمز</value>
+  </data>
+  <data name="Meaning" xml:space="preserve">
+    <value>المعنى</value>
+  </data>
+  <data name="Open_Active" xml:space="preserve">
+    <value>مفتوح / نشط</value>
+  </data>
+  <data name="Closed_Error_Overdue" xml:space="preserve">
+    <value>مغلق / خطأ / متجاوز</value>
+  </data>
+  <data name="Warning_Needs_Attention" xml:space="preserve">
+    <value>تحذير / يحتاج انتباه</value>
+  </data>
+  <data name="Neutral_Locked" xml:space="preserve">
+    <value>محايد / مقفول</value>
+  </data>
+  <data name="Payment_Statuses" xml:space="preserve">
+    <value>حالات الدفعة</value>
+  </data>
+  <data name="Pending_Awaiting_Confirmation" xml:space="preserve">
+    <value>⏳ &lt;strong&gt;pending&lt;/strong&gt; — في انتظار التأكيد</value>
+  </data>
+  <data name="Confirmed_Confirmed" xml:space="preserve">
+    <value>✅ &lt;strong&gt;confirmed&lt;/strong&gt; — اتأكدت</value>
+  </data>
+  <data name="Cancelled_Cancelled" xml:space="preserve">
+    <value>❌ &lt;strong&gt;cancelled&lt;/strong&gt; — اتلغت</value>
+  </data>
+  <data name="Support" xml:space="preserve">
+    <value>الدعم</value>
+  </data>
+  <data name="If_You_Have_A_Problem_Contact" xml:space="preserve">
+    <value>لو عندك مشكلة، كلّم &lt;strong&gt;الأدمن بتاع عمارتك&lt;/strong&gt; الأول. لو المشكلة أكبر، كلّم &lt;strong&gt;المدير العام&lt;/strong&gt;.</value>
+  </data>
+  <data name="For_Technical_Support" xml:space="preserve">
+    <value>📧 للدعم التقني:</value>
+  </data>
+  <data name="Maintenance" xml:space="preserve">
+    <value>الصيانة</value>
+  </data>
+  <data name="Open_3" xml:space="preserve">
+    <value>🔓 مفتوحة</value>
+  </data>
+  <data name="In_Progress" xml:space="preserve">
+    <value>🔧 جاري التنفيذ</value>
+  </data>
+  <data name="Done" xml:space="preserve">
+    <value>✅ تم</value>
+  </data>
+  <data name="Cancelled" xml:space="preserve">
+    <value>❌ ملغاة</value>
+  </data>
+  <data name="Maintenance_N_N" xml:space="preserve">
+    <value>🔧 صيانة {0} ({1})</value>
+  </data>
+  <data name="New_Maintenance_Record" xml:space="preserve">
+    <value>➕ سجل صيانة جديد</value>
+  </data>
+  <data name="Title" xml:space="preserve">
+    <value>العنوان</value>
+  </data>
+  <data name="Cost" xml:space="preserve">
+    <value>التكلفة</value>
+  </data>
+  <data name="Supplier" xml:space="preserve">
+    <value>المورّد</value>
+  </data>
+  <data name="No_Maintenance_Records_Yet" xml:space="preserve">
+    <value>لا توجد سجلات صيانة بعد.</value>
+  </data>
+  <data name="Add_To_Expenses" xml:space="preserve">
+    <value>أضف للمصروفات</value>
+  </data>
+  <data name="Added_To_Expenses" xml:space="preserve">
+    <value>مضافة للمصروفات</value>
+  </data>
+  <data name="Delete_The_Record" xml:space="preserve">
+    <value>حذف السجل؟</value>
+  </data>
+  <data name="Notifications_3" xml:space="preserve">
+    <value>الإشعارات</value>
+  </data>
+  <data name="Notifications_N" xml:space="preserve">
+    <value>🔔 الإشعارات ({0})</value>
+  </data>
+  <data name="Mark_All_As_Read" xml:space="preserve">
+    <value>تعليم الكل كمقروء</value>
+  </data>
+  <data name="No_Notifications" xml:space="preserve">
+    <value>لا توجد إشعارات.</value>
+  </data>
+  <data name="Mark_As_Read" xml:space="preserve">
+    <value>تعليم كمقروء</value>
+  </data>
+  <data name="Permissions_Matrix" xml:space="preserve">
+    <value>مصفوفة الصلاحيات</value>
+  </data>
+  <data name="Permissions_Matrix_2" xml:space="preserve">
+    <value>🔐 مصفوفة الصلاحيات</value>
+  </data>
+  <data name="N_Admins" xml:space="preserve">
+    <value>{0} أدمن</value>
+  </data>
+  <data name="Technical_Reference_Table" xml:space="preserve">
+    <value>📋 الجدول المرجعي التقني</value>
+  </data>
+  <data name="There_Are_No_Admins_To_Show" xml:space="preserve">
+    <value>لا يوجد أدمنة لعرض صلاحياتهم.</value>
+  </data>
+  <data name="Search_By_Name_Or_Number" xml:space="preserve">
+    <value>🔍 ابحث بالاسم أو الرقم...</value>
+  </data>
+  <data name="All_Buildings_2" xml:space="preserve">
+    <value>🏢 كل العمارات</value>
+  </data>
+  <data name="Expand_All" xml:space="preserve">
+    <value>📂 فتح الكل</value>
+  </data>
+  <data name="Collapse_All" xml:space="preserve">
+    <value>📁 غلق الكل</value>
+  </data>
+  <data name="Text_8a78cc" xml:space="preserve">
+    <value>، </value>
+  </data>
+  <data name="Disabled_3" xml:space="preserve">
+    <value>معطّل</value>
+  </data>
+  <data name="12_Permissions_For_A_Regular_Admin" xml:space="preserve">
+    <value>12 صلاحية — للأدمن العادي</value>
+  </data>
+  <data name="Full_Template_12" xml:space="preserve">
+    <value>⚡ قالب كامل (12)</value>
+  </data>
+  <data name="22_Permissions_Super_Admin_Permissions" xml:space="preserve">
+    <value>22 صلاحية — ⚠️ صلاحيات Super Admin</value>
+  </data>
+  <data name="Super_Template_22" xml:space="preserve">
+    <value>👑 قالب Super (22)</value>
+  </data>
+  <data name="7_Permissions_Financial_Management" xml:space="preserve">
+    <value>7 صلاحيات — الإدارة المالية</value>
+  </data>
+  <data name="Financial_Template_7" xml:space="preserve">
+    <value>💰 قالب مالي (7)</value>
+  </data>
+  <data name="4_Permissions_Maintenance_And_Notifications" xml:space="preserve">
+    <value>4 صلاحيات — الصيانة والإشعارات</value>
+  </data>
+  <data name="Maintenance_Template_4" xml:space="preserve">
+    <value>🔧 قالب صيانة (4)</value>
+  </data>
+  <data name="Clear_All_2" xml:space="preserve">
+    <value>🗑️ مسح الكل</value>
+  </data>
+  <data name="Edit_Admin_Details" xml:space="preserve">
+    <value>✏️ تعديل بيانات الأدمن</value>
+  </data>
+  <data name="No_Admins_Match_The_Search" xml:space="preserve">
+    <value>لا يوجد أدمنة مطابقين للبحث.</value>
+  </data>
+  <data name="Technical_Reference_Service_Controller_Actions" xml:space="preserve">
+    <value>📋 مرجع تقني: Service + Controller + Actions</value>
+  </data>
+  <data name="Permission" xml:space="preserve">
+    <value>الصلاحية</value>
+  </data>
+  <data name="Save_Failed" xml:space="preserve">
+    <value>فشل الحفظ:</value>
+  </data>
+  <data name="Apply_Template" xml:space="preserve">
+    <value>تطبيق قالب</value>
+  </data>
+  <data name="All_Current_Permissions_Will_Be_Replaced" xml:space="preserve">
+    <value>؟ سيتم استبدال كل الصلاحيات الحالية.</value>
+  </data>
+  <data name="Failed_To_Apply_The_Template" xml:space="preserve">
+    <value>فشل تطبيق القالب</value>
+  </data>
+  <data name="Clear_All_Permissions" xml:space="preserve">
+    <value>مسح كل الصلاحيات؟</value>
+  </data>
+  <data name="Polls_3" xml:space="preserve">
+    <value>التصويتات</value>
+  </data>
+  <data name="Polls_Of_N_N" xml:space="preserve">
+    <value>🗳️ تصويتات {0} ({1})</value>
+  </data>
+  <data name="New_Poll" xml:space="preserve">
+    <value>➕ تصويت جديد</value>
+  </data>
+  <data name="Question" xml:space="preserve">
+    <value>السؤال</value>
+  </data>
+  <data name="Description_Optional" xml:space="preserve">
+    <value>وصف (اختياري)</value>
+  </data>
+  <data name="Options_At_Least_Two" xml:space="preserve">
+    <value>الخيارات (خياران على الأقل)</value>
+  </data>
+  <data name="Option_1" xml:space="preserve">
+    <value>خيار 1</value>
+  </data>
+  <data name="Option_2" xml:space="preserve">
+    <value>خيار 2</value>
+  </data>
+  <data name="Option_3_Optional" xml:space="preserve">
+    <value>خيار 3 (اختياري)</value>
+  </data>
+  <data name="Option_4_Optional" xml:space="preserve">
+    <value>خيار 4 (اختياري)</value>
+  </data>
+  <data name="Deadline_Optional" xml:space="preserve">
+    <value>آخر موعد (اختياري)</value>
+  </data>
+  <data name="Publish_Poll" xml:space="preserve">
+    <value>نشر التصويت</value>
+  </data>
+  <data name="No_Polls_Yet" xml:space="preserve">
+    <value>لا توجد تصويتات بعد.</value>
+  </data>
+  <data name="Closed_3" xml:space="preserve">
+    <value>مغلق</value>
+  </data>
+  <data name="By_N" xml:space="preserve">
+    <value>بواسطة {0}</value>
+  </data>
+  <data name="Until_N" xml:space="preserve">
+    <value>⏰ حتى {0}</value>
+  </data>
+  <data name="Reopen" xml:space="preserve">
+    <value>إعادة فتح</value>
+  </data>
+  <data name="Delete_The_Poll" xml:space="preserve">
+    <value>حذف التصويت؟</value>
+  </data>
+  <data name="Total_Votes_N_N" xml:space="preserve">
+    <value>إجمالي الأصوات: {0} / {1}</value>
+  </data>
+  <data name="Temporary_Login_Link" xml:space="preserve">
+    <value>رابط دخول مؤقت</value>
+  </data>
+  <data name="A_Temporary_Login_Link_Was_Created" xml:space="preserve">
+    <value>✅ اتعمل رابط دخول مؤقت</value>
+  </data>
+  <data name="Valid_Until_N" xml:space="preserve">
+    <value>صالح لحد: {0}</value>
+  </data>
+  <data name="Copy_2" xml:space="preserve">
+    <value>نسخ</value>
+  </data>
+  <data name="Back_To_All_Codes" xml:space="preserve">
+    <value>رجوع لكل الأكواد</value>
+  </data>
+  <data name="QR_Codes" xml:space="preserve">
+    <value>أكواد QR</value>
+  </data>
+  <data name="Apartment_QR_Codes_N" xml:space="preserve">
+    <value>📱 أكواد QR للشقق — {0}</value>
+  </data>
+  <data name="Download_Door_QR" xml:space="preserve">
+    <value>⬇️ تنزيل QR الباب</value>
+  </data>
+  <data name="Hour" xml:space="preserve">
+    <value>ساعة</value>
+  </data>
+  <data name="Day" xml:space="preserve">
+    <value>يوم</value>
+  </data>
+  <data name="Login_Link" xml:space="preserve">
+    <value>رابط دخول</value>
+  </data>
+  <data name="Regular_Login_2" xml:space="preserve">
+    <value>الدخول العادي</value>
+  </data>
+  <data name="Reports_3" xml:space="preserve">
+    <value>التقارير</value>
+  </data>
+  <data name="Reports_Of_N" xml:space="preserve">
+    <value>📊 تقارير {0}</value>
+  </data>
+  <data name="6_Months" xml:space="preserve">
+    <value>6 شهور</value>
+  </data>
+  <data name="12_Months" xml:space="preserve">
+    <value>12 شهر</value>
+  </data>
+  <data name="Current_Year" xml:space="preserve">
+    <value>السنة الحالية</value>
+  </data>
+  <data name="Total_Collected" xml:space="preserve">
+    <value>إجمالي المحصّل</value>
+  </data>
+  <data name="Total_Revenues" xml:space="preserve">
+    <value>إجمالي الإيرادات</value>
+  </data>
+  <data name="Total_Expenses" xml:space="preserve">
+    <value>إجمالي المصروفات</value>
+  </data>
+  <data name="Net_Balance" xml:space="preserve">
+    <value>صافي الرصيد</value>
+  </data>
+  <data name="Monthly_Average" xml:space="preserve">
+    <value>متوسط شهري</value>
+  </data>
+  <data name="Collected_Vs_Expenses_By_Month" xml:space="preserve">
+    <value>المحصّل مقابل المصروفات شهريًا</value>
+  </data>
+  <data name="Expenses_By_Item" xml:space="preserve">
+    <value>المصروفات حسب البند</value>
+  </data>
+  <data name="No_Data" xml:space="preserve">
+    <value>لا توجد بيانات</value>
+  </data>
+  <data name="Wallet_Distribution_Current_Month" xml:space="preserve">
+    <value>توزيع المحفظة (الشهر الحالي)</value>
+  </data>
+  <data name="Most_Indebted_Apartments" xml:space="preserve">
+    <value>🔴 أكثر الشقق مديونية</value>
+  </data>
+  <data name="Apartment_N_N_2" xml:space="preserve">
+    <value>شقة {0} {1}</value>
+  </data>
+  <data name="Apartments_With_The_Highest_Balance" xml:space="preserve">
+    <value>🟢 أكثر الشقق رصيدًا</value>
+  </data>
+  <data name="Collected" xml:space="preserve">
+    <value>محصّل</value>
+  </data>
+  <data name="Revenues" xml:space="preserve">
+    <value>إيرادات</value>
+  </data>
+  <data name="Expenses_3" xml:space="preserve">
+    <value>مصروفات</value>
+  </data>
+  <data name="Balance" xml:space="preserve">
+    <value>الرصيد</value>
+  </data>
+  <data name="Resident_Dashboard" xml:space="preserve">
+    <value>لوحة الساكن</value>
+  </data>
+  <data name="Your_Apartment_Details_Could_Not_Be" xml:space="preserve">
+    <value>لا يمكن تحديد بيانات شقتك.</value>
+  </data>
+  <data name="Welcome_Apartment_N_N" xml:space="preserve">
+    <value>مرحبًا 👋 — شقة {0}، {1}</value>
+  </data>
+  <data name="Monthly_Fee_N_EGP" xml:space="preserve">
+    <value>الرسم الشهري: {0} ج.م</value>
+  </data>
+  <data name="My_Wallet_3" xml:space="preserve">
+    <value>💼 محفظتي</value>
+  </data>
+  <data name="Download_My_Invoice_PDF" xml:space="preserve">
+    <value>🧾 تنزيل فاتورتي (PDF)</value>
+  </data>
+  <data name="Maintenance_Log" xml:space="preserve">
+    <value>🔧 سجل الصيانة</value>
+  </data>
+  <data name="In_Progress_2" xml:space="preserve">
+    <value>جاري التنفيذ</value>
+  </data>
+  <data name="Done_2" xml:space="preserve">
+    <value>تم</value>
+  </data>
+  <data name="Total_Cost" xml:space="preserve">
+    <value>إجمالي التكلفة</value>
+  </data>
+  <data name="No_Maintenance_Records_At_The_Moment" xml:space="preserve">
+    <value>لا توجد سجلات صيانة حاليًا.</value>
+  </data>
+  <data name="Polls_N" xml:space="preserve">
+    <value>🗳️ التصويتات ({0})</value>
+  </data>
+  <data name="No_Active_Polls_At_The_Moment" xml:space="preserve">
+    <value>لا توجد تصويتات نشطة حاليًا.</value>
+  </data>
+  <data name="Voted" xml:space="preserve">
+    <value>✅ صوّتت</value>
+  </data>
+  <data name="Vote_For_This_Option" xml:space="preserve">
+    <value>صوّت لهذا الخيار</value>
+  </data>
+  <data name="My_Wallet_4" xml:space="preserve">
+    <value>محفظتي</value>
+  </data>
+  <data name="My_Wallet_Apartment_N_N" xml:space="preserve">
+    <value>💼 محفظتي — شقة {0}، {1}</value>
+  </data>
+  <data name="Your_Current_Balance" xml:space="preserve">
+    <value>رصيدك الحالي</value>
+  </data>
+  <data name="You_Have_An_Amount_Due" xml:space="preserve">
+    <value>عليك مبلغ مستحق</value>
+  </data>
+  <data name="Download_PDF_Invoice" xml:space="preserve">
+    <value>🧾 تحميل فاتورة PDF</value>
+  </data>
+  <data name="Submit_A_New_Payment_2" xml:space="preserve">
+    <value>➕ تسجيل دفعة جديدة</value>
+  </data>
+  <data name="It_Will_Be_Set_To_Pending" xml:space="preserve">
+    <value>هتتحول لحالة "معلقة" لحد ما الأدمن يأكدها</value>
+  </data>
+  <data name="Do_You_Have_The_Transfer_Image" xml:space="preserve">
+    <value>📷 عندك صورة التحويل؟</value>
+  </data>
+  <data name="Upload_It_And_We_Ll_Read" xml:space="preserve">
+    <value>ارفعها وهنقرأ المبلغ والبيانات تلقائياً + هترفق مع الدفعة</value>
+  </data>
+  <data name="Read_From_Image" xml:space="preserve">
+    <value>اقرأ من صورة</value>
+  </data>
+  <data name="Image_Read_Successfully" xml:space="preserve">
+    <value>✅ تم قراءة الصورة بنجاح</value>
+  </data>
+  <data name="Submit" xml:space="preserve">
+    <value>إرسال</value>
+  </data>
+  <data name="You_Have_N_Payment_S_Awaiting" xml:space="preserve">
+    <value>عندك {0} دفعة/دفعات في انتظار تأكيد الأدمن.</value>
+  </data>
+  <data name="Account_Statement_N" xml:space="preserve">
+    <value>كشف الحساب ({0})</value>
+  </data>
+  <data name="No_Transactions_For_This_Month" xml:space="preserve">
+    <value>لا توجد معاملات لهذا الشهر.</value>
+  </data>
+  <data name="Description_2" xml:space="preserve">
+    <value>البيان</value>
+  </data>
+  <data name="Receipt" xml:space="preserve">
+    <value>الإيصال</value>
+  </data>
+  <data name="Payment" xml:space="preserve">
+    <value>دفعة </value>
+  </data>
+  <data name="Share_Of_Expenses" xml:space="preserve">
+    <value>نصيب من المصروفات</value>
+  </data>
+  <data name="Share_Of_Revenues" xml:space="preserve">
+    <value>نصيب من الإيرادات</value>
+  </data>
+  <data name="Monthly_Fee_Due" xml:space="preserve">
+    <value>رسم شهري مستحق</value>
+  </data>
+  <data name="Increase_In_The_Monthly_Fee" xml:space="preserve">
+    <value>زيادة في الرسم الشهري</value>
+  </data>
+  <data name="Adjustment" xml:space="preserve">
+    <value>تسوية: </value>
+  </data>
+  <data name="Pending" xml:space="preserve">
+    <value>⏳ معلقة</value>
+  </data>
+  <data name="Confirmed" xml:space="preserve">
+    <value>✅ مؤكدة</value>
+  </data>
+  <data name="Reading_The_Image_May_Take_5" xml:space="preserve">
+    <value>جاري قراءة الصورة... (قد يستغرق 5-15 ثانية)</value>
+  </data>
+  <data name="Amount_2" xml:space="preserve">
+    <value>المبلغ:</value>
+  </data>
+  <data name="EGP" xml:space="preserve">
+    <value>ج.م</value>
+  </data>
+  <data name="Reference" xml:space="preserve">
+    <value>المرجع:</value>
+  </data>
+  <data name="Date_2" xml:space="preserve">
+    <value>التاريخ:</value>
+  </data>
+  <data name="Account" xml:space="preserve">
+    <value>حساب:</value>
+  </data>
+  <data name="The_Image_Will_Be_Uploaded_With" xml:space="preserve">
+    <value>الصورة هترفع مع الدفعة</value>
+  </data>
+  <data name="Revenues_2" xml:space="preserve">
+    <value>الإيرادات</value>
+  </data>
+  <data name="Revenues_Of_N" xml:space="preserve">
+    <value>📈 إيرادات {0}</value>
+  </data>
+  <data name="Add_Revenue" xml:space="preserve">
+    <value>➕ إضافة إيراد</value>
+  </data>
+  <data name="Revenue_Log_N" xml:space="preserve">
+    <value>سجل الإيرادات ({0})</value>
+  </data>
+  <data name="No_Revenues_For_This_Month" xml:space="preserve">
+    <value>لا توجد إيرادات لهذا الشهر.</value>
+  </data>
+  <data name="Delete_The_Revenue" xml:space="preserve">
+    <value>حذف الإيراد؟</value>
+  </data>
+  <data name="Building_Settings" xml:space="preserve">
+    <value>إعدادات العمارة</value>
+  </data>
+  <data name="Settings_Of_N" xml:space="preserve">
+    <value>🏢 إعدادات {0}</value>
+  </data>
+  <data name="All_Buildings_3" xml:space="preserve">
+    <value>← كل العمارات</value>
+  </data>
+  <data name="Building_Details_2" xml:space="preserve">
+    <value>📋 بيانات العمارة</value>
+  </data>
+  <data name="Display_Name" xml:space="preserve">
+    <value>الاسم الظاهر</value>
+  </data>
+  <data name="Building_WhatsApp_Number" xml:space="preserve">
+    <value>رقم واتساب العمارة</value>
+  </data>
+  <data name="Invoice_Policy" xml:space="preserve">
+    <value>🧾 سياسة الفواتير</value>
+  </data>
+  <data name="Invoice_Issue_Day_Of_The_Month" xml:space="preserve">
+    <value>يوم إصدار الفاتورة من الشهر</value>
+  </data>
+  <data name="Currency" xml:space="preserve">
+    <value>العملة</value>
+  </data>
+  <data name="EGP_2" xml:space="preserve">
+    <value>ج.م (EGP)</value>
+  </data>
+  <data name="SAR" xml:space="preserve">
+    <value>ر.س (SAR)</value>
+  </data>
+  <data name="AED" xml:space="preserve">
+    <value>د.إ (AED)</value>
+  </data>
+  <data name="Expense_Distribution" xml:space="preserve">
+    <value>⚖️ توزيع المصروفات</value>
+  </data>
+  <data name="Equally_Equally_Across_All_Open_Apartments" xml:space="preserve">
+    <value>&lt;strong&gt;بالتساوي&lt;/strong&gt; — على كل الشقق المفتوحة بالتساوي</value>
+  </data>
+  <data name="By_Area_A_Share_For_Each" xml:space="preserve">
+    <value>&lt;strong&gt;حسب المساحة&lt;/strong&gt; — نسبة لكل شقة حسب المساحة</value>
+  </data>
+  <data name="By_Number_Of_Residents_A_Share" xml:space="preserve">
+    <value>&lt;strong&gt;حسب عدد السكان&lt;/strong&gt; — نسبة حسب عدد أفراد الشقة</value>
+  </data>
+  <data name="Open_And_Disabled_Apartments_Only_Closed" xml:space="preserve">
+    <value>&lt;strong&gt;على الشقق المفتوحة والمعطّلة فقط&lt;/strong&gt; — المقفولة مستثناة</value>
+  </data>
+  <data name="Voting_Quorum" xml:space="preserve">
+    <value>نصاب التصويت (%)</value>
+  </data>
+  <data name="The_Percentage_Of_Residents_Required_For" xml:space="preserve">
+    <value>النسبة المطلوبة من السكان لاعتبار التصويت صحيحًا</value>
+  </data>
+  <data name="Select_The_Building_For_Its_Settings" xml:space="preserve">
+    <value>🏢 اختر العمارة لإعداداتها</value>
+  </data>
+  <data name="Global_Settings" xml:space="preserve">
+    <value>الإعدادات العامة</value>
+  </data>
+  <data name="Global_Settings_2" xml:space="preserve">
+    <value>⚙️ الإعدادات العامة (Global)</value>
+  </data>
+  <data name="App_Settings" xml:space="preserve">
+    <value>📱 إعدادات التطبيق</value>
+  </data>
+  <data name="App_Name_2" xml:space="preserve">
+    <value>اسم التطبيق</value>
+  </data>
+  <data name="Default_Language" xml:space="preserve">
+    <value>اللغة الافتراضية</value>
+  </data>
+  <data name="Text_26b1b2" xml:space="preserve">
+    <value>العربية</value>
+  </data>
+  <data name="Firebase_Read_Only" xml:space="preserve">
+    <value>🔥 Firebase (عرض فقط)</value>
+  </data>
+  <data name="Read_From_Appsettings_Json" xml:space="preserve">
+    <value>يُقرأ من appsettings.json</value>
+  </data>
+  <data name="OCR_Receipt_Reading" xml:space="preserve">
+    <value>OCR (قراءة الإيصالات)</value>
+  </data>
+  <data name="Security" xml:space="preserve">
+    <value>🔒 الأمان</value>
+  </data>
+  <data name="Session_Duration_Days" xml:space="preserve">
+    <value>مدة الجلسة (بالأيام)</value>
+  </data>
+  <data name="Maximum_PIN_Attempts" xml:space="preserve">
+    <value>الحد الأقصى لمحاولات PIN</value>
+  </data>
+  <data name="My_Settings" xml:space="preserve">
+    <value>إعداداتي</value>
+  </data>
+  <data name="Super_Admin" xml:space="preserve">
+    <value>مدير عام</value>
+  </data>
+  <data name="Resident_2" xml:space="preserve">
+    <value>ساكن</value>
+  </data>
+  <data name="My_Settings_2" xml:space="preserve">
+    <value>⚙️ إعداداتي</value>
+  </data>
+  <data name="My_Personal_Details" xml:space="preserve">
+    <value>بياناتي الشخصية</value>
+  </data>
+  <data name="Your_Name_And_Contact_Number_As" xml:space="preserve">
+    <value>اسمك ورقم التواصل زي ما هيظهروا في الفواتير</value>
+  </data>
+  <data name="Apartment_N_3" xml:space="preserve">
+    <value>• شقة {0}</value>
+  </data>
+  <data name="Name_2" xml:space="preserve">
+    <value>📝 الاسم &lt;span class="text-danger"&gt;*&lt;/span&gt;</value>
+  </data>
+  <data name="Enter_Your_Name_Here" xml:space="preserve">
+    <value>اكتب اسمك هنا</value>
+  </data>
+  <data name="The_Name_Shown_On_Invoices_And" xml:space="preserve">
+    <value>الاسم اللي هيظهر في الفواتير والإشعارات</value>
+  </data>
+  <data name="Apartment_Name_Optional" xml:space="preserve">
+    <value>🏠 اسم الشقة &lt;span class="badge bg-secondary" style="font-size: 10px;"&gt;اختياري&lt;/span&gt;</value>
+  </data>
+  <data name="Example_Alaa_S_Apartment" xml:space="preserve">
+    <value>مثال: شقة علاء</value>
+  </data>
+  <data name="A_Short_Name_To_Identify_The" xml:space="preserve">
+    <value>اسم مختصر للشقة للتمييز</value>
+  </data>
+  <data name="Mobile_Number_Affects_Login" xml:space="preserve">
+    <value>📱 رقم الموبايل &lt;span class="badge bg-warning text-dark" style="font-size: 10px;"&gt;يؤثر على الدخول&lt;/span&gt;</value>
+  </data>
+  <data name="Changing_It_Automatically_Updates_The_Firebase" xml:space="preserve">
+    <value>⚠️ تغييره = تحديث حساب Firebase Auth تلقائيًا</value>
+  </data>
+  <data name="WhatsApp_Number_Separate" xml:space="preserve">
+    <value>💬 رقم الواتساب &lt;span class="badge bg-success" style="font-size: 10px;"&gt;مستقل&lt;/span&gt;</value>
+  </data>
+  <data name="Can_Be_Different_From_The_Mobile" xml:space="preserve">
+    <value>ممكن يكون مختلف عن رقم الموبايل</value>
+  </data>
+  <data name="Security_Change_PIN" xml:space="preserve">
+    <value>الأمان — تغيير PIN</value>
+  </data>
+  <data name="Leave_Empty_If_You_Don_T" xml:space="preserve">
+    <value>اتركه فاضي لو مش عايز تغييره</value>
+  </data>
+  <data name="Current_PIN" xml:space="preserve">
+    <value>🔒 PIN الحالي</value>
+  </data>
+  <data name="Required_Only_To_Change_The_Mobile" xml:space="preserve">
+    <value>مطلوب فقط لتغيير الموبايل أو PIN</value>
+  </data>
+  <data name="New_PIN_2" xml:space="preserve">
+    <value>🔑 PIN الجديد</value>
+  </data>
+  <data name="Confirm_New_PIN" xml:space="preserve">
+    <value>✅ تأكيد PIN الجديد</value>
+  </data>
+  <data name="Preferences" xml:space="preserve">
+    <value>التفضيلات</value>
+  </data>
+  <data name="Language_Notifications_Payment_Method" xml:space="preserve">
+    <value>اللغة، الإشعارات، طريقة الدفع</value>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>🌐 اللغة</value>
+  </data>
+  <data name="Preferred_Payment_Method" xml:space="preserve">
+    <value>💳 طريقة الدفع المفضلة</value>
+  </data>
+  <data name="Cash" xml:space="preserve">
+    <value>نقدي</value>
+  </data>
+  <data name="Bank_Transfer" xml:space="preserve">
+    <value>تحويل بنكي</value>
+  </data>
+  <data name="Vodafone_Cash" xml:space="preserve">
+    <value>فودافون كاش</value>
+  </data>
+  <data name="Notification_Preferences" xml:space="preserve">
+    <value>🔔 تفضيلات الإشعارات</value>
+  </data>
+  <data name="Cancel_3" xml:space="preserve">
+    <value>↩️ إلغاء</value>
+  </data>
+  <data name="Save_Changes" xml:space="preserve">
+    <value>💾 حفظ التغييرات</value>
+  </data>
+  <data name="Matching" xml:space="preserve">
+    <value>متطابق</value>
+  </data>
+  <data name="Not_Matching" xml:space="preserve">
+    <value>غير متطابق</value>
+  </data>
+  <data name="The_New_One_Must_Be_4" xml:space="preserve">
+    <value>الجديد لازم يكون 4 أرقام</value>
+  </data>
+  <data name="The_New_PIN_And_Its_Confirmation" xml:space="preserve">
+    <value>الجديد وتأكيده مش متطابقين</value>
+  </data>
+  <data name="You_Must_Enter_The_Current_PIN" xml:space="preserve">
+    <value>لازم تدخل PIN الحالي لتأكيد التغيير</value>
+  </data>
+  <data name="You_Are_In_Impersonation_Mode" xml:space="preserve">
+    <value>أنت في وضع Impersonation</value>
+  </data>
+  <data name="Browsing_As" xml:space="preserve">
+    <value>— تتصفح كـ</value>
+  </data>
+  <data name="Back_To_My_Account_Admin" xml:space="preserve">
+    <value>↩️ رجوع لحسابي (الأدمن)</value>
+  </data>
+  <data name="Text_bbcf99" xml:space="preserve">
+    <value>🇪🇬 العربية</value>
+  </data>
+  <data name="Of_A_Total_Of" xml:space="preserve">
+    <value>من إجمالي</value>
+  </data>
+  <data name="Page" xml:space="preserve">
+    <value>— صفحة</value>
+  </data>
+  <data name="Of" xml:space="preserve">
+    <value>من</value>
+  </data>
+  <data name="Page_Size" xml:space="preserve">
+    <value>حجم الصفحة:</value>
+  </data>
+  <data name="Previous" xml:space="preserve">
+    <value>‹ السابق</value>
+  </data>
+  <data name="Next" xml:space="preserve">
+    <value>التالي ›</value>
+  </data>
+  <data name="Super_Admin_Dashboard" xml:space="preserve">
+    <value>لوحة Super Admin</value>
+  </data>
+  <data name="No_Buildings_Yet" xml:space="preserve">
+    <value>لا توجد عمارات بعد.</value>
+  </data>
+  <data name="Database_Sync" xml:space="preserve">
+    <value>مزامنة الداتابيز</value>
+  </data>
+  <data name="Database_Sync_2" xml:space="preserve">
+    <value>🔄 مزامنة الداتابيز</value>
+  </data>
+  <data name="Check_And_Fix_Differences_Between_Firebase" xml:space="preserve">
+    <value>فحص وإصلاح الفروقات بين Firebase Auth و Firestore</value>
+  </data>
+  <data name="Sync_Admins" xml:space="preserve">
+    <value>👥 مزامنة الأدمنة</value>
+  </data>
+  <data name="Check_Emails_Firebase_Auth" xml:space="preserve">
+    <value>فحص الإيميلات + Firebase Auth</value>
+  </data>
+  <data name="Auto_Fix" xml:space="preserve">
+    <value>إصلاح تلقائي</value>
+  </data>
+  <data name="Run" xml:space="preserve">
+    <value>▶️ تشغيل</value>
+  </data>
+  <data name="Sync_Residents" xml:space="preserve">
+    <value>🏠 مزامنة السكان</value>
+  </data>
+  <data name="Check_Firebase_Auth_For_Residents" xml:space="preserve">
+    <value>فحص Firebase Auth للسكان</value>
+  </data>
+  <data name="Sync_Passwords" xml:space="preserve">
+    <value>🔑 مزامنة كلمات السر</value>
+  </data>
+  <data name="Update_Firebase_Auth_With_The_Correct" xml:space="preserve">
+    <value>تحديث Firebase Auth بالباسوردات الصحيحة</value>
+  </data>
+  <data name="Sync_Result" xml:space="preserve">
+    <value>نتيجة المزامنة</value>
+  </data>
+  <data name="Result_Of_N_Sync" xml:space="preserve">
+    <value>نتيجة مزامنة {0}</value>
+  </data>
+  <data name="Checked" xml:space="preserve">
+    <value>تم الفحص:</value>
+  </data>
+  <data name="Issues" xml:space="preserve">
+    <value>مشاكل:</value>
+  </data>
+  <data name="Fixed" xml:space="preserve">
+    <value>تم الإصلاح:</value>
+  </data>
+  <data name="Duration_N_Seconds" xml:space="preserve">
+    <value>المدة: {0} ثانية</value>
+  </data>
+  <data name="Type" xml:space="preserve">
+    <value>النوع</value>
+  </data>
+  <data name="Issue" xml:space="preserve">
+    <value>المشكلة</value>
+  </data>
+  <data name="Fixed_2" xml:space="preserve">
+    <value>تم الإصلاح؟</value>
+  </data>
+  <data name="No_Issues_Found" xml:space="preserve">
+    <value>✅ لا توجد مشاكل</value>
+  </data>
+  <data name="Full_Export" xml:space="preserve">
+    <value>تصدير شامل</value>
+  </data>
+  <data name="Full_Export_2" xml:space="preserve">
+    <value>📦 تصدير شامل</value>
+  </data>
+  <data name="The_Following_Will_Be_Exported" xml:space="preserve">
+    <value>سيتم تصدير:</value>
+  </data>
+  <data name="N_Buildings" xml:space="preserve">
+    <value>— {0} عمارة</value>
+  </data>
+  <data name="Users_Json_All_Admins" xml:space="preserve">
+    <value>&lt;strong&gt;users.json&lt;/strong&gt; — كل الأدمنة</value>
+  </data>
+  <data name="README_Md_Content_Description" xml:space="preserve">
+    <value>&lt;strong&gt;README.md&lt;/strong&gt; — شرح المحتوى</value>
+  </data>
+  <data name="Export_ZIP" xml:space="preserve">
+    <value>⬇️ تصدير ZIP</value>
+  </data>
+  <data name="Advanced_Tools" xml:space="preserve">
+    <value>الأدوات المتقدمة</value>
+  </data>
+  <data name="Advanced_Tools_2" xml:space="preserve">
+    <value>🧰 الأدوات المتقدمة</value>
+  </data>
+  <data name="Convert_The_Old_Building_Log_Building" xml:space="preserve">
+    <value>تحويل سجل العمارة القديم (building.AuditLog) إلى auditLogs collection</value>
+  </data>
+  <data name="Open_Tool" xml:space="preserve">
+    <value>فتح الأداة</value>
+  </data>
+  <data name="DB_Maintenance" xml:space="preserve">
+    <value>🔧 صيانة DB</value>
+  </data>
+  <data name="Duplicate_Detection_Cleaning_Up_Pending_Items" xml:space="preserve">
+    <value>كشف التكرار، تنظيف المعلق، إعادة حساب الأرصدة، كشف اليتامى</value>
+  </data>
+  <data name="Export_All_Data_Buildings_Users_As" xml:space="preserve">
+    <value>تصدير كل البيانات (buildings + users) كملف ZIP</value>
+  </data>
+  <data name="DB_Maintenance_2" xml:space="preserve">
+    <value>صيانة DB</value>
+  </data>
+  <data name="Database_Maintenance" xml:space="preserve">
+    <value>🔧 صيانة قاعدة البيانات</value>
+  </data>
+  <data name="Detect_Duplicate_Users" xml:space="preserve">
+    <value>👥 كشف تكرار المستخدمين</value>
+  </data>
+  <data name="Users_With_The_Same_Mobile_Number" xml:space="preserve">
+    <value>مستخدمين بنفس رقم الموبايل</value>
+  </data>
+  <data name="Auto_Fix_Delete_Duplicates" xml:space="preserve">
+    <value>إصلاح تلقائي (حذف المكرر)</value>
+  </data>
+  <data name="Scan" xml:space="preserve">
+    <value>🔍 فحص</value>
+  </data>
+  <data name="Old_Pending_Payments" xml:space="preserve">
+    <value>⏰ دفعات معلقة قديمة</value>
+  </data>
+  <data name="Older_Than_Days" xml:space="preserve">
+    <value>أقدم من (يوم)</value>
+  </data>
+  <data name="Auto_Cancel" xml:space="preserve">
+    <value>إلغاء تلقائي</value>
+  </data>
+  <data name="Recalculate_Balances" xml:space="preserve">
+    <value>🧮 إعادة حساب الأرصدة</value>
+  </data>
+  <data name="Select_A_Building" xml:space="preserve">
+    <value>— اختر عمارة —</value>
+  </data>
+  <data name="Detect_Orphan_References" xml:space="preserve">
+    <value>🔗 كشف المراجع اليتيمة</value>
+  </data>
+  <data name="Payments_Linked_To_Apartments_That_Don" xml:space="preserve">
+    <value>دفعات مرتبطة بشقق مش موجودة</value>
+  </data>
+  <data name="Result_N" xml:space="preserve">
+    <value>نتيجة: {0}</value>
+  </data>
+  <data name="Number_Of_Items" xml:space="preserve">
+    <value>عدد العناصر:</value>
+  </data>
+  <data name="Fixed_3" xml:space="preserve">
+    <value>تم إصلاحها:</value>
+  </data>
+  <data name="Details_3" xml:space="preserve">
+    <value>التفاصيل</value>
+  </data>
+  <data name="Migration_Convert_The_Old_Log" xml:space="preserve">
+    <value>🔄 Migration — تحويل السجل القديم</value>
+  </data>
+  <data name="Convert_Building_AuditLog_AuditLogs_Collection" xml:space="preserve">
+    <value>تحويل &lt;code&gt;building.AuditLog&lt;/code&gt; → &lt;code&gt;auditLogs&lt;/code&gt; collection</value>
+  </data>
+  <data name="Building_Leave_Empty_All_Buildings" xml:space="preserve">
+    <value>العمارة (اتركها فاضية = كل العمارات)</value>
+  </data>
+  <data name="Dry_Run_A_Test_Without_Saving" xml:space="preserve">
+    <value>🧪 Dry-run (تجربة بدون حفظ — موصى به أولاً)</value>
+  </data>
+  <data name="Start_Migration" xml:space="preserve">
+    <value>▶️ بدء Migration</value>
+  </data>
+  <data name="Dry_Run_Result" xml:space="preserve">
+    <value>🧪 نتيجة Dry-run</value>
+  </data>
+  <data name="Migration_Result" xml:space="preserve">
+    <value>✅ نتيجة Migration</value>
+  </data>
+  <data name="Buildings_3" xml:space="preserve">
+    <value>عمارات:</value>
+  </data>
+  <data name="Existing_Records" xml:space="preserve">
+    <value>سجلات موجودة:</value>
+  </data>
+  <data name="Migrated" xml:space="preserve">
+    <value>تم ترحيلها:</value>
+  </data>
+  <data name="Skipped_2" xml:space="preserve">
+    <value>تم تخطيها:</value>
+  </data>
+  <data name="Failed_4" xml:space="preserve">
+    <value>فشلت:</value>
+  </data>
+  <data name="Errors" xml:space="preserve">
+    <value>أخطاء:</value>
+  </data>
+  <data name="Details_N" xml:space="preserve">
+    <value>التفاصيل ({0})</value>
+  </data>
+  <data name="Wallet_Of_N" xml:space="preserve">
+    <value>💼 محفظة {0}</value>
+  </data>
+  <data name="Wallet_Total" xml:space="preserve">
+    <value>إجمالي المحفظة</value>
+  </data>
+  <data name="Payments_Awaiting_Confirmation_N" xml:space="preserve">
+    <value>⏳ دفعات في انتظار التأكيد ({0})</value>
+  </data>
+  <data name="Payment_Number" xml:space="preserve">
+    <value>رقم الدفعة</value>
+  </data>
+  <data name="Edited_N" xml:space="preserve">
+    <value>✏️ معدّلة: {0}</value>
+  </data>
+  <data name="View_Receipt" xml:space="preserve">
+    <value>عرض الإيصال</value>
+  </data>
+  <data name="View_3" xml:space="preserve">
+    <value>📎 عرض</value>
+  </data>
+  <data name="Cancel_The_Payment" xml:space="preserve">
+    <value>إلغاء الدفعة؟</value>
+  </data>
+  <data name="Edit_2" xml:space="preserve">
+    <value>✏️ تعديل</value>
+  </data>
+  <data name="Apartment_Balances_N" xml:space="preserve">
+    <value>أرصدة الشقق ({0})</value>
+  </data>
+  <data name="Unknown_Floor" xml:space="preserve">
+    <value>دور غير معروف</value>
+  </data>
+  <data name="Manual_Adjustment" xml:space="preserve">
+    <value>تسوية يدوية</value>
+  </data>
+  <data name="Amount_3" xml:space="preserve">
+    <value>المبلغ (+/-)</value>
+  </data>
+  <data name="Reason" xml:space="preserve">
+    <value>السبب</value>
+  </data>
+  <data name="Adjustment_2" xml:space="preserve">
+    <value>تسوية</value>
+  </data>
+  <data name="Payment_Receipt" xml:space="preserve">
+    <value>📎 إيصال الدفعة</value>
+  </data>
+  <data name="Receipt_2" xml:space="preserve">
+    <value>إيصال</value>
+  </data>
+  <data name="Open_In_A_New_Tab" xml:space="preserve">
+    <value>🔗 فتح في تاب جديد</value>
+  </data>
+  <data name="Edit_Payment" xml:space="preserve">
+    <value>✏️ تعديل دفعة</value>
+  </data>
+  <data name="Amount_EGP" xml:space="preserve">
+    <value>💰 المبلغ (ج.م)</value>
+  </data>
+  <data name="Reason_For_The_Edit" xml:space="preserve">
+    <value>📝 سبب التعديل &lt;span class="text-danger"&gt;*&lt;/span&gt;</value>
+  </data>
+  <data name="Example_Correcting_The_Amount_Based_On" xml:space="preserve">
+    <value>مثال: تصحيح المبلغ بناءً على الإيصال</value>
+  </data>
+  <data name="Note_2" xml:space="preserve">
+    <value>📋 ملاحظة</value>
+  </data>
+  <data name="Note_On_The_Payment_Optional" xml:space="preserve">
+    <value>ملاحظة على الدفعة (اختياري)</value>
+  </data>
+  <data name="Save_Changes_2" xml:space="preserve">
+    <value>💾 حفظ التعديلات</value>
+  </data>
+  <data name="WhatsApp_Messages" xml:space="preserve">
+    <value>رسائل واتساب</value>
+  </data>
+  <data name="WhatsApp_Messages_N" xml:space="preserve">
+    <value>💬 رسائل واتساب — {0}</value>
+  </data>
+  <data name="Template" xml:space="preserve">
+    <value>القالب</value>
+  </data>
+  <data name="Amount_If_Needed" xml:space="preserve">
+    <value>المبلغ (لو محتاج)</value>
+  </data>
+  <data name="Description_Note_If_Needed" xml:space="preserve">
+    <value>البيان / الملاحظة (لو محتاج)</value>
+  </data>
+  <data name="Apartment_Share_If_Needed" xml:space="preserve">
+    <value>نصيب الشقة (لو محتاج)</value>
+  </data>
+  <data name="General_Message_If_You_Chose_General" xml:space="preserve">
+    <value>رسالة عامة (لو اخترت "رسالة عامة")</value>
+  </data>
+  <data name="Generate_Message" xml:space="preserve">
+    <value>توليد الرسالة</value>
+  </data>
+  <data name="Message_Ready" xml:space="preserve">
+    <value>رسالة جاهزة</value>
+  </data>
+  <data name="Message_For_Apartment_N" xml:space="preserve">
+    <value>💬 رسالة لشقة {0}</value>
+  </data>
+  <data name="Open_WhatsApp_And_Send" xml:space="preserve">
+    <value>فتح واتساب وإرسال</value>
+  </data>
+  <data name="Back_3" xml:space="preserve">
+    <value>رجوع</value>
+  </data>
+  <data name="Too_Many_Failed_Login_Attempts_Try" xml:space="preserve">
+    <value>⛔ محاولات دخول غلط كتير. حاول تاني بعد 15 دقيقة.</value>
+  </data>
+  <data name="This_Link_Has_Been_Modified_Or" xml:space="preserve">
+    <value>⚠️ الرابط ده اتعدّل أو مش أصلي. امسح الـ QR الأصلي.</value>
+  </data>
+  <data name="Invalid_Login_Details" xml:space="preserve">
+    <value>❌ بيانات الدخول غير صحيحة</value>
+  </data>
+  <data name="The_Session_Has_Expired_Please_Try" xml:space="preserve">
+    <value>انتهت صلاحية الجلسة. حاول تسجّل دخول تاني.</value>
+  </data>
+  <data name="The_Session_Has_Expired" xml:space="preserve">
+    <value>انتهت صلاحية الجلسة.</value>
+  </data>
+  <data name="The_Selected_Context_Does_Not_Exist" xml:space="preserve">
+    <value>السياق المحدد غير موجود.</value>
+  </data>
+  <data name="The_Building_Does_Not_Exist" xml:space="preserve">
+    <value>العمارة غير موجودة</value>
+  </data>
+  <data name="The_Apartment_Does_Not_Exist" xml:space="preserve">
+    <value>الشقة غير موجودة</value>
+  </data>
+  <data name="This_Email_Is_Not_Authorized_For" xml:space="preserve">
+    <value>هذا الإيميل غير مصرح له بصلاحية Super Admin</value>
+  </data>
+  <data name="Login_Error_2" xml:space="preserve">
+    <value>خطأ في تسجيل الدخول</value>
+  </data>
+  <data name="No_Admin_Has_Been_Registered_Yet" xml:space="preserve">
+    <value>لا يوجد أي أدمن مسجل بعد</value>
+  </data>
+  <data name="Incorrect_Phone_Number_Or_PIN" xml:space="preserve">
+    <value>رقم الهاتف أو الـ PIN غير صحيح</value>
+  </data>
+  <data name="The_WhatsApp_Number_Does_Not_Match" xml:space="preserve">
+    <value>رقم الواتساب غير مطابق لبيانات الشقة</value>
+  </data>
+  <data name="Incorrect_PIN" xml:space="preserve">
+    <value>الـ PIN غير صحيح</value>
+  </data>
+  <data name="This_Email_Is_Not_Authorized_For_2" xml:space="preserve">
+    <value>هذا البريد غير مصرح له بصلاحية Super Admin</value>
+  </data>
+  <data name="This_Account_Is_Disabled" xml:space="preserve">
+    <value>🚫 هذا الحساب معطّل</value>
+  </data>
+  <data name="Reason_N" xml:space="preserve">
+    <value> — السبب: {0}</value>
+  </data>
+  <data name="Invalid_Login_Details_2" xml:space="preserve">
+    <value>بيانات الدخول غير صحيحة</value>
+  </data>
+  <data name="An_Unexpected_Error_Occurred" xml:space="preserve">
+    <value>حدث خطأ غير متوقع</value>
+  </data>
+  <data name="Could_Not_Log_In_2" xml:space="preserve">
+    <value>تعذّر تسجيل الدخول: </value>
+  </data>
+  <data name="The_Apartment_Is_Already_Open" xml:space="preserve">
+    <value>الشقة مفتوحة بالفعل</value>
+  </data>
+  <data name="Apartment_N_Was_Opened_The_Resident" xml:space="preserve">
+    <value>✅ تم فتح شقة {0} — الساكن هيتنبّه</value>
+  </data>
+  <data name="The_Apartment_Is_Already_Closed" xml:space="preserve">
+    <value>الشقة مغلقة بالفعل</value>
+  </data>
+  <data name="Apartment_N_Was_Closed" xml:space="preserve">
+    <value>✅ تم إغلاق شقة {0}</value>
+  </data>
+  <data name="All_Fields_Are_Required" xml:space="preserve">
+    <value>كل الحقول مطلوبة.</value>
+  </data>
+  <data name="Admin_Created_Successfully" xml:space="preserve">
+    <value>✅ تم إنشاء الأدمن بنجاح.</value>
+  </data>
+  <data name="Creation_Failed" xml:space="preserve">
+    <value>فشل الإنشاء: </value>
+  </data>
+  <data name="Updated" xml:space="preserve">
+    <value>✅ تم التحديث.</value>
+  </data>
+  <data name="Update_Failed" xml:space="preserve">
+    <value>فشل التحديث: </value>
+  </data>
+  <data name="PIN_Changed" xml:space="preserve">
+    <value>✅ تم تغيير PIN.</value>
+  </data>
+  <data name="PIN_Change_Failed" xml:space="preserve">
+    <value>فشل تغيير PIN: </value>
+  </data>
+  <data name="Disabled_4" xml:space="preserve">
+    <value>تم التعطيل.</value>
+  </data>
+  <data name="Activated" xml:space="preserve">
+    <value>تم التنشيط.</value>
+  </data>
+  <data name="Deleted" xml:space="preserve">
+    <value>تم الحذف.</value>
+  </data>
+  <data name="Select_At_Least_One_Collection" xml:space="preserve">
+    <value>اختر على الأقل Collection واحد</value>
+  </data>
+  <data name="Backup_Created_N_Collections_N_Documents" xml:space="preserve">
+    <value>✅ تم إنشاء النسخة ({0} collections، {1} مستند)</value>
+  </data>
+  <data name="Upload_A_ZIP_File_First" xml:space="preserve">
+    <value>ارفع ملف ZIP أولاً</value>
+  </data>
+  <data name="The_File_Must_Be_A_ZIP" xml:space="preserve">
+    <value>الملف لازم يكون ZIP</value>
+  </data>
+  <data name="Failed_To_Read_The_File" xml:space="preserve">
+    <value>فشل قراءة الملف: </value>
+  </data>
+  <data name="Failed_5" xml:space="preserve">
+    <value>فشل: </value>
+  </data>
+  <data name="Incomplete_Data" xml:space="preserve">
+    <value>بيانات ناقصة</value>
+  </data>
+  <data name="You_Must_Select_At_Least_One" xml:space="preserve">
+    <value>لازم تختار على الأقل Collection واحد</value>
+  </data>
+  <data name="Settings_Saved" xml:space="preserve">
+    <value>✅ تم حفظ الإعدادات</value>
+  </data>
+  <data name="Save_Failed_2" xml:space="preserve">
+    <value>فشل الحفظ: </value>
+  </data>
+  <data name="Backup_Created" xml:space="preserve">
+    <value>✅ تم إنشاء النسخة</value>
+  </data>
+  <data name="Deleted_2" xml:space="preserve">
+    <value>✅ تم الحذف</value>
+  </data>
+  <data name="File_Not_Found" xml:space="preserve">
+    <value>❌ لم يتم العثور على الملف</value>
+  </data>
+  <data name="Failed_To_Download_The_Template" xml:space="preserve">
+    <value>فشل تنزيل القالب: </value>
+  </data>
+  <data name="No_File_Was_Uploaded" xml:space="preserve">
+    <value>لم يتم رفع أي ملف</value>
+  </data>
+  <data name="The_File_Must_Be_In_Xlsx" xml:space="preserve">
+    <value>الملف لازم يكون بصيغة .xlsx</value>
+  </data>
+  <data name="The_File_Is_Invalid" xml:space="preserve">
+    <value>الملف غير صالح</value>
+  </data>
+  <data name="The_Session_Has_Expired_Upload_The" xml:space="preserve">
+    <value>انتهت صلاحية الجلسة. ارفع الملف تاني.</value>
+  </data>
+  <data name="The_Data_Is_Corrupted_Upload_The" xml:space="preserve">
+    <value>البيانات تالفة. ارفع الملف تاني.</value>
+  </data>
+  <data name="The_Data_Is_Incomplete_Upload_The" xml:space="preserve">
+    <value>البيانات ناقصة. ارفع الملف تاني.</value>
+  </data>
+  <data name="Failed_To_Create_The_Building" xml:space="preserve">
+    <value>فشل إنشاء العمارة</value>
+  </data>
+  <data name="Building_N_Imported_Successfully_N_Apartments" xml:space="preserve">
+    <value>✅ تم استيراد العمارة '{0}' بنجاح ({1} شقة)</value>
+  </data>
+  <data name="Import_Failed" xml:space="preserve">
+    <value>فشل الاستيراد: </value>
+  </data>
+  <data name="Building_Name_Is_Required_2_To" xml:space="preserve">
+    <value>اسم العمارة مطلوب (من 2 إلى 100 حرف)</value>
+  </data>
+  <data name="Admin_PIN_Must_Be_Exactly_4" xml:space="preserve">
+    <value>PIN الأدمن لازم يكون 4 أرقام بالظبط</value>
+  </data>
+  <data name="Admin_WhatsApp_Number_Is_Required" xml:space="preserve">
+    <value>رقم واتساب الأدمن مطلوب</value>
+  </data>
+  <data name="Admin_WhatsApp_Number_Is_Invalid_Digits" xml:space="preserve">
+    <value>رقم واتساب الأدمن غير صحيح (أرقام فقط، 7 خانات على الأقل)</value>
+  </data>
+  <data name="Building_Number_Must_Be_In_The" xml:space="preserve">
+    <value>رقم العمارة لازم يكون بصيغة BLD-XXX (مثال: BLD-001)</value>
+  </data>
+  <data name="Building_N_Created_Successfully" xml:space="preserve">
+    <value>✅ تم إنشاء العمارة {0} بنجاح</value>
+  </data>
+  <data name="You_Must_Enter_A_WhatsApp_Number" xml:space="preserve">
+    <value>لازم تدخل رقم واتساب و PIN لكل شقة (مفصولين بفاصلة)</value>
+  </data>
+  <data name="Floor_Added_Successfully" xml:space="preserve">
+    <value>تمت إضافة الدور بنجاح</value>
+  </data>
+  <data name="WhatsApp_Number_And_PIN_At_Least" xml:space="preserve">
+    <value>رقم الواتساب و PIN (4 أرقام على الأقل) مطلوبين</value>
+  </data>
+  <data name="Apartment_Added_Successfully" xml:space="preserve">
+    <value>تمت إضافة الشقة بنجاح</value>
+  </data>
+  <data name="Fixed_N_Accounts_N_Failed" xml:space="preserve">
+    <value>✅ تم إصلاح {0} حساب، فشل {1}</value>
+  </data>
+  <data name="Apartment_N_Already_Exists" xml:space="preserve">
+    <value>✅ شقة {0}: موجود بالفعل</value>
+  </data>
+  <data name="Apartment_N_Created" xml:space="preserve">
+    <value>✅ شقة {0}: تم الإنشاء</value>
+  </data>
+  <data name="Apartment_N_Created_But_Sign_In" xml:space="preserve">
+    <value>⚠️ شقة {0}: اتعمل بس SignIn فشل</value>
+  </data>
+  <data name="Apartment_N_N_3" xml:space="preserve">
+    <value>❌ شقة {0}: {1}</value>
+  </data>
+  <data name="N_Succeeded_N_Failed" xml:space="preserve">
+    <value>✅ نجح {0}، فشل {1}</value>
+  </data>
+  <data name="Category_Name_Is_Required" xml:space="preserve">
+    <value>اسم الفئة مطلوب.</value>
+  </data>
+  <data name="Category_Added" xml:space="preserve">
+    <value>✅ تمت إضافة الفئة.</value>
+  </data>
+  <data name="Category_Not_Found" xml:space="preserve">
+    <value>❌ الفئة غير موجودة.</value>
+  </data>
+  <data name="Deleted_Or_Disabled_If_In_Use" xml:space="preserve">
+    <value>✅ تم الحذف (أو التعطيل لو مستخدمة).</value>
+  </data>
+  <data name="Expense_Added" xml:space="preserve">
+    <value>تمت إضافة المصروف</value>
+  </data>
+  <data name="Maintenance_Record_Added" xml:space="preserve">
+    <value>تمت إضافة سجل الصيانة</value>
+  </data>
+  <data name="Cost_Added_To_Expenses" xml:space="preserve">
+    <value>تمت إضافة التكلفة للمصروفات</value>
+  </data>
+  <data name="Full_12" xml:space="preserve">
+    <value>كامل (12)</value>
+  </data>
+  <data name="Financial_7" xml:space="preserve">
+    <value>مالي (7)</value>
+  </data>
+  <data name="Maintenance_4" xml:space="preserve">
+    <value>صيانة (4)</value>
+  </data>
+  <data name="Template_N_Applied_N_Permissions" xml:space="preserve">
+    <value>✅ تم تطبيق قالب {0} — {1} صلاحية.</value>
+  </data>
+  <data name="A_Question_And_At_Least_Two" xml:space="preserve">
+    <value>لازم سؤال + خيارين على الأقل</value>
+  </data>
+  <data name="Poll_Published" xml:space="preserve">
+    <value>تم نشر التصويت</value>
+  </data>
+  <data name="Could_Not_Determine_The_Apartment" xml:space="preserve">
+    <value>تعذّر تحديد الشقة</value>
+  </data>
+  <data name="The_Link_Has_Expired" xml:space="preserve">
+    <value>⏰ انتهت صلاحية الرابط</value>
+  </data>
+  <data name="This_Link_Has_Already_Been_Used" xml:space="preserve">
+    <value>🚫 الرابط ده اتستخدم قبل كده</value>
+  </data>
+  <data name="The_Link_Is_Invalid" xml:space="preserve">
+    <value>الرابط غير صالح</value>
+  </data>
+  <data name="Could_Not_Log_In_With_This" xml:space="preserve">
+    <value>تعذّر الدخول بهذا الرابط</value>
+  </data>
+  <data name="Report_N_N" xml:space="preserve">
+    <value>=== تقرير — {0} ({1}) ===</value>
+  </data>
+  <data name="Export_Date_N" xml:space="preserve">
+    <value>تاريخ التصدير: {0:O}</value>
+  </data>
+  <data name="Summary" xml:space="preserve">
+    <value>=== الملخص ===</value>
+  </data>
+  <data name="Monthly_2" xml:space="preserve">
+    <value>=== شهريًا ===</value>
+  </data>
+  <data name="Month" xml:space="preserve">
+    <value>الشهر</value>
+  </data>
+  <data name="Collected_2" xml:space="preserve">
+    <value>المحصّل</value>
+  </data>
+  <data name="Net" xml:space="preserve">
+    <value>الصافي</value>
+  </data>
+  <data name="Wallet_Distribution_Current_Month_2" xml:space="preserve">
+    <value>=== توزيع المحفظة (الشهر الحالي) ===</value>
+  </data>
+  <data name="The_Poll_Is_Closed_Or_You" xml:space="preserve">
+    <value>التصويت مقفول أو أنت صوّت بالفعل</value>
+  </data>
+  <data name="The_Payment_Was_Submitted_Awaiting_Admin" xml:space="preserve">
+    <value>تم إرسال الدفعة، في انتظار تأكيد الأدمن</value>
+  </data>
+  <data name="No_Image_Was_Uploaded" xml:space="preserve">
+    <value>لم يتم رفع صورة</value>
+  </data>
+  <data name="The_Image_Is_Too_Large_Maximum" xml:space="preserve">
+    <value>حجم الصورة كبير جداً (الحد الأقصى 10 ميجا)</value>
+  </data>
+  <data name="We_Couldn_T_Read_The_Image" xml:space="preserve">
+    <value>لم نتمكن من قراءة الصورة. تأكد من وضوحها أو أدخل البيانات يدوياً.</value>
+  </data>
+  <data name="This_Image_Shows_A_Failed_Or" xml:space="preserve">
+    <value>الصورة دي تحويل فاشل أو قيد الانتظار. ارفع صورة التحويل الناجح ✅</value>
+  </data>
+  <data name="Error_Reading_The_Image" xml:space="preserve">
+    <value>خطأ في قراءة الصورة: </value>
+  </data>
+  <data name="Revenue_Added" xml:space="preserve">
+    <value>تمت إضافة الإيراد</value>
+  </data>
+  <data name="Global_Settings_Saved" xml:space="preserve">
+    <value>✅ تم حفظ الإعدادات العامة</value>
+  </data>
+  <data name="Building_Settings_Saved" xml:space="preserve">
+    <value>✅ تم حفظ إعدادات العمارة</value>
+  </data>
+  <data name="Error_2" xml:space="preserve">
+    <value>خطأ: </value>
+  </data>
+  <data name="Preferences_2" xml:space="preserve">
+    <value>التفضيلات: </value>
+  </data>
+  <data name="The_New_PIN_And_Its_Confirmation_2" xml:space="preserve">
+    <value>PIN الجديد وتأكيده مش متطابقين</value>
+  </data>
+  <data name="PIN_Must_Be_Exactly_4_Digits" xml:space="preserve">
+    <value>PIN لازم يكون 4 أرقام بالظبط</value>
+  </data>
+  <data name="Your_Details" xml:space="preserve">
+    <value>بياناتك</value>
+  </data>
+  <data name="Saved" xml:space="preserve">
+    <value>✅ تم حفظ </value>
+  </data>
+  <data name="And" xml:space="preserve">
+    <value> و </value>
+  </data>
+  <data name="Saved_2" xml:space="preserve">
+    <value>⚠️ تم حفظ </value>
+  </data>
+  <data name="But_Failed" xml:space="preserve">
+    <value> — لكن فشل: </value>
+  </data>
+  <data name="Save_Failed_3" xml:space="preserve">
+    <value>❌ فشل الحفظ: </value>
+  </data>
+  <data name="Admins_2" xml:space="preserve">
+    <value>أدمنة</value>
+  </data>
+  <data name="Residents" xml:space="preserve">
+    <value>سكان</value>
+  </data>
+  <data name="Passwords" xml:space="preserve">
+    <value>كلمات السر</value>
+  </data>
+  <data name="Select_A_Building_First" xml:space="preserve">
+    <value>اختر عمارة أولاً</value>
+  </data>
+  <data name="Unknown_Tool" xml:space="preserve">
+    <value>أداة غير معروفة</value>
+  </data>
+  <data name="The_Payment_Does_Not_Exist" xml:space="preserve">
+    <value>الدفعة غير موجودة</value>
+  </data>
+  <data name="A_Payment_Cannot_Be_Edited_When" xml:space="preserve">
+    <value>لا يمكن تعديل دفعة </value>
+  </data>
+  <data name="Confirmed_2" xml:space="preserve">
+    <value>مؤكدة</value>
+  </data>
+  <data name="Cancelled_2" xml:space="preserve">
+    <value>ملغاة</value>
+  </data>
+  <data name="Payment_Updated_Successfully" xml:space="preserve">
+    <value>✅ تم تعديل الدفعة بنجاح</value>
+  </data>
+  <data name="Update_Failed_2" xml:space="preserve">
+    <value>فشل التعديل: </value>
+  </data>
+  <data name="Manage_Buildings" xml:space="preserve">
+    <value>إدارة العمارات</value>
+  </data>
+  <data name="Manage_Residents" xml:space="preserve">
+    <value>إدارة السكان</value>
+  </data>
+  <data name="Manage_Wallets" xml:space="preserve">
+    <value>إدارة المحافظ</value>
+  </data>
+  <data name="Manage_Expenses" xml:space="preserve">
+    <value>إدارة المصروفات</value>
+  </data>
+  <data name="Manage_Revenues" xml:space="preserve">
+    <value>إدارة الإيرادات</value>
+  </data>
+  <data name="View_Reports" xml:space="preserve">
+    <value>عرض التقارير</value>
+  </data>
+  <data name="Manage_Polls" xml:space="preserve">
+    <value>إدارة التصويتات</value>
+  </data>
+  <data name="Manage_Maintenance" xml:space="preserve">
+    <value>إدارة الصيانة</value>
+  </data>
+  <data name="Send_Notifications" xml:space="preserve">
+    <value>إرسال الإشعارات</value>
+  </data>
+  <data name="Use_WhatsApp" xml:space="preserve">
+    <value>استخدام واتساب</value>
+  </data>
+  <data name="Full_Log" xml:space="preserve">
+    <value>السجل الكامل</value>
+  </data>
+  <data name="Building_Log" xml:space="preserve">
+    <value>سجل العمارة</value>
+  </data>
+  <data name="My_Log_Only" xml:space="preserve">
+    <value>سجلي فقط</value>
+  </data>
+  <data name="Secret_Access" xml:space="preserve">
+    <value>الدخول السري</value>
+  </data>
+  <data name="Management" xml:space="preserve">
+    <value>🏢 إدارة</value>
+  </data>
+  <data name="Finance_2" xml:space="preserve">
+    <value>💰 مالية</value>
+  </data>
+  <data name="Services" xml:space="preserve">
+    <value>🛎️ خدمات</value>
+  </data>
+  <data name="System" xml:space="preserve">
+    <value>🛠️ نظام</value>
+  </data>
+  <data name="Create_Edit_Delete_Buildings_Manage_The" xml:space="preserve">
+    <value>إنشاء/تعديل/حذف العمارات + إدارة الهيكل (أدوار + شقق)</value>
+  </data>
+  <data name="Add_Edit_Disable_Admins_Manage_Permissions" xml:space="preserve">
+    <value>إضافة/تعديل/تعطيل الأدمنة + إدارة الصلاحيات</value>
+  </data>
+  <data name="Add_Edit_Disable_Residents_Reset_PINs" xml:space="preserve">
+    <value>إضافة/تعديل/تعطيل السكان + إعادة تعيين PIN</value>
+  </data>
+  <data name="View_Balances_Confirm_Cancel_Payments_Manual" xml:space="preserve">
+    <value>عرض الأرصدة، تأكيد/إلغاء الدفعات، التسويات اليدوية، إصدار الفواتير</value>
+  </data>
+  <data name="Add_Edit_Delete_Monthly_Expenses" xml:space="preserve">
+    <value>إضافة/تعديل/حذف المصروفات الشهرية</value>
+  </data>
+  <data name="Add_Edit_Delete_Monthly_Revenues" xml:space="preserve">
+    <value>إضافة/تعديل/حذف الإيرادات الشهرية</value>
+  </data>
+  <data name="Manage_Expense_And_Revenue_Categories_Colors" xml:space="preserve">
+    <value>إدارة فئات المصروفات والإيرادات (ألوان، ترتيب، تفعيل)</value>
+  </data>
+  <data name="View_Financial_Reports_CSV_Export" xml:space="preserve">
+    <value>عرض التقارير المالية + تصدير CSV</value>
+  </data>
+  <data name="Create_Close_Delete_Polls_Follow_Results" xml:space="preserve">
+    <value>إنشاء/إغلاق/حذف التصويتات + متابعة النتائج</value>
+  </data>
+  <data name="Add_Edit_Delete_Maintenance_Records_Add" xml:space="preserve">
+    <value>إضافة/تعديل/حذف سجلات الصيانة + إضافة التكلفة للمصروفات</value>
+  </data>
+  <data name="Send_In_App_Notifications_To_Admins" xml:space="preserve">
+    <value>إرسال إشعارات داخل التطبيق للأدمنة والسكان</value>
+  </data>
+  <data name="Generate_WhatsApp_Messages_From_Templates_Open" xml:space="preserve">
+    <value>توليد رسائل واتساب من القوالب + فتح روابط wa.me</value>
+  </data>
+  <data name="View_All_Records_Across_All_Buildings" xml:space="preserve">
+    <value>عرض كل السجلات في كل العمارات (Super Admin)</value>
+  </data>
+  <data name="View_The_Building_Log_Only_Admin" xml:space="preserve">
+    <value>عرض سجل العمارة فقط (Admin)</value>
+  </data>
+  <data name="View_My_Apartment_S_Log_Only" xml:space="preserve">
+    <value>عرض سجل شقتي فقط (Resident)</value>
+  </data>
+  <data name="Global_System_Settings_Super_Admin" xml:space="preserve">
+    <value>إعدادات النظام العامة (Super Admin)</value>
+  </data>
+  <data name="Building_Settings_Invoice_Policy_Expense_Distrib" xml:space="preserve">
+    <value>إعدادات العمارة (سياسة فواتير، توزيع مصروفات، …)</value>
+  </data>
+  <data name="My_Personal_Settings_Mobile_WhatsApp_PIN" xml:space="preserve">
+    <value>إعداداتي الشخصية (موبايل، واتساب، PIN، اللغة)</value>
+  </data>
+  <data name="Migration_DB_Maintenance_Full_ZIP_Export" xml:space="preserve">
+    <value>Migration + صيانة DB + تصدير شامل ZIP</value>
+  </data>
+  <data name="Full_Backup_Restore" xml:space="preserve">
+    <value>نسخ احتياطي كامل + استعادة</value>
+  </data>
+  <data name="Sync_Firebase_Auth_With_Firestore_Check" xml:space="preserve">
+    <value>مزامنة Firebase Auth مع Firestore (فحص/إصلاح)</value>
+  </data>
+  <data name="Secret_Access_Impersonation_To_Buildings_And" xml:space="preserve">
+    <value>الدخول السري (impersonation) للعمارات والشقق</value>
+  </data>
+  <data name="Index_Super_Admin_All_Records_ExportCsv" xml:space="preserve">
+    <value>Index (Super Admin — كل السجلات), ExportCsv</value>
+  </data>
+  <data name="Index_Admin_Own_Building_S_Log" xml:space="preserve">
+    <value>Index (Admin — سجل عمارته)</value>
+  </data>
+  <data name="Index_Resident_Own_Apartment_S_Log" xml:space="preserve">
+    <value>Index (Resident — سجل شقته)</value>
+  </data>
+  <data name="Soon_SettingsService" xml:space="preserve">
+    <value>(قريبًا) SettingsService</value>
+  </data>
+  <data name="Soon_SettingsController" xml:space="preserve">
+    <value>(قريبًا) SettingsController</value>
+  </data>
+  <data name="Soon_BackupService" xml:space="preserve">
+    <value>(قريبًا) BackupService</value>
+  </data>
+  <data name="Soon_BackupController" xml:space="preserve">
+    <value>(قريبًا) BackupController</value>
+  </data>
+  <data name="Soon_SecretAccessService" xml:space="preserve">
+    <value>(قريبًا) SecretAccessService</value>
+  </data>
+  <data name="Soon_SecretAccessController" xml:space="preserve">
+    <value>(قريبًا) SecretAccessController</value>
+  </data>
+  <data name="Never_Logged_In" xml:space="preserve">
+    <value>لم يسجل دخول</value>
+  </data>
+  <data name="You_Don_T_Have_Permission_To" xml:space="preserve">
+    <value>⛔ ماعندكش صلاحية لتنفيذ العملية دي. كلّم السوبر أدمن.</value>
+  </data>
+  <data name="Create_Admin" xml:space="preserve">
+    <value>إنشاء أدمن</value>
+  </data>
+  <data name="Change_Admin_PIN" xml:space="preserve">
+    <value>تغيير PIN أدمن</value>
+  </data>
+  <data name="Disable_Admin" xml:space="preserve">
+    <value>تعطيل أدمن</value>
+  </data>
+  <data name="Activate_Admin" xml:space="preserve">
+    <value>تنشيط أدمن</value>
+  </data>
+  <data name="Delete_Admin" xml:space="preserve">
+    <value>حذف أدمن</value>
+  </data>
+  <data name="Sync_Permissions" xml:space="preserve">
+    <value>مزامنة صلاحيات</value>
+  </data>
+  <data name="Update_Admin_Details" xml:space="preserve">
+    <value>تحديث بيانات أدمن</value>
+  </data>
+  <data name="Add_Expense_Category_2" xml:space="preserve">
+    <value>إضافة فئة مصروف</value>
+  </data>
+  <data name="Edit_Expense_Category" xml:space="preserve">
+    <value>تعديل فئة مصروف</value>
+  </data>
+  <data name="Delete_Expense_Category" xml:space="preserve">
+    <value>حذف فئة مصروف</value>
+  </data>
+  <data name="Disable_Expense_Category" xml:space="preserve">
+    <value>تعطيل فئة مصروف</value>
+  </data>
+  <data name="Reorder_Expense_Categories" xml:space="preserve">
+    <value>إعادة ترتيب فئات المصروفات</value>
+  </data>
+  <data name="Add_Revenue_Category_2" xml:space="preserve">
+    <value>إضافة فئة إيراد</value>
+  </data>
+  <data name="Edit_Revenue_Category" xml:space="preserve">
+    <value>تعديل فئة إيراد</value>
+  </data>
+  <data name="Delete_Revenue_Category" xml:space="preserve">
+    <value>حذف فئة إيراد</value>
+  </data>
+  <data name="Disable_Revenue_Category" xml:space="preserve">
+    <value>تعطيل فئة إيراد</value>
+  </data>
+  <data name="Reorder_Revenue_Categories" xml:space="preserve">
+    <value>إعادة ترتيب فئات الإيرادات</value>
+  </data>
+  <data name="Create_Payment" xml:space="preserve">
+    <value>إنشاء دفعة</value>
+  </data>
+  <data name="Confirm_Payment" xml:space="preserve">
+    <value>تأكيد دفعة</value>
+  </data>
+  <data name="Cancel_Payment" xml:space="preserve">
+    <value>إلغاء دفعة</value>
+  </data>
+  <data name="Edit_Payment_2" xml:space="preserve">
+    <value>تعديل دفعة</value>
+  </data>
+  <data name="Add_Expense_2" xml:space="preserve">
+    <value>إضافة مصروف</value>
+  </data>
+  <data name="Delete_Expense" xml:space="preserve">
+    <value>حذف مصروف</value>
+  </data>
+  <data name="Add_Revenue_2" xml:space="preserve">
+    <value>إضافة إيراد</value>
+  </data>
+  <data name="Delete_Revenue" xml:space="preserve">
+    <value>حذف إيراد</value>
+  </data>
+  <data name="Wallet_Adjustment" xml:space="preserve">
+    <value>تسوية محفظة</value>
+  </data>
+  <data name="Export_Report" xml:space="preserve">
+    <value>تصدير تقرير</value>
+  </data>
+  <data name="Download_Invoice" xml:space="preserve">
+    <value>تحميل فاتورة</value>
+  </data>
+  <data name="Add_Maintenance" xml:space="preserve">
+    <value>إضافة صيانة</value>
+  </data>
+  <data name="Edit_Maintenance" xml:space="preserve">
+    <value>تعديل صيانة</value>
+  </data>
+  <data name="Delete_Maintenance" xml:space="preserve">
+    <value>حذف صيانة</value>
+  </data>
+  <data name="Add_Maintenance_Cost_As_Expense" xml:space="preserve">
+    <value>إضافة تكلفة صيانة كمصروف</value>
+  </data>
+  <data name="Create_Poll" xml:space="preserve">
+    <value>إنشاء تصويت</value>
+  </data>
+  <data name="Close_Poll" xml:space="preserve">
+    <value>إغلاق تصويت</value>
+  </data>
+  <data name="Reopen_Poll" xml:space="preserve">
+    <value>إعادة فتح تصويت</value>
+  </data>
+  <data name="Delete_Poll" xml:space="preserve">
+    <value>حذف تصويت</value>
+  </data>
+  <data name="Vote" xml:space="preserve">
+    <value>تصويت</value>
+  </data>
+  <data name="Generate_QR_Login_Link" xml:space="preserve">
+    <value>توليد رابط دخول QR</value>
+  </data>
+  <data name="Add_Resident" xml:space="preserve">
+    <value>إضافة ساكن</value>
+  </data>
+  <data name="Edit_Resident" xml:space="preserve">
+    <value>تعديل ساكن</value>
+  </data>
+  <data name="Update_Resident_Details" xml:space="preserve">
+    <value>تحديث بيانات ساكن</value>
+  </data>
+  <data name="Create_Building_2" xml:space="preserve">
+    <value>إنشاء عمارة</value>
+  </data>
+  <data name="Delete_Building_2" xml:space="preserve">
+    <value>حذف عمارة</value>
+  </data>
+  <data name="Update_My_Settings" xml:space="preserve">
+    <value>تحديث إعداداتي</value>
+  </data>
+  <data name="Update_Building_Settings" xml:space="preserve">
+    <value>تحديث إعدادات العمارة</value>
+  </data>
+  <data name="Update_Global_Settings" xml:space="preserve">
+    <value>تحديث الإعدادات العامة</value>
+  </data>
+  <data name="Update_Super_Admin_Name" xml:space="preserve">
+    <value>تحديث اسم السوبر أدمن</value>
+  </data>
+  <data name="Open_Apartment_2" xml:space="preserve">
+    <value>🔓 فتح شقة</value>
+  </data>
+  <data name="Close_Apartment_2" xml:space="preserve">
+    <value>🔒 إغلاق شقة</value>
+  </data>
+  <data name="Log_In_As_Resident_Impersonation" xml:space="preserve">
+    <value>🚪 دخول كساكن (Impersonation)</value>
+  </data>
+  <data name="Return_From_Impersonation" xml:space="preserve">
+    <value>↩️ رجوع من Impersonation</value>
+  </data>
+  <data name="Building_Number_N" xml:space="preserve">
+    <value>رقم العمارة: {0}</value>
+  </data>
+  <data name="Wallet_Invoice" xml:space="preserve">
+    <value>فاتورة محفظة</value>
+  </data>
+  <data name="Invoice_Number_N" xml:space="preserve">
+    <value>رقم الفاتورة: {0}</value>
+  </data>
+  <data name="Issue_Date_N" xml:space="preserve">
+    <value>تاريخ الإصدار: {0}</value>
+  </data>
+  <data name="Resident_Name" xml:space="preserve">
+    <value>اسم الساكن</value>
+  </data>
+  <data name="Wallet_Summary" xml:space="preserve">
+    <value>ملخص المحفظة</value>
+  </data>
+  <data name="Previous_Balance" xml:space="preserve">
+    <value>الرصيد السابق</value>
+  </data>
+  <data name="N_EGP_2" xml:space="preserve">
+    <value>{0:0.##} ج.م</value>
+  </data>
+  <data name="Deposits_This_Month" xml:space="preserve">
+    <value>+ إيداعات هذا الشهر</value>
+  </data>
+  <data name="N_EGP_3" xml:space="preserve">
+    <value>+{0:0.##} ج.م</value>
+  </data>
+  <data name="Your_Share_Of_Revenues" xml:space="preserve">
+    <value>+ نصيبك من الإيرادات</value>
+  </data>
+  <data name="Your_Share_Of_Expenses" xml:space="preserve">
+    <value>- نصيبك من المصروفات</value>
+  </data>
+  <data name="N_EGP_4" xml:space="preserve">
+    <value>-{0:0.##} ج.م</value>
+  </data>
+  <data name="Current_Balance_2" xml:space="preserve">
+    <value>= الرصيد الحالي</value>
+  </data>
+  <data name="Expense_Breakdown" xml:space="preserve">
+    <value>تفصيل المصروفات</value>
+  </data>
+  <data name="Method_N" xml:space="preserve">
+    <value>الطريقة: {0}</value>
+  </data>
+  <data name="Account_Number_N" xml:space="preserve">
+    <value>رقم الحساب: {0}</value>
+  </data>
+  <data name="Phone_Number_N" xml:space="preserve">
+    <value>رقم الهاتف: {0}</value>
+  </data>
+  <data name="Note_N" xml:space="preserve">
+    <value>ملاحظة: {0}</value>
+  </data>
+  <data name="N_Building_Management_System" xml:space="preserve">
+    <value>{0} — نظام إدارة العمارات</value>
+  </data>
+  <data name="This_Is_An_Electronic_Invoice_Issued" xml:space="preserve">
+    <value>هذه فاتورة إلكترونية صادرة من نظام إدارة العمارات</value>
+  </data>
+  <data name="Scan_To_Verify" xml:space="preserve">
+    <value>امسح للتحقق</value>
+  </data>
+  <data name="Building_N" xml:space="preserve">
+    <value>العمارة: {0}</value>
+  </data>
+  <data name="Number_N" xml:space="preserve">
+    <value>الرقم: {0}</value>
+  </data>
+  <data name="Link" xml:space="preserve">
+    <value>الرابط:</value>
+  </data>
+  <data name="Generated_N" xml:space="preserve">
+    <value>تم الإنشاء: {0:yyyy-MM-dd HH:mm}</value>
+  </data>
+  <data name="Users" xml:space="preserve">
+    <value>المستخدمون</value>
+  </data>
+  <data name="Audit_Log" xml:space="preserve">
+    <value>سجل التدقيق</value>
+  </data>
+  <data name="QR_Usage" xml:space="preserve">
+    <value>استخدام QR</value>
+  </data>
+  <data name="QR_Tokens" xml:space="preserve">
+    <value>رموز QR</value>
+  </data>
+  <data name="Presence" xml:space="preserve">
+    <value>الحضور</value>
+  </data>
+  <data name="WhatsApp_Templates" xml:space="preserve">
+    <value>قوالب واتساب</value>
+  </data>
+  <data name="N_Invalid_JSON_N" xml:space="preserve">
+    <value>{0}: JSON غير صالح - {1}</value>
+  </data>
+  <data name="Error_N" xml:space="preserve">
+    <value>خطأ: {0}</value>
+  </data>
+  <data name="The_Temporary_File_Does_Not_Exist" xml:space="preserve">
+    <value>الملف المؤقت غير موجود</value>
+  </data>
+  <data name="N_Not_Found_In_The_ZIP" xml:space="preserve">
+    <value>{0}: غير موجود في الـ ZIP</value>
+  </data>
+  <data name="N_N_Documents" xml:space="preserve">
+    <value>✅ {0}: {1} مستند</value>
+  </data>
+  <data name="Indebted" xml:space="preserve">
+    <value>مدين</value>
+  </data>
+  <data name="N_Minutes_Ago" xml:space="preserve">
+    <value>منذ {0} دقيقة</value>
+  </data>
+  <data name="N_Hours_Ago" xml:space="preserve">
+    <value>منذ {0} ساعة</value>
+  </data>
+  <data name="N_Days_Ago" xml:space="preserve">
+    <value>منذ {0} يوم</value>
+  </data>
+  <data name="Now" xml:space="preserve">
+    <value>الآن</value>
+  </data>
+  <data name="Duplicate_User_Detection" xml:space="preserve">
+    <value>كشف تكرار المستخدمين</value>
+  </data>
+  <data name="Phone_N_N_Documents" xml:space="preserve">
+    <value>📱 phone: {0} → {1} مستند</value>
+  </data>
+  <data name="Pending_Payments_N_Days" xml:space="preserve">
+    <value>دفعات معلقة &gt; {0} يوم</value>
+  </data>
+  <data name="N_Payment_N_N_EGP" xml:space="preserve">
+    <value>💰 {0} — دفعة {1} ({2:0.##} ج.م)</value>
+  </data>
+  <data name="Recalculate_Balances_2" xml:space="preserve">
+    <value>إعادة حساب الأرصدة</value>
+  </data>
+  <data name="N_New_Distribution_N_Apartments" xml:space="preserve">
+    <value>📅 {0}: توزيع جديد = {1} شقة</value>
+  </data>
+  <data name="Orphan_Reference_Detection" xml:space="preserve">
+    <value>كشف المراجع اليتيمة</value>
+  </data>
+  <data name="N_Payment_N_Is_Linked_To" xml:space="preserve">
+    <value>⚠️ {0} — دفعة {1} مرتبطة بشقة مش موجودة ({2})</value>
+  </data>
+  <data name="Email_Mismatch_N_N" xml:space="preserve">
+    <value>الإيميل مختلف: '{0}' ≠ '{1}'</value>
+  </data>
+  <data name="Firebase_Auth_Account_Does_Not_Exist" xml:space="preserve">
+    <value>حساب Firebase Auth مش موجود</value>
+  </data>
+  <data name="UID_Mismatch_Firestore_N_Auth_N" xml:space="preserve">
+    <value>UID مختلف: Firestore={0}, Auth={1}</value>
+  </data>
+  <data name="Apartment_N_N_4" xml:space="preserve">
+    <value>شقة {0} - {1}</value>
+  </data>
+  <data name="Admin_N_2" xml:space="preserve">
+    <value>أدمن {0}</value>
+  </data>
+  <data name="Failed_To_Update_The_Password" xml:space="preserve">
+    <value>فشل تحديث كلمة السر</value>
+  </data>
+  <data name="No_Old_AuditLog_Found_In_The" xml:space="preserve">
+    <value>لا يوجد auditLog قديم في العمارة</value>
+  </data>
+  <data name="AuditLog_Is_Not_A_List" xml:space="preserve">
+    <value>auditLog ليس قائمة</value>
+  </data>
+  <data name="A_Confirmed_Or_Cancelled_Payment_Cannot" xml:space="preserve">
+    <value>لا يمكن تعديل دفعة مؤكدة أو ملغاة</value>
+  </data>
+  <data name="The_Amount_Must_Be_Greater_Than" xml:space="preserve">
+    <value>المبلغ لازم يكون أكبر من صفر</value>
+  </data>
+  <data name="Your_Share_Of_This_Month_S" xml:space="preserve">
+    <value>نصيبك من مصروفات الشهر</value>
+  </data>
+  <data name="Your_Share_Of_The_Building_S" xml:space="preserve">
+    <value>نصيبك من إيرادات العمارة</value>
+  </data>
+  <data name="Building_Number_N_Is_Already_In" xml:space="preserve">
+    <value>رقم العمارة {0} مستخدم بالفعل</value>
+  </data>
+  <data name="Failed_To_Create_The_Firebase_Auth" xml:space="preserve">
+    <value>فشل إنشاء حساب Firebase Auth: </value>
+  </data>
+  <data name="The_Admin_Does_Not_Exist" xml:space="preserve">
+    <value>الأدمن غير موجود</value>
+  </data>
+  <data name="The_Current_PIN_Is_Incorrect" xml:space="preserve">
+    <value>PIN الحالي غير صحيح</value>
+  </data>
+  <data name="Invalid_Token" xml:space="preserve">
+    <value>Token غير صالح</value>
+  </data>
+  <data name="The_Token_Has_Been_Tampered_With" xml:space="preserve">
+    <value>Token تم التلاعب به</value>
+  </data>
+  <data name="Corrupted_Token" xml:space="preserve">
+    <value>Token تالف</value>
+  </data>
+  <data name="The_QR_Has_Expired" xml:space="preserve">
+    <value>انتهت صلاحية الـ QR</value>
+  </data>
+  <data name="This_QR_Has_Already_Been_Used" xml:space="preserve">
+    <value>الـ QR ده اتستخدم قبل كده</value>
+  </data>
+  <data name="This_QR_Has_Reached_Its_Maximum" xml:space="preserve">
+    <value>الـ QR ده وصل للحد الأقصى للاستخدام</value>
+  </data>
+  <data name="This_QR_Is_Linked_To_Another" xml:space="preserve">
+    <value>الـ QR ده مرتبط بجهاز تاني</value>
+  </data>
+  <data name="January" xml:space="preserve">
+    <value>يناير</value>
+  </data>
+  <data name="February" xml:space="preserve">
+    <value>فبراير</value>
+  </data>
+  <data name="March" xml:space="preserve">
+    <value>مارس</value>
+  </data>
+  <data name="April" xml:space="preserve">
+    <value>أبريل</value>
+  </data>
+  <data name="May" xml:space="preserve">
+    <value>مايو</value>
+  </data>
+  <data name="June" xml:space="preserve">
+    <value>يونيو</value>
+  </data>
+  <data name="July" xml:space="preserve">
+    <value>يوليو</value>
+  </data>
+  <data name="August" xml:space="preserve">
+    <value>أغسطس</value>
+  </data>
+  <data name="September" xml:space="preserve">
+    <value>سبتمبر</value>
+  </data>
+  <data name="October" xml:space="preserve">
+    <value>أكتوبر</value>
+  </data>
+  <data name="November" xml:space="preserve">
+    <value>نوفمبر</value>
+  </data>
+  <data name="December" xml:space="preserve">
+    <value>ديسمبر</value>
+  </data>
+  <data name="This_File_Is_Not_From_The" xml:space="preserve">
+    <value>الملف ده مش من النظام. حمّل القالب من التطبيق.</value>
+  </data>
+  <data name="The_Template_Version_Is_Outdated_Download" xml:space="preserve">
+    <value>إصدار القالب قديم. حمّل نسخة جديدة.</value>
+  </data>
+  <data name="The_File_Is_Corrupted" xml:space="preserve">
+    <value>الملف تالف.</value>
+  </data>
+  <data name="This_Template_Expired_N_Days_Ago" xml:space="preserve">
+    <value>⚠️ القالب ده انتهت صلاحيته من {0} يوم. حمّل نسخة جديدة.</value>
+  </data>
+  <data name="The_File_Was_Modified_Or_Is" xml:space="preserve">
+    <value>الملف اتعُدِّل أو مش أصلي. حمّل نسخة جديدة.</value>
+  </data>
+  <data name="Sheet_N_Is_Missing" xml:space="preserve">
+    <value>ورقة '{0}' مفقودة</value>
+  </data>
+  <data name="Building_Name_Is_Required_In_The" xml:space="preserve">
+    <value>اسم العمارة مطلوب في ورقة Building Info.</value>
+  </data>
+  <data name="There_Are_No_Apartments_In_The" xml:space="preserve">
+    <value>مفيش شقق في الملف. املأ البيانات من الصف 6.</value>
+  </data>
+  <data name="Error_Reading_The_File_N" xml:space="preserve">
+    <value>خطأ في قراءة الملف: {0}</value>
+  </data>
+  <data name="Js_AptDetails_Title" xml:space="preserve">
+    <value>📋 تفاصيل الشقة</value>
+  </data>
+  <data name="Js_Loading" xml:space="preserve">
+    <value>جاري التحميل...</value>
+  </data>
+  <data name="Js_Close" xml:space="preserve">
+    <value>إغلاق</value>
+  </data>
+  <data name="Js_LoadFailed" xml:space="preserve">
+    <value>❌ فشل تحميل البيانات: {0}</value>
+  </data>
+  <data name="Js_ConfirmImpersonate" xml:space="preserve">
+    <value>⚠️ هل تريد الدخول كساكن هذه الشقة؟
 
-  <!-- ===== App ===== -->
-  <data name="App_Name" xml:space="preserve"><value>نظام إدارة العمارات</value></data>
-  <data name="App_ShortName" xml:space="preserve"><value>إدارة العمارات</value></data>
+ملاحظات:
+• سيتم تسجيل خروجك من حساب الأدمن
+• يمكنك الرجوع لحسابك في أي وقت من الشريط الأحمر أعلى الصفحة
+• سيتم تسجيل هذا الإجراء في السجل</value>
+  </data>
+  <data name="Js_ConfirmOpenApt" xml:space="preserve">
+    <value>🔓 هل تريد فتح شقة {0}؟
 
-  <!-- ===== Common ===== -->
-  <data name="Common_Back" xml:space="preserve"><value>رجوع</value></data>
-  <data name="Common_Cancel" xml:space="preserve"><value>إلغاء</value></data>
-  <data name="Common_Confirm" xml:space="preserve"><value>تأكيد</value></data>
-  <data name="Common_Delete" xml:space="preserve"><value>حذف</value></data>
-  <data name="Common_Edit" xml:space="preserve"><value>تعديل</value></data>
-  <data name="Common_Save" xml:space="preserve"><value>حفظ</value></data>
-  <data name="Common_Close" xml:space="preserve"><value>إغلاق</value></data>
-  <data name="Common_Add" xml:space="preserve"><value>إضافة</value></data>
-  <data name="Common_Loading" xml:space="preserve"><value>جاري التحميل...</value></data>
-  <data name="Common_Copy" xml:space="preserve"><value>نسخ</value></data>
-  <data name="Common_Copied" xml:space="preserve"><value>تم النسخ</value></data>
+ملاحظة:
+• الشقة هتضاف للمصروفات الشهرية
+• هتقدر تصدر فواتير ليها
+• لو فيها دفعات قديمة، هتتحسب</value>
+  </data>
+  <data name="Js_PromptCloseApt" xml:space="preserve">
+    <value>🔒 إغلاق شقة {0}
 
-  <!-- ===== Footer ===== -->
-  <data name="Footer_Copyright" xml:space="preserve"><value>نظام إدارة العمارات — نسخة C# MVC</value></data>
+اكتب سبب الإغلاق (اختياري):
 
-  <!-- ===== Login ===== -->
-  <data name="Login_Title" xml:space="preserve"><value>تسجيل الدخول</value></data>
-  <data name="Login_Subtitle" xml:space="preserve"><value>سجل دخولك للمتابعة</value></data>
-  <data name="Login_Identifier" xml:space="preserve"><value>الإيميل / رقم التليفون</value></data>
-  <data name="Login_IdentifierPlaceholder" xml:space="preserve"><value>you@example.com أو +201001234567</value></data>
-  <data name="Login_Credential" xml:space="preserve"><value>الباسورد / PIN</value></data>
-  <data name="Login_Submit" xml:space="preserve"><value>دخول</value></data>
-  <data name="Login_Or" xml:space="preserve"><value>أو</value></data>
-  <data name="Login_QrHint" xml:space="preserve"><value>عندك QR سريع؟ اضغط هنا</value></data>
-  <data name="Login_AutoRoleDetection" xml:space="preserve"><value>النظام بيتعرّف على دورك تلقائيًا</value></data>
-  <data name="Login_GoogleButton" xml:space="preserve"><value>الدخول بـ Google (Super Admin)</value></data>
-  <data name="Login_GoogleError" xml:space="preserve"><value>فشل الدخول بـ Google</value></data>
-  <data name="Login_GooglePopupClosed" xml:space="preserve"><value>تم إغلاق نافذة Google</value></data>
-  <data name="Login_GooglePopupBlocked" xml:space="preserve"><value>المتصفح منع النافذة</value></data>
-  <data name="Login_GoogleCancelled" xml:space="preserve"><value>تم إلغاء العملية</value></data>
-  <data name="Login_GoogleUnauthorizedDomain" xml:space="preserve"><value>الدومين غير مصرح به في Firebase</value></data>
-  <data name="Login_ConnectionError" xml:space="preserve"><value>خطأ في الاتصال</value></data>
-  <data name="Login_AdminTitle" xml:space="preserve"><value>دخول الأدمن</value></data>
-  <data name="Login_AdminSubtitle" xml:space="preserve"><value>اختار العمارة وأدخل رقم الهاتف والـ PIN</value></data>
-  <data name="Login_ResidentTitle" xml:space="preserve"><value>دخول الساكن</value></data>
-  <data name="Login_ResidentSubtitle" xml:space="preserve"><value>اختار العمارة والدور والشقة، وأدخل رقم الواتساب والـ PIN</value></data>
-  <data name="Login_SuperAdminTitle" xml:space="preserve"><value>دخول Super Admin</value></data>
-  <data name="Login_SuperAdminSubtitle" xml:space="preserve"><value>بالبريد الإلكتروني وكلمة المرور</value></data>
-  <data name="Login_Email" xml:space="preserve"><value>البريد الإلكتروني</value></data>
-  <data name="Login_Password" xml:space="preserve"><value>كلمة المرور</value></data>
-  <data name="Login_Building" xml:space="preserve"><value>العمارة</value></data>
-  <data name="Login_Whatsapp" xml:space="preserve"><value>رقم الواتساب</value></data>
-  <data name="Login_FloorNumber" xml:space="preserve"><value>رقم الدور</value></data>
-  <data name="Login_AptNumber" xml:space="preserve"><value>رقم الشقة</value></data>
-  <data name="Login_Choose" xml:space="preserve"><value>— اختار —</value></data>
-  <data name="Login_QrDetectedBuilding" xml:space="preserve"><value>📱 تم التعرف على العمارة تلقائياً</value></data>
-  <data name="Login_QrDetectedApt" xml:space="preserve"><value>📱 تم التعرف على شقتك تلقائياً</value></data>
-  <data name="Login_QrHintAdmin" xml:space="preserve"><value>💡 بس أدخل رقم الواتساب والـ PIN</value></data>
+مثال: الساكن مسافر - شقة فاضية - صيانة</value>
+  </data>
+  <data name="Js_ConfirmCloseApt" xml:space="preserve">
+    <value>⚠️ تأكيد إغلاق شقة {0}؟
 
-  <!-- ===== Nav ===== -->
-  <data name="Nav_Home" xml:space="preserve"><value>الرئيسية</value></data>
-  <data name="Nav_Admins" xml:space="preserve"><value>الأدمنة</value></data>
-  <data name="Nav_Apts" xml:space="preserve"><value>الشقق</value></data>
-  <data name="Nav_AuditLog" xml:space="preserve"><value>السجل</value></data>
-  <data name="Nav_Backup" xml:space="preserve"><value>النسخ الاحتياطي</value></data>
-  <data name="Nav_Buildings" xml:space="preserve"><value>العمارات</value></data>
-  <data name="Nav_Categories" xml:space="preserve"><value>الفئات</value></data>
-  <data name="Nav_Expenses" xml:space="preserve"><value>المصروفات</value></data>
-  <data name="Nav_Help" xml:space="preserve"><value>الكتيب</value></data>
-  <data name="Nav_Logout" xml:space="preserve"><value>تسجيل الخروج</value></data>
-  <data name="Nav_Maintenance" xml:space="preserve"><value>الصيانة</value></data>
-  <data name="Nav_MyLog" xml:space="preserve"><value>سجلي</value></data>
-  <data name="Nav_MySettings" xml:space="preserve"><value>إعداداتي</value></data>
-  <data name="Nav_MyWallet" xml:space="preserve"><value>محفظتي</value></data>
-  <data name="Nav_Notifications" xml:space="preserve"><value>الإشعارات</value></data>
-  <data name="Nav_Permissions" xml:space="preserve"><value>الصلاحيات</value></data>
-  <data name="Nav_Polls" xml:space="preserve"><value>التصويتات</value></data>
-  <data name="Nav_Revenues" xml:space="preserve"><value>الإيرادات</value></data>
-  <data name="Nav_Settings" xml:space="preserve"><value>الإعدادات</value></data>
-  <data name="Nav_Sync" xml:space="preserve"><value>المزامنة</value></data>
-  <data name="Nav_Tools" xml:space="preserve"><value>الأدوات</value></data>
-  <data name="Nav_Wallet" xml:space="preserve"><value>المحفظة</value></data>
-  <data name="Nav_WhatsApp" xml:space="preserve"><value>واتساب</value></data>
-
-  <!-- ===== Roles ===== -->
-  <data name="Role_Admin" xml:space="preserve"><value>أدمن</value></data>
-  <data name="Role_Resident" xml:space="preserve"><value>ساكن</value></data>
-  <data name="Role_SuperAdmin" xml:space="preserve"><value>مدير عام</value></data>
-
+• مش هتتضمن في توزيع المصروفات
+• مش هيتم إصدار فواتير ليها</value>
+  </data>
+  <data name="Js_PrivateAccess" xml:space="preserve">
+    <value>وصول خاص</value>
+  </data>
+  <data name="Js_EnterSecret" xml:space="preserve">
+    <value>أدخل كلمة السر للوصول للوحة Super Admin</value>
+  </data>
+  <data name="Js_Password" xml:space="preserve">
+    <value>كلمة السر</value>
+  </data>
+  <data name="Js_Cancel" xml:space="preserve">
+    <value>إلغاء</value>
+  </data>
+  <data name="Js_Confirm" xml:space="preserve">
+    <value>تأكيد</value>
+  </data>
+  <data name="Js_WrongSecret" xml:space="preserve">
+    <value>❌ كلمة السر غير صحيحة</value>
+  </data>
 </root>

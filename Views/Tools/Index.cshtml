@@ -1,35 +1,35 @@
 ﻿@{
-    ViewData["Title"] = "الأدوات المتقدمة";
+    ViewData["Title"] = Loc.T("Advanced_Tools");
 }
 
 <div class="container">
-    <h2 class="mb-4">🧰 الأدوات المتقدمة</h2>
+    <h2 class="mb-4">@Loc.T("Advanced_Tools_2")</h2>
 
     <div class="row g-3">
         <div class="col-md-4">
             <div class="card h-100">
                 <div class="card-body">
                     <h5>🔄 Migration</h5>
-                    <p class="text-muted">تحويل سجل العمارة القديم (building.AuditLog) إلى auditLogs collection</p>
-                    <a asp-action="Migration" class="btn btn-primary w-100">فتح الأداة</a>
+                    <p class="text-muted">@Loc.T("Convert_The_Old_Building_Log_Building")</p>
+                    <a asp-action="Migration" class="btn btn-primary w-100">@Loc.T("Open_Tool")</a>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card h-100">
                 <div class="card-body">
-                    <h5>🔧 صيانة DB</h5>
-                    <p class="text-muted">كشف التكرار، تنظيف المعلق، إعادة حساب الأرصدة، كشف اليتامى</p>
-                    <a asp-action="Maintenance" class="btn btn-warning w-100">فتح الأداة</a>
+                    <h5>@Loc.T("DB_Maintenance")</h5>
+                    <p class="text-muted">@Loc.T("Duplicate_Detection_Cleaning_Up_Pending_Items")</p>
+                    <a asp-action="Maintenance" class="btn btn-warning w-100">@Loc.T("Open_Tool")</a>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card h-100">
                 <div class="card-body">
-                    <h5>📦 تصدير شامل</h5>
-                    <p class="text-muted">تصدير كل البيانات (buildings + users) كملف ZIP</p>
-                    <a asp-action="Export" class="btn btn-success w-100">فتح الأداة</a>
+                    <h5>@Loc.T("Full_Export_2")</h5>
+                    <p class="text-muted">@Loc.T("Export_All_Data_Buildings_Users_As")</p>
+                    <a asp-action="Export" class="btn btn-success w-100">@Loc.T("Open_Tool")</a>
                 </div>
             </div>
         </div>

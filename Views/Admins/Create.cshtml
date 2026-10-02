@@ -1,29 +1,29 @@
 ﻿@{
-    ViewData["Title"] = "إضافة أدمن";
+    ViewData["Title"] = Loc.T("Add_Admin");
     var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Models.Building> ?? new();
     var allPerms = ViewBag.AllPermissions as List<string> ?? new();
 }
 
 <div class="container">
-    <h2>➕ إضافة أدمن</h2>
+    <h2>@Loc.T("Add_Admin_2")</h2>
 
     <form asp-action="Create" method="post">
         @Html.AntiForgeryToken()
 
         <div class="mb-3">
-            <label class="form-label">الاسم</label>
+            <label class="form-label">@Loc.T("Name")</label>
             <input name="name" class="form-control" required />
         </div>
 
         <div class="mb-3">
-            <label class="form-label">رقم الموبايل</label>
+            <label class="form-label">@Loc.T("Mobile_Number")</label>
             <input name="phone" class="form-control" required />
         </div>
 
         <div class="mb-3">
-            <label class="form-label">العمارة</label>
+            <label class="form-label">@Loc.T("Building")</label>
             <select name="buildingId" class="form-select" required>
-                <option value="">— اختر —</option>
+                <option value="">@Loc.T("Select_2")</option>
                 @foreach (var b in buildings)
                 {
                     <option value="@b.Id">@b.Name (@b.BuildingNumber)</option>
@@ -37,7 +37,7 @@
         </div>
 
         <div class="mb-3">
-            <label class="form-label">الصلاحيات</label>
+            <label class="form-label">@Loc.T("Permissions")</label>
             <div class="row">
                 @foreach (var p in allPerms)
                 {
@@ -50,7 +50,7 @@
             </div>
         </div>
 
-        <button class="btn btn-primary">حفظ</button>
-        <a asp-action="Index" class="btn btn-secondary">إلغاء</a>
+        <button class="btn btn-primary">@Loc.T("Save")</button>
+        <a asp-action="Index" class="btn btn-secondary">@Loc.T("Cancel")</a>
     </form>
 </div>

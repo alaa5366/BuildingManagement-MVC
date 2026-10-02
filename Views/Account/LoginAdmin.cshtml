@@ -1,6 +1,6 @@
 @model AdminLoginVm
 @{
-    ViewData["Title"] = "دخول الأدمن";
+    ViewData["Title"] = Loc.T("Admin_Login");
     var buildings = (List<Building>)ViewBag.Buildings;
 
     // ✅ QR data
@@ -12,20 +12,20 @@
 
 <div class="auth-wrap">
     <div class="auth-card">
-        <a asp-action="LoginChoice" class="link-btn back-link">← رجوع</a>
-        <h2>دخول الأدمن</h2>
-        <p class="sub">اختار العمارة وأدخل رقم الهاتف والـ PIN</p>
+        <a asp-action="LoginChoice" class="link-btn back-link">@Loc.T("Back")</a>
+        <h2>@Loc.T("Admin_Login")</h2>
+        <p class="sub">@Loc.T("Choose_The_Building_And_Enter_Your")</p>
 
         @if (hasQr)
         {
             <div class="alert alert-success">
-                <strong>📱 تم التعرف على العمارة تلقائياً</strong>
+                <strong>@Loc.T("Building_Detected_Automatically")</strong>
                 <div class="small mt-2">
                     <div>🏢 <strong>@qrBuildingName</strong></div>
                     <div>@qrBuildingNumber</div>
                 </div>
                 <div class="small mt-2 text-muted">
-                    💡 بس أدخل رقم الواتساب والـ PIN
+                    @Loc.T("Just_Enter_Your_WhatsApp_Number_And")
                 </div>
             </div>
         }
@@ -39,9 +39,9 @@
             @Html.AntiForgeryToken()
 
             <div class="field">
-                <label>العمارة</label>
+                <label>@Loc.T("Building")</label>
                 <select name="BuildingId" class="form-select" required>
-                    <option value="">— اختار —</option>
+                    <option value="">@Loc.T("Select")</option>
                     @foreach (var b in buildings)
                     {
                         <option value="@b.Id" selected="@(hasQr && b.Id == qrBuildingId)">
@@ -52,7 +52,7 @@
             </div>
 
             <div class="field">
-                <label>رقم الواتساب</label>
+                <label>@Loc.T("WhatsApp_Number")</label>
                 <input name="Phone" type="tel" class="form-control"
                        placeholder="+201001234567" required autofocus="@hasQr" />
             </div>
@@ -62,7 +62,7 @@
                 <input name="Pin" type="password" class="form-control" required maxlength="4" />
             </div>
 
-            <button type="submit" class="btn btn-brand w-100">دخول</button>
+            <button type="submit" class="btn btn-brand w-100">@Loc.T("Log_In")</button>
         </form>
     </div>
 </div>

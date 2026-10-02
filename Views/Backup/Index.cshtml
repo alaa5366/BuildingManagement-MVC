@@ -1,5 +1,5 @@
 ﻿@{
-    ViewData["Title"] = "النسخ الاحتياطي";
+    ViewData["Title"] = Loc.T("Backup");
     var buildings = (List<Building>)ViewBag.Buildings;
     var stats = ViewBag.Stats as List<BuildingManagementMvc.Models.BackupStats> ?? new();
     var backupFiles = ViewBag.BackupFiles as List<(string FileName, long FileSize, DateTime CreatedAt)> ?? new();
@@ -19,9 +19,9 @@
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>💾 النسخ الاحتياطي والاستيراد</h3>
+    <h3>@Loc.T("Backup_And_Import")</h3>
     <a asp-controller="SuperAdminHome" asp-action="Index" class="btn btn-outline-secondary btn-sm">
-        ← رجوع
+        @Loc.T("Back")
     </a>
 </div>
 
@@ -31,32 +31,32 @@
 <ul class="nav nav-tabs mb-3" role="tablist">
     <li class="nav-item">
         <a class="@tabClass("overview")" asp-action="Index" asp-route-tab="overview">
-            📊 نظرة عامة
+            @Loc.T("Overview")
         </a>
     </li>
     <li class="nav-item">
         <a class="@tabClass("backup")" asp-action="Index" asp-route-tab="backup">
-            📦 Backup كامل
+            @Loc.T("Full_Backup")
         </a>
     </li>
     <li class="nav-item">
         <a class="@tabClass("import")" asp-action="Index" asp-route-tab="import">
-            📥 استيراد Excel
+            @Loc.T("Excel_Import")
         </a>
     </li>
     <li class="nav-item">
         <a class="@tabClass("export")" asp-action="Index" asp-route-tab="export">
-            📤 تصدير
+            @Loc.T("Export")
         </a>
     </li>
     <li class="nav-item">
         <a class="@tabClass("scheduled")" asp-action="Index" asp-route-tab="scheduled">
-            ⏰ مجدول
+            @Loc.T("Scheduled")
         </a>
     </li>
     <li class="nav-item">
         <a class="@tabClass("history")" asp-action="Index" asp-route-tab="history">
-            📜 السجل
+            @Loc.T("Log_2")
         </a>
     </li>
 </ul>
@@ -75,19 +75,19 @@
         </div>
         <div class="col-md-3">
             <div class="bg-white rounded shadow-sm p-3">
-                <div class="text-muted small">إجمالي المستندات</div>
+                <div class="text-muted small">@Loc.T("Total_Documents")</div>
                 <div class="fw-bold fs-3 text-success">@totalDocs</div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="bg-white rounded shadow-sm p-3">
-                <div class="text-muted small">عدد العمارات</div>
+                <div class="text-muted small">@Loc.T("Number_Of_Buildings")</div>
                 <div class="fw-bold fs-3 text-info">@totalBuildings</div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="bg-white rounded shadow-sm p-3">
-                <div class="text-muted small">النسخ المحفوظة</div>
+                <div class="text-muted small">@Loc.T("Saved_Backups")</div>
                 <div class="fw-bold fs-3 text-warning">@totalBackups</div>
             </div>
         </div>
@@ -96,25 +96,25 @@
     @if (!string.IsNullOrEmpty(lastScheduledRun))
     {
         <div class="alert alert-info">
-            <strong>⏰ آخر نسخة مجدولة:</strong>
+            <strong>@Loc.T("Last_Scheduled_Backup")</strong>
             @DateTime.Parse(lastScheduledRun).ToLocalTime().ToString("yyyy-MM-dd HH:mm")
             <span class="badge @(lastScheduledStatus == "success" ? "bg-success" : "bg-danger") ms-2">
-                @(lastScheduledStatus == "success" ? "نجح" : "فشل")
+                @(lastScheduledStatus == "success" ? Loc.T("Succeeded_2") : Loc.T("Failed_2"))
             </span>
         </div>
     }
 
     <div class="card">
         <div class="card-header bg-primary text-white">
-            <strong>📊 إحصائيات Collections</strong>
+            <strong>@Loc.T("Collections_Statistics")</strong>
         </div>
         <div class="card-body p-0">
             <table class="table table-sm table-hover mb-0">
                 <thead class="table-dark">
                     <tr>
                         <th>Collection</th>
-                        <th>الوصف</th>
-                        <th>عدد المستندات</th>
+                        <th>@Loc.T("Description")</th>
+                        <th>@Loc.T("Document_Count")</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -129,7 +129,7 @@
                 </tbody>
                 <tfoot class="table-light">
                     <tr>
-                        <td colspan="2" class="text-end"><strong>الإجمالي:</strong></td>
+                        <td colspan="2" class="text-end"><strong>@Loc.T("Total")</strong></td>
                         <td><strong>@totalDocs</strong></td>
                     </tr>
                 </tfoot>
@@ -145,19 +145,19 @@
 {
     <div class="card">
         <div class="card-header bg-success text-white">
-            <strong>📦 Backup كامل (ZIP)</strong>
+            <strong>@Loc.T("Full_Backup_ZIP")</strong>
         </div>
         <div class="card-body">
             <p class="text-muted">
-                اختر الـ Collections اللي عايز تصدّرها. هيتولّد ملف ZIP فيه ملف JSON لكل Collection.
+                @Loc.T("Choose_The_Collections_You_Want_To")
             </p>
 
             <form method="post" asp-action="Create">
                 @Html.AntiForgeryToken()
 
                 <div class="mb-3">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAll(true)">تحديد الكل</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAll(false)">إلغاء الكل</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAll(true)">@Loc.T("Select_All")</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAll(false)">@Loc.T("Clear_All")</button>
                 </div>
 
                 <div class="row g-2 mb-3">
@@ -177,7 +177,7 @@
                 </div>
 
                 <button class="btn btn-success">
-                    💾 إنشاء نسخة احتياطية الآن
+                    @Loc.T("Create_Backup_Now")
                 </button>
             </form>
         </div>
@@ -186,23 +186,23 @@
     @* Restore *@
     <div class="card mt-4">
         <div class="card-header bg-warning">
-            <strong>📥 استعادة من نسخة احتياطية</strong>
+            <strong>@Loc.T("Restore_From_Backup")</strong>
         </div>
         <div class="card-body">
             <div class="alert alert-warning py-2">
-                <small>⚠️ <strong>تحذير:</strong> الاستعادة بتكتب بيانات في Firestore. استخدم Preview الأول.</small>
+                <small>@Html.Raw(Loc.T("Warning_Restoring_Writes_Data_To_Firestore"))</small>
             </div>
 
             <form method="post" asp-action="PreviewRestore" enctype="multipart/form-data">
                 @Html.AntiForgeryToken()
                 <div class="row g-2 align-items-end">
                     <div class="col-md-8">
-                        <label class="form-label small">ملف ZIP</label>
+                        <label class="form-label small">@Loc.T("ZIP_File")</label>
                         <input type="file" name="backupFile" accept=".zip" class="form-control" required />
-                        <div class="form-text">الحد الأقصى: 100 MB</div>
+                        <div class="form-text">@Loc.T("Maximum_100_MB")</div>
                     </div>
                     <div class="col-md-4">
-                        <button class="btn btn-warning w-100">🔍 معاينة المحتوى</button>
+                        <button class="btn btn-warning w-100">@Loc.T("Preview_Contents")</button>
                     </div>
                 </div>
             </form>
@@ -217,26 +217,26 @@
 {
     <div class="card">
         <div class="card-header bg-primary text-white">
-            <strong>📥 استيراد عمارة جديدة من Excel</strong>
+            <strong>@Loc.T("Import_A_New_Building_From_Excel")</strong>
         </div>
         <div class="card-body">
             <p class="text-muted small">
-                حمّل القالب، املأه بالبيانات، ثم ارفعه هنا. النظام هيتحقق من صحة الملف قبل الاستيراد.
+                @Loc.T("Download_The_Template_Fill_It_In")
             </p>
 
             <a asp-action="DownloadTemplate" class="btn btn-outline-success mb-3">
-                ⬇️ تحميل القالب الفاضي
+                @Loc.T("Download_Empty_Template")
             </a>
 
             <form method="post" asp-action="UploadExcel" enctype="multipart/form-data">
                 @Html.AntiForgeryToken()
                 <div class="row g-2 align-items-end">
                     <div class="col-md-8">
-                        <label class="form-label small">ملف Excel (.xlsx)</label>
+                        <label class="form-label small">@Loc.T("Excel_File_Xlsx")</label>
                         <input type="file" name="excelFile" accept=".xlsx" class="form-control" required />
                     </div>
                     <div class="col-md-4">
-                        <button class="btn btn-brand w-100">🔍 فحص الملف واستيراده</button>
+                        <button class="btn btn-brand w-100">@Loc.T("Validate_And_Import_File")</button>
                     </div>
                 </div>
             </form>
@@ -251,14 +251,14 @@
 {
     <div class="card mb-3">
         <div class="card-header bg-info text-dark">
-            <strong>📤 تصدير كل البيانات</strong>
+            <strong>@Loc.T("Export_All_Data")</strong>
         </div>
         <div class="card-body">
             <p class="text-muted small mb-3">
-                حمّل نسخة احتياطية كاملة من كل العمارات بصيغة JSON.
+                @Loc.T("Download_A_Full_Backup_Of_All")
             </p>
             <a asp-action="ExportAllJson" class="btn btn-outline-primary">
-                ⬇️ تصدير كل العمارات (JSON)
+                @Loc.T("Export_All_Buildings_JSON")
             </a>
         </div>
     </div>
@@ -267,17 +267,17 @@
     {
         <div class="card">
             <div class="card-header">
-                <strong>🏢 تصدير عمارة محددة</strong>
+                <strong>@Loc.T("Export_A_Specific_Building")</strong>
             </div>
             <div class="card-body p-0">
                 <table class="table table-sm table-hover mb-0">
                     <thead class="table-dark">
                         <tr>
-                            <th>رقم العمارة</th>
-                            <th>الاسم</th>
-                            <th>الشقق</th>
-                            <th>الأدوار</th>
-                            <th>الإجراءات</th>
+                            <th>@Loc.T("Building_Number")</th>
+                            <th>@Loc.T("Name")</th>
+                            <th>@Loc.T("Apartments")</th>
+                            <th>@Loc.T("Floors")</th>
+                            <th>@Loc.T("Actions")</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -291,7 +291,7 @@
                                 <td class="d-flex gap-1">
                                     <a asp-action="ExportJson" asp-route-id="@b.Id" class="btn btn-sm btn-outline-primary">📄 JSON</a>
                                     <a asp-action="ExportExcel" asp-route-id="@b.Id" class="btn btn-sm btn-outline-success">📊 Excel</a>
-                                    <a asp-controller="Buildings" asp-action="Details" asp-route-id="@b.Id" class="btn btn-sm btn-outline-secondary">👁️ عرض</a>
+                                    <a asp-controller="Buildings" asp-action="Details" asp-route-id="@b.Id" class="btn btn-sm btn-outline-secondary">@Loc.T("View_2")</a>
                                 </td>
                             </tr>
                         }
@@ -309,7 +309,7 @@
 {
     <div class="card mb-3">
         <div class="card-header bg-primary text-white">
-            <strong>⏰ إعدادات النسخ المجدولة</strong>
+            <strong>@Loc.T("Scheduled_Backup_Settings")</strong>
         </div>
         <div class="card-body">
             <form method="post" asp-action="SaveScheduledSettings">
@@ -319,55 +319,55 @@
                     <input type="checkbox" name="Enabled" value="true" class="form-check-input"
                            id="enabled" @(settings.Enabled ? "checked" : "") />
                     <label class="form-check-label" for="enabled">
-                        <strong>تشغيل النسخ التلقائي</strong>
+                        <strong>@Loc.T("Enable_Automatic_Backups")</strong>
                     </label>
                 </div>
 
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label">التكرار</label>
+                        <label class="form-label">@Loc.T("Frequency")</label>
                         <select name="Frequency" class="form-select" id="frequency">
-                            <option value="daily" selected="@(settings.Frequency == "daily")">📅 يومي</option>
-                            <option value="weekly" selected="@(settings.Frequency == "weekly")">📆 أسبوعي</option>
-                            <option value="monthly" selected="@(settings.Frequency == "monthly")">🗓️ شهري</option>
+                            <option value="daily" selected="@(settings.Frequency == "daily")">@Loc.T("Daily")</option>
+                            <option value="weekly" selected="@(settings.Frequency == "weekly")">@Loc.T("Weekly")</option>
+                            <option value="monthly" selected="@(settings.Frequency == "monthly")">@Loc.T("Monthly")</option>
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">الساعة (UTC)</label>
+                        <label class="form-label">@Loc.T("Hour_UTC")</label>
                         <input type="number" name="Hour" min="0" max="23" value="@settings.Hour" class="form-control" />
                     </div>
                     <div class="col-md-4" id="dowGroup" style="display:none;">
-                        <label class="form-label">اليوم (للأسبوعي)</label>
+                        <label class="form-label">@Loc.T("Day_For_Weekly")</label>
                         <select name="DayOfWeek" class="form-select">
-                            <option value="">— اختر —</option>
-                            <option value="0" selected="@(settings.DayOfWeek == 0)">الأحد</option>
-                            <option value="1" selected="@(settings.DayOfWeek == 1)">الاثنين</option>
-                            <option value="2" selected="@(settings.DayOfWeek == 2)">الثلاثاء</option>
-                            <option value="3" selected="@(settings.DayOfWeek == 3)">الأربعاء</option>
-                            <option value="4" selected="@(settings.DayOfWeek == 4)">الخميس</option>
-                            <option value="5" selected="@(settings.DayOfWeek == 5)">الجمعة</option>
-                            <option value="6" selected="@(settings.DayOfWeek == 6)">السبت</option>
+                            <option value="">@Loc.T("Select_2")</option>
+                            <option value="0" selected="@(settings.DayOfWeek == 0)">@Loc.T("Sunday")</option>
+                            <option value="1" selected="@(settings.DayOfWeek == 1)">@Loc.T("Monday")</option>
+                            <option value="2" selected="@(settings.DayOfWeek == 2)">@Loc.T("Tuesday")</option>
+                            <option value="3" selected="@(settings.DayOfWeek == 3)">@Loc.T("Wednesday")</option>
+                            <option value="4" selected="@(settings.DayOfWeek == 4)">@Loc.T("Thursday")</option>
+                            <option value="5" selected="@(settings.DayOfWeek == 5)">@Loc.T("Friday")</option>
+                            <option value="6" selected="@(settings.DayOfWeek == 6)">@Loc.T("Saturday")</option>
                         </select>
                     </div>
                     <div class="col-md-4" id="domGroup" style="display:none;">
-                        <label class="form-label">اليوم من الشهر (للشهري)</label>
+                        <label class="form-label">@Loc.T("Day_Of_Month_For_Monthly")</label>
                         <input type="number" name="DayOfMonth" min="1" max="28"
                                value="@(settings.DayOfMonth ?? 1)" class="form-control" />
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">عدد النسخ المحفوظة</label>
+                        <label class="form-label">@Loc.T("Number_Of_Backups_To_Keep")</label>
                         <input type="number" name="MaxBackupsToKeep" min="1" max="30"
                                value="@settings.MaxBackupsToKeep" class="form-control" />
-                        <div class="form-text">الأقدم بيتمسح تلقائيًا</div>
+                        <div class="form-text">@Loc.T("The_Oldest_Is_Deleted_Automatically")</div>
                     </div>
                 </div>
 
                 <hr />
 
                 <div class="mb-2">
-                    <strong>📦 Collections المشمولة:</strong>
-                    <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="selectAllCols(true)">الكل</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="selectAllCols(false)">لا شيء</button>
+                    <strong>@Loc.T("Included_Collections")</strong>
+                    <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="selectAllCols(true)">@Loc.T("All_2")</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="selectAllCols(false)">@Loc.T("None")</button>
                 </div>
 
                 <div class="row g-2">
@@ -389,12 +389,12 @@
 
                 <hr />
 
-                <button type="submit" class="btn btn-primary">💾 حفظ الإعدادات</button>
+                <button type="submit" class="btn btn-primary">@Loc.T("Save_Settings")</button>
 
                 @if (settings.Enabled && !string.IsNullOrEmpty(settings.LastRunAt))
                 {
                     <span class="text-muted ms-3">
-                        آخر تشغيل: @DateTime.Parse(settings.LastRunAt).ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                        @Loc.T("Last_Run_N", DateTime.Parse(settings.LastRunAt).ToLocalTime().ToString("yyyy-MM-dd HH:mm"))
                     </span>
                 }
             </form>
@@ -402,28 +402,28 @@
     </div>
 
     <form method="post" asp-action="RunNow" class="mb-3"
-          onsubmit="return confirm('تشغيل نسخة الآن يدويًا؟');">
+          onsubmit="return confirm('@Loc.Js("Run_A_Backup_Now_Manually")');">
         @Html.AntiForgeryToken()
-        <button class="btn btn-warning">⚡ تشغيل نسخة الآن (يدويًا)</button>
+        <button class="btn btn-warning">@Loc.T("Run_Backup_Now_Manual")</button>
     </form>
 
     <div class="card">
         <div class="card-header">
-            <strong>📁 النسخ المحفوظة (@backupFiles.Count)</strong>
+            <strong>@Loc.T("Saved_Backups_N", backupFiles.Count)</strong>
         </div>
         <div class="card-body">
             @if (backupFiles.Count == 0)
             {
-                <div class="alert alert-info mb-0">لا توجد نسخ محفوظة بعد.</div>
+                <div class="alert alert-info mb-0">@Loc.T("No_Saved_Backups_Yet")</div>
             }
             else
             {
                 <table class="table table-sm table-hover mb-0">
                     <thead>
                         <tr>
-                            <th>الملف</th>
-                            <th>الحجم</th>
-                            <th>التاريخ</th>
+                            <th>@Loc.T("File")</th>
+                            <th>@Loc.T("Size")</th>
+                            <th>@Loc.T("Date")</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -435,8 +435,8 @@
                                 <td>@(f.FileSize / 1024) KB</td>
                                 <td>@f.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
                                 <td>
-                                    <a asp-action="DownloadBackup" asp-route-fileName="@f.FileName" class="btn btn-sm btn-outline-primary">⬇️ تحميل</a>
-                                    <form method="post" asp-action="DeleteBackup" class="d-inline" onsubmit="return confirm('حذف الملف؟');">
+                                    <a asp-action="DownloadBackup" asp-route-fileName="@f.FileName" class="btn btn-sm btn-outline-primary">@Loc.T("Download")</a>
+                                    <form method="post" asp-action="DeleteBackup" class="d-inline" onsubmit="return confirm('@Loc.Js("Delete_The_File")');">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="fileName" value="@f.FileName" />
                                         <button class="btn btn-sm btn-outline-danger">🗑️</button>
@@ -458,31 +458,31 @@
 {
     <div class="card">
         <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-            <strong>📜 سجل النسخ الاحتياطية (@history.Count)</strong>
+            <strong>@Loc.T("Backup_History_N", history.Count)</strong>
             @if (history.Any(h => h.Source == "scheduled" && h.Status == "success"))
             {
-                <small class="text-white-50">💾 يمكنك تحميل/حذف النسخ المجدولة</small>
+                <small class="text-white-50">@Loc.T("You_Can_Download_Delete_Scheduled_Backups")</small>
             }
         </div>
         <div class="card-body p-0">
             @if (history.Count == 0)
             {
-                <div class="alert alert-info mb-0 m-3">لا يوجد سجل بعد.</div>
+                <div class="alert alert-info mb-0 m-3">@Loc.T("No_History_Yet")</div>
             }
             else
             {
                 <table class="table table-sm table-hover mb-0">
                     <thead class="table-dark">
                         <tr>
-                            <th>التاريخ</th>
-                            <th>الحالة</th>
-                            <th>المصدر</th>
-                            <th>الملف</th>
+                            <th>@Loc.T("Date")</th>
+                            <th>@Loc.T("Status")</th>
+                            <th>@Loc.T("Source")</th>
+                            <th>@Loc.T("File")</th>
                             <th>Collections</th>
-                            <th>المستندات</th>
-                            <th>الحجم</th>
-                            <th>المدة</th>
-                            <th>الإجراءات</th>
+                            <th>@Loc.T("Documents")</th>
+                            <th>@Loc.T("Size")</th>
+                            <th>@Loc.T("Duration")</th>
+                            <th>@Loc.T("Actions")</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -498,11 +498,11 @@
                                 <td>
                                     @if (h.Status == "success")
                                     {
-                                        <span class="badge bg-success">✅ نجح</span>
+                                        <span class="badge bg-success">@Loc.T("Succeeded")</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-danger" title="@h.ErrorMessage">❌ فشل</span>
+                                        <span class="badge bg-danger" title="@h.ErrorMessage">@Loc.T("Failed")</span>
                                     }
                                 </td>
                                 <td><span class="badge bg-secondary">@h.Source</span></td>
@@ -515,22 +515,22 @@
                                  @if (h.FileExists)
                                     {
                                        <a asp-action="DownloadBackup" asp-route-fileName="@h.FileName"
-                                        class="btn btn-sm btn-outline-primary" title="تحميل">
+                                        class="btn btn-sm btn-outline-primary" title="@Loc.T("Download_2")">
                                          ⬇️
                                         </a>
                                          }
                                             else
     {
-        <span class="text-muted small" title="الملف محذوف">
+        <span class="text-muted small" title="@Loc.T("File_Deleted")">
             <i>📁❌</i>
         </span>
     }
 
     <form method="post" asp-action="DeleteBackup" class="d-inline"
-          onsubmit="return confirm('حذف الملف والسجل نهائيًا؟');">
+          onsubmit="return confirm('@Loc.Js("Permanently_Delete_The_File_And_Its")');">
         @Html.AntiForgeryToken()
         <input type="hidden" name="fileName" value="@h.FileName" />
-        <button class="btn btn-sm btn-outline-danger" title="حذف">
+        <button class="btn btn-sm btn-outline-danger" title="@Loc.T("Delete_2")">
             🗑️
         </button>
     </form>

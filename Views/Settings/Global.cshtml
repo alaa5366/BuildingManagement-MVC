@@ -1,10 +1,10 @@
 ﻿@model BuildingManagementMvc.Models.GlobalSettings
 @{
-    ViewData["Title"] = "الإعدادات العامة";
+    ViewData["Title"] = Loc.T("Global_Settings");
 }
 
 <div class="container">
-    <h2 class="mb-3">⚙️ الإعدادات العامة (Global)</h2>
+    <h2 class="mb-3">@Loc.T("Global_Settings_2")</h2>
 
     <form method="post" asp-action="Global">
         @Html.AntiForgeryToken()
@@ -12,18 +12,18 @@
         @* إعدادات التطبيق *@
         <div class="card mb-3">
             <div class="card-header bg-primary text-white">
-                <strong>📱 إعدادات التطبيق</strong>
+                <strong>@Loc.T("App_Settings")</strong>
             </div>
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label">اسم التطبيق</label>
+                        <label class="form-label">@Loc.T("App_Name_2")</label>
                         <input name="AppName" value="@Model.AppName" class="form-control" required />
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">اللغة الافتراضية</label>
+                        <label class="form-label">@Loc.T("Default_Language")</label>
                         <select name="DefaultLanguage" class="form-select">
-                            <option value="ar" selected="@(Model.DefaultLanguage == "ar")">العربية</option>
+                            <option value="ar" selected="@(Model.DefaultLanguage == "ar")">@Loc.T("Text_26b1b2")</option>
                             <option value="en" selected="@(Model.DefaultLanguage == "en")">English</option>
                         </select>
                     </div>
@@ -72,12 +72,12 @@
         @* Firebase (عرض فقط) *@
         <div class="card mb-3">
             <div class="card-header bg-secondary text-white">
-                <strong>🔥 Firebase (عرض فقط)</strong>
+                <strong>@Loc.T("Firebase_Read_Only")</strong>
             </div>
             <div class="card-body">
                 <label class="form-label">Project ID</label>
                 <input value="@Model.FirebaseProjectId" class="form-control" disabled />
-                <div class="form-text">يُقرأ من appsettings.json</div>
+                <div class="form-text">@Loc.T("Read_From_Appsettings_Json")</div>
             </div>
         </div>
 
@@ -92,21 +92,21 @@
                         <div class="form-check form-switch">
                             <input type="checkbox" name="FeatureFlags.EnablePolls" value="true" class="form-check-input"
                             @(Model.FeatureFlags.EnablePolls ? "checked" : "") />
-                            <label class="form-check-label">التصويتات</label>
+                            <label class="form-check-label">@Loc.T("Polls_3")</label>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-check form-switch">
                             <input type="checkbox" name="FeatureFlags.EnableMaintenance" value="true" class="form-check-input"
                             @(Model.FeatureFlags.EnableMaintenance ? "checked" : "") />
-                            <label class="form-check-label">الصيانة</label>
+                            <label class="form-check-label">@Loc.T("Maintenance")</label>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-check form-switch">
                             <input type="checkbox" name="FeatureFlags.EnableOcr" value="true" class="form-check-input"
                             @(Model.FeatureFlags.EnableOcr ? "checked" : "") />
-                            <label class="form-check-label">OCR (قراءة الإيصالات)</label>
+                            <label class="form-check-label">@Loc.T("OCR_Receipt_Reading")</label>
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -120,7 +120,7 @@
                         <div class="form-check form-switch">
                             <input type="checkbox" name="FeatureFlags.EnableWhatsApp" value="true" class="form-check-input"
                             @(Model.FeatureFlags.EnableWhatsApp ? "checked" : "") />
-                            <label class="form-check-label">واتساب</label>
+                            <label class="form-check-label">@Loc.T("WhatsApp")</label>
                         </div>
                     </div>
                 </div>
@@ -130,17 +130,17 @@
         @* الأمان *@
         <div class="card mb-3">
             <div class="card-header bg-danger text-white">
-                <strong>🔒 الأمان</strong>
+                <strong>@Loc.T("Security")</strong>
             </div>
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label">مدة الجلسة (بالأيام)</label>
+                        <label class="form-label">@Loc.T("Session_Duration_Days")</label>
                         <input type="number" name="Security.SessionTimeoutDays" min="1" max="30"
                                value="@Model.Security.SessionTimeoutDays" class="form-control" />
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">الحد الأقصى لمحاولات PIN</label>
+                        <label class="form-label">@Loc.T("Maximum_PIN_Attempts")</label>
                         <input type="number" name="Security.MaxPinAttempts" min="1" max="10"
                                value="@Model.Security.MaxPinAttempts" class="form-control" />
                     </div>
@@ -148,6 +148,6 @@
             </div>
         </div>
 
-        <button type="submit" class="btn btn-primary btn-lg">💾 حفظ الإعدادات</button>
+        <button type="submit" class="btn btn-primary btn-lg">@Loc.T("Save_Settings")</button>
     </form>
 </div>

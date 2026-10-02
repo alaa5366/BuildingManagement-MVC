@@ -1,5 +1,10 @@
 ﻿using BuildingManagementMvc.Models;
+using Google.Cloud.Firestore;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Services;
 
@@ -51,7 +56,7 @@ public class DbSyncService
                     Type = "admin",
                     Id = admin.Uid,
                     Name = admin.Name,
-                    Issue = $"الإيميل مختلف: '{admin.Email}' ≠ '{email}'",
+                    Issue = Loc.T("Email_Mismatch_N_N", admin.Email, email),
                     CanAutoFix = true
                 };
 
@@ -80,7 +85,7 @@ public class DbSyncService
                     Type = "admin",
                     Id = admin.Uid,
                     Name = admin.Name,
-                    Issue = "حساب Firebase Auth مش موجود",
+                    Issue = Loc.T("Firebase_Auth_Account_Does_Not_Exist"),
                     CanAutoFix = false
                 });
             }
@@ -92,7 +97,7 @@ public class DbSyncService
                     Type = "admin",
                     Id = admin.Uid,
                     Name = admin.Name,
-                    Issue = $"UID مختلف: Firestore={admin.Uid}, Auth={uid}",
+                    Issue = Loc.T("UID_Mismatch_Firestore_N_Auth_N", admin.Uid, uid),
                     CanAutoFix = false
                 });
             }
@@ -142,8 +147,8 @@ public class DbSyncService
                     {
                         Type = "resident",
                         Id = apt.Id,
-                        Name = $"شقة {apt.Number} - {building.Name}",
-                        Issue = "حساب Firebase Auth مش موجود",
+                        Name = Loc.T("Apartment_N_N_4", apt.Number, building.Name),
+                        Issue = Loc.T("Firebase_Auth_Account_Does_Not_Exist"),
                         CanAutoFix = false
                     });
                 }
@@ -188,8 +193,8 @@ public class DbSyncService
                 {
                     Type = "admin",
                     Id = building.Id,
-                    Name = $"أدمن {building.Name}",
-                    Issue = "فشل تحديث كلمة السر",
+                    Name = Loc.T("Admin_N_2", building.Name),
+                    Issue = Loc.T("Failed_To_Update_The_Password"),
                     CanAutoFix = false
                 });
             }
@@ -215,8 +220,8 @@ public class DbSyncService
                     {
                         Type = "resident",
                         Id = apt.Id,
-                        Name = $"شقة {apt.Number} - {building.Name}",
-                        Issue = "فشل تحديث كلمة السر",
+                        Name = Loc.T("Apartment_N_N_4", apt.Number, building.Name),
+                        Issue = Loc.T("Failed_To_Update_The_Password"),
                         CanAutoFix = false
                     });
                 }

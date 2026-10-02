@@ -403,6 +403,15 @@ namespace BuildingManagementMvc.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to تعذّر الدخول.
+        /// </summary>
+        internal static string Login_QuickErrorTitle {
+            get {
+                return ResourceManager.GetString("Login_QuickErrorTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to اختار العمارة والدور والشقة، وأدخل رقم الواتساب والـ PIN.
         /// </summary>
         internal static string Login_ResidentSubtitle {

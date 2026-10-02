@@ -2,6 +2,7 @@
 using QRCoder;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 
 namespace BuildingManagementMvc.Services;
 
@@ -32,16 +33,16 @@ public class QrCodePdfService
                     col.Spacing(15);
 
                     // QR الأدمن
-                    col.Item().Text("👑 أدمن العمارة").FontSize(14).Bold();
+                    col.Item().Text(Loc.T("Building_Admin")).FontSize(14).Bold();
                     var adminUrl = $"{baseUrl}/Account/LoginAdmin?bld={building.Id}";
                     col.Item().Row(row =>
                     {
                         row.ConstantItem(120).Image(GenerateQrBytes(adminUrl));
                         row.RelativeItem().PaddingLeft(10).Column(c =>
                         {
-                            c.Item().Text($"العمارة: {building.Name}").FontSize(11).Bold();
-                            c.Item().Text($"الرقم: {building.BuildingNumber}").FontSize(10);
-                            c.Item().Text($"الرابط:").FontSize(9).FontColor("#666");
+                            c.Item().Text(Loc.T("Building_N", building.Name)).FontSize(11).Bold();
+                            c.Item().Text(Loc.T("Number_N", building.BuildingNumber)).FontSize(10);
+                            c.Item().Text(Loc.T("Link")).FontSize(9).FontColor("#666");
                             c.Item().Text(adminUrl).FontSize(7).FontColor("#0066CC");
                         });
                     });
@@ -49,7 +50,7 @@ public class QrCodePdfService
                     col.Item().PaddingTop(20).LineHorizontal(1).LineColor("#DDDDDD");
 
                     // QR الشقق
-                    col.Item().Text($"🏠 الشقق ({building.Apartments.Count})").FontSize(14).Bold();
+                    col.Item().Text(Loc.T("Apartments_N", building.Apartments.Count)).FontSize(14).Bold();
 
                     foreach (var floor in building.Floors.OrderBy(f => f.Order))
                     {
@@ -76,13 +77,13 @@ public class QrCodePdfService
                                     {
                                         c.Item().AlignCenter().Width(120).Height(120)
                                             .Image(GenerateQrBytes(aptUrl));
-                                        c.Item().AlignCenter().Text($"🏠 شقة {apt.Number}")
+                                        c.Item().AlignCenter().Text(Loc.T("Apartment_N_2", apt.Number))
                                             .FontSize(10).Bold();
                                         if (!string.IsNullOrEmpty(apt.Owner))
                                             c.Item().AlignCenter().Text(apt.Owner)
                                                 .FontSize(8).FontColor("#666");
                                         if (apt.Closed)
-                                            c.Item().AlignCenter().Text("🔒 مغلقة")
+                                            c.Item().AlignCenter().Text(Loc.T("Closed_2"))
                                                 .FontSize(8).FontColor("#A0432A");
                                     });
                                 }
@@ -99,9 +100,9 @@ public class QrCodePdfService
 
                 page.Footer().AlignCenter().Text(text =>
                 {
-                    text.Span("نظام إدارة العمارات").FontSize(8).FontColor("#666");
+                    text.Span(Loc.T("Building_Management_System")).FontSize(8).FontColor("#666");
                     text.Span(" | ").FontSize(8).FontColor("#666");
-                    text.Span($"تم الإنشاء: {DateTime.Now:yyyy-MM-dd HH:mm}").FontSize(8).FontColor("#666");
+                    text.Span(Loc.T("Generated_N", DateTime.Now)).FontSize(8).FontColor("#666");
                 });
             });
         });

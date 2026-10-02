@@ -7,10 +7,17 @@ namespace BuildingManagementMvc.Controllers;
 [AllowAnonymous]
 public class LanguageController : Controller
 {
+    // ✅ اللغات المدعومة
+    private static readonly HashSet<string> SupportedLanguages = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "ar", "en", "fr", "de"
+    };
+
     [HttpGet]
     public IActionResult Set(string lang, string? returnUrl)
     {
-        var value = lang == "en" ? "en" : "ar";
+        // ✅ لو اللغة مش مدعومة، ارجع للعربي
+        var value = SupportedLanguages.Contains(lang) ? lang.ToLowerInvariant() : "ar";
 
         // ✅ نستخدم صيغة ASP.NET Core القياسية
         var cookieValue = CookieRequestCultureProvider.MakeCookieValue(

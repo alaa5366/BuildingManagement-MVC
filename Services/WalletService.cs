@@ -1,5 +1,5 @@
-using BuildingManagementMvc.Models;
 using System.Text.RegularExpressions;
+using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Services;
 
@@ -92,10 +92,10 @@ public class WalletService
 
         // ⚠️ نمنع التعديل بعد التأكيد أو الإلغاء
         if (d.Status != "pending")
-            throw new InvalidOperationException("لا يمكن تعديل دفعة مؤكدة أو ملغاة");
+            throw new InvalidOperationException(Loc.T("A_Confirmed_Or_Cancelled_Payment_Cannot"));
 
         if (newAmount <= 0)
-            throw new InvalidOperationException("المبلغ لازم يكون أكبر من صفر");
+            throw new InvalidOperationException(Loc.T("The_Amount_Must_Be_Greater_Than"));
 
         // 📝 سجّل التعديل في التاريخ
         var editEntry = new DepositEditEntry
@@ -120,7 +120,7 @@ public class WalletService
         d.UpdateReason = reason;
 
         return d;
-    }
+    }  
 
     public double TotalConfirmedDeposits(Building building, string aptId, string monthKey)
     {
@@ -279,16 +279,16 @@ public class WalletService
         {
             var diff = totalPaid - monthlyFee;
             if (diff < 0)
-                txs.Add(new WalletTransactionVm { Type = "monthly_fee_due", Id = "fee-due-" + monthKey, Amount = diff, Note = "رسم شهري مستحق", CreatedAt = monthKey + "-01T00:00:00Z" });
+                txs.Add(new WalletTransactionVm { Type = "monthly_fee_due", Id = "fee-due-" + monthKey, Amount = diff, Note = Loc.T("Monthly_Fee_Due"), CreatedAt = monthKey + "-01T00:00:00Z" });
             else if (diff > 0)
-                txs.Add(new WalletTransactionVm { Type = "monthly_fee_credit", Id = "fee-credit-" + monthKey, Amount = diff, Note = "زيادة في الرسم الشهري", CreatedAt = monthKey + "-01T00:00:00Z" });
+                txs.Add(new WalletTransactionVm { Type = "monthly_fee_credit", Id = "fee-credit-" + monthKey, Amount = diff, Note = Loc.T("Increase_In_The_Monthly_Fee"), CreatedAt = monthKey + "-01T00:00:00Z" });
         }
 
         if (m.Distribution.TryGetValue(aptId, out var dist) && dist > 0)
-            txs.Add(new WalletTransactionVm { Type = "expense", Id = "expense-" + monthKey, Amount = -dist, Note = "نصيبك من مصروفات الشهر", CreatedAt = monthKey + "-28T23:59:59Z" });
+            txs.Add(new WalletTransactionVm { Type = "expense", Id = "expense-" + monthKey, Amount = -dist, Note = Loc.T("Your_Share_Of_This_Month_S"), CreatedAt = monthKey + "-28T23:59:59Z" });
 
         if (m.RevenueDistribution.TryGetValue(aptId, out var revDist) && revDist > 0)
-            txs.Add(new WalletTransactionVm { Type = "revenue", Id = "revenue-" + monthKey, Amount = revDist, Note = "نصيبك من إيرادات العمارة", CreatedAt = monthKey + "-15T12:00:00Z" });
+            txs.Add(new WalletTransactionVm { Type = "revenue", Id = "revenue-" + monthKey, Amount = revDist, Note = Loc.T("Your_Share_Of_The_Building_S"), CreatedAt = monthKey + "-15T12:00:00Z" });
 
         foreach (var adj in building.WalletAdjustments.Where(a => a.AptId == aptId && a.MonthKey == monthKey))
             txs.Add(new WalletTransactionVm { Type = "adjustment", Id = adj.Id, Amount = adj.Amount, Note = adj.Reason, CreatedAt = adj.CreatedAt });

@@ -1,12 +1,14 @@
-using BuildingManagementMvc.Services;
+using BuildingManagementMvc.Attributes;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
 
 // نفس شاشة js/views/admin/admin-polls.js
 [Authorize(Roles = "admin")]
+[AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManagePolls)]
 public class PollsController : Controller
 {
     private readonly BuildingsService _buildings;
@@ -49,14 +51,14 @@ public class PollsController : Controller
         var validOptions = (options ?? new()).Where(o => !string.IsNullOrWhiteSpace(o)).ToList();
         if (string.IsNullOrWhiteSpace(question) || validOptions.Count < 2)
         {
-            TempData["Error"] = "لازم سؤال + خيارين على الأقل";
+            TempData["Error"] = Loc.T("A_Question_And_At_Least_Two");
             return RedirectToAction("Index");
         }
 
         var poll = _polls.CreatePoll(building, question.Trim(), description, validOptions, deadline, User.Identity?.Name ?? "admin");
         _audit.Push(building, "poll_create", poll.Question, "admin", User.Identity?.Name ?? "admin");
         await _buildings.SaveFullAsync(building);
-        TempData["Message"] = "تم نشر التصويت";
+        TempData["Message"] = Loc.T("Poll_Published");
         return RedirectToAction("Index");
     }
 

@@ -3,6 +3,8 @@ using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Controllers;
 
@@ -64,14 +66,14 @@ public class PermissionsController : Controller
 
         var label = template switch
         {
-            "full" => "كامل (12)",
+            "full" => Loc.T("Full_12"),
             "super" => "Super (22)",
-            "financial" => "مالي (7)",
-            "maintenance" => "صيانة (4)",
+            "financial" => Loc.T("Financial_7"),
+            "maintenance" => Loc.T("Maintenance_4"),
             _ => template
         };
 
-        TempData["Message"] = $"✅ تم تطبيق قالب {label} — {perms.Count} صلاحية.";
+        TempData["Message"] = Loc.T("Template_N_Applied_N_Permissions", label, perms.Count);
         return RedirectToAction(nameof(Index));
     }
     private static Dictionary<AdminPermissions.PermissionCategory, List<string>> GetGroupedPermissions()

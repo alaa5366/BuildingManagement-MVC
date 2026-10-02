@@ -1,4 +1,5 @@
-﻿using BuildingManagementMvc.Models;
+﻿using System.Text.Json;
+using BuildingManagementMvc.Models;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace BuildingManagementMvc.Services;
@@ -86,7 +87,7 @@ public class UnifiedAuthService
                     Id = $"admin_{bId}",
                     Type = "admin",
                     Icon = "🏢",
-                    Title = "أدمن",
+                    Title = Loc.T("Admin"),
                     Subtitle = building.Name,
                     BuildingId = bId,
                     BuildingName = building.Name,
@@ -131,18 +132,18 @@ public class UnifiedAuthService
                     Id = $"resident_{building.Id}_{apt.Id}",
                     Type = "resident",
                     Icon = "🏠",
-                    Title = "ساكن",
-                    Subtitle = $"{building.Name} — شقة {apt.Number}",
+                    Title = Loc.T("Resident_2"),
+                    Subtitle = Loc.T("N_Apartment_N", building.Name, apt.Number),
                     BuildingId = building.Id,
                     BuildingName = building.Name,
                     BuildingNumber = building.BuildingNumber,
                     FloorOrder = floor.Order,
                     AptNumber = apt.Number,
-                    AptId = apt.Id,
+                    AptId = apt.Id,          
                     AptLabel = apt.Label,
                     Email = email,
                     Uid = signIn.Uid,
-                    Name = string.IsNullOrWhiteSpace(apt.Owner) ? $"شقة {apt.Number}" : apt.Owner
+                    Name = string.IsNullOrWhiteSpace(apt.Owner) ? Loc.T("Apartment_N", apt.Number) : apt.Owner
                 });
             }
         }

@@ -3,6 +3,9 @@ using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Controllers;
 
@@ -77,7 +80,7 @@ public class CategoriesController : Controller
     {
         if (string.IsNullOrWhiteSpace(name))
         {
-            TempData["Error"] = "اسم الفئة مطلوب.";
+            TempData["Error"] = Loc.T("Category_Name_Is_Required");
             return RedirectBack(buildingId);
         }
 
@@ -87,7 +90,7 @@ public class CategoriesController : Controller
         if (!CanAccessBuilding(buildingId)) return Forbid();
 
         await _categories.AddAsync(building, isExpense, name, color, CurrentUserId);
-        TempData["Message"] = "✅ تمت إضافة الفئة.";
+        TempData["Message"] = Loc.T("Category_Added");
         return RedirectBack(buildingId);
     }
 
@@ -105,7 +108,7 @@ public class CategoriesController : Controller
         if (!CanAccessBuilding(buildingId)) return Forbid();
 
         var ok = await _categories.UpdateAsync(building, isExpense, id, name, color, active, CurrentUserId);
-        TempData[ok ? "Message" : "Error"] = ok ? "✅ تم التحديث." : "❌ الفئة غير موجودة.";
+        TempData[ok ? "Message" : "Error"] = ok ? Loc.T("Updated") : Loc.T("Category_Not_Found");
         return RedirectBack(buildingId);
     }
 
@@ -122,8 +125,8 @@ public class CategoriesController : Controller
 
         var ok = await _categories.DeleteAsync(building, isExpense, id, CurrentUserId);
         TempData[ok ? "Message" : "Error"] = ok
-            ? "✅ تم الحذف (أو التعطيل لو مستخدمة)."
-            : "❌ الفئة غير موجودة.";
+            ? Loc.T("Deleted_Or_Disabled_If_In_Use")
+            : Loc.T("Category_Not_Found");
         return RedirectBack(buildingId);
     }
 

@@ -1,9 +1,14 @@
 ﻿using BuildingManagementMvc.Models;
 using Google.Cloud.Firestore;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Services;
 
@@ -12,15 +17,15 @@ public class BackupService
     private readonly FirestoreDb _db;
     private readonly IAuditLogger _audit;
 
-    private static readonly Dictionary<string, string> KnownCollections = new()
+    private static Dictionary<string, string> KnownCollections => new()
     {
-        ["buildings"] = "العمارات",
-        ["users"] = "المستخدمون",
-        ["auditLogs"] = "سجل التدقيق",
-        ["qr_usage"] = "استخدام QR",
-        ["qr-tokens"] = "رموز QR",
-        ["presence"] = "الحضور",
-        ["whatsappTemplates"] = "قوالب واتساب"
+        ["buildings"] = Loc.T("Buildings"),
+        ["users"] = Loc.T("Users"),
+        ["auditLogs"] = Loc.T("Audit_Log"),
+        ["qr_usage"] = Loc.T("QR_Usage"),
+        ["qr-tokens"] = Loc.T("QR_Tokens"),
+        ["presence"] = Loc.T("Presence"),
+        ["whatsappTemplates"] = Loc.T("WhatsApp_Templates")
     };
 
     public BackupService(FirestoreContext ctx, IAuditLogger audit)
@@ -266,7 +271,7 @@ public class BackupService
                 }
                 catch (Exception ex)
                 {
-                    result.Errors.Add($"{colName}: JSON غير صالح - {ex.Message}");
+                    result.Errors.Add(Loc.T("N_Invalid_JSON_N", colName, ex.Message));
                 }
             }
 
@@ -274,7 +279,7 @@ public class BackupService
         }
         catch (Exception ex)
         {
-            result.Errors.Add($"خطأ: {ex.Message}");
+            result.Errors.Add(Loc.T("Error_N", ex.Message));
         }
 
         return result;
@@ -294,7 +299,7 @@ public class BackupService
 
         if (!File.Exists(tempFilePath))
         {
-            result.Errors.Add("الملف المؤقت غير موجود");
+            result.Errors.Add(Loc.T("The_Temporary_File_Does_Not_Exist"));
             return result;
         }
 
@@ -307,7 +312,7 @@ public class BackupService
                 var entry = zip.GetEntry($"{colName}.json");
                 if (entry == null)
                 {
-                    result.Errors.Add($"{colName}: غير موجود في الـ ZIP");
+                    result.Errors.Add(Loc.T("N_Not_Found_In_The_ZIP", colName));
                     continue;
                 }
 
@@ -324,7 +329,7 @@ public class BackupService
                 }
                 catch (Exception ex)
                 {
-                    result.Errors.Add($"{colName}: JSON غير صالح - {ex.Message}");
+                    result.Errors.Add(Loc.T("N_Invalid_JSON_N", colName, ex.Message));
                     continue;
                 }
 
@@ -373,12 +378,12 @@ public class BackupService
                     }
                 }
 
-                result.Details.Add($"✅ {colName}: {docs.Count} مستند");
+                result.Details.Add(Loc.T("N_N_Documents", colName, docs.Count));
             }
         }
         catch (Exception ex)
         {
-            result.Errors.Add($"خطأ: {ex.Message}");
+            result.Errors.Add(Loc.T("Error_N", ex.Message));
         }
         finally
         {

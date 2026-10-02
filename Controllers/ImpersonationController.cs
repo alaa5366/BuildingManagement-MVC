@@ -1,14 +1,14 @@
-﻿using BuildingManagementMvc.Models;
+﻿using System.Security.Claims;
+using BuildingManagementMvc.Attributes;
+using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
 
-[Authorize(Roles = "admin")]
 public class ImpersonationController : Controller
 {
     private readonly BuildingsService _buildings;
@@ -33,6 +33,8 @@ public class ImpersonationController : Controller
     // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Roles = "admin")]
+    [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageResidents)]
     public async Task<IActionResult> Enter(string aptId)
     {
         var buildingId = User.FindFirst("buildingId")?.Value;
@@ -44,8 +46,7 @@ public class ImpersonationController : Controller
         var apt = building.Apartments.FirstOrDefault(a => a.Id == aptId);
         if (apt == null) return NotFound();
 
-        // 1. احفظ بيانات الأدمن (لو لسه ما اتحفظتش)
-        if (!_impersonation.IsImpersonating(HttpContext))
+        // 1. احفظ بيانات الأدمن (دايماً — الأدمن مبيكونش في وضع impersonation هنا)
         {
             var backup = new AdminBackupData
             {
@@ -66,12 +67,13 @@ public class ImpersonationController : Controller
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, "imp-" + apt.Id),
-            new(ClaimTypes.Name, string.IsNullOrWhiteSpace(apt.Owner) ? $"شقة {apt.Number}" : apt.Owner),
+            new(ClaimTypes.Name, string.IsNullOrWhiteSpace(apt.Owner) ? Loc.T("Apartment_N", apt.Number) : apt.Owner),
             new(ClaimTypes.Role, "resident"),
             new("buildingId", building.Id),
             new("apartmentId", apt.Id),
             new("apartmentNumber", apt.Number.ToString()),
-            new("impersonated", "true")
+            new("impersonated", "true"),
+            new("impersonatedBy", AdminUid)
         };
 
         // صلاحيات الساكن
@@ -98,11 +100,17 @@ public class ImpersonationController : Controller
     // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [AllowAnonymous]
+    [Authorize(Roles = "resident")]
     public async Task<IActionResult> Exit()
     {
+        // ✅ الخروج متاح بس لجلسة impersonation حقيقية (الـ claims دي السيرفر هو اللي وقّعها)
+        if (!_impersonation.IsImpersonating(HttpContext))
+            return Forbid();
+
         var backup = _impersonation.ReadBackup(HttpContext);
-        if (backup == null)
+        var impersonatedBy = User.FindFirst("impersonatedBy")?.Value;
+
+        if (backup == null || string.IsNullOrEmpty(impersonatedBy) || backup.Uid != impersonatedBy)
         {
             // مفيش backup — بس نعمل logout ونرجع لصفحة الدخول
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -115,7 +123,7 @@ public class ImpersonationController : Controller
             new(ClaimTypes.NameIdentifier, backup.Uid),
             new(ClaimTypes.Name, backup.Name),
             new(ClaimTypes.Email, backup.Email),
-            new(ClaimTypes.Role, backup.Role)
+            new(ClaimTypes.Role, "admin")   // ✅ الدور ثابت، مش من الكوكي
         };
 
         foreach (var bId in backup.BuildingIds)

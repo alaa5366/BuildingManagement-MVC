@@ -3,6 +3,8 @@ using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Controllers;
 
@@ -56,7 +58,7 @@ public class AdminsController : Controller
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(phone) ||
             string.IsNullOrWhiteSpace(buildingId) || string.IsNullOrWhiteSpace(pin))
         {
-            TempData["Error"] = "كل الحقول مطلوبة.";
+            TempData["Error"] = Loc.T("All_Fields_Are_Required");
             ViewBag.Buildings = await _buildings.GetAllAsync();
             ViewBag.AllPermissions = AdminPermissions.All;
             return View();
@@ -65,12 +67,12 @@ public class AdminsController : Controller
         try
         {
             await _admins.CreateAdminAsync(name, phone, buildingId, pin, permissions ?? new(), CurrentUserId);
-            TempData["Message"] = "✅ تم إنشاء الأدمن بنجاح.";
+            TempData["Message"] = Loc.T("Admin_Created_Successfully");
             return RedirectToAction(nameof(Index));
         }
         catch (System.Exception ex)
         {
-            TempData["Error"] = "فشل الإنشاء: " + ex.Message;
+            TempData["Error"] = Loc.T("Creation_Failed") + ex.Message;
             ViewBag.Buildings = await _buildings.GetAllAsync();
             ViewBag.AllPermissions = AdminPermissions.All;
             return View();
@@ -96,12 +98,12 @@ public class AdminsController : Controller
         try
         {
             await _admins.UpdateAdminAsync(id, name, phone, permissions ?? new(), isActive, CurrentUserId);
-            TempData["Message"] = "✅ تم التحديث.";
+            TempData["Message"] = Loc.T("Updated");
             return RedirectToAction(nameof(Index));
         }
         catch (System.Exception ex)
         {
-            TempData["Error"] = "فشل التحديث: " + ex.Message;
+            TempData["Error"] = Loc.T("Update_Failed") + ex.Message;
             var admin = await _admins.GetAdminAsync(id);
             ViewBag.Buildings = await _buildings.GetAllAsync();
             ViewBag.AllPermissions = AdminPermissions.All;
@@ -116,11 +118,11 @@ public class AdminsController : Controller
         try
         {
             await _admins.ChangePinAsync(id, newPin, CurrentUserId);
-            TempData["Message"] = "✅ تم تغيير PIN.";
+            TempData["Message"] = Loc.T("PIN_Changed");
         }
         catch (System.Exception ex)
         {
-            TempData["Error"] = "فشل تغيير PIN: " + ex.Message;
+            TempData["Error"] = Loc.T("PIN_Change_Failed") + ex.Message;
         }
         return RedirectToAction(nameof(Edit), new { id });
     }
@@ -129,7 +131,7 @@ public class AdminsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Deactivate(string id)
     {
-        try { await _admins.DeactivateAsync(id, CurrentUserId); TempData["Message"] = "تم التعطيل."; }
+        try { await _admins.DeactivateAsync(id, CurrentUserId); TempData["Message"] = Loc.T("Disabled_4"); }
         catch (System.Exception ex) { TempData["Error"] = ex.Message; }
         return RedirectToAction(nameof(Index));
     }
@@ -138,7 +140,7 @@ public class AdminsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Activate(string id)
     {
-        try { await _admins.ActivateAsync(id, CurrentUserId); TempData["Message"] = "تم التنشيط."; }
+        try { await _admins.ActivateAsync(id, CurrentUserId); TempData["Message"] = Loc.T("Activated"); }
         catch (System.Exception ex) { TempData["Error"] = ex.Message; }
         return RedirectToAction(nameof(Index));
     }
@@ -147,7 +149,7 @@ public class AdminsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string id)
     {
-        try { await _admins.DeleteAsync(id, CurrentUserId); TempData["Message"] = "تم الحذف."; }
+        try { await _admins.DeleteAsync(id, CurrentUserId); TempData["Message"] = Loc.T("Deleted"); }
         catch (System.Exception ex) { TempData["Error"] = ex.Message; }
         return RedirectToAction(nameof(Index));
     }

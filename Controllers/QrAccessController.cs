@@ -1,9 +1,9 @@
-using BuildingManagementMvc.Services;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
 
@@ -42,14 +42,14 @@ public class QrAccessController : Controller
         var apartment = building?.Apartments.FirstOrDefault(a => a.Id == apt);
         if (building == null || apartment == null)
         {
-            ViewBag.Error = "تعذّر تحديد الشقة";
+            ViewBag.Error = Loc.T("Could_Not_Determine_The_Apartment");
             return View("AccessDenied");
         }
 
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, "qr-" + apartment.Id),
-            new(ClaimTypes.Name, string.IsNullOrWhiteSpace(apartment.Owner) ? $"شقة {apartment.Number}" : apartment.Owner),
+            new(ClaimTypes.Name, string.IsNullOrWhiteSpace(apartment.Owner) ? Loc.T("Apartment_N", apartment.Number) : apartment.Owner),
             new(ClaimTypes.Role, "resident"),
             new("buildingId", building.Id),
             new("apartmentId", apartment.Id),
@@ -64,10 +64,10 @@ public class QrAccessController : Controller
 
     private static string MapReason(string? reason) => reason switch
     {
-        "expired" => "⏰ انتهت صلاحية الرابط",
-        "already-used" => "🚫 الرابط ده اتستخدم قبل كده",
-        "not-found" => "الرابط غير صالح",
-        "invalid-signature" => "الرابط غير صالح",
-        _ => "تعذّر الدخول بهذا الرابط"
+        "expired" => Loc.T("The_Link_Has_Expired"),
+        "already-used" => Loc.T("This_Link_Has_Already_Been_Used"),
+        "not-found" => Loc.T("The_Link_Is_Invalid"),
+        "invalid-signature" => Loc.T("The_Link_Is_Invalid"),
+        _ => Loc.T("Could_Not_Log_In_With_This")
     };
 }

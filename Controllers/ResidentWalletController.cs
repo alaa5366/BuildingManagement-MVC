@@ -1,8 +1,8 @@
-using BuildingManagementMvc.Models;
-using BuildingManagementMvc.Services;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+using BuildingManagementMvc.Services;
+using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Controllers;
 
@@ -102,7 +102,7 @@ public class ResidentWalletController : Controller
                 User.Identity?.Name ?? "resident", apt.Number.ToString());
 
             await _buildings.SaveFullAsync(building);
-            TempData["Message"] = "تم إرسال الدفعة، في انتظار تأكيد الأدمن";
+            TempData["Message"] = Loc.T("The_Payment_Was_Submitted_Awaiting_Admin");
         }
 
         return RedirectToAction("Index", new { month = mk });
@@ -118,10 +118,10 @@ public class ResidentWalletController : Controller
         [FromServices] TransactionParser parser)
     {
         if (image == null || image.Length == 0)
-            return Json(new { success = false, error = "لم يتم رفع صورة" });
+            return Json(new { success = false, error = Loc.T("No_Image_Was_Uploaded") });
 
         if (image.Length > 10 * 1024 * 1024) // 10 MB
-            return Json(new { success = false, error = "حجم الصورة كبير جداً (الحد الأقصى 10 ميجا)" });
+            return Json(new { success = false, error = Loc.T("The_Image_Is_Too_Large_Maximum") });
 
         try
         {
@@ -134,7 +134,7 @@ public class ResidentWalletController : Controller
                 return Json(new
                 {
                     success = false,
-                    error = "لم نتمكن من قراءة الصورة. تأكد من وضوحها أو أدخل البيانات يدوياً.",
+                    error = Loc.T("We_Couldn_T_Read_The_Image"),
                     rawText = text
                 });
             }
@@ -145,7 +145,7 @@ public class ResidentWalletController : Controller
                 return Json(new
                 {
                     success = false,
-                    error = "الصورة دي تحويل فاشل أو قيد الانتظار. ارفع صورة التحويل الناجح ✅",
+                    error = Loc.T("This_Image_Shows_A_Failed_Or"),
                     status = "FAILED",
                     rawText = text
                 });
@@ -165,7 +165,7 @@ public class ResidentWalletController : Controller
         }
         catch (Exception ex)
         {
-            return Json(new { success = false, error = "خطأ في قراءة الصورة: " + ex.Message });
+            return Json(new { success = false, error = Loc.T("Error_Reading_The_Image") + ex.Message });
         }
     }
 

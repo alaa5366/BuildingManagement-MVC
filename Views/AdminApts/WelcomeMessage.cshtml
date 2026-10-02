@@ -1,5 +1,5 @@
 ﻿@{
-    ViewData["Title"] = "رسالة ترحيب";
+    ViewData["Title"] = Loc.T("Welcome_Message");
     var building = (Building)ViewBag.Building;
     var apt = (Apartment)ViewBag.Apt;
     var floor = (Floor?)ViewBag.Floor;
@@ -16,25 +16,25 @@
 <div class="container" style="max-width: 800px;">
 
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>💌 رسالة ترحيب — شقة @apt.Number</h2>
+        <h2>@Loc.T("Welcome_Message_Apartment_N", apt.Number)</h2>
         <span class="badge bg-secondary">@building.Name</span>
     </div>
 
     @* ===== الخطوات ===== *@
     <div class="alert alert-info">
-        <strong>📋 خطوات الإرسال:</strong>
+        <strong>@Loc.T("Steps_To_Send")</strong>
         <ol class="mb-0 mt-2">
-            <li>حمّل صورة الـ QR (زر <strong>📥 تحميل QR</strong>)</li>
-            <li>اضغط <strong>💬 إرسال عبر واتساب</strong> — الرسالة هتفتح جاهزة</li>
-            <li>ابعت الصورة بعد الرسالة (من الـ Downloads)</li>
+            <li>@Html.Raw(Loc.T("Download_The_QR_Image_Button_Download"))</li>
+            <li>@Html.Raw(Loc.T("Tap_Send_Via_WhatsApp_The_Message"))</li>
+            <li>@Loc.T("Send_The_Image_After_The_Message")</li>
         </ol>
     </div>
 
     @* ===== QR + Info ===== *@
     <div class="card mb-4 border-0 shadow-sm">
         <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
-            <strong>📱 QR للدخول السريع</strong>
-            <span class="badge bg-info">صالح @validityHours ساعة</span>
+            <strong>@Loc.T("Quick_Login_QR")</strong>
+            <span class="badge bg-info">@Loc.T("Valid_For_N_Hours", validityHours)</span>
         </div>
         <div class="card-body text-center">
             <img src="data:image/png;base64,@qrBase64"
@@ -43,20 +43,20 @@
                  style="width: 300px; height: 300px; border: 4px solid #12433C; border-radius: 12px; padding: 8px; background: white;" />
 
             <div class="mt-3">
-                <small class="text-muted d-block mb-1">رابط الدخول السريع:</small>
+                <small class="text-muted d-block mb-1">@Loc.T("Quick_Login_Link")</small>
                 <code class="small d-block" style="word-break: break-all;">@quickUrl</code>
             </div>
 
             @* ✅ أزرار التحميل والنسخ للـ QR *@
             <div class="d-flex gap-2 justify-content-center mt-3 flex-wrap">
                 <button type="button" onclick="downloadQr()" class="btn btn-primary">
-                    📥 تحميل QR كصورة
+                    @Loc.T("Download_QR_As_Image")
                 </button>
                 <button type="button" onclick="copyImageToClipboard()" class="btn btn-outline-primary">
-                    📋 نسخ الصورة للحافظة
+                    @Loc.T("Copy_Image_To_Clipboard")
                 </button>
                 <button type="button" onclick="copyText('@quickUrl', this)" class="btn btn-outline-secondary">
-                    🔗 نسخ الرابط
+                    @Loc.T("Copy_Link")
                 </button>
             </div>
         </div>
@@ -65,15 +65,15 @@
     @* ===== WhatsApp Send ===== *@
     <div class="card mb-4 border-0 shadow-sm">
         <div class="card-body text-center">
-            <h5 class="mb-3">📤 إرسال الرسالة</h5>
+            <h5 class="mb-3">@Loc.T("Send_Message")</h5>
             <p class="text-muted small mb-3">
-                اضغط الزر لفتح واتساب مع الرسالة جاهزة. بعد الإرسال، ارفق صورة الـ QR.
+                @Loc.T("Tap_The_Button_To_Open_WhatsApp")
             </p>
             <a href="@waLink" target="_blank" class="btn btn-success btn-lg">
-                💬 إرسال عبر واتساب — @apt.Phone
+                @Loc.T("Send_Via_WhatsApp_N", apt.Phone)
             </a>
             <div class="mt-2 text-muted small">
-                💡 هيتم فتح واتساب على جهازك (أو WhatsApp Web)
+                @Loc.T("WhatsApp_Will_Open_On_Your_Device")
             </div>
         </div>
     </div>
@@ -81,9 +81,9 @@
     @* ===== Message Preview ===== *@
     <div class="card mb-4 border-0 shadow-sm">
         <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center">
-            <strong>📄 معاينة الرسالة</strong>
+            <strong>@Loc.T("Message_Preview")</strong>
             <button type="button" onclick="copyMsg(this)" class="btn btn-sm btn-outline-light">
-                📋 نسخ
+                @Loc.T("Copy")
             </button>
         </div>
         <div class="card-body">
@@ -94,7 +94,7 @@
     @* ===== Actions ===== *@
     <div class="d-flex gap-2 justify-content-end mb-5 flex-wrap">
         <a asp-action="Index" class="btn btn-secondary">
-            ↩️ رجوع
+            @Loc.T("Back_2")
         </a>
     </div>
 </div>
@@ -130,9 +130,9 @@
                     new ClipboardItem({ 'image/png': blob })
                 ]);
 
-                alert('✅ تم نسخ الصورة — تقدر تلصقها في واتساب');
+                alert('✅ @Html.Raw(Loc.Js("Image_Copied_You_Can_Paste_It"))');
             } catch (err) {
-                alert('❌ المتصفح مش بيدعم نسخ الصور. استخدم "تحميل QR كصورة" بدل.');
+                alert('❌ @Html.Raw(Loc.Js("Your_Browser_Doesn_T_Support_Copying")) "@Html.Raw(Loc.Js("Download_QR_As_Image_2"))" @Html.Raw(Loc.Js("Instead"))');
                 console.error(err);
             }
         }
@@ -143,7 +143,7 @@
         function copyText(text, btn) {
             navigator.clipboard.writeText(text).then(() => {
                 const original = btn.innerText;
-                btn.innerText = '✅ تم النسخ';
+                btn.innerText = '✅ @Html.Raw(Loc.Js("Copied"))';
                 setTimeout(() => btn.innerText = original, 1500);
             });
         }
@@ -152,7 +152,7 @@
             const text = document.getElementById('msgText').innerText;
             navigator.clipboard.writeText(text).then(() => {
                 const original = btn.innerText;
-                btn.innerText = '✅ تم النسخ';
+                btn.innerText = '✅ @Html.Raw(Loc.Js("Copied"))';
                 setTimeout(() => btn.innerText = original, 1500);
             });
         }

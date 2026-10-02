@@ -1,5 +1,5 @@
 ﻿@{
-    ViewData["Title"] = "كتيب الاستخدام";
+    ViewData["Title"] = Loc.T("User_Guide");
     Layout = "_Layout";
 }
 
@@ -204,25 +204,25 @@
     @* Sidebar TOC                                                  *@
     @* ============================================================ *@
     <aside class="help-toc">
-        <h5>📖 المحتويات</h5>
-        <a href="#getting-started">🚀 البداية السريعة</a>
-        <a href="#resident" class="sub">للسكان</a>
-        <a href="#resident-wallet" class="sub">— محفظتي</a>
-        <a href="#resident-deposit" class="sub">— إرسال دفعة</a>
-        <a href="#resident-notifications" class="sub">— الإشعارات</a>
-        <a href="#resident-polls" class="sub">— التصويتات</a>
-        <a href="#admin" class="sub">للأدمنة</a>
-        <a href="#admin-wallet" class="sub">— المحفظة</a>
-        <a href="#admin-deposits" class="sub">— الدفعات</a>
-        <a href="#admin-expenses" class="sub">— المصروفات</a>
-        <a href="#admin-invoices" class="sub">— الفواتير</a>
-        <a href="#admin-reports" class="sub">— التقارير</a>
-        <a href="#superadmin" class="sub">للمدير العام</a>
-        <a href="#superadmin-buildings" class="sub">— العمارات</a>
-        <a href="#superadmin-admins" class="sub">— الأدمنة</a>
-        <a href="#superadmin-backup" class="sub">— النسخ الاحتياطي</a>
-        <a href="#faq">❓ الأسئلة الشائعة</a>
-        <a href="#shortcuts">⌨️ معلومات سريعة</a>
+        <h5>@Loc.T("Contents")</h5>
+        <a href="#getting-started">@Loc.T("Quick_Start")</a>
+        <a href="#resident" class="sub">@Loc.T("For_Residents")</a>
+        <a href="#resident-wallet" class="sub">@Loc.T("My_Wallet")</a>
+        <a href="#resident-deposit" class="sub">@Loc.T("Submit_A_Payment")</a>
+        <a href="#resident-notifications" class="sub">@Loc.T("Notifications")</a>
+        <a href="#resident-polls" class="sub">@Loc.T("Polls")</a>
+        <a href="#admin" class="sub">@Loc.T("For_Admins")</a>
+        <a href="#admin-wallet" class="sub">@Loc.T("Wallet_3")</a>
+        <a href="#admin-deposits" class="sub">@Loc.T("Payments")</a>
+        <a href="#admin-expenses" class="sub">@Loc.T("Expenses_2")</a>
+        <a href="#admin-invoices" class="sub">@Loc.T("Invoices")</a>
+        <a href="#admin-reports" class="sub">@Loc.T("Reports_2")</a>
+        <a href="#superadmin" class="sub">@Loc.T("For_The_Super_Admin")</a>
+        <a href="#superadmin-buildings" class="sub">@Loc.T("Buildings_2")</a>
+        <a href="#superadmin-admins" class="sub">@Loc.T("Admins")</a>
+        <a href="#superadmin-backup" class="sub">@Loc.T("Backup_2")</a>
+        <a href="#faq">@Loc.T("FAQ")</a>
+        <a href="#shortcuts">@Loc.T("Quick_Info")</a>
     </aside>
 
     @* ============================================================ *@
@@ -230,331 +230,269 @@
     @* ============================================================ *@
     <article class="help-content">
 
-        <h1>📖 كتيب استخدام نظام إدارة العمارات</h1>
+        <h1>@Loc.T("Building_Management_System_User_Guide")</h1>
 
         <p>
-            مرحبًا بك في نظام إدارة العمارات! هذا الكتيب هيشرحلك خطوة بخطوة
-            كل حاجة محتاج تعرفها عن النظام — من تسجيل الدخول لحد
-            إصدار الفواتير وإدارة المحافظ.
+            @Loc.T("Welcome_To_The_Building_Management_System")
         </p>
 
         @* ============================================================ *@
         @* 1. Getting Started                                            *@
         @* ============================================================ *@
-        <h2 id="getting-started">🚀 البداية السريعة</h2>
+        <h2 id="getting-started">@Loc.T("Quick_Start")</h2>
 
-        <h3>تسجيل الدخول</h3>
-        <p>عند فتح النظام، هتلاقي شاشة دخول موحّدة. اتبع الخطوات:</p>
+        <h3>@Loc.T("Log_In_2")</h3>
+        <p>@Loc.T("When_You_Open_The_System_You")</p>
 
         <ol>
-            <li>
-                <span class="badge-step">1</span>
-                اكتب <strong>رقم الموبايل</strong> اللي مسجّل بيه (مثال: <code>+201119221000</code>)
-            </li>
-            <li>
-                <span class="badge-step">2</span>
-                اكتب <strong>PIN</strong> (4 أرقام)
-            </li>
-            <li>
-                <span class="badge-step">3</span>
-                اضغط <strong>"دخول"</strong>
-            </li>
-            <li>
-                <span class="badge-step">4</span>
-                لو عندك أكتر من دور (أدمن + ساكن)، هيظهرلك <strong>اختيار السياق</strong> — اختار اللي عايز تدخل بيه
-            </li>
+            <li>@Html.Raw(Loc.T("1_Enter_The_Mobile_Number_You"))</li>
+            <li>@Html.Raw(Loc.T("2_Enter_Your_PIN_4_Digits"))</li>
+            <li>@Html.Raw(Loc.T("3_Tap_Log_In"))</li>
+            <li>@Html.Raw(Loc.T("4_If_You_Have_More_Than"))</li>
         </ol>
 
-        <div class="alert-tip">
-            💡 <strong>نصيحة</strong>: لو نسيت PIN، كلّم الأدمن يعملك PIN جديد.
-        </div>
+        <div class="alert-tip">@Html.Raw(Loc.T("Tip_If_You_Forgot_Your_PIN"))</div>
 
-        <h3>الدخول بالـ QR</h3>
+        <h3>@Loc.T("Login_With_QR")</h3>
         <p>
-            لو الأدمن باعتلك QR على واتساب، امسحه من أي تطبيق QR reader،
-            هيفتحلك صفحة دخول تلقائية.
+            @Loc.T("If_The_Admin_Sent_You_A")
         </p>
 
-        <a href="#" class="back-top">↑ رجوع للأعلى</a>
+        <a href="#" class="back-top">@Loc.T("Back_To_Top")</a>
 
         @* ============================================================ *@
         @* 2. Resident                                                   *@
         @* ============================================================ *@
-        <h2 id="resident">🏠 للسكان</h2>
+        <h2 id="resident">@Loc.T("For_Residents_2")</h2>
 
-        <h3 id="resident-wallet">💰 محفظتي</h3>
-        <p>
-            صفحة <code>/ResidentWallet</code> بتوريك:
-        </p>
+        <h3 id="resident-wallet">@Loc.T("My_Wallet_2")</h3>
+        <p>@Html.Raw(Loc.T("The_ResidentWallet_Page_Shows_You"))</p>
         <ul>
-            <li><strong>رصيدك الحالي</strong> في الشهر المختار</li>
-            <li><strong>كشف الحساب</strong> — كل المعاملات (دفعات، مصروفات، إيرادات، تسويات)</li>
-            <li><strong>الدفعات المعلقة</strong> — اللي لسه ما اتأكدتش من الأدمن</li>
+            <li>@Html.Raw(Loc.T("Your_Current_Balance_In_The_Selected"))</li>
+            <li>@Html.Raw(Loc.T("Account_Statement_All_Transactions_Payments_Expe"))</li>
+            <li>@Html.Raw(Loc.T("Pending_Payments_Those_Not_Yet_Confirmed"))</li>
         </ul>
 
-        <h3 id="resident-deposit">📤 إرسال دفعة جديدة</h3>
+        <h3 id="resident-deposit">@Loc.T("Submit_A_New_Payment")</h3>
         <ol>
-            <li><span class="badge-step">1</span> في محفظتي، دوّر على خيار <strong>"إرسال دفعة"</strong></li>
-            <li><span class="badge-step">2</span> اكتب <strong>المبلغ</strong> والملاحظة</li>
-            <li><span class="badge-step">3</span> اختياريًا، ارفع <strong>صورة الإيصال</strong> (InstaPay، تحويل بنكي، إلخ)</li>
-            <li><span class="badge-step">4</span> اضغط <strong>"إرسال"</strong></li>
+            <li>@Html.Raw(Loc.T("1_In_My_Wallet_Look_For"))</li>
+            <li>@Html.Raw(Loc.T("2_Enter_The_Amount_And_A"))</li>
+            <li>@Html.Raw(Loc.T("3_Optionally_Upload_A_Receipt_Image"))</li>
+            <li>@Html.Raw(Loc.T("4_Tap_Submit"))</li>
         </ol>
 
-        <div class="alert-help">
-            📸 <strong>صورة الإيصال</strong>: النظام بيستخدم OCR يقرأ المبلغ من الصورة تلقائيًا.
-            بس للتأكيد، راجع المبلغ قبل الإرسال.
-        </div>
+        <div class="alert-help">@Html.Raw(Loc.T("Receipt_Image_The_System_Uses_OCR"))</div>
 
-        <p>
-            بعد الإرسال، الدفعة بتظهر بحالة <strong>"في انتظار التأكيد"</strong> لحد ما الأدمن يراجعها.
-        </p>
+        <p>@Html.Raw(Loc.T("After_Submitting_The_Payment_Appears_With"))</p>
 
-        <h3 id="resident-notifications">🔔 الإشعارات</h3>
-        <p>
-            في صفحة <code>/Notifications</code>، هتلاقي كل الإشعارات الموجهة ليك:
-        </p>
+        <h3 id="resident-notifications">@Loc.T("Notifications_2")</h3>
+        <p>@Html.Raw(Loc.T("On_The_Notifications_Page_You_Will"))</p>
         <ul>
-            <li>✅ <strong>تأكيد دفعة</strong> — لما الأدمن يأكد دفعتك</li>
-            <li>✏️ <strong>تعديل دفعة</strong> — لو الأدمن عدّل مبلغ أو ملاحظة دفعة معلقة</li>
-            <li>❌ <strong>إلغاء دفعة</strong> — لو الأدمن ألغى دفعة</li>
-            <li>💸 <strong>مصروف جديد</strong> — لما يتسجّل مصروف جديد في العمارة</li>
+            <li>@Html.Raw(Loc.T("Payment_Confirmed_When_The_Admin_Confirms"))</li>
+            <li>@Html.Raw(Loc.T("Payment_Edited_If_The_Admin_Edits"))</li>
+            <li>@Html.Raw(Loc.T("Payment_Cancelled_If_The_Admin_Cancels"))</li>
+            <li>@Html.Raw(Loc.T("New_Expense_When_A_New_Expense"))</li>
         </ul>
 
-        <h3 id="resident-polls">🗳️ التصويتات</h3>
-        <p>
-            في صفحة <code>/ResidentPolls</code>، هتلاقي التصويتات النشطة.
-            كل شقة ليها صوت واحد في كل تصويت.
-        </p>
-        <p>
-            اضغط على الخيار اللي عايزه، وبعدها <strong>"تصويت"</strong>.
-            <strong>مش هتقدر تغيّر صوتك بعد كده</strong>.
-        </p>
+        <h3 id="resident-polls">@Loc.T("Polls_2")</h3>
+        <p>@Html.Raw(Loc.T("On_The_ResidentPolls_Page_You_Will"))</p>
+        <p>@Html.Raw(Loc.T("Tap_The_Option_You_Want_Then"))</p>
 
-        <a href="#" class="back-top">↑ رجوع للأعلى</a>
+        <a href="#" class="back-top">@Loc.T("Back_To_Top")</a>
 
         @* ============================================================ *@
         @* 3. Admin                                                      *@
         @* ============================================================ *@
-        <h2 id="admin">🏢 للأدمنة</h2>
+        <h2 id="admin">@Loc.T("For_Admins_2")</h2>
 
-        <h3 id="admin-wallet">💼 المحفظة</h3>
-        <p>صفحة <code>/Wallet</code> هي قلب النظام. فيها:</p>
+        <h3 id="admin-wallet">@Loc.T("Wallet")</h3>
+        <p>@Html.Raw(Loc.T("The_Wallet_Page_Is_The_Heart"))</p>
         <ul>
-            <li><strong>ملخص الشهر</strong> — محصّل، مصروفات، إيرادات، إجمالي المحفظة</li>
-            <li><strong>الدفعات المعلقة</strong> — كل الدفعات اللي محتاجة مراجعة</li>
-            <li><strong>أرصدة الشقق</strong> — كل شقة ورصيدها في الشهر المختار</li>
+            <li>@Html.Raw(Loc.T("Month_Summary_Collected_Expenses_Revenues_Wallet"))</li>
+            <li>@Html.Raw(Loc.T("Pending_Payments_All_Payments_That_Need"))</li>
+            <li>@Html.Raw(Loc.T("Apartment_Balances_Each_Apartment_And_Its"))</li>
         </ul>
 
-        <h3 id="admin-deposits">💰 إدارة الدفعات</h3>
-        <p>لكل دفعة معلقة، عندك 3 خيارات:</p>
+        <h3 id="admin-deposits">@Loc.T("Managing_Payments")</h3>
+        <p>@Loc.T("For_Each_Pending_Payment_You_Have")</p>
 
         <table>
             <thead>
                 <tr>
-                    <th>الزر</th>
-                    <th>الإجراء</th>
+                    <th>@Loc.T("Button")</th>
+                    <th>@Loc.T("Action_2")</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td>✅ <strong>تأكيد</strong></td>
-                    <td>الدفعة بتتحسب في رصيد الشقة، والساكن بياخد إشعار</td>
+                    <td>✅ <strong>@Loc.T("Confirm")</strong></td>
+                    <td>@Loc.T("The_Payment_Is_Counted_In_The")</td>
                 </tr>
                 <tr>
-                    <td>✏️ <strong>تعديل</strong></td>
-                    <td>تعديل المبلغ أو الملاحظة (لازم تكتب سبب التعديل)</td>
+                    <td>✏️ <strong>@Loc.T("Edit")</strong></td>
+                    <td>@Loc.T("Edit_The_Amount_Or_Note_You")</td>
                 </tr>
                 <tr>
-                    <td>❌ <strong>إلغاء</strong></td>
-                    <td>الدفعة بتترفض، والساكن بياخد إشعار بسبب الإلغاء</td>
+                    <td>❌ <strong>@Loc.T("Cancel")</strong></td>
+                    <td>@Loc.T("The_Payment_Is_Rejected_And_The")</td>
                 </tr>
             </tbody>
         </table>
 
-        <div class="alert-help">
-            📝 <strong>تعديل الدفعة</strong>: لما تعدّل دفعة معلقة، النظام بيسجّل
-            التعديل في <strong>سجل التعديلات</strong> (editHistory) وبيبعت
-            <strong>إشعار للساكن</strong> بالمبلغ القديم والجديد والسبب.
-        </div>
+        <div class="alert-help">@Html.Raw(Loc.T("Editing_A_Payment_When_You_Edit"))</div>
 
-        <h3 id="admin-expenses">💸 المصروفات والإيرادات</h3>
-        <p>
-            في <code>/Expenses</code> و <code>/Revenues</code>، تقدر:
-        </p>
+        <h3 id="admin-expenses">@Loc.T("Expenses_And_Revenues")</h3>
+        <p>@Html.Raw(Loc.T("In_Expenses_And_Revenues_You_Can"))</p>
         <ul>
-            <li>تضيف مصروف/إيراد ببند وسعر وملاحظة</li>
-            <li>تحذف مصروف/إيراد</li>
-            <li>تختار الشهر</li>
+            <li>@Loc.T("Add_An_Expense_Revenue_With_An")</li>
+            <li>@Loc.T("Delete_An_Expense_Revenue")</li>
+            <li>@Loc.T("Choose_The_Month")</li>
         </ul>
-        <p>
-            <strong>المصروفات بتتوزّع تلقائيًا</strong> على كل الشقق المفتوحة بالتساوي.
-        </p>
+        <p>@Html.Raw(Loc.T("Expenses_Are_Distributed_Automatically_Equally_A"))</p>
 
-        <h3 id="admin-invoices">🧾 الفواتير</h3>
-        <p>
-            من صفحة المحفظة، جنب كل شقة، فيه زر <strong>"🧾 فاتورة PDF"</strong>.
-        </p>
-        <p>الفاتورة فيها:</p>
+        <h3 id="admin-invoices">@Loc.T("Invoices_2")</h3>
+        <p>@Html.Raw(Loc.T("From_The_Wallet_Page_Next_To"))</p>
+        <p>@Loc.T("The_Invoice_Contains")</p>
         <ul>
-            <li>بيانات الشقة والساكن</li>
-            <li>ملخص المحفظة (الرصيد، الإيداعات، نصيب المصروفات والإيرادات)</li>
-            <li>تفصيل المصروفات حسب البند</li>
-            <li>بيانات التحويل للدفع</li>
-            <li><strong>QR code</strong> للتحقق من الفاتورة</li>
+            <li>@Loc.T("Apartment_And_Resident_Details")</li>
+            <li>@Loc.T("Wallet_Summary_Balance_Deposits_Share_Of")</li>
+            <li>@Loc.T("Expense_Breakdown_By_Item")</li>
+            <li>@Loc.T("Transfer_Details_For_Payment")</li>
+            <li>@Html.Raw(Loc.T("A_QR_Code_To_Verify_The"))</li>
         </ul>
 
-        <h3 id="admin-reports">📊 التقارير</h3>
-        <p>
-            صفحة <code>/Reports</code> بتديك:
-        </p>
+        <h3 id="admin-reports">@Loc.T("Reports")</h3>
+        <p>@Html.Raw(Loc.T("The_Reports_Page_Gives_You"))</p>
         <ul>
-            <li>ملخص مالي (محصّل، مصروفات، إيرادات، صافي)</li>
-            <li>3 رسوم بيانية (شهريًا، حسب البند، توزيع المحفظة)</li>
-            <li>أعلى 5 مدينين ودائنين</li>
-            <li>تصدير CSV</li>
+            <li>@Loc.T("Financial_Summary_Collected_Expenses_Revenues_Ne")</li>
+            <li>@Loc.T("3_Charts_Monthly_By_Item_Wallet")</li>
+            <li>@Loc.T("Top_5_Debtors_And_Creditors")</li>
+            <li>@Loc.T("CSV_Export")</li>
         </ul>
 
-        <a href="#" class="back-top">↑ رجوع للأعلى</a>
+        <a href="#" class="back-top">@Loc.T("Back_To_Top")</a>
 
         @* ============================================================ *@
         @* 4. Super Admin                                               *@
         @* ============================================================ *@
-        <h2 id="superadmin">👑 للمدير العام</h2>
+        <h2 id="superadmin">@Loc.T("For_The_Super_Admin_2")</h2>
 
-        <h3 id="superadmin-buildings">🏢 إدارة العمارات</h3>
-        <p>صفحة <code>/Buildings</code> بتديك:</p>
+        <h3 id="superadmin-buildings">@Loc.T("Managing_Buildings")</h3>
+        <p>@Html.Raw(Loc.T("The_Buildings_Page_Gives_You"))</p>
         <ul>
-            <li><strong>إنشاء عمارة جديدة</strong> — رقم تلقائي (BLD-001، BLD-002، ...)</li>
-            <li><strong>إضافة أدوار وشقق</strong> — مع إنشاء Firebase Auth تلقائي</li>
-            <li><strong>توليد QRs</strong> — للأدمن وكل شقة (PDF فيه كل الـ QRs)</li>
-            <li><strong>مزامنة Firebase</strong> — إعادة إنشاء حسابات، تحديث كلمات السر</li>
+            <li>@Html.Raw(Loc.T("Create_A_New_Building_Automatic_Number"))</li>
+            <li>@Html.Raw(Loc.T("Add_Floors_And_Apartments_With_Automatic"))</li>
+            <li>@Html.Raw(Loc.T("Generate_QRs_For_The_Admin_And"))</li>
+            <li>@Html.Raw(Loc.T("Firebase_Sync_Recreate_Accounts_Update_Passwords"))</li>
         </ul>
 
-        <h3 id="superadmin-admins">👥 إدارة الأدمنة والصلاحيات</h3>
-        <p>
-            عندك <strong>22 صلاحية</strong> موزّعة على 4 تصنيفات:
-        </p>
+        <h3 id="superadmin-admins">@Loc.T("Managing_Admins_And_Permissions")</h3>
+        <p>@Html.Raw(Loc.T("You_Have_22_Permissions_Grouped_Into"))</p>
         <ul>
-            <li>🏢 <strong>إدارة</strong> — العمارات، الأدمنة، السكان</li>
-            <li>💰 <strong>مالية</strong> — المحافظ، المصروفات، الإيرادات، التقارير</li>
-            <li>🛎️ <strong>خدمات</strong> — التصويتات، الصيانة، الإشعارات، واتساب</li>
-            <li>🛠️ <strong>نظام</strong> — السجل، الإعدادات، الأدوات، النسخ الاحتياطي</li>
+            <li>@Html.Raw(Loc.T("Management_Buildings_Admins_Residents"))</li>
+            <li>@Html.Raw(Loc.T("Finance_Wallets_Expenses_Revenues_Reports"))</li>
+            <li>@Html.Raw(Loc.T("Services_Polls_Maintenance_Notifications_WhatsAp"))</li>
+            <li>@Html.Raw(Loc.T("System_Log_Settings_Tools_Backup"))</li>
         </ul>
 
-        <p>فيه <strong>4 قوالب جاهزة</strong>:</p>
+        <p>@Html.Raw(Loc.T("There_Are_4_Ready_Made_Templates"))</p>
         <ul>
-            <li><strong>Full</strong> — 12 صلاحية (الأساسية)</li>
-            <li><strong>Super</strong> — 22 صلاحية (كل حاجة)</li>
-            <li><strong>Financial</strong> — 7 صلاحيات (مالية بس)</li>
-            <li><strong>Maintenance</strong> — 4 صلاحيات (صيانة بس)</li>
+            <li>@Html.Raw(Loc.T("Full_12_Permissions_The_Basics"))</li>
+            <li>@Html.Raw(Loc.T("Super_22_Permissions_Everything"))</li>
+            <li>@Html.Raw(Loc.T("Financial_7_Permissions_Finance_Only"))</li>
+            <li>@Html.Raw(Loc.T("Maintenance_4_Permissions_Maintenance_Only"))</li>
         </ul>
 
-        <h3 id="superadmin-backup">💾 النسخ الاحتياطي</h3>
-        <p>
-            صفحة <code>/Backup</code> بتديك 4 تبويبات:
-        </p>
+        <h3 id="superadmin-backup">@Loc.T("Backup_3")</h3>
+        <p>@Html.Raw(Loc.T("The_Backup_Page_Gives_You_4"))</p>
         <ul>
-            <li><strong>نظرة عامة</strong> — إحصائيات المستندات في كل Collection</li>
-            <li><strong>نسخة احتياطية</strong> — اختار Collections ونزّل ZIP</li>
-            <li><strong>الاستعادة</strong> — ارفع ZIP واختار Collections</li>
-            <li><strong>النسخ المجدولة</strong> — يومي/أسبوعي/شهري تلقائي</li>
+            <li>@Html.Raw(Loc.T("Overview_Document_Statistics_For_Each_Collection"))</li>
+            <li>@Html.Raw(Loc.T("Backup_Choose_Collections_And_Download_A"))</li>
+            <li>@Html.Raw(Loc.T("Restore_Upload_A_ZIP_And_Choose"))</li>
+            <li>@Html.Raw(Loc.T("Scheduled_Backups_Automatic_Daily_Weekly_Monthly"))</li>
         </ul>
 
-        <a href="#" class="back-top">↑ رجوع للأعلى</a>
+        <a href="#" class="back-top">@Loc.T("Back_To_Top")</a>
 
         @* ============================================================ *@
         @* 5. FAQ                                                        *@
         @* ============================================================ *@
-        <h2 id="faq">❓ الأسئلة الشائعة</h2>
+        <h2 id="faq">@Loc.T("FAQ")</h2>
 
-        <h3>نسيت الـ PIN بتاعي، أعمل إيه؟</h3>
+        <h3>@Loc.T("I_Forgot_My_PIN_What_Should")</h3>
         <p>
-            كلّم الأدمن. هو يقدر يعملك PIN جديد من صفحة الشقق
-            أو من إعداداتك.
+            @Loc.T("Contact_The_Admin_They_Can_Set")
         </p>
 
-        <h3>الدفعة المعلقة مش بتظهر عندي كساكن، ليه؟</h3>
-        <p>
-            تأكد إنك في <strong>نفس الشهر</strong> اللي أرسلت فيه الدفعة.
-            لو لسه مش ظاهرة، اعمل Refresh.
-        </p>
+        <h3>@Loc.T("My_Pending_Payment_Doesn_T_Show")</h3>
+        <p>@Html.Raw(Loc.T("Make_Sure_You_Are_In_The"))</p>
 
-        <h3>بعمل Refresh الصفحة وبتطلعلي رسالة حمراء "فشل الحفظ"</h3>
+        <h3>@Loc.T("When_I_Refresh_The_Page_I")</h3>
         <p>
-            غالبًا فيه مشكلة في الاتصال بـ Firebase. تأكد من:
+            @Loc.T("There_Is_Probably_A_Problem_Connecting")
         </p>
         <ul>
-            <li>الإنترنت شغال</li>
-            <li>ما استخدمتش VPN (ممكن يحجب Firebase)</li>
-            <li>جرّب تعمل Logout + Login تاني</li>
+            <li>@Loc.T("Your_Internet_Connection_Is_Working")</li>
+            <li>@Loc.T("You_Are_Not_Using_A_VPN")</li>
+            <li>@Loc.T("Try_Logging_Out_And_Logging_In")</li>
         </ul>
 
-        <h3>ينفع أستخدم النظام من الموبايل؟</h3>
-        <p>
-            أيوة! النظام متوافق مع الموبايل، وكمان تقدر <strong>تثبّته كتطبيق</strong>:
-        </p>
+        <h3>@Loc.T("Can_I_Use_The_System_From")</h3>
+        <p>@Html.Raw(Loc.T("Yes_The_System_Is_Mobile_Friendly"))</p>
         <ul>
-            <li><strong>Android</strong>: افتح Chrome → اضغط "Install" أو "Add to Home screen"</li>
-            <li><strong>iOS</strong>: افتح Safari → Share → "Add to Home Screen"</li>
+            <li>@Html.Raw(Loc.T("Android_Open_Chrome_Tap_Install_Or"))</li>
+            <li>@Html.Raw(Loc.T("IOS_Open_Safari_Share_Add_To"))</li>
         </ul>
 
-        <h3>الـ QR مش بيفتح، أعمل إيه؟</h3>
-        <p>
-            بعض الـ QRs بيكونوا <strong>لمرة واحدة</strong>. لو استخدمتهم،
-            مش هيفتحوا تاني. كلّم الأدمن يعملك QR جديد.
-        </p>
+        <h3>@Loc.T("The_QR_Won_T_Open_What")</h3>
+        <p>@Html.Raw(Loc.T("Some_QRs_Are_Single_Use_If"))</p>
 
-        <h3>عايز أعدّل إعدادات الإشعارات، إزاي؟</h3>
-        <p>
-            من <code>/Settings/Own</code>، تقدر تفتح/تقفل:
-        </p>
+        <h3>@Loc.T("How_Do_I_Change_My_Notification")</h3>
+        <p>@Html.Raw(Loc.T("From_Settings_Own_You_Can_Turn"))</p>
         <ul>
-            <li>💬 واتساب</li>
-            <li>📧 البريد الإلكتروني</li>
-            <li>🔔 داخل التطبيق</li>
+            <li>@Loc.T("WhatsApp_2")</li>
+            <li>@Loc.T("Email_3")</li>
+            <li>@Loc.T("In_App")</li>
         </ul>
 
-        <a href="#" class="back-top">↑ رجوع للأعلى</a>
+        <a href="#" class="back-top">@Loc.T("Back_To_Top")</a>
 
         @* ============================================================ *@
         @* 6. Shortcuts                                                  *@
         @* ============================================================ *@
-        <h2 id="shortcuts">⌨️ معلومات سريعة</h2>
+        <h2 id="shortcuts">@Loc.T("Quick_Info")</h2>
 
-        <h3>الألوان والتسميات</h3>
+        <h3>@Loc.T("Colors_And_Labels")</h3>
         <table>
             <thead>
                 <tr>
-                    <th>الرمز</th>
-                    <th>المعنى</th>
+                    <th>@Loc.T("Symbol")</th>
+                    <th>@Loc.T("Meaning")</th>
                 </tr>
             </thead>
             <tbody>
-                <tr><td>🟢</td><td>مفتوح / نشط</td></tr>
-                <tr><td>🔴</td><td>مغلق / خطأ / متجاوز</td></tr>
-                <tr><td>🟡</td><td>تحذير / يحتاج انتباه</td></tr>
-                <tr><td>⚪</td><td>محايد / مقفول</td></tr>
+                <tr><td>🟢</td><td>@Loc.T("Open_Active")</td></tr>
+                <tr><td>🔴</td><td>@Loc.T("Closed_Error_Overdue")</td></tr>
+                <tr><td>🟡</td><td>@Loc.T("Warning_Needs_Attention")</td></tr>
+                <tr><td>⚪</td><td>@Loc.T("Neutral_Locked")</td></tr>
             </tbody>
         </table>
 
-        <h3>حالات الدفعة</h3>
+        <h3>@Loc.T("Payment_Statuses")</h3>
         <ul>
-            <li>⏳ <strong>pending</strong> — في انتظار التأكيد</li>
-            <li>✅ <strong>confirmed</strong> — اتأكدت</li>
-            <li>❌ <strong>cancelled</strong> — اتلغت</li>
+            <li>@Html.Raw(Loc.T("Pending_Awaiting_Confirmation"))</li>
+            <li>@Html.Raw(Loc.T("Confirmed_Confirmed"))</li>
+            <li>@Html.Raw(Loc.T("Cancelled_Cancelled"))</li>
         </ul>
 
-        <h3>الدعم</h3>
-        <p>
-            لو عندك مشكلة، كلّم <strong>الأدمن بتاع عمارتك</strong> الأول.
-            لو المشكلة أكبر، كلّم <strong>المدير العام</strong>.
-        </p>
+        <h3>@Loc.T("Support")</h3>
+        <p>@Html.Raw(Loc.T("If_You_Have_A_Problem_Contact"))</p>
 
         <div class="alert-tip">
-            📧 للدعم التقني: <code>alaa5366@gmail.com</code>
+            @Loc.T("For_Technical_Support")<code>alaa5366@gmail.com</code>
         </div>
 
-        <a href="#" class="back-top">↑ رجوع للأعلى</a>
+        <a href="#" class="back-top">@Loc.T("Back_To_Top")</a>
 
     </article>
 </div>

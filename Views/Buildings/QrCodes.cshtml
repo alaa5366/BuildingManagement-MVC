@@ -9,10 +9,10 @@
     <h3>📱 QR Codes — @Model.Name (@Model.BuildingNumber)</h3>
     <div class="d-flex gap-2">
         <a asp-action="QrCodesPdf" asp-route-id="@Model.Id" class="btn btn-success btn-sm">
-            📄 تحميل PDF
+            @Loc.T("Download_PDF")
         </a>
-        <button onclick="window.print()" class="btn btn-outline-primary btn-sm">🖨️ طباعة</button>
-        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">← رجوع</a>
+        <button onclick="window.print()" class="btn btn-outline-primary btn-sm">@Loc.T("Print")</button>
+        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">@Loc.T("Back")</a>
     </div>
 </div>
 
@@ -27,8 +27,8 @@
 }
 <div class="print-page">
     <div class="page-header">
-        <h4>👑 أدمن العمارة</h4>
-        <p class="text-muted small">امسح الـ QR ده لدخول الأدمن مباشرة على العمارة دي</p>
+        <h4>@Loc.T("Building_Admin")</h4>
+        <p class="text-muted small">@Loc.T("Scan_This_QR_To_Log_In")</p>
     </div>
 
     <div class="row justify-content-center">
@@ -37,14 +37,14 @@
                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=@Uri.EscapeDataString(adminQrUrl)"
                      alt="Admin QR" class="img-fluid mb-3 qr-image" />
                 <div class="small">
-                    <strong style="font-size: 14px;">👑 أدمن</strong>
+                    <strong style="font-size: 14px;">@Loc.T("Admin_2")</strong>
                     <div>@Model.BuildingNumber</div>
                     <div>@Model.Name</div>
                 </div>
 
                 <div class="mt-3 no-print">
                     <a href="@adminQrUrl" target="_blank" class="btn btn-sm btn-outline-primary w-100">
-                        🔗 افتح الرابط
+                        @Loc.T("Open_Link")
                     </a>
                     <div class="text-muted mt-2 qr-link">@adminQrUrl</div>
                 </div>
@@ -68,7 +68,7 @@
     <div class="print-page">
         <div class="page-header">
             <h4>🏢 @floor.Label</h4>
-            <p class="text-muted small">@apts.Count شقة — كل QR للساكن يمسحه فيملّي البيانات تلقائياً</p>
+            <p class="text-muted small">@Loc.T("N_Apartments_Each_Resident_Scans_Their", apts.Count)</p>
         </div>
 
         <div class="row g-3">
@@ -84,7 +84,7 @@
                         <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=@Uri.EscapeDataString(qrUrl)"
                              alt="Apt QR" class="img-fluid mb-2 qr-image" />
                         <div class="small">
-                            <strong>🏠 شقة @apt.Number</strong>
+                            <strong>@Loc.T("Apartment_N_2", apt.Number)</strong>
                             @if (!string.IsNullOrEmpty(apt.Label))
                             {
                                 <div class="text-muted" style="font-size: 11px;">@apt.Label</div>
@@ -95,13 +95,13 @@
                             }
                             @if (apt.Closed)
                             {
-                                <div class="badge bg-secondary mt-1">🔒 مغلقة</div>
+                                <div class="badge bg-secondary mt-1">@Loc.T("Closed_2")</div>
                             }
                         </div>
 
                         <div class="mt-2 no-print">
                             <a href="@qrUrl" target="_blank" class="btn btn-sm btn-outline-primary w-100">
-                                🔗 افتح الرابط
+                                @Loc.T("Open_Link")
                             </a>
                             <div class="text-muted mt-1 qr-link">@qrUrl</div>
                         </div>

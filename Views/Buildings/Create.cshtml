@@ -1,9 +1,9 @@
 @{
-    ViewData["Title"] = "عمارة جديدة";
+    ViewData["Title"] = Loc.T("New_Building");
 }
 
 <div class="col-md-8 mx-auto">
-    <h3 class="mb-3">🏢 إنشاء عمارة جديدة</h3>
+    <h3 class="mb-3">@Loc.T("Create_A_New_Building")</h3>
     <div asp-validation-summary="All" class="text-danger"></div>
 
     <form method="post" class="bg-white p-4 rounded shadow-sm mb-3">
@@ -11,74 +11,72 @@
 
         <!-- اسم العمارة -->
         <div class="mb-3">
-            <label class="form-label fw-bold">اسم العمارة <span class="text-danger">*</span></label>
-            <input name="name" class="form-control" required placeholder="مثال: عمارة النيل" />
-            <div class="form-text">من 2 إلى 100 حرف</div>
+            <label class="form-label fw-bold">@Html.Raw(Loc.T("Building_Name"))</label>
+            <input name="name" class="form-control" required placeholder="@Loc.T("Example_Nile_Building")" />
+            <div class="form-text">@Loc.T("2_To_100_Characters")</div>
         </div>
 
         <!-- رقم العمارة -->
         <div class="mb-3">
-            <label class="form-label fw-bold">رقم العمارة</label>
+            <label class="form-label fw-bold">@Loc.T("Building_Number")</label>
             <input name="buildingNumber" class="form-control" placeholder="BLD-001" />
-            <div class="form-text">اتركه فاضي للتوليد التلقائي (BLD-XXX)</div>
+            <div class="form-text">@Loc.T("Leave_Empty_To_Auto_Generate_BLD")</div>
         </div>
 
         <!-- PIN الأدمن -->
         <div class="mb-3">
-            <label class="form-label fw-bold">PIN الأدمن <span class="text-danger">*</span></label>
+            <label class="form-label fw-bold">@Html.Raw(Loc.T("Admin_PIN_2"))</label>
             <input name="adminPin" class="form-control" required maxlength="4" placeholder="1234" />
-            <div class="form-text">4 أرقام بالظبط</div>
+            <div class="form-text">@Loc.T("Exactly_4_Digits")</div>
         </div>
 
         <!-- واتساب الأدمن -->
         <div class="mb-3">
-            <label class="form-label fw-bold">رقم واتساب الأدمن <span class="text-danger">*</span></label>
+            <label class="form-label fw-bold">@Html.Raw(Loc.T("Admin_WhatsApp_Number"))</label>
             <input name="adminWhatsapp" class="form-control" required placeholder="+201012345678" />
-            <div class="form-text">مثال: +201012345678</div>
+            <div class="form-text">@Loc.T("Example_201012345678")</div>
         </div>
 
         <!-- رابط الشعار -->
         <div class="mb-3">
-            <label class="form-label fw-bold">رابط شعار العمارة (اختياري)</label>
+            <label class="form-label fw-bold">@Loc.T("Building_Logo_URL_Optional")</label>
             <input name="logoUrl" class="form-control" placeholder="https://example.com/logo.png" />
-            <div class="form-text">لازم يبدأ بـ http:// أو https://</div>
+            <div class="form-text">@Loc.T("Must_Start_With_Http_Or_Https")</div>
         </div>
 
         <hr />
 
         <!-- الإعدادات الافتراضية -->
         <div class="mb-3">
-            <label class="form-label fw-bold">⚙️ الإعدادات الافتراضية</label>
+            <label class="form-label fw-bold">@Loc.T("Default_Settings")</label>
             <div class="form-check">
                 <input type="checkbox" name="addDefaultExpenseCategories" value="true" class="form-check-input" id="expCats" checked />
                 <label class="form-check-label" for="expCats">
-                    إضافة فئات المصروفات الافتراضية (مياه، كهرباء، نظافة، صيانة، أخرى)
+                    @Loc.T("Add_Default_Expense_Categories_Water_Electricity")
                 </label>
             </div>
             <div class="form-check">
                 <input type="checkbox" name="addDefaultRevenueCategories" value="true" class="form-check-input" id="revCats" checked />
                 <label class="form-check-label" for="revCats">
-                    إضافة فئات الإيرادات الافتراضية (تأجير السطح، تأجير محل، بيع خردة، أخرى)
+                    @Loc.T("Add_Default_Revenue_Categories_Roof_Rental")
                 </label>
             </div>
         </div>
 
         <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-brand">
-                <i class="bi bi-check-circle"></i> إنشاء العمارة
-            </button>
-            <a asp-action="Index" class="btn btn-outline-secondary">إلغاء</a>
+            <button type="submit" class="btn btn-brand">@Html.Raw(Loc.T("Create_Building"))</button>
+            <a asp-action="Index" class="btn btn-outline-secondary">@Loc.T("Cancel")</a>
         </div>
     </form>
 
     <!-- قسم الاستيراد من Excel -->
     <div class="bg-white p-4 rounded shadow-sm">
-        <h5>📥 أو استورد عمارة كاملة من Excel</h5>
+        <h5>@Loc.T("Or_Import_A_Full_Building_From")</h5>
         <p class="text-muted small mb-3">
-            عندك ملف Excel فيه كل البيانات (الأدوار + الشقق + الفئات)؟ استخدم القالب الجاهز وارفعه.
+            @Loc.T("Do_You_Have_An_Excel_File")
         </p>
         <a asp-controller="Backup" asp-action="Index" class="btn btn-outline-success">
-            📊 استيراد من Excel
+            @Loc.T("Import_From_Excel")
         </a>
     </div>
 </div>

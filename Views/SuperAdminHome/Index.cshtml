@@ -1,20 +1,20 @@
 @model List<Building>
-@{ ViewData["Title"] = "لوحة Super Admin"; }
+@{ ViewData["Title"] = Loc.T("Super_Admin_Dashboard"); }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>🏢 كل العمارات</h3>
-    <a asp-controller="Buildings" asp-action="Create" class="btn btn-brand">+ عمارة جديدة</a>
+    <h3>@Loc.T("All_Buildings_2")</h3>
+    <a asp-controller="Buildings" asp-action="Create" class="btn btn-brand">@Loc.T("New_Building_2")</a>
 </div>
 
 @if (Model.Count == 0)
 {
-    <div class="alert alert-info">لا توجد عمارات بعد.</div>
+    <div class="alert alert-info">@Loc.T("No_Buildings_Yet")</div>
 }
 else
 {
     <div class="table-responsive">
         <table class="table table-hover bg-white">
-            <thead><tr><th>الرقم</th><th>الاسم</th><th>الأدوار</th><th>الشقق</th><th></th></tr></thead>
+            <thead><tr><th>@Loc.T("No")</th><th>@Loc.T("Name")</th><th>@Loc.T("Floors")</th><th>@Loc.T("Apartments")</th><th></th></tr></thead>
             <tbody>
             @foreach (var b in Model)
             {
@@ -23,7 +23,7 @@ else
                     <td>@b.Name</td>
                     <td>@b.Floors.Count</td>
                     <td>@b.Apartments.Count</td>
-                    <td><a asp-controller="Buildings" asp-action="Details" asp-route-id="@b.Id" class="btn btn-sm btn-outline-secondary">تفاصيل</a></td>
+                    <td><a asp-controller="Buildings" asp-action="Details" asp-route-id="@b.Id" class="btn btn-sm btn-outline-secondary">@Loc.T("Details")</a></td>
                 </tr>
             }
             </tbody>

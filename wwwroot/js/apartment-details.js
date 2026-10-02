@@ -1,4 +1,5 @@
 ﻿/**
+const i18nT = (k, ...a) => String((window.I18N && window.I18N[k]) ?? k).replace(/\{(\d+)\}/g, (m, i) => (a[i] ?? m));
  * Apartment Details Modal — Phase 24.3
  */
 
@@ -18,17 +19,17 @@ function getOrCreateModal() {
             <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
                 <div class="modal-content">
                     <div class="modal-header bg-dark text-white">
-                        <h5 class="modal-title">📋 تفاصيل الشقة</h5>
+                        <h5 class="modal-title">${i18nT('Js_AptDetails_Title')}</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body" id="apartmentDetailsContent">
                         <div class="text-center py-5">
                             <div class="spinner-border text-primary"></div>
-                            <p class="text-muted mt-2">جاري التحميل...</p>
+                            <p class="text-muted mt-2">${i18nT('Js_Loading')}</p>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18nT('Js_Close')}</button>
                     </div>
                 </div>
             </div>
@@ -48,7 +49,7 @@ async function openApartmentDetails(aptId) {
     content.innerHTML = `
         <div class="text-center py-5">
             <div class="spinner-border text-primary"></div>
-            <p class="text-muted mt-2">جاري التحميل...</p>
+            <p class="text-muted mt-2">${i18nT('Js_Loading')}</p>
         </div>
     `;
 
@@ -70,7 +71,7 @@ async function openApartmentDetails(aptId) {
         console.error('[Details] Failed:', err);
         content.innerHTML = `
             <div class="alert alert-danger">
-                ❌ فشل تحميل البيانات: ${err.message}
+                ${i18nT('Js_LoadFailed', err.message)}
             </div>
         `;
     }
@@ -100,7 +101,7 @@ function quickQrFromDetails(aptId) {
 }
 
 function impersonateResident(aptId) {
-    if (!confirm('⚠️ هل تريد الدخول كساكن هذه الشقة؟\n\nملاحظات:\n• سيتم تسجيل خروجك من حساب الأدمن\n• يمكنك الرجوع لحسابك في أي وقت من الشريط الأحمر أعلى الصفحة\n• سيتم تسجيل هذا الإجراء في السجل')) {
+    if (!confirm(i18nT('Js_ConfirmImpersonate'))) {
         return;
     }
 
@@ -132,7 +133,7 @@ function getAntiForgeryToken() {
 // ✅ فتح شقة
 // ============================================================
 function openApartment(aptId, aptNumber) {
-    if (!confirm(`🔓 هل تريد فتح شقة ${aptNumber}؟\n\nملاحظة:\n• الشقة هتضاف للمصروفات الشهرية\n• هتقدر تصدر فواتير ليها\n• لو فيها دفعات قديمة، هتتحسب`)) {
+    if (!confirm(i18nT('Js_ConfirmOpenApt', aptNumber))) {
         return;
     }
 
@@ -152,13 +153,13 @@ function openApartment(aptId, aptNumber) {
 // ============================================================
 function closeApartment(aptId, aptNumber) {
     const reason = prompt(
-        `🔒 إغلاق شقة ${aptNumber}\n\nاكتب سبب الإغلاق (اختياري):\n\nمثال: الساكن مسافر - شقة فاضية - صيانة`,
+        i18nT('Js_PromptCloseApt', aptNumber),
         ''
     );
 
     if (reason === null) return;  // المستخدم ضغط Cancel
 
-    if (!confirm(`⚠️ تأكيد إغلاق شقة ${aptNumber}؟\n\n• مش هتتضمن في توزيع المصروفات\n• مش هيتم إصدار فواتير ليها`)) {
+    if (!confirm(i18nT('Js_ConfirmCloseApt', aptNumber))) {
         return;
     }
 

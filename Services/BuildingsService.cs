@@ -1,6 +1,6 @@
-using BuildingManagementMvc.Models;
-using Google.Cloud.Firestore;
 using System.Text.RegularExpressions;
+using Google.Cloud.Firestore;
+using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Services;
 
@@ -57,7 +57,7 @@ public class BuildingsService
             // تحقق من عدم التكرار
             var all = await GetAllAsync();
             if (all.Any(b => b.BuildingNumber == buildingNumber))
-                throw new InvalidOperationException($"رقم العمارة {buildingNumber} مستخدم بالفعل");
+                throw new InvalidOperationException(Loc.T("Building_Number_N_Is_Already_In", buildingNumber));
 
             nextNumber = buildingNumber.Trim();
         }

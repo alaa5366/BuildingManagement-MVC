@@ -1,5 +1,9 @@
 ﻿using BuildingManagementMvc.Models;
 using Google.Cloud.Firestore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Services;
 
@@ -344,7 +348,7 @@ public class SettingsService
         if (!string.IsNullOrWhiteSpace(newPin))
         {
             if (currentPin != apt.Pin)
-                throw new InvalidOperationException("PIN الحالي غير صحيح");
+                throw new InvalidOperationException(Loc.T("The_Current_PIN_Is_Incorrect"));
         }
 
         var oldPhone = apt.Phone;
@@ -371,7 +375,7 @@ public class SettingsService
         if (!string.IsNullOrWhiteSpace(newPin))
         {
             if (newPin.Length != 4 || !newPin.All(char.IsDigit))
-                throw new InvalidOperationException("PIN لازم يكون 4 أرقام بالظبط");
+                throw new InvalidOperationException(Loc.T("PIN_Must_Be_Exactly_4_Digits"));
 
             apt.Pin = newPin;
             pinChanged = true;
@@ -441,7 +445,7 @@ public class SettingsService
         var pinChanged = !string.IsNullOrWhiteSpace(newPin);
 
         if ((phoneChangedByUser || pinChanged) && currentPin != user.Pin)
-            throw new InvalidOperationException("PIN الحالي غير صحيح");
+            throw new InvalidOperationException(Loc.T("The_Current_PIN_Is_Incorrect"));
 
         var oldPhone = user.Phone;
         var oldPin = user.Pin;
@@ -468,7 +472,7 @@ public class SettingsService
         if (pinChanged)
         {
             if (newPin!.Length != 4 || !newPin.All(char.IsDigit))
-                throw new InvalidOperationException("PIN لازم يكون 4 أرقام بالظبط");
+                throw new InvalidOperationException(Loc.T("PIN_Must_Be_Exactly_4_Digits"));
 
             updates["pin"] = newPin;
             newPinValue = newPin;

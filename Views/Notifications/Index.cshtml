@@ -1,15 +1,15 @@
 @model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Notification>
 @{
-    ViewData["Title"] = "الإشعارات";
+    ViewData["Title"] = Loc.T("Notifications_3");
     var routeValuesStr = ViewBag.RouteValues as Dictionary<string, string> ?? new();
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>🔔 الإشعارات (@Model.TotalItems)</h3>
+    <h3>@Loc.T("Notifications_N", Model.TotalItems)</h3>
     @if (Model.Items.Any(n => !n.Read))
     {
         <form method="post" asp-action="MarkAllRead">
-            <button class="btn btn-sm btn-outline-secondary">تعليم الكل كمقروء</button>
+            <button class="btn btn-sm btn-outline-secondary">@Loc.T("Mark_All_As_Read")</button>
         </form>
     }
 </div>
@@ -33,7 +33,7 @@
 
 @if (Model.Items.Count == 0)
 {
-    <div class="alert alert-info">لا توجد إشعارات.</div>
+    <div class="alert alert-info">@Loc.T("No_Notifications")</div>
 }
 else
 {
@@ -50,7 +50,7 @@ else
             {
                 <form method="post" asp-action="MarkRead">
                     <input type="hidden" name="id" value="@n.Id" />
-                    <button class="btn btn-sm btn-outline-secondary">تعليم كمقروء</button>
+                    <button class="btn btn-sm btn-outline-secondary">@Loc.T("Mark_As_Read")</button>
                 </form>
             }
         </div>

@@ -1,3 +1,4 @@
+using BuildingManagementMvc.Attributes;
 using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -8,6 +9,7 @@ namespace BuildingManagementMvc.Controllers;
 
 // نفس شاشة js/views/admin/admin-revenues.js
 [Authorize(Roles = "admin")]
+[AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageRevenues)]
 public class RevenuesController : Controller
 {
     private readonly BuildingsService _buildings;
@@ -63,7 +65,7 @@ public class RevenuesController : Controller
             _wallet.RecalculateRevenueDistribution(building, mk);
             _audit.Push(building, "revenue_add", $"{amount:0.##} ج.م — {note}", "admin", User.Identity?.Name ?? "admin");
             await _buildings.SaveFullAsync(building);
-            TempData["Message"] = "تمت إضافة الإيراد";
+            TempData["Message"] = Loc.T("Revenue_Added");
         }
 
         return RedirectToAction("Index", new { month = mk });

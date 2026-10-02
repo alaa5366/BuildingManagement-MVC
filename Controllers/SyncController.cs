@@ -3,6 +3,7 @@ using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Controllers;
 
@@ -25,7 +26,7 @@ public class SyncController : Controller
     {
         var result = await _sync.SyncAdminsAsync(autoFix, CurrentUserId);
         ViewBag.Result = result;
-        ViewBag.SyncType = "أدمنة";
+        ViewBag.SyncType = Loc.T("Admins_2");
         return View("Result");
     }
 
@@ -35,7 +36,7 @@ public class SyncController : Controller
     {
         var result = await _sync.SyncResidentsAsync(autoFix, CurrentUserId);
         ViewBag.Result = result;
-        ViewBag.SyncType = "سكان";
+        ViewBag.SyncType = Loc.T("Residents");
         return View("Result");
     }
 
@@ -45,7 +46,7 @@ public class SyncController : Controller
     {
         var result = await _sync.SyncPasswordsAsync(CurrentUserId);
         ViewBag.Result = result;
-        ViewBag.SyncType = "كلمات السر";
+        ViewBag.SyncType = Loc.T("Passwords");
         return View("Result");
     }
 }

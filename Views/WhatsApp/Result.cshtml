@@ -1,15 +1,15 @@
 @{
-    ViewData["Title"] = "رسالة جاهزة";
+    ViewData["Title"] = Loc.T("Message_Ready");
     var apt = (Apartment)ViewBag.Apt;
     string message = ViewBag.Message;
     string link = ViewBag.Link;
 }
 
-<h3 class="mb-3">💬 رسالة لشقة @apt.Number</h3>
+<h3 class="mb-3">@Loc.T("Message_For_Apartment_N", apt.Number)</h3>
 
 <div class="bg-white rounded shadow-sm p-3 mb-3">
     <pre style="white-space:pre-wrap; font-family:inherit;">@message</pre>
 </div>
 
-<a href="@link" target="_blank" class="btn btn-brand">فتح واتساب وإرسال</a>
-<a asp-action="Index" class="btn btn-link">رجوع</a>
+<a href="@link" target="_blank" class="btn btn-brand">@Loc.T("Open_WhatsApp_And_Send")</a>
+<a asp-action="Index" class="btn btn-link">@Loc.T("Back_3")</a>
