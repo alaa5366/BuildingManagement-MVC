@@ -41,7 +41,8 @@ public class ApartmentCardVm
     public string StatusColor { get; set; } = "#999";
     public string StatusIcon { get; set; } = "⚪";
     public string StatusLabel { get; set; } = "";
-
+    public bool IsDisabled => Apt.Disabled;
+    public bool IsClosed => Apt.Closed;
     // Helpers
     public string OwnerDisplay => string.IsNullOrWhiteSpace(Apt.Owner) ? "—" : Apt.Owner;
     public string BalanceClass => Balance < 0 ? "text-danger" : "text-success";
@@ -81,7 +82,9 @@ public class ApartmentDetailsVm
     public string Pin { get; set; } = "";
     public string? Email { get; set; }
     public string OwnerInitial => string.IsNullOrWhiteSpace(Owner) ? "?" : Owner.Trim()[0].ToString();
-
+    public bool IsDisabled { get; set; }
+    public string DisabledReason { get; set; } = "";
+    public string DisabledAtText { get; set; } = "";
     // Financial
     public double Balance { get; set; }
     public double MonthlyFee { get; set; }

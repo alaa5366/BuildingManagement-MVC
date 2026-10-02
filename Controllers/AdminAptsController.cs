@@ -261,4 +261,185 @@ public class AdminAptsController : Controller
         TempData["Message"] = Loc.T("Apartment_N_Was_Closed", apt.Number);
         return RedirectToAction("Index", "AdminHome");
     }
+
+    // ============================================================
+    // ✅ تعطيل شقة (الساكن مش هيقدر يدخل)
+    // ============================================================
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DisableApartment(string aptId, string? reason)
+    {
+        var building = await _buildings.GetByIdAsync(BuildingId);
+        if (building == null) return NotFound();
+
+        var apt = building.Apartments.FirstOrDefault(a => a.Id == aptId);
+        if (apt == null) return NotFound();
+
+        if (apt.Disabled)
+        {
+            TempData["Error"] = Loc.T("The_Apartment_Is_Already_Disabled");
+            return RedirectToAction("Index", "AdminHome");
+        }
+
+        // 1. عطّل الشقة
+        apt.Disabled = true;
+        apt.DisabledReason = reason ?? "";
+
+        // 2. إشعار للساكن
+        _notify.NotifyResidentApartmentDisabled(building, apt, reason);
+
+        // 3. حفظ
+        await _buildings.SaveFullAsync(building);
+
+        // 4. Audit
+        await _auditLogger.LogAsync(
+            action: "apartment.disabled",
+            buildingId: building.Id,
+            apartmentId: apt.Id,
+            userId: CurrentUserId,
+            userRole: "admin",
+            metadata: new
+            {
+                aptNumber = apt.Number,
+                aptOwner = apt.Owner,
+                reason = reason ?? ""
+            },
+            severity: "warning");
+
+        TempData["Message"] = Loc.T("Apartment_N_Was_Disabled", apt.Number);
+        return RedirectToAction("Index", "AdminHome");
+    }
+
+    // ============================================================
+    // ✅ تفعيل شقة
+    // ============================================================
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EnableApartment(string aptId, string? reason)
+    {
+        var building = await _buildings.GetByIdAsync(BuildingId);
+        if (building == null) return NotFound();
+
+        var apt = building.Apartments.FirstOrDefault(a => a.Id == aptId);
+        if (apt == null) return NotFound();
+
+        if (!apt.Disabled)
+        {
+            TempData["Error"] = Loc.T("The_Apartment_Is_Already_Enabled");
+            return RedirectToAction("Index", "AdminHome");
+        }
+
+        // 1. فعّل الشقة
+        apt.Disabled = false;
+        apt.DisabledReason = "";
+
+        // 2. إشعار للساكن
+        _notify.NotifyResidentApartmentEnabled(building, apt, reason);
+
+        // 3. حفظ
+        await _buildings.SaveFullAsync(building);
+
+        // 4. Audit
+        await _auditLogger.LogAsync(
+            action: "apartment.enabled",
+            buildingId: building.Id,
+            apartmentId: apt.Id,
+            userId: CurrentUserId,
+            userRole: "admin",
+            metadata: new
+            {
+                aptNumber = apt.Number,
+                aptOwner = apt.Owner,
+                reason = reason ?? ""
+            },
+            severity: "info");
+
+        TempData["Message"] = Loc.T("Apartment_N_Was_Enabled", apt.Number);
+        return RedirectToAction("Index", "AdminHome");
+    }
+
+    // ============================================================
+    // ✅ صفحة تعديل الشقة (GET)
+    // ============================================================
+    [HttpGet]
+    public async Task<IActionResult> Edit(string aptId)
+    {
+        var building = await _buildings.GetByIdAsync(BuildingId);
+        if (building == null) return NotFound();
+
+        var apt = building.Apartments.FirstOrDefault(a => a.Id == aptId);
+        if (apt == null) return NotFound();
+
+        var floor = building.Floors.FirstOrDefault(f => f.Id == apt.FloorId);
+
+        ViewBag.Building = building;
+        ViewBag.Floor = floor;
+
+        return View(apt);
+    }
+
+    // ============================================================
+    // ✅ صفحة تعديل الشقة (POST)
+    // ============================================================
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(
+        string aptId,
+        string owner,
+        string label,
+        string phone,
+        string pin,
+        double monthlyFee,
+        string? notes,
+        string? email)
+    {
+        var building = await _buildings.GetByIdAsync(BuildingId);
+        if (building == null) return NotFound();
+
+        var apt = building.Apartments.FirstOrDefault(a => a.Id == aptId);
+        if (apt == null) return NotFound();
+
+        // ✅ تحقق
+        if (string.IsNullOrWhiteSpace(owner))
+        {
+            TempData["Error"] = Loc.T("All_Fields_Are_Required");
+            return RedirectToAction(nameof(Edit), new { aptId });
+        }
+
+        if (string.IsNullOrWhiteSpace(pin) || pin.Length != 4 || !pin.All(char.IsDigit))
+        {
+            TempData["Error"] = Loc.T("PIN_Must_Be_Exactly_4_Digits");
+            return RedirectToAction(nameof(Edit), new { aptId });
+        }
+
+        try
+        {
+            await _buildings.UpdateApartmentAsync(
+                BuildingId, aptId,
+                owner, label ?? "", phone ?? "", pin,
+                monthlyFee, notes ?? "", email);
+
+            // ✅ Audit
+            await _auditLogger.LogAsync(
+                action: "apartment.updated",
+                buildingId: building.Id,
+                apartmentId: aptId,
+                userId: CurrentUserId,
+                userRole: "admin",
+                metadata: new
+                {
+                    aptNumber = apt.Number,
+                    aptOwner = owner
+                },
+                severity: "info");
+
+            TempData["Message"] = Loc.T("Updated");
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = Loc.T("Update_Failed") + ex.Message;
+        }
+
+        return RedirectToAction(nameof(Edit), new { aptId });
+    }
 }

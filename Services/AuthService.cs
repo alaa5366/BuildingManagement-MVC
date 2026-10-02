@@ -27,8 +27,15 @@ public class AuthService
         _fbAuth = fbAuth;
     }
 
-    public static bool IsSuperAdminEmail(string? email) =>
-        !string.IsNullOrWhiteSpace(email) && SuperAdminEmails.Contains(email.Trim().ToLowerInvariant());
+    public static bool IsSuperAdminEmail(string? email)
+    {
+        var normalized = email?.Trim().ToLowerInvariant() ?? "";
+        Console.WriteLine($"[AuthService] Checking: '{normalized}'");
+        Console.WriteLine($"[AuthService] Registered: [{string.Join(", ", SuperAdminEmails)}]");
+        var result = !string.IsNullOrWhiteSpace(email) && SuperAdminEmails.Contains(normalized);
+        Console.WriteLine($"[AuthService] Result: {result}");
+        return result;
+    }
 
     public async Task<AuthResult> SignInSuperAdminAsync(string email, string password)
     {

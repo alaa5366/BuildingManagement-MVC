@@ -207,4 +207,59 @@ public class BuildingsService
             .ToList();
     }
 
+    // ============================================================
+    // ✅ تحديث بيانات شقة
+    // ============================================================
+    public async Task UpdateApartmentAsync(
+        string buildingId,
+        string aptId,
+        string owner,
+        string label,
+        string phone,
+        string pin,
+        double monthlyFee,
+        string notes,
+        string? email = null)
+    {
+        var building = await GetByIdAsync(buildingId)
+            ?? throw new InvalidOperationException("building-not-found");
+
+        var apt = building.Apartments.FirstOrDefault(a => a.Id == aptId)
+            ?? throw new InvalidOperationException("apt-not-found");
+
+        var oldPhone = apt.Phone;
+        var oldPin = apt.Pin;
+
+        // ✅ حدّث الحقول
+        apt.Owner = owner ?? "";
+        apt.Label = label ?? "";
+        apt.Phone = AuthHelpers.NormalizePhone(phone);
+        apt.Pin = pin;
+        apt.MonthlyFee = monthlyFee;
+        apt.Notes = notes ?? "";
+        if (!string.IsNullOrWhiteSpace(email))
+            apt.Email = email;
+
+        // ✅ لو الـ PIN أو الـ Phone اتغيروا، حدّث Firebase Auth
+        var floor = building.Floors.FirstOrDefault(f => f.Id == apt.FloorId);
+        if (floor != null && (oldPin != pin || AuthHelpers.NormalizePhone(oldPhone) != apt.Phone))
+        {
+            var fbEmail = AuthHelpers.ResidentInternalEmail(building.Id, floor.Order, apt.Number);
+            var fbPassword = AuthHelpers.ResidentPassword(building.Id, apt.Number, pin);
+
+            // ✅ جرّب تحديث الباسورد (لو المستخدم موجود)
+            var uid = await _fbAuth.GetUidByEmailAsync(fbEmail);
+            if (!string.IsNullOrEmpty(uid))
+            {
+                await _fbAuth.UpdatePasswordAsync(uid, fbPassword);
+            }
+            else
+            {
+                // ✅ المستخدم مش موجود، أنشئه
+                await _fbAuth.CreateUserAsync(fbEmail, fbPassword);
+            }
+        }
+
+        await SaveFullAsync(building);
+    }
 }

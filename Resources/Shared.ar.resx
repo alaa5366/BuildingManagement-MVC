@@ -117,7 +117,7 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-    <data name="App_Name" xml:space="preserve">
+  <data name="App_Name" xml:space="preserve">
     <value>نظام إدارة العمارات</value>
   </data>
   <data name="App_ShortName" xml:space="preserve">
@@ -2027,9 +2027,6 @@
   </data>
   <data name="Text_8a78cc" xml:space="preserve">
     <value>، </value>
-  </data>
-  <data name="Disabled_3" xml:space="preserve">
-    <value>معطّل</value>
   </data>
   <data name="12_Permissions_For_A_Regular_Admin" xml:space="preserve">
     <value>12 صلاحية — للأدمن العادي</value>
@@ -3991,5 +3988,50 @@
   </data>
   <data name="Js_WrongSecret" xml:space="preserve">
     <value>❌ كلمة السر غير صحيحة</value>
+  </data>
+  <data name="Disable_Apartment" xml:space="preserve">
+    <value>تعطيل الشقة</value>
+  </data>
+  <data name="Enable_Apartment" xml:space="preserve">
+    <value>تفعيل الشقة</value>
+  </data>
+  <data name="Apartment_Is_Disabled" xml:space="preserve">
+    <value>الشقة معطلة</value>
+  </data>
+  <data name="Disable_Apartment_Means_It_Will" xml:space="preserve">
+    <value>تعطيل الشقة معناه إن الساكن مش هيقدر يدخل، بس المصاريف والفواتير لسه بتتحسب.</value>
+  </data>
+  <data name="Reason_For_Disabling" xml:space="preserve">
+    <value>سبب التعطيل</value>
+  </data>
+  <data name="Apartment_N_Was_Disabled" xml:space="preserve">
+    <value>تم تعطيل الشقة {0}</value>
+  </data>
+  <data name="Apartment_N_Was_Enabled" xml:space="preserve">
+    <value>تم تفعيل الشقة {0}</value>
+  </data>
+  <data name="The_Apartment_Is_Already_Disabled" xml:space="preserve">
+    <value>الشقة معطلة بالفعل</value>
+  </data>
+  <data name="The_Apartment_Is_Already_Enabled" xml:space="preserve">
+    <value>الشقة مفعلة بالفعل</value>
+  </data>
+  <data name="Disabled_3" xml:space="preserve">
+    <value>معطلة</value>
+  </data>
+  <data name="Disable_Apartment_Desc" xml:space="preserve">
+    <value>تعطيل/تفعيل الشقة (الساكن مش هيقدر يدخل، بس المصاريف والفواتير لسه بتتحسب)</value>
+  </data>
+  <data name="Js_PromptDisableApt" xml:space="preserve">
+    <value>🚫 تعطيل الشقة {0} — اكتب السبب (اختياري):</value>
+  </data>
+  <data name="Js_ConfirmDisableApt" xml:space="preserve">
+    <value>⚠️ تأكيد تعطيل الشقة {0}؟ — الساكن مش هيقدر يدخل.</value>
+  </data>
+  <data name="Js_PromptEnableApt" xml:space="preserve">
+    <value>✅ تفعيل الشقة {0} — اكتب السبب (اختياري):</value>
+  </data>
+  <data name="Js_ConfirmEnableApt" xml:space="preserve">
+    <value>⚠️ تأكيد تفعيل الشقة {0}؟ — الساكن هيرجع يقدر يدخل.</value>
   </data>
 </root>

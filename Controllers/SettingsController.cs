@@ -312,7 +312,7 @@ public class SettingsController : Controller
         // ============================================================
         var currentLang = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
         var newLang = string.IsNullOrWhiteSpace(model.Language) ? "ar" : model.Language.ToLower();
-        if (newLang != "ar" && newLang != "en") newLang = "ar";
+        if (newLang != "ar" && newLang != "en" && newLang != "fr" && newLang != "de") newLang = "ar";
 
         if (newLang != currentLang)
         {

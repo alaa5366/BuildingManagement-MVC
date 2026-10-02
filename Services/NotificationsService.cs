@@ -137,4 +137,31 @@ public class NotificationsService
 
         Push(building, "resident", apt.Id, "apartment_closed", "🔒", "تم إغلاق شقتك", body);
     }
+    // ✅ تعطيل الشقة
+    public void NotifyResidentApartmentDisabled(
+        Building building,
+        Apartment apt,
+        string? reason)
+    {
+        var body = $"تم تعطيل شقتك رقم {apt.Number} في {building.Name}";
+        if (!string.IsNullOrWhiteSpace(reason))
+            body += $" — السبب: {reason}";
+        body += ". مش هتقدر تدخل التطبيق دلوقتي. كلم الإدارة.";
+
+        Push(building, "resident", apt.Id, "apartment_disabled", "🚫", "تم تعطيل شقتك", body);
+    }
+
+    // ✅ تفعيل الشقة
+    public void NotifyResidentApartmentEnabled(
+        Building building,
+        Apartment apt,
+        string? reason)
+    {
+        var body = $"تم إعادة تفعيل شقتك رقم {apt.Number} في {building.Name}";
+        if (!string.IsNullOrWhiteSpace(reason))
+            body += $" — {reason}";
+        body += ". أهلاً بيك تاني!";
+
+        Push(building, "resident", apt.Id, "apartment_enabled", "✅", "تم إعادة تفعيل شقتك", body);
+    }
 }

@@ -1,7 +1,13 @@
-﻿/**
-const i18nT = (k, ...a) => String((window.I18N && window.I18N[k]) ?? k).replace(/\{(\d+)\}/g, (m, i) => (a[i] ?? m));
- * Apartment Details Modal — Phase 24.3
- */
+﻿// ============================================================
+// i18n Helper
+// ============================================================
+const i18nT = (k, ...a) =>
+    String((window.I18N && window.I18N[k]) ?? k)
+        .replace(/\{(\d+)\}/g, (m, i) => (a[i] ?? m));
+
+// ============================================================
+// Apartment Details Modal — Phase 24.3
+// ============================================================
 
 let apartmentDetailsModal = null;
 
@@ -166,6 +172,60 @@ function closeApartment(aptId, aptNumber) {
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = '/AdminApts/CloseApartment';
+    form.innerHTML = `
+        <input type="hidden" name="aptId" value="${aptId}" />
+        <input type="hidden" name="reason" value="${reason || ''}" />
+        <input type="hidden" name="__RequestVerificationToken" value="${getAntiForgeryToken()}" />
+    `;
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// ============================================================
+// ✅ تعطيل شقة
+// ============================================================
+function disableApartment(aptId, aptNumber) {
+    const reason = prompt(
+        i18nT('Js_PromptDisableApt', aptNumber),
+        ''
+    );
+
+    if (reason === null) return;  // المستخدم ضغط Cancel
+
+    if (!confirm(i18nT('Js_ConfirmDisableApt', aptNumber))) {
+        return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/AdminApts/DisableApartment';
+    form.innerHTML = `
+        <input type="hidden" name="aptId" value="${aptId}" />
+        <input type="hidden" name="reason" value="${reason || ''}" />
+        <input type="hidden" name="__RequestVerificationToken" value="${getAntiForgeryToken()}" />
+    `;
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// ============================================================
+// ✅ تفعيل شقة
+// ============================================================
+function enableApartment(aptId, aptNumber) {
+    const reason = prompt(
+        i18nT('Js_PromptEnableApt', aptNumber),
+        ''
+    );
+
+    if (reason === null) return;
+
+    if (!confirm(i18nT('Js_ConfirmEnableApt', aptNumber))) {
+        return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/AdminApts/EnableApartment';
     form.innerHTML = `
         <input type="hidden" name="aptId" value="${aptId}" />
         <input type="hidden" name="reason" value="${reason || ''}" />

@@ -117,7 +117,7 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-      <data name="App_Name" xml:space="preserve">
+  <data name="App_Name" xml:space="preserve">
     <value>Building Management System</value>
   </data>
   <data name="App_ShortName" xml:space="preserve">
@@ -3991,5 +3991,47 @@ Example: resident is traveling - empty apartment - maintenance</value>
   </data>
   <data name="Js_WrongSecret" xml:space="preserve">
     <value>❌ Incorrect password</value>
+  </data>
+  <data name="Disable_Apartment" xml:space="preserve">
+    <value>Disable apartment</value>
+  </data>
+  <data name="Enable_Apartment" xml:space="preserve">
+    <value>Enable apartment</value>
+  </data>
+  <data name="Apartment_Is_Disabled" xml:space="preserve">
+    <value>Apartment is disabled</value>
+  </data>
+  <data name="Disable_Apartment_Means_It_Will" xml:space="preserve">
+    <value>Disabling the apartment means the resident cannot log in, but expenses and invoices are still calculated.</value>
+  </data>
+  <data name="Reason_For_Disabling" xml:space="preserve">
+    <value>Reason for disabling</value>
+  </data>
+  <data name="Apartment_N_Was_Disabled" xml:space="preserve">
+    <value>Apartment {0} was disabled</value>
+  </data>
+  <data name="Apartment_N_Was_Enabled" xml:space="preserve">
+    <value>Apartment {0} was enabled</value>
+  </data>
+  <data name="The_Apartment_Is_Already_Disabled" xml:space="preserve">
+    <value>The apartment is already disabled</value>
+  </data>
+  <data name="The_Apartment_Is_Already_Enabled" xml:space="preserve">
+    <value>The apartment is already enabled</value>
+  </data>
+  <data name="Disable_Apartment_Desc" xml:space="preserve">
+    <value>Disable/enable the apartment (resident cannot log in, but expenses and invoices are still calculated)</value>
+  </data>
+  <data name="Js_PromptDisableApt" xml:space="preserve">
+    <value>🚫 Disable apartment {0} — Enter the reason (optional):</value>
+  </data>
+  <data name="Js_ConfirmDisableApt" xml:space="preserve">
+    <value>⚠️ Confirm disabling apartment {0}? — The resident will not be able to log in.</value>
+  </data>
+  <data name="Js_PromptEnableApt" xml:space="preserve">
+    <value>✅ Enable apartment {0} — Enter the reason (optional):</value>
+  </data>
+  <data name="Js_ConfirmEnableApt" xml:space="preserve">
+    <value>⚠️ Confirm enabling apartment {0}? — The resident will be able to log in again.</value>
   </data>
 </root>

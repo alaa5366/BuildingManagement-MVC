@@ -7,6 +7,8 @@ public static class AdminPermissions
     public const string ManageBuildings = "buildings.manage";
     public const string ManageAdmins = "admins.manage";
     public const string ManageResidents = "residents.manage";
+    public const string DisableApartment = "apartment.disable"; // ✅ جديد
+
 
     // مالية
     public const string ManageWallet = "wallet.manage";
@@ -39,7 +41,7 @@ public static class AdminPermissions
 
     public static readonly List<string> All = new()
     {
-        ManageBuildings, ManageAdmins, ManageResidents,
+        ManageBuildings, ManageAdmins, ManageResidents, DisableApartment,
         ManageWallet, ManageExpenses, ManageRevenues, ManageCategories, ViewReports,
         ManagePolls, ManageMaintenance, SendNotifications, UseWhatsApp,
         ViewAuditLogAll, ViewAuditLogBuilding, ViewAuditLogOwn,
@@ -49,7 +51,7 @@ public static class AdminPermissions
 
     public static readonly List<string> TemplateAdminFull = new()
     {
-        ManageResidents, ManageWallet, ManageExpenses, ManageRevenues,
+        ManageResidents,  DisableApartment, ManageWallet, ManageExpenses, ManageRevenues,
         ManageCategories, ViewReports, ManagePolls, ManageMaintenance,
         SendNotifications, UseWhatsApp,
         ViewAuditLogBuilding, ManageSettingsBuilding
@@ -97,6 +99,7 @@ public static class AdminPermissions
     public static string LabelAr(string key) => key switch
     {
         ManageBuildings => Loc.T("Manage_Buildings"),
+        DisableApartment => Loc.T("Disable_Apartment"),
         ManageAdmins => Loc.T("Manage_Admins"),
         ManageResidents => Loc.T("Manage_Residents"),
         ManageWallet => Loc.T("Manage_Wallets"),
@@ -134,6 +137,7 @@ public static class AdminPermissions
     public static PermissionCategory CategoryOf(string key) => key switch
     {
         ManageBuildings or ManageAdmins or ManageResidents => PermissionCategory.Admin,
+        ManageBuildings or ManageAdmins or ManageResidents or DisableApartment => PermissionCategory.Admin,
         ManageWallet or ManageExpenses or ManageRevenues or ManageCategories or ViewReports => PermissionCategory.Financial,
         ManagePolls or ManageMaintenance or SendNotifications or UseWhatsApp => PermissionCategory.Services,
         ViewAuditLogAll or ViewAuditLogBuilding or ViewAuditLogOwn => PermissionCategory.System,
@@ -158,6 +162,7 @@ public static class AdminPermissions
     {
         ManageBuildings => Loc.T("Create_Edit_Delete_Buildings_Manage_The"),
         ManageAdmins => Loc.T("Add_Edit_Disable_Admins_Manage_Permissions"),
+        DisableApartment => Loc.T("Disable_Apartment_Desc"),
         ManageResidents => Loc.T("Add_Edit_Disable_Residents_Reset_PINs"),
 
         ManageWallet => Loc.T("View_Balances_Confirm_Cancel_Payments_Manual"),
@@ -194,6 +199,8 @@ public static class AdminPermissions
     {
         ManageBuildings => ("BuildingsService", "BuildingsController",
             "Index, Create, Details, QrCodes, QrCodesPdf, Delete, AddFloor, AddApartment, FixFirebaseAccounts, RecreateFirebaseAccounts, SyncFirebasePasswords"),
+
+        DisableApartment => ("AdminAptsController", "AdminAptsController", "DisableApartment, EnableApartment"),
 
         ManageAdmins => ("AdminManagementService", "AdminsController, PermissionsController",
             "Index, Create, Edit, ChangePin, Deactivate, Activate, Delete, Permissions.Index, Permissions.Toggle"),

@@ -96,6 +96,8 @@ public class BuildingMapService
             PendingDepositsCount = pending
         };
 
+        // ✅ Disabled flag
+        card.Apt = apt;
         // Presence
         if (presenceMap.TryGetValue(apt.Id, out var presence))
         {
@@ -106,7 +108,6 @@ public class BuildingMapService
 
         // الحالة (اللون)
         DetermineStatus(card);
-
         return card;
     }
 
@@ -115,6 +116,16 @@ public class BuildingMapService
     // ============================================================
     private static void DetermineStatus(ApartmentCardVm card)
     {
+        // 0. معطلة → بنفسجي
+        if (card.Apt.Disabled)
+        {
+            card.Status = "disabled";
+            card.StatusColor = "#8E6BB2";
+            card.StatusIcon = "🚫";
+            card.StatusLabel = Loc.T("Disabled_3");
+            return;
+        }
+
         // 1. مغلقة → أزرق
         if (card.Apt.Closed)
         {
@@ -145,7 +156,7 @@ public class BuildingMapService
             return;
         }
 
-        // 4. آخر ظهور قريب (< 24 ساعة) → أصفر
+        // 4. آخر ظهور قريب → أصفر
         if (card.IsRecent)
         {
             card.Status = "recent";
@@ -182,6 +193,8 @@ public class BuildingMapService
             FloorLabel = floor?.Label ?? "—",
             FloorOrder = floor?.Order ?? 0,
             IsClosed = apt.Closed,
+            IsDisabled = apt.Disabled,
+            DisabledReason = apt.DisabledReason ?? "",
             AptLabel = apt.Label,
             Notes = apt.Notes,
 
@@ -245,6 +258,13 @@ public class BuildingMapService
 
     private static void DetermineStatusForDetails(ApartmentDetailsVm vm)
     {
+        // 0. معطلة → بنفسجي
+        if (vm.IsDisabled)
+        {
+            vm.StatusIcon = "🚫"; vm.StatusLabel = Loc.T("Disabled_3");
+            vm.StatusColor = "#8E6BB2"; return;
+        }
+
         if (vm.IsClosed)
         {
             vm.StatusIcon = "🔵"; vm.StatusLabel = Loc.T("Closed");

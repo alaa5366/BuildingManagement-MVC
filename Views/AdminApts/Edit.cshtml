@@ -1,0 +1,266 @@
+﻿@model BuildingManagementMvc.Models.Apartment
+@{
+    ViewData["Title"] = Loc.T("Edit_Apartment");
+    var building = ViewBag.Building as BuildingManagementMvc.Models.Building;
+    var floor = ViewBag.Floor as BuildingManagementMvc.Models.Floor;
+    var statusColor = Model.Disabled ? "#8E6BB2" : (Model.Closed ? "#5B9BD5" : "#2E7D5B");
+    var statusLabel = Model.Disabled ? Loc.T("Disabled_3") : (Model.Closed ? Loc.T("Closed") : Loc.T("Online"));
+}
+
+<link rel="stylesheet" href="~/css/building-map.css" asp-append-version="true" />
+
+<div class="container" style="max-width: 900px;">
+
+    @* ===== Header ===== *@
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">✏️ @Loc.T("Edit_Apartment")</h2>
+            <div class="text-muted small">
+                🏢 @building?.Name — @Loc.T("Apartment_N_2", Model.Number)
+                @if (floor != null)
+                {
+                    <text> — @Loc.T("N_Floor_N", floor.Label, floor.Order)</text>
+                }
+            </div>
+        </div>
+        <a asp-controller="AdminHome" asp-action="Index" class="btn btn-outline-secondary">
+            ← @Loc.T("Back")
+        </a>
+    </div>
+
+    @* ===== Status Badge ===== *@
+    <div class="alert" style="background: @statusColor; color: white; border: none;">
+        <strong>@statusLabel</strong>
+        @if (Model.Disabled && !string.IsNullOrWhiteSpace(Model.DisabledReason))
+        {
+            <text> — @Loc.T("Reason") @Model.DisabledReason</text>
+        }
+    </div>
+
+    @* ===== Form ===== *@
+    <form method="post" asp-action="Edit" asp-route-aptId="@Model.Id">
+        @Html.AntiForgeryToken()
+
+        <div class="card mb-3 border-0 shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <strong>👤 @Loc.T("Resident")</strong>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">@Loc.T("Name") <span class="text-danger">*</span></label>
+                        <input name="owner" value="@Model.Owner" required
+                               maxlength="100" class="form-control form-control-lg" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">@Loc.T("Apartment_Name_Optional")</label>
+                        <input name="label" value="@Model.Label" maxlength="60"
+                               class="form-control form-control-lg" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">@Loc.T("Mobile") <span class="text-danger">*</span></label>
+                        <input name="phone" value="@Model.Phone" required
+                               dir="ltr" class="form-control form-control-lg" />
+                        <div class="form-text text-warning small">
+                            @Loc.T("Changing_It_Automatically_Updates_The_Firebase")
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">@Loc.T("Email_2")</label>
+                        <input name="email" value="@Model.Email" type="email"
+                               dir="ltr" class="form-control form-control-lg" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3 border-0 shadow-sm">
+            <div class="card-header bg-danger text-white">
+                <strong>🔐 PIN</strong>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">PIN <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input name="pin" id="editPin" value="@Model.Pin"
+                                   type="password" maxlength="4" inputmode="numeric"
+                                   pattern="\d*" required class="form-control form-control-lg" />
+                            <button type="button" class="btn btn-outline-secondary toggle-pin"
+                                    data-target="editPin" tabindex="-1">
+                                👁
+                            </button>
+                        </div>
+                        <div class="form-text">@Loc.T("Exactly_4_Digits")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3 border-0 shadow-sm">
+            <div class="card-header bg-success text-white">
+                <strong>💰 @Loc.T("Finance")</strong>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">@Loc.T("Monthly_Fee_N_EGP", "")</label>
+                        <input name="monthlyFee" value="@Model.MonthlyFee"
+                               type="number" step="0.01" min="0"
+                               class="form-control form-control-lg" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3 border-0 shadow-sm">
+            <div class="card-header bg-secondary text-white">
+                <strong>📝 @Loc.T("Note")</strong>
+            </div>
+            <div class="card-body">
+                <textarea name="notes" rows="3" maxlength="500"
+                          class="form-control">@Model.Notes</textarea>
+            </div>
+        </div>
+
+        @* ===== Status Actions ===== *@
+        <div class="card mb-3 border-0 shadow-sm">
+            <div class="card-header bg-warning">
+                <strong>⚙️ @Loc.T("Quick_Actions")</strong>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+
+                    @if (Model.Closed)
+                    {
+                        <button type="button" class="btn btn-success"
+                                onclick="openApartment('@Model.Id', '@Model.Number')">
+                            🔓 @Loc.T("Open_Apartment")
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-outline-danger"
+                                onclick="closeApartment('@Model.Id', '@Model.Number')">
+                            🔒 @Loc.T("Close_Apartment")
+                        </button>
+                    }
+
+                    @if (Model.Disabled)
+                    {
+                        <button type="button" class="btn btn-success"
+                                onclick="enableApartment('@Model.Id', '@Model.Number')">
+                            ✅ @Loc.T("Enable_Apartment")
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-outline-secondary"
+                                onclick="disableApartment('@Model.Id', '@Model.Number')">
+                            🚫 @Loc.T("Disable_Apartment")
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @* ===== Save ===== *@
+        <div class="d-flex gap-2 justify-content-end mb-5">
+            <a asp-controller="AdminHome" asp-action="Index" class="btn btn-outline-secondary btn-lg">
+                @Loc.T("Cancel")
+            </a>
+            <button type="submit" class="btn btn-primary btn-lg px-4">
+                💾 @Loc.T("Save_Changes")
+            </button>
+        </div>
+
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        // 👁 إظهار/إخفاء PIN
+        document.querySelectorAll('.toggle-pin').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const input = document.getElementById(btn.dataset.target);
+                if (!input) return;
+                input.type = input.type === 'password' ? 'text' : 'password';
+                btn.textContent = input.type === 'password' ? '👁' : '🙈';
+            });
+        });
+
+        // 🔢 امنع غير الأرقام في حقل PIN
+        document.getElementById('editPin')?.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4);
+        });
+
+        // ============================================================
+        // ✅ فتح/إغلاق/تعطيل/تفعيل
+        // ============================================================
+        function getAntiForgeryToken() {
+            const el = document.querySelector('input[name="__RequestVerificationToken"]');
+            return el ? el.value : '';
+        }
+
+        function openApartment(aptId, aptNumber) {
+            if (!confirm('🔓 ' + aptNumber)) return;
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/AdminApts/OpenApartment';
+            form.innerHTML = `
+                <input type="hidden" name="aptId" value="${aptId}" />
+                <input type="hidden" name="__RequestVerificationToken" value="${getAntiForgeryToken()}" />
+            `;
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        function closeApartment(aptId, aptNumber) {
+            const reason = prompt('🔒 ' + aptNumber, '');
+            if (reason === null) return;
+            if (!confirm('⚠️ ' + aptNumber)) return;
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/AdminApts/CloseApartment';
+            form.innerHTML = `
+                <input type="hidden" name="aptId" value="${aptId}" />
+                <input type="hidden" name="reason" value="${reason || ''}" />
+                <input type="hidden" name="__RequestVerificationToken" value="${getAntiForgeryToken()}" />
+            `;
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        function disableApartment(aptId, aptNumber) {
+            const reason = prompt('🚫 ' + aptNumber, '');
+            if (reason === null) return;
+            if (!confirm('⚠️ ' + aptNumber)) return;
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/AdminApts/DisableApartment';
+            form.innerHTML = `
+                <input type="hidden" name="aptId" value="${aptId}" />
+                <input type="hidden" name="reason" value="${reason || ''}" />
+                <input type="hidden" name="__RequestVerificationToken" value="${getAntiForgeryToken()}" />
+            `;
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        function enableApartment(aptId, aptNumber) {
+            const reason = prompt('✅ ' + aptNumber, '');
+            if (reason === null) return;
+            if (!confirm('⚠️ ' + aptNumber)) return;
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/AdminApts/EnableApartment';
+            form.innerHTML = `
+                <input type="hidden" name="aptId" value="${aptId}" />
+                <input type="hidden" name="reason" value="${reason || ''}" />
+                <input type="hidden" name="__RequestVerificationToken" value="${getAntiForgeryToken()}" />
+            `;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    </script>
+}

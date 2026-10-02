@@ -90,6 +90,7 @@
         <span class="legend-item"><span class="legend-dot" style="background:#999;"></span> @Loc.T("Offline")</span>
         <span class="legend-item"><span class="legend-dot" style="background:#A0432A;"></span> @Loc.T("Negative_Balance")</span>
         <span class="legend-item"><span class="legend-dot" style="background:#5B9BD5;"></span> @Loc.T("Closed")</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#8E6BB2;"></span> @Loc.T("Disabled_3")</span>
     </div>
 
     @* ===== Quick Actions ===== *@
@@ -111,7 +112,22 @@
         </div>
     </div>
     @section Scripts {
-        <script>window.I18N = Object.assign(window.I18N || {}, @Html.Raw(Loc.JsonDict("Js_AptDetails_Title","Js_Loading","Js_Close","Js_LoadFailed","Js_ConfirmImpersonate","Js_ConfirmOpenApt","Js_PromptCloseApt","Js_ConfirmCloseApt")));</script>
-    <script src="~/js/apartment-details.js" asp-append-version="true"></script>
+        <script>
+                window.I18N = Object.assign(window.I18N || {}, @Html.Raw(Loc.JsonDict(
+                                "Js_AptDetails_Title",
+                                "Js_Loading",
+                                "Js_Close",
+                                "Js_LoadFailed",
+                                "Js_ConfirmImpersonate",
+                                "Js_ConfirmOpenApt",
+                                "Js_PromptCloseApt",
+                                "Js_ConfirmCloseApt",
+                                "Js_PromptDisableApt",
+                                "Js_ConfirmDisableApt",
+                                "Js_PromptEnableApt",
+                                "Js_ConfirmEnableApt"
+                        )));
+        </script>
+        <script src="~/js/apartment-details.js" asp-append-version="true"></script>
     }
 </div>

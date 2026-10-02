@@ -122,7 +122,7 @@
                     <span>@Loc.T("PDF_Invoice")</span>
                 </a>
 
-                <a asp-controller="AdminApts" asp-action="Index"
+                <a asp-controller="AdminApts" asp-action="Edit" asp-route-aptId="@Model.AptId"
                    class="qa-btn qa-edit">
                     <span class="qa-icon">✏️</span>
                     <span>@Loc.T("Edit_Apartment")</span>
@@ -158,32 +158,61 @@
 
     </div>
     @* ===== Status Actions ===== *@
-    @if (Model.IsClosed)
+
+    @* ✅ Disabled ======= *@
+    @if (Model.IsDisabled)
     {
         <div class="details-section">
-            <h6 class="details-section-title">@Loc.T("Apartment_Is_Closed")</h6>
-            <div class="alert alert-info small mb-3">
-                @Loc.T("Closing_Date")<strong>@Model.CloseDateText</strong>
-                <br />
-                @Loc.T("When_You_Open_The_Apartment_It")
+            <h6 class="details-section-title">🚫 @Loc.T("Disabled_3")</h6>
+            <div class="alert alert-warning small mb-3">
+                @if (!string.IsNullOrWhiteSpace(Model.DisabledReason))
+                {
+                    <strong>@Loc.T("Reason")</strong> 
+                    @Model.DisabledReason
+                    <br />
+                }
+                @Loc.T("Disable_Apartment_Means_It_Will")
             </div>
             <button type="button" class="btn btn-success btn-lg w-100"
-                    onclick="openApartment('@Model.AptId', '@Model.AptNumber')">
-                @Loc.T("Open_Apartment")
+                    onclick="enableApartment('@Model.AptId', '@Model.AptNumber')">
+                ✅ @Loc.T("Enable_Apartment")
             </button>
         </div>
     }
     else
     {
-        <div class="details-section">
-            <h6 class="details-section-title">@Loc.T("Close_Apartment")</h6>
-            <div class="alert alert-warning small mb-3">
-                @Loc.T("Closing_The_Apartment_Means_It_Will")
+        @* ✅ Closed ======= *@
+        if (Model.IsClosed)
+        {
+            <div class="details-section">
+                <h6 class="details-section-title">@Loc.T("Apartment_Is_Closed")</h6>
+                <div class="alert alert-info small mb-3">
+                    @Loc.T("Closing_Date")<strong>@Model.CloseDateText</strong>
+                    <br />
+                    @Loc.T("When_You_Open_The_Apartment_It")
+                </div>
+                <button type="button" class="btn btn-success btn-lg w-100"
+                        onclick="openApartment('@Model.AptId', '@Model.AptNumber')">
+                    @Loc.T("Open_Apartment")
+                </button>
             </div>
-            <button type="button" class="btn btn-outline-danger w-100"
-                    onclick="closeApartment('@Model.AptId', '@Model.AptNumber')">
-                @Loc.T("Close_Apartment")
-            </button>
-        </div>
+        }
+        else
+        {
+            <div class="details-section">
+                <h6 class="details-section-title">@Loc.T("Close_Apartment")</h6>
+                <div class="alert alert-warning small mb-3">
+                    @Loc.T("Closing_The_Apartment_Means_It_Will")
+                </div>
+                <button type="button" class="btn btn-outline-danger w-100 mb-2"
+                        onclick="closeApartment('@Model.AptId', '@Model.AptNumber')">
+                    @Loc.T("Close_Apartment")
+                </button>
+
+                <button type="button" class="btn btn-outline-secondary w-100"
+                        onclick="disableApartment('@Model.AptId', '@Model.AptNumber')">
+                    🚫 @Loc.T("Disable_Apartment")
+                </button>
+            </div>
+        }
     }
-</div>

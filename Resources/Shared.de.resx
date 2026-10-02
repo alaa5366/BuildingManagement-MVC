@@ -3992,4 +3992,46 @@ Beispiel: Bewohner ist auf Reisen - leere Wohnung - Wartung</value>
   <data name="Js_WrongSecret" xml:space="preserve">
     <value>❌ Falsches Passwort</value>
   </data>
+  <data name="Disable_Apartment" xml:space="preserve">
+    <value>Wohnung deaktivieren</value>
+  </data>
+  <data name="Enable_Apartment" xml:space="preserve">
+    <value>Wohnung aktivieren</value>
+  </data>
+  <data name="Apartment_Is_Disabled" xml:space="preserve">
+    <value>Die Wohnung ist deaktiviert</value>
+  </data>
+  <data name="Disable_Apartment_Means_It_Will" xml:space="preserve">
+    <value>Das Deaktivieren der Wohnung bedeutet, dass der Bewohner sich nicht anmelden kann, aber Ausgaben und Rechnungen werden weiterhin berechnet.</value>
+  </data>
+  <data name="Reason_For_Disabling" xml:space="preserve">
+    <value>Grund für die Deaktivierung</value>
+  </data>
+  <data name="Apartment_N_Was_Disabled" xml:space="preserve">
+    <value>Wohnung {0} wurde deaktiviert</value>
+  </data>
+  <data name="Apartment_N_Was_Enabled" xml:space="preserve">
+    <value>Wohnung {0} wurde aktiviert</value>
+  </data>
+  <data name="The_Apartment_Is_Already_Disabled" xml:space="preserve">
+    <value>Die Wohnung ist bereits deaktiviert</value>
+  </data>
+  <data name="The_Apartment_Is_Already_Enabled" xml:space="preserve">
+    <value>Die Wohnung ist bereits aktiviert</value>
+  </data>
+  <data name="Disable_Apartment_Desc" xml:space="preserve">
+    <value>Wohnung deaktivieren/aktivieren (Bewohner kann sich nicht anmelden, aber Ausgaben und Rechnungen werden weiterhin berechnet)</value>
+  </data>
+  <data name="Js_PromptDisableApt" xml:space="preserve">
+    <value>🚫 Wohnung {0} deaktivieren — Grund eingeben (optional):</value>
+  </data>
+  <data name="Js_ConfirmDisableApt" xml:space="preserve">
+    <value>⚠️ Deaktivierung von Wohnung {0} bestätigen? — Der Bewohner kann sich nicht anmelden.</value>
+  </data>
+  <data name="Js_PromptEnableApt" xml:space="preserve">
+    <value>✅ Wohnung {0} aktivieren — Grund eingeben (optional):</value>
+  </data>
+  <data name="Js_ConfirmEnableApt" xml:space="preserve">
+    <value>⚠️ Aktivierung von Wohnung {0} bestätigen? — Der Bewohner kann sich wieder anmelden.</value>
+  </data>
 </root>

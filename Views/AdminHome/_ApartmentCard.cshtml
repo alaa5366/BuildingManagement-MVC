@@ -4,7 +4,7 @@
 }
 
 <div class="apt-card"
-     style="border-color: @Model.StatusColor;"
+     style="border-color: @Model.StatusColor; @(Model.IsDisabled ? "opacity: 0.75; filter: grayscale(0.3);" : "")"
      data-apt-id="@apt.Id"
      data-bs-toggle="tooltip"
      data-bs-placement="top"
