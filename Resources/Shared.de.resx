@@ -4034,4 +4034,50 @@ Beispiel: Bewohner ist auf Reisen - leere Wohnung - Wartung</value>
   <data name="Js_ConfirmEnableApt" xml:space="preserve">
     <value>⚠️ Aktivierung von Wohnung {0} bestätigen? — Der Bewohner kann sich wieder anmelden.</value>
   </data>
+  <data name="CarryOver_Migration_Title" xml:space="preserve">
+    <value>Übertragsmigration</value>
+  </data>
+  <data name="CarryOver_Migration_Desc" xml:space="preserve">
+    <value>Übertragssalden für alle vorhandenen Monate aktualisieren</value>
+  </data>
+  <data name="CarryOver_Migration_Button" xml:space="preserve">
+    <value>Migration jetzt ausführen</value>
+  </data>
+  <data name="CarryOver_Migration_Confirm" xml:space="preserve">
+    <value>⚠️ Sind Sie sicher, dass Sie die Übertragsmigration ausführen möchten?
+
+Dadurch werden die Übertragssalden für alle vorhandenen Monate aktualisiert.
+
+Dieser Vorgang kann einige Sekunden dauern.</value>
+  </data>
+  <data name="CarryOver_Migration_Warn_1" xml:space="preserve">
+    <value>Aktualisiert nur die Übertragssalden für vorhandene Monate (Monate mit vorhandenem carryOver werden nicht berührt)</value>
+  </data>
+  <data name="CarryOver_Migration_Warn_2" xml:space="preserve">
+    <value>Dieser Vorgang ist sicher und idempotent (kann mehrmals ausgeführt werden)</value>
+  </data>
+  <data name="CarryOver_Migration_Warn_3" xml:space="preserve">
+    <value>Erstellen Sie vor dem Ausführen ein Backup für große Datenbanken</value>
+  </data>
+  <data name="Migration_Success_N_Buildings_N_Months_N_Apts" xml:space="preserve">
+    <value>✅ Migration abgeschlossen: {0} Gebäude, {1} Monate, {2} Wohnungen aktualisiert</value>
+  </data>
+  <data name="Migration_Failed" xml:space="preserve">
+    <value>❌ Migration fehlgeschlagen</value>
+  </data>
+  <data name="Current_Month_Only" xml:space="preserve">
+  <value>Nur aktueller Monat</value>
+</data>
+  <data name="All_Months" xml:space="preserve">
+  <value>Alle Monate</value>
+</data>
+  <data name="Selected" xml:space="preserve">
+  <value>ausgewählt</value>
+</data>
+<data name="Deposit_Confirmed_Successfully" xml:space="preserve">
+  <value>✅ Zahlung erfolgreich bestätigt</value>
+</data>
+<data name="Deposit_Cancelled_Successfully" xml:space="preserve">
+  <value>✅ Zahlung erfolgreich storniert</value>
+</data>
 </root>

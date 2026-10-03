@@ -8,16 +8,15 @@ public class InvoiceData
     public Building Building { get; set; } = null!;
     public Apartment Apt { get; set; } = null!;
     public Floor? Floor { get; set; }
-
     public double Balance { get; set; }
     public double PreviousBalance { get; set; }
     public double MonthDeposits { get; set; }
     public double MonthExpensesShare { get; set; }
     public double MonthRevenuesShare { get; set; }
-
+    // ✅ جديد
+    public double MonthFee { get; set; }
     public List<CategoryShare> CategoryShares { get; set; } = new();
     public PaymentInfo Payment { get; set; } = new();
-
     public string MonthKey { get; set; } = "";
     public string MonthLabelText { get; set; } = "";
     public string QrPayload { get; set; } = "";

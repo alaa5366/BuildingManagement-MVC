@@ -149,4 +149,66 @@ public class ImpersonationController : Controller
 
         return RedirectToAction("Index", "AdminHome");
     }
+    // ============================================================
+    // ✅ الدخول على محفظة الساكن مباشرة (Impersonation)
+    // ============================================================
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Roles = "admin,superadmin")]
+    public async Task<IActionResult> EnterResidentWallet(string aptId)
+    {
+        var buildingId = User.FindFirstValue("buildingId");
+        if (string.IsNullOrEmpty(buildingId))
+            return NotFound();
+
+        var building = await _buildings.GetByIdAsync(buildingId);
+        if (building == null) return NotFound();
+
+        var apt = building.Apartments.FirstOrDefault(a => a.Id == aptId);
+        if (apt == null) return NotFound();
+
+        // ✅ احفظ بيانات الأدمن (backup) للرجوع
+        var backup = new AdminBackupData
+        {
+            Uid = AdminUid,
+            Name = AdminName,
+            Email = User.FindFirst(ClaimTypes.Email)?.Value ?? "",
+            Role = User.FindFirst(ClaimTypes.Role)?.Value ?? "admin",
+            BuildingIds = User.FindAll("buildingId").Select(c => c.Value).ToList(),
+            Permissions = User.FindAll("perm").Select(c => c.Value).ToList(),
+            BuildingId = buildingId,
+            StartedAt = DateTime.UtcNow.ToString("o")
+        };
+        _impersonation.SaveBackup(HttpContext, backup);
+
+        // ✅ Claims للساكن
+        var claims = new List<Claim>
+    {
+        new(ClaimTypes.NameIdentifier, "imp-" + apt.Id),
+        new(ClaimTypes.Name, string.IsNullOrWhiteSpace(apt.Owner) ? Loc.T("Apartment_N", apt.Number) : apt.Owner),
+        new(ClaimTypes.Role, "resident"),
+        new("buildingId", building.Id),
+        new("apartmentId", apt.Id),
+        new("apartmentNumber", apt.Number.ToString()),   // ✅ جديد
+        new("impersonated", "true"),
+        new("impersonatedBy", AdminUid)
+    };
+
+        foreach (var p in AdminPermissions.ResidentBasic)
+            claims.Add(new Claim("perm", p));
+
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        await HttpContext.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            new ClaimsPrincipal(identity));
+
+        // ✅ Audit
+        await _impersonation.LogEnterAsync(building, apt, AdminUid, AdminName);
+
+        _logger.LogWarning("[Impersonation] Admin {Admin} → Apt {Apt} (Wallet)", AdminUid, apt.Number);
+
+        return RedirectToAction("Index", "ResidentWallet");
+    }
 }

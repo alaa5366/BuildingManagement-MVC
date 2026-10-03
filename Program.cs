@@ -206,14 +206,10 @@ app.UseForwardedHeaders();
 
 // ✅ سجّل خطوط Cairo
 var fontsDir = Path.Combine(app.Environment.WebRootPath, "fonts");
-Console.WriteLine("====================================================");
-Console.WriteLine($"[Startup] Fonts dir: {fontsDir}");
-Console.WriteLine($"[Startup] Dir exists: {Directory.Exists(fontsDir)}");
 
 if (Directory.Exists(fontsDir))
 {
     var fontFiles = Directory.GetFiles(fontsDir, "*.ttf");
-    Console.WriteLine($"[Startup] Found {fontFiles.Length} font files");
 
     foreach (var fontFile in fontFiles)
     {
@@ -221,7 +217,7 @@ if (Directory.Exists(fontsDir))
         {
             using var stream = File.OpenRead(fontFile);
             FontManager.RegisterFont(stream);
-            Console.WriteLine($"[Startup] Registered: {Path.GetFileName(fontFile)}");
+
         }
         catch (Exception ex)
         {
@@ -233,7 +229,6 @@ else
 {
     Console.WriteLine("[Startup] ERROR: Fonts directory not found!");
 }
-Console.WriteLine("====================================================");
 
 if (!app.Environment.IsDevelopment())
 {

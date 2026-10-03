@@ -105,13 +105,9 @@ public class UnifiedAuthService
         {
             foreach (var apt in building.Apartments)
             {
-                Console.WriteLine($"[UnifiedAuth] Checking apt {apt.Number}, phone={apt.Phone}, pin={apt.Pin}");
 
                 if (AuthHelpers.NormalizePhone(apt.Phone) != phone) continue;
                 if (apt.Pin != credential) continue;
-
-                Console.WriteLine($"[UnifiedAuth] Matched apt {apt.Number}!");
-
                 if (apt.Disabled) continue;
                 //if (apt.Closed) continue;
 
@@ -122,9 +118,6 @@ public class UnifiedAuthService
                 var email = AuthHelpers.ResidentInternalEmail(building.Id, floor.Order, apt.Number);
                 var password = AuthHelpers.ResidentPassword(building.Id, apt.Number, credential);
                 var signIn = await _fbAuth.SignInWithPasswordAsync(email, password);
-
-                Console.WriteLine($"[UnifiedAuth] Auth result for apt {apt.Number}: {signIn.Success}, error: {signIn.Error}");
-
                 if (!signIn.Success) continue;
 
                 contexts.Add(new UserContext

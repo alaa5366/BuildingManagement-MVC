@@ -34,11 +34,6 @@ public class ExcelImportService
             var issuedBy = metaSheet.Cell(6, 2).Value.ToString();
             var signature = metaSheet.Cell(7, 2).Value.ToString();
 
-            Console.WriteLine($"[ExcelImport] GeneratedAt: '{generatedAtStr}'");
-            Console.WriteLine($"[ExcelImport] ExpiresAt: '{expiresAtStr}'");
-            Console.WriteLine($"[ExcelImport] BuildingId: '{buildingId}'");
-            Console.WriteLine($"[ExcelImport] Signature from file: '{signature}'");
-
             // 2. تحقق من الـ TemplateId
             if (templateId != TemplateId)
                 return ImportValidationResult.Fail(Loc.T("The_Template_Version_Is_Outdated_Download"));
@@ -56,7 +51,6 @@ public class ExcelImportService
 
             // 5. تحقق من الـ Signature (باستخدام النصوص الخام)
             var expectedSignature = _templateService.ComputeSignatureRaw(generatedAtStr, expiresAtStr, buildingId);
-            Console.WriteLine($"[ExcelImport] Expected Signature: '{expectedSignature}'");
 
             if (signature != expectedSignature)
                 return ImportValidationResult.Fail(Loc.T("The_File_Was_Modified_Or_Is"));
@@ -71,12 +65,6 @@ public class ExcelImportService
 
             // 7. استخرج البيانات
             var data = ExtractData(workbook);
-
-            Console.WriteLine($"[ExcelImport] Name: '{data.Name}'");
-            Console.WriteLine($"[ExcelImport] BuildingNumber: '{data.BuildingNumber}'");
-            Console.WriteLine($"[ExcelImport] AdminPin: '{data.AdminPin}'");
-            Console.WriteLine($"[ExcelImport] AdminWhatsapp: '{data.AdminWhatsapp}'");
-            Console.WriteLine($"[ExcelImport] Apartments count: {data.Apartments.Count}");
 
             if (string.IsNullOrWhiteSpace(data.Name))
                 return ImportValidationResult.Fail(Loc.T("Building_Name_Is_Required_In_The"));

@@ -37,9 +37,6 @@ public class AuditLogQueryService
         var newEntries = await QueryNewAsync(
             buildingId, apartmentId, userId, action, severity, from, to, limit);
         results.AddRange(newEntries);
-
-        Console.WriteLine($"[AuditLogQuery] auditLogs: {newEntries.Count} entries");
-
         if (!string.IsNullOrWhiteSpace(buildingId))
         {
             var oldEntries = await QueryOldAsync(

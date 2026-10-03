@@ -1,0 +1,143 @@
+﻿@model BuildingManagementMvc.ViewModels.StatementPartialVm
+@{
+    var transactions = Model.Transactions;
+    var allMonths = Model.AllMonths;
+    var routeValues = Model.RouteValues;
+    var routeValuesStr = new Dictionary<string, string>();
+    foreach (var kv in routeValues)
+        if (!string.IsNullOrWhiteSpace(kv.Value))
+            routeValuesStr[kv.Key] = kv.Value!;
+}
+
+<div id="statementContainer">
+    <h5>@Loc.T("Account_Statement_N", transactions.TotalItems)</h5>
+
+    @* Pagination (فوق) *@
+    @{
+        ViewData["CurrentPage"] = transactions.CurrentPage;
+        ViewData["PageSize"] = transactions.PageSize;
+        ViewData["TotalItems"] = transactions.TotalItems;
+        ViewData["TotalPages"] = transactions.TotalPages;
+        ViewData["HasPrevious"] = transactions.HasPrevious;
+        ViewData["HasNext"] = transactions.HasNext;
+        ViewData["FirstItemIndex"] = transactions.FirstItemIndex;
+        ViewData["LastItemIndex"] = transactions.LastItemIndex;
+        ViewData["ActionName"] = "Index";
+        ViewData["ControllerName"] = "ResidentWallet";
+        ViewData["RouteValues"] = routeValuesStr;
+        ViewData["PageSizeOptions"] = new[] { 10, 25, 50, 100 };
+    }
+    @await Html.PartialAsync("_Pagination")
+
+    @if (transactions.Items.Count == 0)
+    {
+        <div class="alert alert-info">@Loc.T("No_Transactions_For_This_Month")</div>
+    }
+    else
+    {
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>@Loc.T("Date")</th>
+                    @if (allMonths)
+                    {
+                        <th>@Loc.T("Month")</th>
+                    }
+                    <th>@Loc.T("Description_2")</th>
+                    <th>@Loc.T("Amount")</th>
+                    <th>@Loc.T("Status")</th>
+                    <th>@Loc.T("Receipt")</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var tx in transactions.Items)
+                {
+                    var label = tx.Type switch
+                    {
+                        "deposit" => Loc.T("Payment") + tx.Number,
+                        "expense" => Loc.T("Share_Of_Expenses"),
+                        "revenue" => Loc.T("Share_Of_Revenues"),
+                        "monthly_fee_due" => Loc.T("Monthly_Fee_Due"),
+                        "monthly_fee_credit" => Loc.T("Increase_In_The_Monthly_Fee"),
+                        "adjustment" => Loc.T("Adjustment") + tx.Note,
+                        "carry_over" => Loc.T("Previous_Balance"),
+                        _ => tx.Note
+                    };
+
+                    var monthLabel = tx.CreatedAt.Length >= 7 ? tx.CreatedAt.Substring(0, 7) : "—";
+
+                    <tr>
+                        <td>@tx.CreatedAt.Substring(0, Math.Min(10, tx.CreatedAt.Length))</td>
+                        @if (allMonths)
+                        {
+                            <td><span class="badge bg-secondary">@monthLabel</span></td>
+                        }
+                        <td>@label</td>
+                        <td class="@(tx.Amount < 0 ? "text-danger" : "text-success")">
+                            @tx.Amount.ToString("0.##")
+                        </td>
+                        <td>
+                            @if (tx.Status == "pending")
+                            {
+                                <span>⏳ @Loc.T("Pending")</span>
+                            }
+                            else if (tx.Status == "cancelled")
+                            {
+                                <span>❌ @Loc.T("Cancelled")</span>
+                            }
+                            else
+                            {
+                                <span>✅ @Loc.T("Confirmed")</span>
+                            }
+                        </td>
+                        <td>
+                            @if (tx.Type == "deposit" && tx.HasReceipt)
+                            {
+                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                        data-bs-toggle="modal" data-bs-target="#receiptModal"
+                                        data-receipt-url="@tx.ReceiptUrl"
+                                        data-receipt-name="@(Loc.T("Payment") + tx.Number)"
+                                        title="@Loc.T("View_Receipt")">
+                                    📎 @Loc.T("View_3")
+                                </button>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">—</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    @* Pagination (تحت) *@
+    @await Html.PartialAsync("_Pagination")
+</div>
+
+<!-- ============================================================ -->
+<!-- ✅ Modal لعرض الإيصال                                          -->
+<!-- ============================================================ -->
+<div class="modal fade" id="receiptModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="receiptModalTitle">@Loc.T("Payment_Receipt")</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@Loc.T("Close")"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="receiptImage" src="" alt="@Loc.T("Receipt_2")" class="img-fluid rounded" style="max-height: 70vh;" />
+            </div>
+            <div class="modal-footer">
+                <a id="receiptOpenLink" href="" target="_blank" class="btn btn-sm btn-outline-primary">
+                    @Loc.T("Open_In_A_New_Tab")
+                </a>
+                <a id="receiptDownloadLink" href="" download class="btn btn-sm btn-outline-success">
+                    @Loc.T("Download")
+                </a>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">@Loc.T("Close")</button>
+            </div>
+        </div>
+    </div>
+</div>

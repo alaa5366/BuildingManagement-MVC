@@ -76,6 +76,17 @@ public class InvoicePdfService
                             r.RelativeItem().Text(Loc.T("Deposits_This_Month"));
                             r.RelativeItem().AlignRight().Text(Loc.T("N_EGP_3", d.MonthDeposits)).FontColor("#2E7D5B");
                         });
+
+                        // ✅ الرسم الشهري (دايماً لو > 0)
+                        if (d.MonthFee > 0 && !d.Apt.Closed)
+                        {
+                            c.Item().Row(r =>
+                            {
+                                r.RelativeItem().Text(Loc.T("Monthly_Fee_Due"));
+                                r.RelativeItem().AlignRight().Text(Loc.T("N_EGP_4", d.MonthFee)).FontColor("#A0432A");
+                            });
+                        }
+
                         if (d.MonthRevenuesShare > 0)
                         {
                             c.Item().Row(r =>

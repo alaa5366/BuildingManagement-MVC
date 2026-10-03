@@ -6,31 +6,41 @@
     double balance = ViewBag.Balance;
     var transactions = (BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.WalletTransactionVm>)ViewBag.Transactions;
     var pendingDeposits = (BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Deposit>)ViewBag.PendingDeposits;
-    var routeValues = ViewBag.RouteValues as Dictionary<string, string?> ?? new();
-    var routeValuesStr = new Dictionary<string, string>();
-    foreach (var kv in routeValues)
-        if (!string.IsNullOrWhiteSpace(kv.Value))
-            routeValuesStr[kv.Key] = kv.Value!;
+
+    var allMonths = ViewBag.AllMonths as bool? ?? false;
+    var fromMonth = ViewBag.FromMonth as string;
+    var toMonth = ViewBag.ToMonth as string;
+    var typeFilter = ViewBag.TypeFilter as string ?? "all";
+    var statusFilter = ViewBag.StatusFilter as string;
+
+    var selectedTypes = (typeFilter ?? "all")
+        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+        .Select(t => t.Trim().ToLowerInvariant())
+        .ToList();
+    var isAllSelected = selectedTypes.Contains("all") || selectedTypes.Count == 0;
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>@Loc.T("My_Wallet_Apartment_N_N", apt.Number, building.Name)</h3>
-    <form method="get" class="d-flex gap-2">
-        <input type="hidden" name="pageSize" value="@transactions.PageSize" />
-        <input type="month" name="month" value="@month" class="form-control" onchange="this.form.submit()" />
-    </form>
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h3 class="mb-0">@Loc.T("My_Wallet_Apartment_N_N", apt.Number, building.Name)</h3>
 </div>
 
+@* ===== الرصيد ===== *@
 <div class="bg-white rounded shadow-sm p-4 mb-3 text-center">
     <div class="text-muted small">@Loc.T("Your_Current_Balance")</div>
-    <div class="display-6 fw-bold @(balance < 0 ? "text-danger" : "text-success")">@Loc.T("N_EGP", balance.ToString("0.##"))</div>
+    <div class="display-6 fw-bold @(balance < 0 ? "text-danger" : "text-success")">
+        @Loc.T("N_EGP", balance.ToString("0.##"))
+    </div>
     @if (balance < 0)
     {
         <div class="text-danger small">@Loc.T("You_Have_An_Amount_Due")</div>
     }
-    <a asp-controller="Invoice" asp-action="Download" asp-route-month="@month" class="btn btn-sm btn-outline-primary mt-2">@Loc.T("Download_PDF_Invoice")</a>
+    <a asp-controller="Invoice" asp-action="Download" asp-route-month="@month"
+       class="btn btn-sm btn-outline-primary mt-2">
+        @Loc.T("Download_PDF_Invoice")
+    </a>
 </div>
 
+@* ===== تسجيل دفعة جديدة ===== *@
 <div class="bg-white rounded shadow-sm p-3 mb-3">
     <h5>@Loc.T("Submit_A_New_Payment_2")</h5>
     <p class="text-muted small">@Loc.T("It_Will_Be_Set_To_Pending")</p>
@@ -80,141 +90,368 @@
     </div>
 }
 
-<div class="bg-white rounded shadow-sm p-3">
-    <h5>@Loc.T("Account_Statement_N", transactions.TotalItems)</h5>
+@* ===== فلاتر كشف الحساب ===== *@
+<div class="bg-white rounded shadow-sm p-3 mb-3">
+    <h6 class="mb-3">🔍 @Loc.T("Search") / @Loc.T("Filter")</h6>
+    <form method="get" id="filterForm" class="row g-2 align-items-end"
+          asp-action="Index">
 
-    @* ✅ Pagination (فوق) *@
-    @{
-        ViewData["CurrentPage"] = transactions.CurrentPage;
-        ViewData["PageSize"] = transactions.PageSize;
-        ViewData["TotalItems"] = transactions.TotalItems;
-        ViewData["TotalPages"] = transactions.TotalPages;
-        ViewData["HasPrevious"] = transactions.HasPrevious;
-        ViewData["HasNext"] = transactions.HasNext;
-        ViewData["FirstItemIndex"] = transactions.FirstItemIndex;
-        ViewData["LastItemIndex"] = transactions.LastItemIndex;
-        ViewData["ActionName"] = "Index";
-        ViewData["ControllerName"] = "ResidentWallet";
-        ViewData["RouteValues"] = routeValuesStr;
-        ViewData["PageSizeOptions"] = new[] { 10, 25, 50, 100 };
-    }
-    @await Html.PartialAsync("_Pagination")
-
-    @if (transactions.Items.Count == 0)
-    {
-        <div class="alert alert-info">@Loc.T("No_Transactions_For_This_Month")</div>
-    }
-    else
-    {
-        <table class="table table-sm">
-            <thead>
-                <tr>
-                    <th>@Loc.T("Date")</th>
-                    <th>@Loc.T("Description_2")</th>
-                    <th>@Loc.T("Amount")</th>
-                    <th>@Loc.T("Status")</th>
-                    <th>@Loc.T("Receipt")</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var tx in transactions.Items)
-                {
-                    var label = tx.Type switch
+        @* نوع الحركة — Multi-Select Checkboxes *@
+        <div class="col-md-3">
+            <label class="form-label small">@Loc.T("Action")</label>
+            <div class="dropdown" id="typeFilterDropdown">
+                <button class="btn btn-outline-secondary btn-sm w-100 dropdown-toggle text-start"
+                        type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                        id="typeFilterBtn">
+                    @if (isAllSelected)
                     {
-                        "deposit" => Loc.T("Payment") + tx.Number,
-                        "expense" => Loc.T("Share_Of_Expenses"),
-                        "revenue" => Loc.T("Share_Of_Revenues"),
-                        "monthly_fee_due" => Loc.T("Monthly_Fee_Due"),
-                        "monthly_fee_credit" => Loc.T("Increase_In_The_Monthly_Fee"),
-                        "adjustment" => Loc.T("Adjustment") + tx.Note,
-                        _ => tx.Note
-                    };
+                        <span id="typeFilterLabel">@Loc.T("All")</span>
+                    }
+                    else
+                    {
+                        <span id="typeFilterLabel">@selectedTypes.Count @Loc.T("Selected")</span>
+                    }
+                </button>
+                <ul class="dropdown-menu p-2 w-100" style="min-width: 240px;">
+                    <li>
+                        <div class="form-check">
+                            <input class="form-check-input type-checkbox" type="checkbox"
+                                   value="all" id="tf_all"
+                                   @(isAllSelected ? "checked" : "") />
+                            <label class="form-check-label" for="tf_all">
+                                <strong>@Loc.T("All")</strong>
+                            </label>
+                        </div>
+                    </li>
+                    <li><hr class="dropdown-divider" /></li>
 
-                    <tr>
-                        <td>@tx.CreatedAt.Substring(0, Math.Min(10, tx.CreatedAt.Length))</td>
-                        <td>@label</td>
-                        <td class="@(tx.Amount < 0 ? "text-danger" : "text-success")">@tx.Amount.ToString("0.##")</td>
-                        <td>@(tx.Status == "pending" ? Loc.T("Pending") : tx.Status == "cancelled" ? Loc.T("Cancelled") : Loc.T("Confirmed"))</td>
-                        <td>
-                            @* ✅ هنا الإيصال مش متاح مباشرة لأننا في PagedResult — يقدر المستخدم يشوف في صفحة الدفعات *@
-                            @if (tx.Type == "deposit")
-                            {
-                                <span class="text-muted small">—</span>
-                            }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
+                    <li>
+                        <div class="form-check">
+                            <input class="form-check-input type-checkbox" type="checkbox"
+                                   value="success" id="tf_success"
+                                   @(selectedTypes.Contains("success") ? "checked" : "") />
+                            <label class="form-check-label" for="tf_success">
+                                ✅ @Loc.T("Confirmed")
+                            </label>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="form-check">
+                            <input class="form-check-input type-checkbox" type="checkbox"
+                                   value="failed" id="tf_failed"
+                                   @(selectedTypes.Contains("failed") ? "checked" : "") />
+                            <label class="form-check-label" for="tf_failed">
+                                ❌ @Loc.T("Cancelled")
+                            </label>
+                        </div>
+                    </li>
 
-    @* ✅ Pagination (تحت) *@
-    @await Html.PartialAsync("_Pagination")
+                    <li><hr class="dropdown-divider" /></li>
+
+                    <li>
+                        <div class="form-check">
+                            <input class="form-check-input type-checkbox" type="checkbox"
+                                   value="deposits" id="tf_deposits"
+                                   @(selectedTypes.Contains("deposits") ? "checked" : "") />
+                            <label class="form-check-label" for="tf_deposits">
+                                💰 @Loc.T("Payment")
+                            </label>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="form-check">
+                            <input class="form-check-input type-checkbox" type="checkbox"
+                                   value="expenses" id="tf_expenses"
+                                   @(selectedTypes.Contains("expenses") ? "checked" : "") />
+                            <label class="form-check-label" for="tf_expenses">
+                                💸 @Loc.T("Share_Of_Expenses")
+                            </label>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="form-check">
+                            <input class="form-check-input type-checkbox" type="checkbox"
+                                   value="revenues" id="tf_revenues"
+                                   @(selectedTypes.Contains("revenues") ? "checked" : "") />
+                            <label class="form-check-label" for="tf_revenues">
+                                📈 @Loc.T("Share_Of_Revenues")
+                            </label>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="form-check">
+                            <input class="form-check-input type-checkbox" type="checkbox"
+                                   value="carry_over" id="tf_carry_over"
+                                   @(selectedTypes.Contains("carry_over") ? "checked" : "") />
+                            <label class="form-check-label" for="tf_carry_over">
+                                📌 @Loc.T("Previous_Balance")
+                            </label>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="form-check">
+                            <input class="form-check-input type-checkbox" type="checkbox"
+                                   value="monthly_fee" id="tf_monthly_fee"
+                                   @(selectedTypes.Contains("monthly_fee") ? "checked" : "") />
+                            <label class="form-check-label" for="tf_monthly_fee">
+                                📅 @Loc.T("Monthly_Fee_Due")
+                            </label>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="form-check">
+                            <input class="form-check-input type-checkbox" type="checkbox"
+                                   value="adjustments" id="tf_adjustments"
+                                   @(selectedTypes.Contains("adjustments") ? "checked" : "") />
+                            <label class="form-check-label" for="tf_adjustments">
+                                ⚙️ @Loc.T("Adjustment")
+                            </label>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <input type="hidden" name="typeFilter" id="typeFilterHidden" value="@typeFilter" />
+        </div>
+
+        @* الفترة *@
+        <div class="col-md-3">
+            <label class="form-label small">@Loc.T("Month")</label>
+            <select name="allMonths" class="form-select form-select-sm"
+                    onchange="this.form.submit()">
+                <option value="false" selected="@(!allMonths)">@Loc.T("Current_Month_Only")</option>
+                <option value="true" selected="@allMonths">@Loc.T("All_Months")</option>
+            </select>
+        </div>
+
+        @if (!allMonths)
+        {
+            <div class="col-md-2">
+                <label class="form-label small">@Loc.T("Month")</label>
+                <input type="month" name="month" value="@month"
+                       class="form-control form-control-sm" />
+            </div>
+        }
+        else
+        {
+            <div class="col-md-2">
+                <label class="form-label small">@Loc.T("From_Date")</label>
+                <input type="month" name="fromMonth" value="@fromMonth"
+                       class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">@Loc.T("To_Date")</label>
+                <input type="month" name="toMonth" value="@toMonth"
+                       class="form-control form-control-sm" />
+            </div>
+        }
+
+        <div class="col-md-1">
+            <button type="submit" class="btn btn-primary btn-sm w-100">🔍</button>
+        </div>
+        <div class="col-md-1">
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm w-100">↻</a>
+        </div>
+
+        <input type="hidden" name="pageSize" value="@transactions.PageSize" />
+    </form>
+</div>
+
+@* ===== كشف الحساب (AJAX Container) ===== *@
+<div class="bg-white rounded shadow-sm p-3" id="statementWrapper">
+    @await Html.PartialAsync("_StatementPartial", new BuildingManagementMvc.ViewModels.StatementPartialVm
+    {
+        Transactions = transactions,
+        AllMonths = allMonths,
+        RouteValues = ViewBag.RouteValues as Dictionary<string, string?> ?? new()
+    })
 </div>
 
 @section Scripts {
     <script>
+        // ============================================================
+        // ✅ Multi-Select Filter + AJAX (بدون reload)
+        // ============================================================
+        (function () {
+            const checkboxes = document.querySelectorAll('.type-checkbox');
+            const allCheckbox = document.getElementById('tf_all');
+            const others = Array.from(checkboxes).filter(cb => cb.id !== 'tf_all');
+            const hiddenInput = document.getElementById('typeFilterHidden');
+            const label = document.getElementById('typeFilterLabel');
+            const form = document.getElementById('filterForm');
+            const dropdownEl = document.getElementById('typeFilterDropdown');
+
+            // ✅ امنع قفل الـ Dropdown أثناء الفلترة
+            if (dropdownEl) {
+                dropdownEl.addEventListener('click', (e) => e.stopPropagation());
+            }
+
+            function updateHidden() {
+                const selected = [];
+
+                if (allCheckbox.checked) {
+                    selected.push('all');
+                } else {
+                    others.forEach(cb => {
+                        if (cb.checked) selected.push(cb.value);
+                    });
+
+                    if (selected.length === 0) {
+                        allCheckbox.checked = true;
+                        selected.push('all');
+                    }
+                }
+
+                hiddenInput.value = selected.join(',');
+
+                if (selected.includes('all')) {
+                    label.textContent = '@Html.Raw(Loc.Js("All"))';
+                } else {
+                    label.textContent = selected.length + ' @Html.Raw(Loc.Js("Selected"))';
+                }
+            }
+
+            // ✅ AJAX Filter
+            async function submitFilterAjax() {
+                const formData = new FormData(form);
+                const params = new URLSearchParams(formData);
+                const url = form.action + '?' + params.toString();
+
+                try {
+                    const response = await fetch(url, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+
+                    const html = await response.text();
+
+                    // ✅ استبدل الـ statement wrapper
+                    const wrapper = document.getElementById('statementWrapper');
+                    if (wrapper) {
+                        wrapper.innerHTML = html;
+                    }
+
+                    // ✅ أعد تفعيل Tooltips (لو موجودة)
+                    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+                        new bootstrap.Tooltip(el);
+                    });
+
+                } catch (err) {
+                    console.error('[Filter AJAX] Failed:', err);
+                    // ✅ Fallback: submit عادي
+                    form.submit();
+                }
+            }
+
+            // ✅ "الكل"
+            allCheckbox.addEventListener('change', () => {
+                if (allCheckbox.checked) {
+                    others.forEach(cb => cb.checked = false);
+                }
+                updateHidden();
+                submitFilterAjax();
+            });
+
+            // ✅ الباقي
+            others.forEach(cb => {
+                cb.addEventListener('change', () => {
+                    if (cb.checked) {
+                        allCheckbox.checked = false;
+                    }
+                    updateHidden();
+                    submitFilterAjax();
+                });
+            });
+
+            // ✅ Initialize
+            updateHidden();
+        })();
+
+        // ============================================================
+        // OCR
+        // ============================================================
         async function handleReceiptUpload(input) {
-                    if (!input.files || input.files.length === 0) return;
+            if (!input.files || input.files.length === 0) return;
 
-                    const file = input.files[0];
-                    const formData = new FormData();
-                    formData.append('image', file);
+            const file = input.files[0];
+            const formData = new FormData();
+            formData.append('image', file);
 
-                    const token = document.querySelector('input[name="__RequestVerificationToken"]');
-                    if (token) {
-                        formData.append('__RequestVerificationToken', token.value);
-                    }
+            const token = document.querySelector('input[name="__RequestVerificationToken"]');
+            if (token) {
+                formData.append('__RequestVerificationToken', token.value);
+            }
 
-                    document.getElementById('ocrStatus').style.display = 'block';
-                    document.getElementById('ocrStatus').innerText = '⏳ @Html.Raw(Loc.Js("Reading_The_Image_May_Take_5"))';
-                    document.getElementById('ocrResult').style.display = 'none';
-                    document.getElementById('ocrError').style.display = 'none';
+            document.getElementById('ocrStatus').style.display = 'block';
+            document.getElementById('ocrStatus').innerText = '⏳ @Html.Raw(Loc.Js("Reading_The_Image_May_Take_5"))';
+            document.getElementById('ocrResult').style.display = 'none';
+            document.getElementById('ocrError').style.display = 'none';
 
-                    try {
-                        const response = await fetch('@Url.Action("ParseReceiptImage", "ResidentWallet")', {
-                            method: 'POST',
-                            body: formData
-                        });
+            try {
+                const response = await fetch('@Url.Action("ParseReceiptImage", "ResidentWallet")', {
+                    method: 'POST',
+                    body: formData
+                });
 
-                        document.getElementById('ocrStatus').style.display = 'none';
-                        const text = await response.text();
+                document.getElementById('ocrStatus').style.display = 'none';
+                const text = await response.text();
 
-                        if (!response.ok) {
-                            console.error('Server error:', response.status, text);
-                            throw new Error(`Server returned ${response.status}: ${text.substring(0, 200)}`);
+                if (!response.ok) {
+                    console.error('Server error:', response.status, text);
+                    throw new Error(`Server returned ${response.status}: ${text.substring(0, 200)}`);
                 }
 
-                        const data = JSON.parse(text);
+                const data = JSON.parse(text);
 
-                        if (data.success) {
-                            document.getElementById('amountInput').value = data.amount;
-                            document.getElementById('noteInput').value = data.note || '';
+                if (data.success) {
+                    document.getElementById('amountInput').value = data.amount;
+                    document.getElementById('noteInput').value = data.note || '';
 
-                            const fileInput = document.getElementById('receiptFileInput');
-                            const dataTransfer = new DataTransfer();
-                            dataTransfer.items.add(file);
-                            fileInput.files = dataTransfer.files;
+                    const fileInput = document.getElementById('receiptFileInput');
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    fileInput.files = dataTransfer.files;
 
-                            document.getElementById('ocrResult').style.display = 'block';
-                            document.getElementById('ocrDetails').innerHTML = `
-                                <div>💰 @Html.Raw(Loc.Js("Amount_2")) <strong>${data.amount}</strong> @Html.Raw(Loc.Js("EGP"))</div>
-                                <div>🔢 @Html.Raw(Loc.Js("Reference")) ${data.reference || '—'}</div>
-                                <div>📅 @Html.Raw(Loc.Js("Date_2")) ${data.date || '—'}</div>
-                                <div>🏦 @Html.Raw(Loc.Js("Account")) ${data.recipientAccount || '—'}</div>
-                                <div class="mt-2 text-success">✅ @Html.Raw(Loc.Js("The_Image_Will_Be_Uploaded_With"))</div>
-                            `;
-                        } else {
-                            document.getElementById('ocrError').style.display = 'block';
-                            document.getElementById('ocrError').innerText = '❌ ' + data.error;
-                        }
-                    } catch (err) {
-                        document.getElementById('ocrStatus').style.display = 'none';
-                        document.getElementById('ocrError').style.display = 'block';
-                        document.getElementById('ocrError').innerText = '❌ @Html.Raw(Loc.Js("Error")) ' + err.message;
-                    }
-
-                    input.value = '';
+                    document.getElementById('ocrResult').style.display = 'block';
+                    document.getElementById('ocrDetails').innerHTML = `
+                        <div>💰 @Html.Raw(Loc.Js("Amount_2")) <strong>${data.amount}</strong> @Html.Raw(Loc.Js("EGP"))</div>
+                        <div>🔢 @Html.Raw(Loc.Js("Reference")) ${data.reference || '—'}</div>
+                        <div>📅 @Html.Raw(Loc.Js("Date_2")) ${data.date || '—'}</div>
+                        <div>🏦 @Html.Raw(Loc.Js("Account")) ${data.recipientAccount || '—'}</div>
+                        <div class="mt-2 text-success">✅ @Html.Raw(Loc.Js("The_Image_Will_Be_Uploaded_With"))</div>
+                    `;
+                } else {
+                    document.getElementById('ocrError').style.display = 'block';
+                    document.getElementById('ocrError').innerText = '❌ ' + data.error;
                 }
+            } catch (err) {
+                document.getElementById('ocrStatus').style.display = 'none';
+                document.getElementById('ocrError').style.display = 'block';
+                document.getElementById('ocrError').innerText = '❌ @Html.Raw(Loc.Js("Error")) ' + err.message;
+            }
+
+            input.value = '';
+        }
+
+        // ✅ Modal الإيصال
+document.addEventListener('DOMContentLoaded', function () {
+    const receiptModal = document.getElementById('receiptModal');
+    if (!receiptModal) return;
+
+    receiptModal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        const url = button.getAttribute('data-receipt-url');
+        const name = button.getAttribute('data-receipt-name');
+
+        document.getElementById('receiptModalTitle').innerText = '📎 @Html.Raw(Loc.Js("Receipt_2")) ' + name;
+        document.getElementById('receiptImage').src = url;
+        document.getElementById('receiptOpenLink').href = url;
+        document.getElementById('receiptDownloadLink').href = url;
+    });
+
+    receiptModal.addEventListener('hidden.bs.modal', function () {
+        document.getElementById('receiptImage').src = '';
+    });
+});
     </script>
 }

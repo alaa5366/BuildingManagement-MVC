@@ -25,6 +25,10 @@ public class MonthData
 
     [FirestoreProperty("revenueDistribution")]
     public Dictionary<string, double> RevenueDistribution { get; set; } = new();
+
+    // ✅ جديد: الرصيد المُرحّل من الشهر السابق (لكل شقة)
+    [FirestoreProperty("carryOver")]
+    public Dictionary<string, double> CarryOver { get; set; } = new();
 }
 
 [FirestoreData]
@@ -123,8 +127,9 @@ public class WalletTransactionVm
     public double Amount { get; set; }
     public string Note { get; set; } = "";
     public string CreatedAt { get; set; } = "";
+    public string? ReceiptUrl { get; set; }
+    public bool HasReceipt => !string.IsNullOrWhiteSpace(ReceiptUrl);
 }
-
 [FirestoreData]
 public class ReceiptData
 {

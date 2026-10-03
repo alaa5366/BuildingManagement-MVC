@@ -50,12 +50,12 @@ public class WalletController : Controller
             .ToList();
 
         // ✅ Pagination للشقق
-        var pagedBalances = PagedResult<(BuildingManagementMvc.Models.Apartment Apt, double Balance)>
+        var pagedBalances = PagedResult<(Apartment Apt, double Balance)>
             .Create(allBalances, page, pageSize);
 
-        // ✅ Pagination للدفعات المعلقة
-        var allPending = _wallet.GetAllPendingDeposits(building, mk);
-        var pagedPending = PagedResult<(BuildingManagementMvc.Models.Apartment Apt, BuildingManagementMvc.Models.Deposit Deposit)>
+        // ✅ Pagination للدفعات المعلقة (من كل الشهور)
+        var allPending = _wallet.GetAllPendingDepositsCrossMonth(building);
+        var pagedPending = PagedResult<(Apartment Apt, Deposit Deposit, string MonthKey)>
             .Create(allPending, 1, pageSize);
 
         var totals = _wallet.TotalsOf(building, mk);
@@ -74,6 +74,9 @@ public class WalletController : Controller
         return View();
     }
 
+    // ============================================================
+    // ✅ تأكيد دفعة
+    // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ConfirmDeposit(string month, string depositId)
@@ -84,13 +87,31 @@ public class WalletController : Controller
         var d = _wallet.ConfirmDeposit(building, depositId, User.Identity?.Name ?? "admin", month);
         if (d != null)
         {
-            _audit.Push(building, "deposit_confirm", $"تأكيد دفعة {d.Number} — {d.Amount:0.##} ج.م", "admin", User.Identity?.Name ?? "admin");
+            // ✅ 1. أعد حساب carryOver من الشهر ده
+            _wallet.RecomputeCarryOverFrom(building, month);
+
+            // ✅ 2. Audit
+            _audit.Push(building, "deposit_confirm",
+                $"تأكيد دفعة {d.Number} — {d.Amount:0.##} ج.م",
+                "admin", User.Identity?.Name ?? "admin");
+
+            // ✅ 3. إشعار الساكن
+            var apt = building.Apartments.FirstOrDefault(a => a.Id == d.AptId);
+            if (apt != null)
+            {
+                _notify.NotifyResidentDepositConfirmed(building, d, apt);
+            }
+
             await _buildings.SaveFullAsync(building);
+            TempData["Message"] = Loc.T("Deposit_Confirmed_Successfully");
         }
 
         return RedirectToAction("Index", new { month });
     }
 
+    // ============================================================
+    // ✅ إلغاء دفعة
+    // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CancelDeposit(string month, string depositId, string? reason)
@@ -101,13 +122,31 @@ public class WalletController : Controller
         var d = _wallet.CancelDeposit(building, depositId, User.Identity?.Name ?? "admin", reason, month);
         if (d != null)
         {
-            _audit.Push(building, "deposit_cancel", $"إلغاء دفعة {d.Number}" + (string.IsNullOrWhiteSpace(reason) ? "" : $" — {reason}"), "admin", User.Identity?.Name ?? "admin");
+            // ✅ 1. أعد حساب carryOver من الشهر ده
+            _wallet.RecomputeCarryOverFrom(building, month);
+
+            // ✅ 2. Audit
+            _audit.Push(building, "deposit_cancel",
+                $"إلغاء دفعة {d.Number}" + (string.IsNullOrWhiteSpace(reason) ? "" : $" — {reason}"),
+                "admin", User.Identity?.Name ?? "admin");
+
+            // ✅ 3. إشعار الساكن
+            var apt = building.Apartments.FirstOrDefault(a => a.Id == d.AptId);
+            if (apt != null)
+            {
+                _notify.NotifyResidentDepositCancelled(building, d, apt, reason);
+            }
+
             await _buildings.SaveFullAsync(building);
+            TempData["Message"] = Loc.T("Deposit_Cancelled_Successfully");
         }
 
         return RedirectToAction("Index", new { month });
     }
 
+    // ============================================================
+    // ✅ إضافة تسوية يدوية
+    // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddAdjustment(string month, string aptId, double amount, string? reason)

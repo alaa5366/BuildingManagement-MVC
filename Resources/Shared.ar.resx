@@ -4034,4 +4034,50 @@
   <data name="Js_ConfirmEnableApt" xml:space="preserve">
     <value>⚠️ تأكيد تفعيل الشقة {0}؟ — الساكن هيرجع يقدر يدخل.</value>
   </data>
+  <data name="CarryOver_Migration_Title" xml:space="preserve">
+    <value>ترحيل الأرصدة</value>
+  </data>
+  <data name="CarryOver_Migration_Desc" xml:space="preserve">
+    <value>تحديث الأرصدة المُرحّلة لكل الشهور الموجودة</value>
+  </data>
+  <data name="CarryOver_Migration_Button" xml:space="preserve">
+    <value>تشغيل الترحيل الآن</value>
+  </data>
+  <data name="CarryOver_Migration_Confirm" xml:space="preserve">
+    <value>⚠️ متأكد إنك عايز تشغّل ترحيل الأرصدة؟
+
+ده هيعمل تحديث للأرصدة المُرحّلة لكل الشهور الموجودة.
+
+العملية ممكن تاخد كام ثانية.</value>
+  </data>
+  <data name="CarryOver_Migration_Warn_1" xml:space="preserve">
+    <value>بيحدّث الأرصدة المُرحّلة للشهور الموجودة بس (مش هيلمس الشهور اللي فيها carryOver موجود)</value>
+  </data>
+  <data name="CarryOver_Migration_Warn_2" xml:space="preserve">
+    <value>العملية آمنة ومتكررة (تقدر تشغّلها أكتر من مرة)</value>
+  </data>
+  <data name="CarryOver_Migration_Warn_3" xml:space="preserve">
+    <value>خد Backup قبل ما تشغّل ده لو عندك قاعدة بيانات كبيرة</value>
+  </data>
+  <data name="Migration_Success_N_Buildings_N_Months_N_Apts" xml:space="preserve">
+    <value>✅ الترحيل اكتمل: {0} عمارات، {1} شهور، {2} شقق</value>
+  </data>
+  <data name="Migration_Failed" xml:space="preserve">
+    <value>❌ الترحيل فشل</value>
+  </data>
+  <data name="Current_Month_Only" xml:space="preserve">
+  <value>الشهر الحالي فقط</value>
+</data>
+  <data name="All_Months" xml:space="preserve">
+  <value>كل الشهور</value>
+</data>
+  <data name="Selected" xml:space="preserve">
+  <value>محدد</value>
+</data>
+<data name="Deposit_Confirmed_Successfully" xml:space="preserve">
+  <value>✅ تم تأكيد الدفعة بنجاح</value>
+</data>
+<data name="Deposit_Cancelled_Successfully" xml:space="preserve">
+  <value>✅ تم إلغاء الدفعة بنجاح</value>
+</data>
 </root>

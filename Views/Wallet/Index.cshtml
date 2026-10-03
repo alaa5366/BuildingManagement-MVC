@@ -3,7 +3,7 @@
     var building = (Building)ViewBag.Building;
     string month = ViewBag.Month;
     var balances = (BuildingManagementMvc.Models.PagedResult<(BuildingManagementMvc.Models.Apartment Apt, double Balance)>)ViewBag.Balances;
-    var pending = (BuildingManagementMvc.Models.PagedResult<(BuildingManagementMvc.Models.Apartment Apt, BuildingManagementMvc.Models.Deposit Deposit)>)ViewBag.Pending;
+    var pending = (BuildingManagementMvc.Models.PagedResult<(BuildingManagementMvc.Models.Apartment Apt, BuildingManagementMvc.Models.Deposit Deposit, string MonthKey)>)ViewBag.Pending;
     var totals = ((double Collected, double Expenses, double Revenues, int OpenCount, int ClosedCount, double Balance, double TotalWallet))ViewBag.Totals;
     var routeValues = ViewBag.RouteValues as Dictionary<string, string?> ?? new();
     var routeValuesStr = new Dictionary<string, string>();
@@ -20,6 +20,7 @@
     </form>
 </div>
 
+@* ===== Totals ===== *@
 <div class="row mb-3 text-center">
     <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">@Loc.T("Collected")</div><div class="fw-bold">@totals.Collected.ToString("0.##")</div></div></div>
     <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">@Loc.T("Expenses_3")</div><div class="fw-bold">@totals.Expenses.ToString("0.##")</div></div></div>
@@ -28,7 +29,7 @@
 </div>
 
 @* ============================================================ *@
-@* ✅ دفعات في انتظار التأكيد                                  *@
+@* ✅ دفعات في انتظار التأكيد (من كل الشهور)                    *@
 @* ============================================================ *@
 @if (pending.TotalItems > 0)
 {
@@ -38,6 +39,7 @@
             <thead>
                 <tr>
                     <th>@Loc.T("Apartment")</th>
+                    <th>@Loc.T("Month")</th>
                     <th>@Loc.T("Payment_Number")</th>
                     <th>@Loc.T("Amount")</th>
                     <th>@Loc.T("Note")</th>
@@ -46,10 +48,11 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var (apt, dep) in pending.Items)
+                @foreach (var (apt, dep, depMonth) in pending.Items)
                 {
                     <tr>
                         <td>@Loc.T("Apartment_N", apt.Number)</td>
+                        <td><span class="badge bg-secondary">@depMonth</span></td>
                         <td>@dep.Number</td>
                         <td>@dep.Amount.ToString("0.##")</td>
                         <td>
@@ -79,12 +82,12 @@
                         </td>
                         <td class="d-flex gap-1">
                             <form method="post" asp-action="ConfirmDeposit">
-                                <input type="hidden" name="month" value="@month" />
+                                <input type="hidden" name="month" value="@depMonth" />
                                 <input type="hidden" name="depositId" value="@dep.Id" />
                                 <button class="btn btn-sm btn-success">@Loc.T("Confirm")</button>
                             </form>
                             <form method="post" asp-action="CancelDeposit" onsubmit="return confirm('@Loc.Js("Cancel_The_Payment")');">
-                                <input type="hidden" name="month" value="@month" />
+                                <input type="hidden" name="month" value="@depMonth" />
                                 <input type="hidden" name="depositId" value="@dep.Id" />
                                 <button class="btn btn-sm btn-outline-danger">@Loc.T("Cancel")</button>
                             </form>
@@ -96,7 +99,7 @@
                                     data-deposit-number="@dep.Number"
                                     data-deposit-amount="@dep.Amount.ToString("0.##")"
                                     data-deposit-note="@dep.Note"
-                                    data-deposit-month="@month"
+                                    data-deposit-month="@depMonth"
                                     data-deposit-apt="@Loc.T("Apartment_N", apt.Number)">
                                 @Loc.T("Edit_2")
                             </button>

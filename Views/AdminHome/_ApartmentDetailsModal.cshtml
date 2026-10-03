@@ -128,12 +128,11 @@
                     <span>@Loc.T("Edit_Apartment")</span>
                 </a>
 
-                <a asp-controller="Wallet" asp-action="Index"
-                   asp-route-month="@Model.CurrentMonth"
-                   class="qa-btn qa-wallet">
-                    <span class="qa-icon">💼</span>
-                    <span>@Loc.T("Wallet_2")</span>
-                </a>
+               <button type="button" class="qa-btn qa-wallet"
+                onclick="enterResidentWallet('@Model.AptId')">
+                <span class="qa-icon">💼</span>
+                <span>@Loc.T("Wallet_2")</span>
+                </button>
 
                 <button type="button" class="qa-btn qa-welcome"
                         onclick="sendWelcomeFromDetails('@Model.AptId')">

@@ -2,36 +2,190 @@
     ViewData["Title"] = Loc.T("Advanced_Tools");
 }
 
-<div class="container">
-    <h2 class="mb-4">@Loc.T("Advanced_Tools_2")</h2>
+<div class="container" style="max-width: 1100px;">
 
-    <div class="row g-3">
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5>🔄 Migration</h5>
-                    <p class="text-muted">@Loc.T("Convert_The_Old_Building_Log_Building")</p>
-                    <a asp-action="Migration" class="btn btn-primary w-100">@Loc.T("Open_Tool")</a>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">🧰 @Loc.T("Advanced_Tools_2")</h2>
+    </div>
+
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Message"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @* ============================================================ *@
+    @* ✅ Cleanup Data — الأولوية القصوى                              *@
+    @* ============================================================ *@
+    <div class="card mb-3 border-0 shadow-sm">
+        <div class="card-header bg-danger text-white">
+            <div class="d-flex align-items-center gap-2">
+                <span style="font-size: 22px;">🧹</span>
+                <div>
+                    <strong class="fs-5">تنظيف البيانات (Cleanup Data)</strong>
+                    <div class="small">إصلاح الشهور الغلط + إعادة حساب carryOver</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5>@Loc.T("DB_Maintenance")</h5>
-                    <p class="text-muted">@Loc.T("Duplicate_Detection_Cleaning_Up_Pending_Items")</p>
-                    <a asp-action="Maintenance" class="btn btn-warning w-100">@Loc.T("Open_Tool")</a>
-                </div>
+        <div class="card-body">
+            <div class="alert alert-danger small mb-3">
+                <strong>⚠️ تحذير مهم:</strong>
+                <ul class="mb-0 mt-2">
+                    <li><strong>اعمل Backup قبل ما تشغّل ده.</strong></li>
+                    <li>هيمسح الشهور المستقبلية (بعد الشهر الحالي).</li>
+                    <li>هيمسح الشهور اللي قبل تاريخ إنشاء العمارة.</li>
+                    <li>هيعيد حساب carryOver من الأول.</li>
+                </ul>
             </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5>@Loc.T("Full_Export_2")</h5>
-                    <p class="text-muted">@Loc.T("Export_All_Data_Buildings_Users_As")</p>
-                    <a asp-action="Export" class="btn btn-success w-100">@Loc.T("Open_Tool")</a>
-                </div>
-            </div>
+
+            <form method="post" asp-action="CleanupData" class="m-0"
+                  onsubmit="return confirm('⚠️ متأكد؟ تأكد إنك عملت Backup الأول.');">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-danger btn-lg w-100">
+                    🧹 تشغيل التنظيف
+                </button>
+            </form>
         </div>
     </div>
+
+    @* ============================================================ *@
+    @* ✅ Migration: Carry Over                                     *@
+    @* ============================================================ *@
+    <div class="card mb-3 border-0 shadow-sm">
+        <div class="card-header bg-warning text-dark">
+            <div class="d-flex align-items-center gap-2">
+                <span style="font-size: 22px;">💰</span>
+                <div>
+                    <strong class="fs-5">@Loc.T("CarryOver_Migration_Title")</strong>
+                    <div class="small">@Loc.T("CarryOver_Migration_Desc")</div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info small mb-3">
+                <strong>⚠️ @Loc.T("Warning")</strong>
+                <ul class="mb-0 mt-2">
+                    <li>@Loc.T("CarryOver_Migration_Warn_1")</li>
+                    <li>@Loc.T("CarryOver_Migration_Warn_2")</li>
+                    <li>@Loc.T("CarryOver_Migration_Warn_3")</li>
+                </ul>
+            </div>
+
+            <form method="post" asp-action="MigrateCarryOver" class="m-0"
+                  onsubmit="return confirm('@Html.Raw(Loc.Js("CarryOver_Migration_Confirm"))');">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-warning btn-lg w-100">
+                    <span style="font-size: 18px;">💰</span>
+                    @Loc.T("CarryOver_Migration_Button")
+                </button>
+            </form>
+        </div>
+    </div>
+
+    @* ============================================================ *@
+    @* ✅ Migration: AuditLog                                       *@
+    @* ============================================================ *@
+    <div class="card mb-3 border-0 shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <div class="d-flex align-items-center gap-2">
+                <span style="font-size: 22px;">🔄</span>
+                <div>
+                    <strong class="fs-5">@Loc.T("Migration_Convert_The_Old_Log")</strong>
+                    <div class="small">@Loc.T("Convert_The_Old_Building_Log_Building")</div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <form method="post" asp-action="RunMigration" class="row g-3 align-items-end">
+                @Html.AntiForgeryToken()
+
+                <div class="col-md-5">
+                    <label class="form-label small">@Loc.T("Building_Leave_Empty_All_Buildings")</label>
+                    <input name="buildingId" class="form-control" placeholder="BLD-001" />
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check form-switch">
+                        <input type="checkbox" name="dryRun" value="true" class="form-check-input" id="dryRunSwitch" checked />
+                        <label class="form-check-label" for="dryRunSwitch">
+                            @Loc.T("Dry_Run_A_Test_Without_Saving")
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100">
+                        ▶️ @Loc.T("Start_Migration")
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @* ============================================================ *@
+    @* ✅ DB Maintenance                                             *@
+    @* ============================================================ *@
+    <div class="card mb-3 border-0 shadow-sm">
+        <div class="card-header bg-info text-dark">
+            <div class="d-flex align-items-center gap-2">
+                <span style="font-size: 22px;">🔧</span>
+                <div>
+                    <strong class="fs-5">@Loc.T("Database_Maintenance")</strong>
+                    <div class="small">@Loc.T("Duplicate_Detection_Cleaning_Up_Pending_Items")</div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <form method="post" asp-action="RunMaintenance" class="row g-3 align-items-end">
+                @Html.AntiForgeryToken()
+
+                <div class="col-md-4">
+                    <label class="form-label small">@Loc.T("Tool")</label>
+                    <select name="tool" class="form-select">
+                        <option value="duplicate-users">👥 @Loc.T("Detect_Duplicate_Users")</option>
+                        <option value="old-pending">⏰ @Loc.T("Old_Pending_Payments")</option>
+                        <option value="recalc-balances">🧮 @Loc.T("Recalculate_Balances")</option>
+                        <option value="orphan-refs">🔗 @Loc.T("Detect_Orphan_References")</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">@Loc.T("Building_Leave_Empty_All_Buildings")</label>
+                    <input name="buildingId" class="form-control" placeholder="BLD-001" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">@Loc.T("Older_Than_Days")</label>
+                    <input name="days" type="number" value="30" min="1" max="365" class="form-control" />
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-info w-100">
+                        ▶️ @Loc.T("Run")
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @* ============================================================ *@
+    @* ✅ تفاصيل التنظيف (لو موجودة)                                *@
+    @* ============================================================ *@
+    @if (TempData["CleanupDetails"] != null)
+    {
+        <div class="card mb-3 border-0 shadow-sm">
+            <div class="card-header bg-secondary text-white">
+                <strong>📋 تفاصيل التنظيف</strong>
+            </div>
+            <div class="card-body">
+                <pre style="max-height: 400px; overflow-y: auto; font-size: 12px;">@TempData["CleanupDetails"]</pre>
+            </div>
+        </div>
+    }
+
 </div>

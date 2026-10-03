@@ -15,7 +15,7 @@ public class InvoiceService
         var m = _wallet.GetOrCreateMonth(building, monthKey);
 
         var balance = _wallet.ComputeWalletBalance(building, apt.Id, monthKey);
-        var previousBalance = 0.0; // نفس computePreviousBalance في الأصل (بترجع 0 دايمًا حاليًا)
+        var previousBalance = m.CarryOver != null && m.CarryOver.TryGetValue(apt.Id, out var carry) ? carry : 0;
         var monthDeposits = _wallet.TotalConfirmedDeposits(building, apt.Id, monthKey);
         var monthExpenses = m.Distribution.TryGetValue(apt.Id, out var dist) ? dist : 0;
         var monthRevenues = m.RevenueDistribution.TryGetValue(apt.Id, out var rev) ? rev : 0;
@@ -54,6 +54,7 @@ public class InvoiceService
             MonthDeposits = monthDeposits,
             MonthExpensesShare = monthExpenses,
             MonthRevenuesShare = monthRevenues,
+            MonthFee = apt.MonthlyFee,  
             CategoryShares = catShares,
             Payment = building.PaymentInfo,
             MonthKey = monthKey,

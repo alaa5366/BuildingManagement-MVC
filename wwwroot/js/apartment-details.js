@@ -82,6 +82,21 @@ async function openApartmentDetails(aptId) {
         `;
     }
 }
+    function enterResidentWallet(aptId) {
+    if (!confirm('⚠️ هل تريد الدخول على محفظة الساكن؟\n\nملاحظات:\n• هتتصفح كأنك الساكن\n• تقدر ترجع لحسابك في أي وقت من الشريط الأحمر\n• الحركة دي هتتسجل في السجل')) {
+        return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/Impersonation/EnterResidentWallet';
+    form.innerHTML = `
+        <input type="hidden" name="aptId" value="${aptId}" />
+        <input type="hidden" name="__RequestVerificationToken" value="${getAntiForgeryToken()}" />
+    `;
+    document.body.appendChild(form);
+    form.submit();
+}
 
 // ============================================================
 // Quick Actions

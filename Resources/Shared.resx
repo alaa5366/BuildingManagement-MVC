@@ -4034,4 +4034,44 @@ Example: resident is traveling - empty apartment - maintenance</value>
   <data name="Js_ConfirmEnableApt" xml:space="preserve">
     <value>⚠️ Confirm enabling apartment {0}? — The resident will be able to log in again.</value>
   </data>
+  <data name="CarryOver_Migration_Title" xml:space="preserve">
+    <value>Carry Over Migration</value>
+  </data>
+  <data name="CarryOver_Migration_Desc" xml:space="preserve">
+    <value>Update carry-over balances for all existing months</value>
+  </data>
+  <data name="CarryOver_Migration_Button" xml:space="preserve">
+    <value>Run Migration Now</value>
+  </data>
+  <data name="CarryOver_Migration_Confirm" xml:space="preserve">
+    <value>⚠️ Are you sure you want to run the carry-over migration?
+
+This will update the carryOver balances for all existing months.
+
+This operation can take a few seconds.</value>
+  </data>
+  <data name="CarryOver_Migration_Warn_1" xml:space="preserve">
+    <value>Updates carry-over balances for existing months only (won't touch months with existing carryOver)</value>
+  </data>
+  <data name="CarryOver_Migration_Warn_2" xml:space="preserve">
+    <value>This operation is safe and idempotent (can be run multiple times)</value>
+  </data>
+  <data name="CarryOver_Migration_Warn_3" xml:space="preserve">
+    <value>Take a backup before running this for large databases</value>
+  </data>
+  <data name="Migration_Success_N_Buildings_N_Months_N_Apts" xml:space="preserve">
+    <value>✅ Migration done: {0} buildings, {1} months, {2} apartments updated</value>
+  </data>
+  <data name="Migration_Failed" xml:space="preserve">
+    <value>❌ Migration failed</value>
+  </data>
+  <data name="Current_Month_Only" xml:space="preserve">
+  <value>Current Month Only</value>
+</data>
+  <data name="All_Months" xml:space="preserve">
+  <value>All Months</value>
+</data>
+  <data name="Selected" xml:space="preserve">
+  <value>selected</value>
+</data>
 </root>

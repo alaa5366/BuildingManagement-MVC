@@ -243,20 +243,17 @@ public class BuildingsController : Controller
                 {
                     successCount++;
                     results.Add(new { apt = apt.Number, email, status = "✅ Created/Updated" });
-                    Console.WriteLine($"[Fix] Apt {apt.Number}: {email} — SUCCESS");
                 }
                 else
                 {
                     failCount++;
                     results.Add(new { apt = apt.Number, email, status = "❌ Failed" });
-                    Console.WriteLine($"[Fix] Apt {apt.Number}: {email} — FAILED");
                 }
             }
             catch (Exception ex)
             {
                 failCount++;
                 results.Add(new { apt = apt.Number, email, status = $"❌ {ex.Message}" });
-                Console.WriteLine($"[Fix] Apt {apt.Number}: {email} — EXCEPTION: {ex.Message}");
             }
         }
 
@@ -361,7 +358,6 @@ public class BuildingsController : Controller
             if (updated)
             {
                 success++;
-                Console.WriteLine($"[Sync] Apt {apt.Number}: password updated");
                 continue;
             }
 
@@ -370,12 +366,10 @@ public class BuildingsController : Controller
             if (uid != null)
             {
                 success++;
-                Console.WriteLine($"[Sync] Apt {apt.Number}: created");
             }
             else
             {
                 fail++;
-                Console.WriteLine($"[Sync] Apt {apt.Number}: FAILED");
             }
         }
 

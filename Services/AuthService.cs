@@ -30,10 +30,9 @@ public class AuthService
     public static bool IsSuperAdminEmail(string? email)
     {
         var normalized = email?.Trim().ToLowerInvariant() ?? "";
-        Console.WriteLine($"[AuthService] Checking: '{normalized}'");
-        Console.WriteLine($"[AuthService] Registered: [{string.Join(", ", SuperAdminEmails)}]");
+
         var result = !string.IsNullOrWhiteSpace(email) && SuperAdminEmails.Contains(normalized);
-        Console.WriteLine($"[AuthService] Result: {result}");
+
         return result;
     }
 

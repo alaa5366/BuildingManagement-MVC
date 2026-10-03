@@ -952,6 +952,15 @@ namespace BuildingManagementMvc.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to All Months.
+        /// </summary>
+        internal static string All_Months {
+            get {
+                return ResourceManager.GetString("All_Months", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to — All records.
         /// </summary>
         internal static string All_Records {
@@ -2032,6 +2041,73 @@ namespace BuildingManagementMvc.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Run Migration Now.
+        /// </summary>
+        internal static string CarryOver_Migration_Button {
+            get {
+                return ResourceManager.GetString("CarryOver_Migration_Button", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to ⚠️ Are you sure you want to run the carry-over migration?
+        ///
+        ///This will update the carryOver balances for all existing months.
+        ///
+        ///This operation can take a few seconds..
+        /// </summary>
+        internal static string CarryOver_Migration_Confirm {
+            get {
+                return ResourceManager.GetString("CarryOver_Migration_Confirm", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Update carry-over balances for all existing months.
+        /// </summary>
+        internal static string CarryOver_Migration_Desc {
+            get {
+                return ResourceManager.GetString("CarryOver_Migration_Desc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Carry Over Migration.
+        /// </summary>
+        internal static string CarryOver_Migration_Title {
+            get {
+                return ResourceManager.GetString("CarryOver_Migration_Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Updates carry-over balances for existing months only (won&apos;t touch months with existing carryOver).
+        /// </summary>
+        internal static string CarryOver_Migration_Warn_1 {
+            get {
+                return ResourceManager.GetString("CarryOver_Migration_Warn_1", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to This operation is safe and idempotent (can be run multiple times).
+        /// </summary>
+        internal static string CarryOver_Migration_Warn_2 {
+            get {
+                return ResourceManager.GetString("CarryOver_Migration_Warn_2", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Take a backup before running this for large databases.
+        /// </summary>
+        internal static string CarryOver_Migration_Warn_3 {
+            get {
+                return ResourceManager.GetString("CarryOver_Migration_Warn_3", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Cash.
         /// </summary>
         internal static string Cash {
@@ -2847,6 +2923,15 @@ namespace BuildingManagementMvc.Resources {
         internal static string Current_Balance_2 {
             get {
                 return ResourceManager.GetString("Current_Balance_2", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Current Month Only.
+        /// </summary>
+        internal static string Current_Month_Only {
+            get {
+                return ResourceManager.GetString("Current_Month_Only", resourceCulture);
             }
         }
         
@@ -6252,11 +6337,29 @@ namespace BuildingManagementMvc.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to ❌ Migration failed.
+        /// </summary>
+        internal static string Migration_Failed {
+            get {
+                return ResourceManager.GetString("Migration_Failed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to ✅ Migration result.
         /// </summary>
         internal static string Migration_Result {
             get {
                 return ResourceManager.GetString("Migration_Result", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to ✅ Migration done: {0} buildings, {1} months, {2} apartments updated.
+        /// </summary>
+        internal static string Migration_Success_N_Buildings_N_Months_N_Apts {
+            get {
+                return ResourceManager.GetString("Migration_Success_N_Buildings_N_Months_N_Apts", resourceCulture);
             }
         }
         
@@ -9299,6 +9402,15 @@ namespace BuildingManagementMvc.Resources {
         internal static string Select_The_Building_To_Manage_Its {
             get {
                 return ResourceManager.GetString("Select_The_Building_To_Manage_Its", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to selected.
+        /// </summary>
+        internal static string Selected {
+            get {
+                return ResourceManager.GetString("Selected", resourceCulture);
             }
         }
         

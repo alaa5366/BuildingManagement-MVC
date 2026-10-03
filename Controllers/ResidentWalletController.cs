@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using BuildingManagementMvc.Services;
 using BuildingManagementMvc.Models;
+using BuildingManagementMvc.ViewModels;
 
 namespace BuildingManagementMvc.Controllers;
 
@@ -22,7 +23,15 @@ public class ResidentWalletController : Controller
     private string ApartmentId => User.FindFirstValue("apartmentId")!;
 
     [HttpGet]
-    public async Task<IActionResult> Index(string? month, int page = 1, int pageSize = 50)
+    public async Task<IActionResult> Index(
+        string? month,
+        bool allMonths = false,
+        string? fromMonth = null,
+        string? toMonth = null,
+        string? typeFilter = "all",
+        string? statusFilter = null,
+        int page = 1,
+        int pageSize = 50)
     {
         var building = await _buildings.GetByIdAsync(BuildingId);
         if (building == null) return NotFound();
@@ -31,38 +40,111 @@ public class ResidentWalletController : Controller
         if (apt == null) return NotFound();
 
         var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
-        _wallet.GetOrCreateMonth(building, mk);
 
-        // ✅ كل المعاملات
-        var allTxs = _wallet.GetUnifiedTransactions(building, apt.Id, mk);
+        var vm = BuildViewModel(building, apt, mk, allMonths, fromMonth, toMonth,
+            typeFilter, statusFilter, page, pageSize);
 
-        // ✅ Pagination
-        var pagedTxs = PagedResult<BuildingManagementMvc.Models.WalletTransactionVm>
-            .Create(allTxs, page, pageSize);
-
-        // ✅ Pagination للدفعات المعلقة
-        var pendingList = _wallet.GetApartmentDeposits(building, apt.Id, mk)
-            .Where(d => d.Status == "pending").ToList();
-        var pagedPending = PagedResult<BuildingManagementMvc.Models.Deposit>
-            .Create(pendingList, 1, pageSize);
+        // ✅ AJAX — ارجع Partial بس
+        if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        {
+            return PartialView("_StatementPartial", vm.Statement);
+        }
 
         ViewBag.Building = building;
         ViewBag.Apartment = apt;
         ViewBag.Month = mk;
+        ViewBag.AllMonths = allMonths;
+        ViewBag.FromMonth = fromMonth;
+        ViewBag.ToMonth = toMonth;
+        ViewBag.TypeFilter = typeFilter;
+        ViewBag.StatusFilter = statusFilter;
         ViewBag.Balance = _wallet.ComputeWalletBalance(building, apt.Id, mk);
-        ViewBag.Transactions = pagedTxs;
-        ViewBag.PendingDeposits = pagedPending;
-        ViewBag.RouteValues = new Dictionary<string, string?>
-        {
-            ["month"] = mk,
-            ["pageSize"] = pageSize.ToString()
-        };
+        ViewBag.Transactions = vm.Statement.Transactions;
+        ViewBag.PendingDeposits = vm.PendingDeposits;
+        ViewBag.RouteValues = vm.Statement.RouteValues;
 
         return View();
     }
 
     // ============================================================
-    // ✅ تعديل: CreateDeposit بيستقبل صورة الإيصال
+    // ✅ Helper: بناء ViewModel
+    // ============================================================
+    private (StatementPartialVm Statement, PagedResult<Deposit> PendingDeposits) BuildViewModel(
+        Building building, Apartment apt, string mk,
+        bool allMonths, string? fromMonth, string? toMonth,
+        string? typeFilter, string? statusFilter,
+        int page, int pageSize)
+    {
+        List<WalletTransactionVm> allTxs;
+
+        if (allMonths)
+        {
+            allTxs = _wallet.GetAllTransactions(
+                building, apt.Id,
+                fromMonth, toMonth,
+                typeFilter, statusFilter);
+        }
+        else
+        {
+            allTxs = _wallet.GetUnifiedTransactions(building, apt.Id, mk);
+
+            if (!string.IsNullOrWhiteSpace(typeFilter))
+            {
+                var selectedTypes = typeFilter
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(t => t.Trim().ToLowerInvariant())
+                    .ToList();
+
+                if (!selectedTypes.Contains("all") && selectedTypes.Count > 0)
+                {
+                    allTxs = allTxs.Where(t =>
+                        (selectedTypes.Contains("deposits") && t.Type == "deposit") ||
+                        (selectedTypes.Contains("expenses") && t.Type == "expense") ||
+                        (selectedTypes.Contains("revenues") && t.Type == "revenue") ||
+                        (selectedTypes.Contains("carry_over") && t.Type == "carry_over") ||
+                        (selectedTypes.Contains("adjustments") && t.Type == "adjustment") ||
+                        (selectedTypes.Contains("monthly_fee") &&
+                            (t.Type == "monthly_fee_due" || t.Type == "monthly_fee_credit")) ||
+                        (selectedTypes.Contains("success") && t.Status == "confirmed") ||
+                        (selectedTypes.Contains("failed") && t.Status == "cancelled") ||
+                        (selectedTypes.Contains("pending") && t.Status == "pending")
+                    ).ToList();
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(statusFilter))
+            {
+                allTxs = allTxs.Where(t => t.Status == statusFilter).ToList();
+            }
+        }
+
+        var pagedTxs = PagedResult<WalletTransactionVm>.Create(allTxs, page, pageSize);
+
+        var pendingList = _wallet.GetApartmentDeposits(building, apt.Id, mk)
+            .Where(d => d.Status == "pending").ToList();
+        var pagedPending = PagedResult<Deposit>.Create(pendingList, 1, pageSize);
+
+        var statementVm = new StatementPartialVm
+        {
+            Transactions = pagedTxs,
+            AllMonths = allMonths,
+            RouteValues = new Dictionary<string, string?>
+            {
+                ["month"] = mk,
+                ["allMonths"] = allMonths.ToString().ToLower(),
+                ["fromMonth"] = fromMonth,
+                ["toMonth"] = toMonth,
+                ["typeFilter"] = typeFilter,
+                ["statusFilter"] = statusFilter,
+                ["pageSize"] = pageSize.ToString()
+            }
+        };
+
+        return (statementVm, pagedPending);
+    }
+
+    // ============================================================
+    // ✅ CreateDeposit
     // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -79,7 +161,6 @@ public class ResidentWalletController : Controller
 
         if (amount > 0)
         {
-            // ✅ 1. ارفع الصورة لو موجودة
             ReceiptData? receipt = null;
             if (receiptImage != null && receiptImage.Length > 0)
             {
@@ -91,10 +172,8 @@ public class ResidentWalletController : Controller
                     apt.Id);
             }
 
-            // ✅ 2. أنشئ الدفعة (مع الصورة)
             var d = _wallet.CreateDeposit(building, apt.Id, amount, note, "resident", mk, receipt);
 
-            // ✅ 3. سجّل في الـ Audit Log
             var auditDetails = $"دفعة جديدة {d.Number} — {amount:0.##} ج.م";
             if (receipt != null) auditDetails += " (مع صورة إيصال)";
 
@@ -109,7 +188,7 @@ public class ResidentWalletController : Controller
     }
 
     // ============================================================
-    // قراءة صورة الإيصال بالـ OCR
+    // ✅ ParseReceiptImage (OCR)
     // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -120,7 +199,7 @@ public class ResidentWalletController : Controller
         if (image == null || image.Length == 0)
             return Json(new { success = false, error = Loc.T("No_Image_Was_Uploaded") });
 
-        if (image.Length > 10 * 1024 * 1024) // 10 MB
+        if (image.Length > 10 * 1024 * 1024)
             return Json(new { success = false, error = Loc.T("The_Image_Is_Too_Large_Maximum") });
 
         try
@@ -139,7 +218,6 @@ public class ResidentWalletController : Controller
                 });
             }
 
-            // تحقق: هل التحويل ناجح؟
             if (!parsed.IsSuccessful)
             {
                 return Json(new
