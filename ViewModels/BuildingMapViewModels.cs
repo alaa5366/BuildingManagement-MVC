@@ -5,7 +5,7 @@ namespace BuildingManagementMvc.ViewModels;
 // ✅ Phase 24.2 — Building Map ViewModels
 // بتجمع: Building + Presence + Balance + Status
 
-public class BuildingMapVm
+public class BuildingMapViewModels
 {
     public Building Building { get; set; } = null!;
     public List<FloorMapVm> Floors { get; set; } = new();

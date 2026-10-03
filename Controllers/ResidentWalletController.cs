@@ -69,7 +69,7 @@ public class ResidentWalletController : Controller
     // ============================================================
     // ✅ Helper: بناء ViewModel
     // ============================================================
-    private (StatementPartialVm Statement, PagedResult<Deposit> PendingDeposits) BuildViewModel(
+    private (StatementPartialViewModels Statement, PagedResult<Deposit> PendingDeposits) BuildViewModel(
         Building building, Apartment apt, string mk,
         bool allMonths, string? fromMonth, string? toMonth,
         string? typeFilter, string? statusFilter,
@@ -124,7 +124,7 @@ public class ResidentWalletController : Controller
             .Where(d => d.Status == "pending").ToList();
         var pagedPending = PagedResult<Deposit>.Create(pendingList, 1, pageSize);
 
-        var statementVm = new StatementPartialVm
+        var statementVm = new StatementPartialViewModels
         {
             Transactions = pagedTxs,
             AllMonths = allMonths,

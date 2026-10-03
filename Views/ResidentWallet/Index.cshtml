@@ -258,7 +258,7 @@
 
 @* ===== كشف الحساب (AJAX Container) ===== *@
 <div class="bg-white rounded shadow-sm p-3" id="statementWrapper">
-    @await Html.PartialAsync("_StatementPartial", new BuildingManagementMvc.ViewModels.StatementPartialVm
+    @await Html.PartialAsync("_StatementPartial", new BuildingManagementMvc.ViewModels.StatementPartialViewModels
     {
         Transactions = transactions,
         AllMonths = allMonths,

@@ -2,7 +2,7 @@
 
 namespace BuildingManagementMvc.ViewModels;
 
-public class StatementPartialVm
+public class StatementPartialViewModels
 {
     public PagedResult<WalletTransactionVm> Transactions { get; set; } = new();
     public bool AllMonths { get; set; }

@@ -15,9 +15,9 @@ public class BuildingMapService
         _presence = presence;
     }
 
-    public async Task<BuildingMapVm> BuildAsync(Building building, string currentMonth)
+    public async Task<BuildingMapViewModels> BuildAsync(Building building, string currentMonth)
     {
-        var vm = new BuildingMapVm
+        var vm = new BuildingMapViewModels
         {
             Building = building,
             CurrentMonth = currentMonth
