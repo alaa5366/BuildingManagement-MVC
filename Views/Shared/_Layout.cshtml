@@ -1,6 +1,4 @@
-@using Microsoft.Extensions.Localization
 @{
-    // ✅ نفس ملفات Resources/Shared.*.resx اللي بتقرا منها Loc.T (من غير حاجة لحقن Factory)
     var Localizer = new BuildingManagementMvc.Services.LocStringLocalizer();
 }
 @{
@@ -8,9 +6,6 @@
     var isRtl = currentCulture == "ar";
     var dir = isRtl ? "rtl" : "ltr";
     var htmlLang = isRtl ? "ar" : "en";
-    var bootstrapCss = isRtl
-        ? "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css"
-        : "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css";
     var returnUrl = Context.Request.Path + Context.Request.QueryString;
 }
 <!DOCTYPE html>
@@ -19,8 +14,17 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>@ViewData["Title"] - @Localizer["App_Name"]</title>
-    <link href="@bootstrapCss" rel="stylesheet" />
-    <link rel="stylesheet" href="~/css/site.css" />
+
+    @* ✅ Bootstrap CSS محلي (بدون dist/) *@
+    @if (isRtl)
+    {
+        <link href="~/lib/bootstrap/css/bootstrap.rtl.min.css" rel="stylesheet" />
+    }
+    else
+    {
+        <link href="~/lib/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+    }
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 
     @* ✅ PWA *@
     <link rel="manifest" href="~/manifest.json" />
@@ -33,7 +37,6 @@
 
     @* ✅ Responsive tweaks *@
     <style>
-        /* على الموبايل: الخط أصغر شوية، الحواف أنضف */
         @@media (max-width: 768px) {
             body { font-size: 14px; }
             .app-navbar .navbar-brand { font-size: 1rem; }
@@ -44,7 +47,6 @@
             .table-responsive { overflow-x: auto; }
         }
 
-        /* اللينكات داخل القائمة المنسدلة على الموبايل */
         .app-navbar .navbar-nav .nav-link {
             padding: .5rem .75rem;
             border-radius: 8px;
@@ -53,17 +55,16 @@
             background-color: rgba(255,255,255,.1);
         }
 
-        /* منع تمرير الصفحة أفقيًا */
         html, body { overflow-x: hidden; }
         .impersonation-banner {
-        background: linear-gradient(90deg, #dc3545, #c82333);
-        color: white;
-        padding: 10px 0;
-        font-size: 14px;
-        position: sticky;
-        top: 0;
-        z-index: 1050;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            background: linear-gradient(90deg, #dc3545, #c82333);
+            color: white;
+            padding: 10px 0;
+            font-size: 14px;
+            position: sticky;
+            top: 0;
+            z-index: 1050;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
     </style>
 </head>
@@ -88,7 +89,6 @@
             </div>
         </div>
     }
-    ...
 
     <nav class="navbar navbar-expand-lg navbar-dark app-navbar">
         <div class="container-fluid">
@@ -98,7 +98,6 @@
 
             @if (User.Identity?.IsAuthenticated == true)
             {
-                @* ✅ زر القائمة على الموبايل *@
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar"
                         aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
@@ -147,36 +146,43 @@
                             <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Help" asp-action="Index">📖 @Localizer["Nav_Help"]</a></li>
                         }
 
-                        @* ✅ Language Switcher *@
                         <li class="nav-item dropdown">
-                            <button class="btn btn-sm btn-outline-light dropdown-toggle mt-2 mt-lg-0" type="button" data-bs-toggle="dropdown">
+                            <button class="btn btn-sm btn-outline-light dropdown-toggle mt-2 mt-lg-0" 
+                                    type="button" 
+                                    id="langDropdown"
+                                    data-bs-toggle="dropdown" 
+                                    aria-expanded="false">
                                 🌐 @(currentCulture switch
                                 {
                                     "ar" => "العربية",
                                     "en" => "English",
                                     "fr" => "Français",
                                     "de" => "Deutsch",
-                                    _ => "English"
+                                    _ => "العربية"
                                 })
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="langDropdown">
                                 <li>
-                                    <a class="dropdown-item" href="/Language/Set?lang=ar&returnUrl=@Uri.EscapeDataString(returnUrl)">
+                                    <a class="dropdown-item" asp-controller="Language" asp-action="Set" 
+                                       asp-route-lang="ar" asp-route-returnUrl="@returnUrl">
                                         🇪🇬 العربية
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="/Language/Set?lang=en&returnUrl=@Uri.EscapeDataString(returnUrl)">
+                                    <a class="dropdown-item" asp-controller="Language" asp-action="Set" 
+                                       asp-route-lang="en" asp-route-returnUrl="@returnUrl">
                                         🇬🇧 English
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="/Language/Set?lang=fr&returnUrl=@Uri.EscapeDataString(returnUrl)">
+                                    <a class="dropdown-item" asp-controller="Language" asp-action="Set" 
+                                       asp-route-lang="fr" asp-route-returnUrl="@returnUrl">
                                         🇫🇷 Français
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="/Language/Set?lang=de&returnUrl=@Uri.EscapeDataString(returnUrl)">
+                                    <a class="dropdown-item" asp-controller="Language" asp-action="Set" 
+                                       asp-route-lang="de" asp-route-returnUrl="@returnUrl">
                                         🇩🇪 Deutsch
                                     </a>
                                 </li>
@@ -218,18 +224,33 @@
         @Localizer["Footer_Copyright"]
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    @* ============================================================ *@
+    @* ✅ Scripts — الترتيب مهم جداً                              *@
+    @* 1. jQuery   (لازم قبل bootstrap.min.js)                     *@
+    @* 2. Popper   (لازم قبل bootstrap.min.js للـ dropdowns)       *@
+    @* 3. Bootstrap JS                                              *@
+    @* ============================================================ *@
+
+    @* ✅ 1. jQuery من CDN *@
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+    @* ✅ 2. Popper من CDN (مطلوب للـ dropdowns و tooltips) *@
+    <script src="https://cdn.jsdelivr.net/npm/@@popperjs/core@@2.11.8/dist/umd/popper.min.js"></script>
+
+    @* ✅ 3. Bootstrap JS محلي *@
+    <script src="~/lib/bootstrap/js/bootstrap.min.js"></script>
 
     @* ✅ PWA *@
     <script>
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('/sw.js')
-                        .then(reg => console.log('[PWA] Service Worker registered:', reg.scope))
-                        .catch(err => console.warn('[PWA] Service Worker registration failed:', err));
-                });
-            }
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('[PWA] Service Worker registered:', reg.scope))
+                    .catch(err => console.warn('[PWA] Service Worker registration failed:', err));
+            });
+        }
     </script>
+
     @* ✅ Presence Heartbeat *@
     @if (User.Identity?.IsAuthenticated == true)
     {

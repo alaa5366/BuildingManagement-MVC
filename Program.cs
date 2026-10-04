@@ -1,5 +1,6 @@
 using BuildingManagementMvc.Services;
-using BuildingManagementMvc.Resources;
+using BuildingManagementMvc.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using QuestPDF.Drawing;
 using QuestPDF.Infrastructure;
@@ -10,33 +11,49 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
 
-// ✅ إعدادات QuestPDF
 QuestPDF.Settings.License = LicenseType.Community;
 QuestPDF.Settings.UseEnvironmentFonts = false;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ✅ الـ cookies لازم Secure في الإنتاج (محلياً على http بنسمح بـ SameAsRequest)
 var cookieSecurePolicy = builder.Environment.IsDevelopment()
     ? CookieSecurePolicy.SameAsRequest
     : CookieSecurePolicy.Always;
 
-// MVC + Localization
 builder.Services.AddControllersWithViews(options =>
-    {
-        // ✅ أي POST/PUT/DELETE لازم يعدّي anti-forgery تلقائياً (إلا لو action عامل [IgnoreAntiforgeryToken] زي Presence)
-        options.Filters.Add(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute());
-    })
+{
+    options.Filters.Add(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute());
+})
     .AddViewLocalization()
     .AddDataAnnotationsLocalization(options =>
     {
-        // رسائل الـ validation (ErrorMessage = "Key") بتتقرا من Resources/Shared.*.resx عن طريق Loc
         options.DataAnnotationLocalizerProvider = (type, factory) =>
             new BuildingManagementMvc.Services.LocStringLocalizer();
     });
 
-// Firebase / Firestore
 builder.Services.AddSingleton<FirestoreContext>();
+builder.Services.AddSingleton<StorageSettingsService>();
+
+var storageProvider = builder.Configuration["Storage:Provider"] ?? "Firestore";
+if (!storageProvider.Equals("Firestore", StringComparison.OrdinalIgnoreCase))
+{
+    var sqlConn = builder.Configuration.GetConnectionString("Default");
+    if (string.IsNullOrWhiteSpace(sqlConn))
+        throw new InvalidOperationException("Storage:Provider=" + storageProvider + " لكن ConnectionStrings:Default ناقص.");
+
+    builder.Services.AddDbContextFactory<AppDbContext>(o => o.UseSqlServer(sqlConn));
+    builder.Services.AddSingleton<BuildingSqlStore>();
+    builder.Services.AddSingleton<UserSqlStore>();
+    builder.Services.AddSingleton<ReverseSyncService>();
+    builder.Services.AddHostedService<HealthMonitorService>();
+
+    Console.WriteLine($"[Storage] Provider = {storageProvider}, SQL Mirror = Enabled + Health Monitor");
+}
+else
+{
+    Console.WriteLine("[Storage] Provider = Firestore (UnEnabled SQL Mirror)");
+}
+
 builder.Services.AddSingleton<BuildingsService>();
 builder.Services.AddSingleton<UsersService>();
 builder.Services.AddHttpClient<FirebaseAuthRestService>();
@@ -68,38 +85,30 @@ builder.Services.AddSingleton<NotificationsService>();
 builder.Services.AddSingleton<WhatsAppTemplateService>();
 builder.Services.AddScoped<ImpersonationService>();
 
-// ✅ Phase 20 — الإعدادات  
 builder.Services.AddScoped<SettingsService>();
 
-// ✅ Phase 24 — Presence
 builder.Services.AddSingleton<PresenceService>();
 builder.Services.AddScoped<BuildingMapService>();
 
-// ✅ Phase 19 — Backup
 builder.Services.AddScoped<BackupService>();
 builder.Services.AddScoped<ScheduledBackupService>();
 builder.Services.AddHostedService<BackupScheduler>();
 
-// ✅ Phase 18 — الأدوات والمزامنة
 builder.Services.AddScoped<MigrationService>();
 builder.Services.AddScoped<DbMaintenanceService>();
 builder.Services.AddScoped<DbSyncService>();
 
-// ✅ Phase 17 — السجل
 builder.Services.AddScoped<AuditLogQueryService>();
-
-// ✅ Phase 16 — الفئات المالية
 builder.Services.AddScoped<CategoriesService>();
 
-// ✅ Phase 15 — إدارة الأدمنة 
 builder.Services.AddSingleton<IAuditLogger, AuditLogger>();
 builder.Services.AddSingleton<AuditLogger>();
 builder.Services.AddScoped<AdminManagementService>();
 
-// ✅ Memory Cache 
+builder.Services.AddSingleton<UserSqlStore>();
+
 builder.Services.AddMemoryCache();
 
-// ✅ Localization (معدّل)
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 
 builder.Services.Configure<RequestLocalizationOptions>(options =>
@@ -126,7 +135,6 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
     options.RequestCultureProviders.Add(new AcceptLanguageHeaderRequestCultureProvider());
 });
 
-// Cookie authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -139,8 +147,6 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.SecurePolicy = cookieSecurePolicy;
         options.Cookie.SameSite = SameSiteMode.Lax;
 
-        // ✅ مراجعة الجلسة: أدمن اتعطّل/اتحذف، أو سوبر أدمن اتشال من الـ config => الجلسة تبطل،
-        // وصلاحيات الأدمن بتتحدّث من غير login جديد (النتيجة بتتخزّن دقيقتين).
         options.Events = new CookieAuthenticationEvents
         {
             OnValidatePrincipal = async ctx =>
@@ -184,8 +190,6 @@ builder.Services.AddAntiforgery(options =>
     options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
-// ✅ ورا Azure App Service لازم نقرأ الـ IP الحقيقي (X-Forwarded-For) عشان الـ LoginThrottle
-// وعشان HTTPS redirect يشتغل صح. App Service هو الـ proxy الوحيد قدام التطبيق.
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -195,7 +199,6 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 var app = builder.Build();
 
-// ✅ يفشل التشغيل بدري لو أي سر ناقص (بدل ما يشتغل بمفتاح افتراضي)
 ConfigSecrets.Require(app.Configuration, "Firebase:ProjectId");
 ConfigSecrets.Require(app.Configuration, "Firebase:WebApiKey");
 ConfigSecrets.Require(app.Configuration, "Excel:SecretKey");
@@ -204,7 +207,6 @@ AuthService.ConfigureSuperAdmins(ConfigSecrets.Require(app.Configuration, "Auth:
 
 app.UseForwardedHeaders();
 
-// ✅ سجّل خطوط Cairo
 var fontsDir = Path.Combine(app.Environment.WebRootPath, "fonts");
 
 if (Directory.Exists(fontsDir))
@@ -217,7 +219,6 @@ if (Directory.Exists(fontsDir))
         {
             using var stream = File.OpenRead(fontFile);
             FontManager.RegisterFont(stream);
-
         }
         catch (Exception ex)
         {

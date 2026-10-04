@@ -1,11 +1,13 @@
+using AuthResult = BuildingManagementMvc.Services.AuthResult;
+using BuildingManagementMvc.Models;
+
 namespace BuildingManagementMvc.Services;
 
 // ترجمة حرفية لمنطق تسجيل الدخول الثلاثي في js/services/auth-service.js
-// (Super Admin بالإيميل، Admin برقم الهاتف + PIN، Resident بالدور +
-// رقم الشقة + واتساب + PIN)
+// ✅ معدّل: Local Auth Fallback لو Firebase وقع
 public class AuthService
 {
-    // ✅ إيميلات السوبر أدمن من الـ configuration (Auth:SuperAdminEmails — مفصولة بفاصلة)، مش مكتوبة في الكود
+    // ✅ إيميلات السوبر أدمن من الـ configuration
     private static string[] SuperAdminEmails = Array.Empty<string>();
 
     public static void ConfigureSuperAdmins(string commaSeparated)
@@ -19,23 +21,29 @@ public class AuthService
     private readonly BuildingsService _buildings;
     private readonly UsersService _users;
     private readonly FirebaseAuthRestService _fbAuth;
+    private readonly ILogger<AuthService> _log;
 
-    public AuthService(BuildingsService buildings, UsersService users, FirebaseAuthRestService fbAuth)
+    public AuthService(
+        BuildingsService buildings,
+        UsersService users,
+        FirebaseAuthRestService fbAuth,
+        ILogger<AuthService> log)
     {
         _buildings = buildings;
         _users = users;
         _fbAuth = fbAuth;
+        _log = log;
     }
 
     public static bool IsSuperAdminEmail(string? email)
     {
         var normalized = email?.Trim().ToLowerInvariant() ?? "";
-
-        var result = !string.IsNullOrWhiteSpace(email) && SuperAdminEmails.Contains(normalized);
-
-        return result;
+        return !string.IsNullOrWhiteSpace(email) && SuperAdminEmails.Contains(normalized);
     }
 
+    // ============================================================
+    // 1. Super Admin — Firebase Auth (بدون Fallback)
+    // ============================================================
     public async Task<AuthResult> SignInSuperAdminAsync(string email, string password)
     {
         if (!IsSuperAdminEmail(email)) return AuthResult.Fail("not-superadmin");
@@ -55,9 +63,13 @@ public class AuthService
             });
         }
 
-        return AuthResult.Ok(res.Uid!, "superadmin", email, existing?.Name ?? "Super Admin", new List<string>());
+        return AuthResult.Ok(res.Uid!, "superadmin", email,
+            existing?.Name ?? "Super Admin", new List<string>());
     }
 
+    // ============================================================
+    // 2. Admin — PIN check + Firebase Auth (Fallback محلي)
+    // ============================================================
     public async Task<AuthResult> SignInAdminAsync(string buildingId, string phone, string pin)
     {
         var building = await _buildings.GetByIdAsync(buildingId);
@@ -67,6 +79,7 @@ public class AuthService
         var admins = await _users.GetAdminsAsync();
         if (admins.Count == 0) return AuthResult.Fail("no-admin");
 
+        AppUserDoc? matchedAdmin = null;
         foreach (var admin in admins)
         {
             if (!admin.BuildingIds.Contains(building.Id)) continue;
@@ -76,17 +89,43 @@ public class AuthService
 
             if (admin.Disabled) return AuthResult.Fail("account-disabled", admin.DisabledReason);
 
-            var password = AuthHelpers.AdminPasswordForPhone(admin.Phone, pin);
-            var signIn = await _fbAuth.SignInWithPasswordAsync(admin.Email, password);
-            if (!signIn.Success) return AuthResult.Fail(signIn.Error ?? "signin-failed");
-
-            return AuthResult.Ok(signIn.Uid!, "admin", admin.Email, admin.Name, new List<string> { building.Id });
+            matchedAdmin = admin;
+            break;
         }
 
-        return AuthResult.Fail("wrong-credentials");
+        if (matchedAdmin == null) return AuthResult.Fail("wrong-credentials");
+
+        // ✅ الـ PIN اتحقق! دلوقتي جرّب Firebase Auth
+        var password = AuthHelpers.AdminPasswordForPhone(matchedAdmin.Phone, pin);
+        try
+        {
+            var signIn = await _fbAuth.SignInWithPasswordAsync(matchedAdmin.Email, password);
+            if (signIn.Success)
+            {
+                return AuthResult.Ok(signIn.Uid!, "admin", matchedAdmin.Email,
+                    matchedAdmin.Name, new List<string> { building.Id });
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Firebase Auth failed for admin {Email}, using local fallback", matchedAdmin.Email);
+        }
+
+        // ✅ Fallback: Local Session (بدون Firebase)
+        _log.LogWarning("Using LOCAL auth for admin {Email}", matchedAdmin.Email);
+        return AuthResult.Ok(
+            matchedAdmin.Uid,
+            "admin",
+            matchedAdmin.Email,
+            matchedAdmin.Name,
+            new List<string> { building.Id });
     }
 
-    public async Task<AuthResult> SignInResidentAsync(string buildingId, int floorOrder, int aptNumber, string whatsapp, string pin)
+    // ============================================================
+    // 3. Resident — PIN check + Firebase Auth (Fallback محلي)
+    // ============================================================
+    public async Task<AuthResult> SignInResidentAsync(string buildingId, int floorOrder,
+        int aptNumber, string whatsapp, string pin)
     {
         var building = await _buildings.GetByIdAsync(buildingId);
         if (building == null) return AuthResult.Fail("building-not-found");
@@ -103,16 +142,45 @@ public class AuthService
         if (apt.Pin != pin) return AuthResult.Fail("wrong-pin");
         if (apt.Disabled) return AuthResult.Fail("account-disabled", apt.DisabledReason);
 
+        // ✅ الـ PIN اتحقق! دلوقتي جرّب Firebase Auth
         var email = AuthHelpers.ResidentInternalEmail(building.Id, floor!.Order, aptNumber);
         var password = AuthHelpers.ResidentPassword(building.Id, aptNumber, pin);
-        var signIn = await _fbAuth.SignInWithPasswordAsync(email, password);
-        if (!signIn.Success) return AuthResult.Fail(signIn.Error ?? "signin-failed");
+        try
+        {
+            var signIn = await _fbAuth.SignInWithPasswordAsync(email, password);
+            if (signIn.Success)
+            {
+                var name = string.IsNullOrWhiteSpace(apt.Owner)
+                    ? Loc.T("Apartment_N", aptNumber)
+                    : apt.Owner;
+                return AuthResult.Ok(signIn.Uid!, "resident", email, name,
+                    new List<string> { building.Id }, apt.Id, aptNumber);
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Firebase Auth failed for resident {Email}, using local fallback", email);
+        }
 
-        var name = string.IsNullOrWhiteSpace(apt.Owner) ? Loc.T("Apartment_N", aptNumber) : apt.Owner;
-        return AuthResult.Ok(signIn.Uid!, "resident", email, name, new List<string> { building.Id }, apt.Id, aptNumber);
+        // ✅ Fallback: Local Session (بدون Firebase)
+        _log.LogWarning("Using LOCAL auth for resident {Email}", email);
+        var localName = string.IsNullOrWhiteSpace(apt.Owner)
+            ? Loc.T("Apartment_N", aptNumber)
+            : apt.Owner;
+        return AuthResult.Ok(
+            $"local-{building.Id}-{apt.Id}",
+            "resident",
+            email,
+            localName,
+            new List<string> { building.Id },
+            apt.Id,
+            aptNumber);
     }
 }
 
+// ============================================================
+// AuthResult — بره AuthService (top-level)
+// ============================================================
 public class AuthResult
 {
     public bool Success { get; set; }
@@ -126,11 +194,17 @@ public class AuthResult
     public string? ApartmentId { get; set; }
     public int? ApartmentNumber { get; set; }
 
-    public static AuthResult Ok(string uid, string role, string email, string name, List<string> buildingIds,
-        string? aptId = null, int? aptNumber = null) => new()
+    public static AuthResult Ok(string uid, string role, string email, string name,
+        List<string> buildingIds, string? aptId = null, int? aptNumber = null) => new()
         {
-            Success = true, Uid = uid, Role = role, Email = email, Name = name,
-            BuildingIds = buildingIds, ApartmentId = aptId, ApartmentNumber = aptNumber
+            Success = true,
+            Uid = uid,
+            Role = role,
+            Email = email,
+            Name = name,
+            BuildingIds = buildingIds,
+            ApartmentId = aptId,
+            ApartmentNumber = aptNumber
         };
 
     public static AuthResult Fail(string error, string? reason = null) =>

@@ -1,5 +1,6 @@
 ﻿@{
     ViewData["Title"] = Loc.T("Database_Sync");
+    var currentMode = ViewBag.CurrentMode as string ?? "Dual";
 }
 
 <div class="container">
@@ -46,6 +47,85 @@
                     <button class="btn btn-warning w-100">@Loc.T("Run")</button>
                 </div>
             </form>
+        </div>
+
+        <div class="col-md-4">
+            <form method="post" asp-action="SyncSql" class="card h-100">
+                @Html.AntiForgeryToken()
+                <div class="card-body">
+                    <h5>مزامنة SQL Server</h5>
+                    <p class="text-muted">نسخ كل العمارات من Firestore إلى SQL Server</p>
+                    <button class="btn btn-success w-100">تشغيل</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-md-4">
+            <form method="post" asp-action="ReverseSync" class="card h-100">
+                @Html.AntiForgeryToken()
+                <div class="card-body">
+                    <h5>مزامنة عكسية (SQL → Firebase)</h5>
+                    <p class="text-muted">نقل التعديلات من SQL إلى Firebase</p>
+                    <button class="btn btn-info w-100">تشغيل</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <form method="post" asp-action="SeedUsersToSql" class="card h-100">
+            @Html.AntiForgeryToken()
+            <div class="card-body">
+                <h5>نسخ المستخدمين إلى SQL</h5>
+                <p class="text-muted">نسخ كل المستخدمين من Firestore إلى SQL Server</p>
+                <button class="btn btn-dark w-100">تشغيل</button>
+            </div>
+        </form>
+    </div>
+    <!-- ✅ قسم تبديل وضع التخزين -->
+    <div class="card mt-4">
+        <div class="card-body">
+            <h5>وضع التخزين الحالي: <span class="badge bg-primary">@currentMode</span></h5>
+            <p class="text-muted">
+                اختار من أين تتم القراءة والكتابة. التغيير يطبق فورًا على الطلبات الجديدة.
+            </p>
+
+            <div class="d-flex gap-2 flex-wrap">
+                <form method="post" asp-action="SetStorageMode" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="mode" value="Firestore" />
+                    <button class="btn btn-outline-danger"
+                            onclick="return confirm('تحويل إلى Firestore فقط؟')">
+                        🔥 Firestore فقط
+                    </button>
+                </form>
+
+                <form method="post" asp-action="SetStorageMode" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="mode" value="Dual" />
+                    <button class="btn btn-outline-primary"
+                            onclick="return confirm('تحويل إلى Dual (الاثنين)؟')">
+                        🔄 Dual (Firestore + SQL)
+                    </button>
+                </form>
+
+                <form method="post" asp-action="SetStorageMode" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="mode" value="Sql" />
+                    <button class="btn btn-outline-success"
+                            onclick="return confirm('تحويل إلى SQL Server فقط؟')">
+                        🗄️ SQL Server فقط
+                    </button>
+                </form>
+            </div>
+
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success mt-3">@TempData["Success"]</div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger mt-3">@TempData["Error"]</div>
+            }
         </div>
     </div>
 </div>

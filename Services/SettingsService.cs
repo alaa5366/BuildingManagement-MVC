@@ -1,4 +1,5 @@
-﻿using BuildingManagementMvc.Models;
+﻿using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Models;
 using Google.Cloud.Firestore;
 using System;
 using System.Collections.Generic;
@@ -16,20 +17,21 @@ public class SettingsService
     private readonly FirebaseAuthRestService _firebaseAuth;
     private readonly FirebaseAdminService _fbAdmin;
     private readonly ILogger<SettingsService> _logger;
-
+    private readonly BuildingSqlStore? _sqlStore;
     private const string SystemSettingsCol = "system_settings";
     private const string BuildingsCol = "buildings";
     private const string UsersCol = "users";
     private const string GlobalDocId = "global";
 
     public SettingsService(
-        FirestoreContext ctx,
-        IAuditLogger audit,
-        BuildingsService buildings,
-        UsersService users,
-        FirebaseAuthRestService firebaseAuth,
-        FirebaseAdminService fbAdmin,
-        ILogger<SettingsService> logger)
+    FirestoreContext ctx,
+    IAuditLogger audit,
+    BuildingsService buildings,
+    UsersService users,
+    FirebaseAuthRestService firebaseAuth,
+    FirebaseAdminService fbAdmin,
+    ILogger<SettingsService> logger,
+    BuildingSqlStore? sqlStore = null)          
     {
         _db = ctx.Db;
         _audit = audit;
@@ -38,6 +40,7 @@ public class SettingsService
         _firebaseAuth = firebaseAuth;
         _fbAdmin = fbAdmin;
         _logger = logger;
+        _sqlStore = sqlStore;                        
     }
 
     // ============================================================
@@ -141,6 +144,19 @@ public class SettingsService
 
         await _db.Collection(BuildingsCol).Document(buildingId)
             .SetAsync(new Dictionary<string, object> { ["settings"] = dict }, SetOptions.MergeAll);
+
+        if (_sqlStore != null)
+        {
+            try
+            {
+                await _sqlStore.SaveSettingsAsync(buildingId, dict);
+            }
+            catch (Exception ex)
+            {
+                SqlMirrorHealth.RecordFailure($"settings {buildingId}", ex);
+                _logger.LogError(ex, "SQL settings mirror failed for building {BuildingId}", buildingId);
+            }
+        }
 
         await _audit.LogAsync(
             action: "settings.building.update",

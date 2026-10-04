@@ -1,0 +1,94 @@
+@using BuildingManagementMvc.Data
+@{
+    ViewData["Title"] = "مزامنة SQL";
+    var provider = (string)ViewBag.Provider;
+    var mirror = (bool)ViewBag.MirrorEnabled;
+    var failures = (int)ViewBag.Failures;
+    var lastError = ViewBag.LastError as string;
+    var lastErrorAt = ViewBag.LastErrorAt as DateTime?;
+    var lastSuccessAt = ViewBag.LastSuccessAt as DateTime?;
+    var report = ViewBag.Report as SyncReport;
+    var error = ViewBag.Error as string;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>التخزين المزدوج (Firestore + SQL)</h3>
+    <a asp-controller="SuperAdminHome" asp-action="Index" class="btn btn-outline-secondary btn-sm">رجوع</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <p class="mb-1">الوضع الحالي: <strong>@provider</strong></p>
+        @if (mirror)
+        {
+            <p class="mb-1 text-success">Firestore هو المصدر الأساسي، وكل تعديل بيتنسخ على SQL.</p>
+        }
+        else
+        {
+            <p class="mb-1 text-warning">المرآة مش شغالة. اضبط <code>Storage:Provider = Dual</code> وأعد التشغيل.</p>
+        }
+        <p class="mb-1">آخر نسخ ناجح: @(lastSuccessAt.HasValue ? lastSuccessAt.Value.ToString("yyyy-MM-dd HH:mm:ss") + " UTC" : "—")</p>
+        <p class="mb-1">عدد مرات فشل النسخ من آخر تشغيل: <strong class="@(failures > 0 ? "text-danger" : "")">@failures</strong></p>
+        @if (!string.IsNullOrEmpty(lastError))
+        {
+            <p class="mb-1 text-danger small">آخر خطأ (@(lastErrorAt?.ToString("yyyy-MM-dd HH:mm:ss")) UTC): @lastError</p>
+        }
+        @if (failures > 0)
+        {
+            <form asp-action="ResetCounters" method="post" class="mt-2">
+                <button class="btn btn-sm btn-outline-secondary">تصفير العدّادات</button>
+            </form>
+        }
+    </div>
+</div>
+
+@if (mirror)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5>مزامنة كاملة من Firestore إلى SQL</h5>
+            <p class="small text-muted mb-2">
+                بتنسخ كل المستخدمين وكل العمارات. شغّلها أول مرة بعد تفعيل Dual، وبعد أي استرجاع نسخة احتياطية
+                أو فشل في النسخ. آمنة للتكرار، وقد تاخد وقت لو العمارات كتير.
+            </p>
+            <form asp-action="Run" method="post">
+                <button class="btn btn-primary" onclick="this.disabled=true; this.form.submit();">ابدأ المزامنة</button>
+            </form>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(error))
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+@if (report != null)
+{
+    <div class="card">
+        <div class="card-body">
+            <h5>نتيجة المزامنة</h5>
+            <p class="mb-1">مستخدمين: <strong>@report.Users</strong> | عمارات: <strong>@report.Buildings</strong> | الوقت: @report.Elapsed.TotalSeconds.ToString("0.0") ثانية</p>
+
+            @if (report.Errors.Count > 0)
+            {
+                <h6 class="text-danger mt-3">أخطاء (@report.Errors.Count)</h6>
+                <ul class="small">
+                    @foreach (var e in report.Errors.Take(100)) { <li>@e</li> }
+                </ul>
+            }
+            @if (report.Warnings.Count > 0)
+            {
+                <h6 class="text-warning mt-3">تحذيرات: صفوف اتخطّت (@report.Warnings.Count)</h6>
+                <p class="small text-muted">دي بيانات مش مطابقة لقيود القاعدة (شقة محذوفة، مبلغ صفر...). راجعها قبل الاعتماد على SQL.</p>
+                <ul class="small">
+                    @foreach (var w in report.Warnings.Take(200)) { <li>@w</li> }
+                </ul>
+            }
+            @if (report.Errors.Count == 0 && report.Warnings.Count == 0)
+            {
+                <p class="text-success mb-0">تمت بدون أخطاء أو تحذيرات.</p>
+            }
+        </div>
+    </div>
+}

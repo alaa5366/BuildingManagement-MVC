@@ -1,69 +1,141 @@
-using System.Text.RegularExpressions;
-using Google.Cloud.Firestore;
+using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
+using Google.Cloud.Firestore;
+using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace BuildingManagementMvc.Services;
 
-// ترجمة حرفية لـ js/services/buildings-service.js
 public class BuildingsService
 {
     private readonly FirestoreDb _db;
     private readonly FirebaseAuthRestService _fbAuth;
+    private readonly BuildingSqlStore? _sql;
+    private readonly StorageSettingsService _storageSettings;
+    private readonly IDbContextFactory<AppDbContext>? _sqlFactory;
+    private readonly bool _useSqlFromConfig;
+    private readonly ILogger<BuildingsService>? _log;
 
-    public BuildingsService(FirestoreContext ctx, FirebaseAuthRestService fbAuth)
+    public BuildingsService(
+        FirestoreContext ctx,
+        FirebaseAuthRestService fbAuth,
+        IConfiguration cfg,
+        BuildingSqlStore? sql = null,
+        StorageSettingsService? storageSettings = null,
+        IDbContextFactory<AppDbContext>? sqlFactory = null,
+        ILogger<BuildingsService>? log = null)
     {
         _db = ctx.Db;
         _fbAuth = fbAuth;
+        _sql = sql;
+        _storageSettings = storageSettings
+            ?? throw new InvalidOperationException("StorageSettingsService مطلوب");
+        _sqlFactory = sqlFactory;
+        _useSqlFromConfig = string.Equals(
+            cfg["Storage:Provider"], "Sql", StringComparison.OrdinalIgnoreCase);
+        _log = log;
+
+        if (_useSqlFromConfig && _sql == null)
+            throw new InvalidOperationException("Storage:Provider=Sql لكن BuildingSqlStore مش متسجّل.");
     }
 
     private CollectionReference Col => _db.Collection("buildings");
 
+    private async Task<string> GetModeAsync()
+    {
+        if (_storageSettings == null)
+            return _useSqlFromConfig ? "Sql" : "Firestore";
+        return await _storageSettings.GetModeAsync();
+    }
+
+    // ✅ تسجيل تغيير في Change Log (للمزامنة العكسية)
+    private async Task RecordChangeAsync(string entityId, string operation, object? payload = null)
+    {
+        if (_sqlFactory == null) return;
+        try
+        {
+            await using var db = await _sqlFactory.CreateDbContextAsync();
+            db.SyncPendingChanges.Add(new SyncPendingChangeEntity
+            {
+                EntityType = "Building",
+                EntityId = entityId,
+                Operation = operation,
+                Payload = payload == null ? null : JsonSerializer.Serialize(payload),
+                CreatedAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _log?.LogWarning(ex, "Failed to record change for {Id}", entityId);
+        }
+    }
+
+    // ============================================================
+    // ✅ القراءة
+    // ============================================================
     public async Task<List<Building>> GetAllAsync()
     {
+        var mode = await GetModeAsync();
+
+        if (mode == "Sql" && _sql != null)
+        {
+            var sqlList = await _sql.GetAllAsync();
+            foreach (var b in sqlList) NormalizeOrder(b);
+            return sqlList;
+        }
+
         var snap = await Col.OrderBy("buildingNumber").GetSnapshotAsync();
         var buildings = snap.Documents.Select(d => d.ConvertTo<Building>()).ToList();
-
-        foreach (var b in buildings) NormalizeOrder(b);   // ← ضيف السطر ده
-
+        foreach (var b in buildings) NormalizeOrder(b);
         return buildings;
     }
 
     public async Task<Building?> GetByIdAsync(string id)
     {
         if (string.IsNullOrWhiteSpace(id)) return null;
+
+        var mode = await GetModeAsync();
+
+        if (mode == "Sql" && _sql != null)
+        {
+            var sqlBuilding = await _sql.GetByIdAsync(id);
+            if (sqlBuilding != null) NormalizeOrder(sqlBuilding);
+            return sqlBuilding;
+        }
+
         var doc = await Col.Document(id).GetSnapshotAsync();
         if (!doc.Exists) return null;
 
         var building = doc.ConvertTo<Building>();
-        NormalizeOrder(building);   // ← ضيف السطر ده
-
+        NormalizeOrder(building);
         return building;
     }
 
-    // إنشاء عمارة جديدة برقم تلقائي BLD-001, BLD-002...
+    // ============================================================
+    // ✅ الكتابة
+    // ============================================================
     public async Task<(string Id, string BuildingNumber)> CreateAsync(
-     string name,
-     string adminPin,
-     string adminWhatsapp = "",
-     string? logoUrl = null,
-     string? buildingNumber = null,
-     bool addDefaultExpenseCategories = true,
-     bool addDefaultRevenueCategories = true)
+        string name, string adminPin, string adminWhatsapp = "",
+        string? logoUrl = null, string? buildingNumber = null,
+        bool addDefaultExpenseCategories = true,
+        bool addDefaultRevenueCategories = true)
     {
-        // 1. تحديد رقم العمارة
+        var mode = await GetModeAsync();
+
         string nextNumber;
         if (!string.IsNullOrWhiteSpace(buildingNumber))
         {
-            // تحقق من عدم التكرار
             var all = await GetAllAsync();
             if (all.Any(b => b.BuildingNumber == buildingNumber))
-                throw new InvalidOperationException(Loc.T("Building_Number_N_Is_Already_In", buildingNumber));
-
+                throw new InvalidOperationException(
+                    Loc.T("Building_Number_N_Is_Already_In", buildingNumber));
             nextNumber = buildingNumber.Trim();
         }
         else
         {
-            // توليد تلقائي
             var all = await GetAllAsync();
             var maxNum = 0;
             foreach (var b in all)
@@ -74,7 +146,6 @@ public class BuildingsService
             nextNumber = "BLD-" + (maxNum + 1).ToString("D3");
         }
 
-        // 2. إنشاء العمارة
         var building = new Building
         {
             BuildingNumber = nextNumber,
@@ -88,25 +159,94 @@ public class BuildingsService
             CreatedAt = DateTime.UtcNow.ToString("o")
         };
 
+        if (mode == "Sql" && _sql != null)
+        {
+            building.Id = Guid.NewGuid().ToString("N");
+            await _sql.SaveFullAsync(building);
+            await RecordChangeAsync(building.Id, "Insert", building);
+            return (building.Id, nextNumber);
+        }
+
         var docRef = await Col.AddAsync(building);
-        return (docRef.Id, nextNumber);
+        building.Id = docRef.Id;
+
+        if (mode == "Dual" && _sql != null)
+        {
+            try { await _sql.SaveFullAsync(building); }
+            catch (Exception ex)
+            {
+                SqlMirrorHealth.RecordFailure($"Create {building.Id}", ex);
+                _log?.LogError(ex, "SQL mirror failed for Create {Id}", building.Id);
+            }
+        }
+
+        return (building.Id, nextNumber);
     }
 
-    public async Task DeleteAsync(string id) => await Col.Document(id).DeleteAsync();
+    public async Task DeleteAsync(string id)
+    {
+        var mode = await GetModeAsync();
 
-    // حفظ كامل (استبدال) — بديل saveBuilding
-    public async Task SaveFullAsync(Building building) =>
-        await Col.Document(building.Id).SetAsync(building, SetOptions.Overwrite);
+        if (mode == "Firestore" || mode == "Dual")
+            await Col.Document(id).DeleteAsync();
 
-    // حفظ جزئي (merge) — بديل updateBuilding
+        if ((mode == "Sql" || mode == "Dual") && _sql != null)
+        {
+            try
+            {
+                await _sql.DeleteAsync(id);
+                if (mode == "Sql")
+                    await RecordChangeAsync(id, "Delete");
+            }
+            catch (Exception ex)
+            {
+                SqlMirrorHealth.RecordFailure($"Delete {id}", ex);
+                _log?.LogError(ex, "SQL Delete failed for {Id}", id);
+                if (mode == "Sql") throw;
+            }
+        }
+    }
+
+    public async Task SaveFullAsync(Building building)
+    {
+        var mode = await GetModeAsync();
+
+        if (mode == "Firestore" || mode == "Dual")
+            await Col.Document(building.Id).SetAsync(building, SetOptions.Overwrite);
+
+        if ((mode == "Sql" || mode == "Dual") && _sql != null)
+        {
+            try
+            {
+                await _sql.SaveFullAsync(building);
+                SqlMirrorHealth.RecordSuccess();
+
+                // ✅ سجّل التغيير لو الوضع Sql (عشان المزامنة العكسية)
+                if (mode == "Sql")
+                    await RecordChangeAsync(building.Id, "Update", building);
+            }
+            catch (Exception ex)
+            {
+                SqlMirrorHealth.RecordFailure($"SaveFull {building.Id}", ex);
+                _log?.LogError(ex, "SQL SaveFull failed for {Id}", building.Id);
+                if (mode == "Sql") throw;
+            }
+        }
+    }
+
     public async Task UpdateAsync(string id, Dictionary<string, object> partialData)
     {
+        var mode = await GetModeAsync();
+        if (mode == "Sql")
+            throw new NotSupportedException("UpdateAsync غير مدعوم في وضع SQL.");
+
         partialData["dataVersion"] = "3.2";
         await Col.Document(id).SetAsync(partialData, SetOptions.MergeAll);
     }
 
-    // إضافة دور جديد بعدد شقق معين (كل شقة معاها رقم واتساب + PIN)
-    // بيعمل حساب Firebase Auth لكل شقة، زي ما بيحصل بالظبط في add-floor-modal.js
+    // ============================================================
+    // ✅ إضافة أدوار وشقق
+    // ============================================================
     public async Task<string> AddFloorAsync(string buildingId, string label, List<(string Phone, string Pin)> apartments)
     {
         var building = await GetByIdAsync(buildingId)
@@ -120,6 +260,8 @@ public class BuildingsService
         var number = building.Apartments.Count == 0
             ? 1
             : building.Apartments.Max(a => a.Number) + 1;
+
+        var mode = await GetModeAsync();
         foreach (var (phoneRaw, pin) in apartments)
         {
             var phone = AuthHelpers.NormalizePhone(phoneRaw);
@@ -135,9 +277,20 @@ public class BuildingsService
                 OpenDate = DateTime.UtcNow.ToString("o")
             });
 
-            var email = AuthHelpers.ResidentInternalEmail(building.Id, floorOrder, number);
-            var password = AuthHelpers.ResidentPassword(building.Id, number, pin);
-            await _fbAuth.CreateUserAsync(email, password);
+            // Firebase Auth اختياري في وضع Sql
+            if (mode != "Sql")
+            {
+                try
+                {
+                    var email = AuthHelpers.ResidentInternalEmail(building.Id, floorOrder, number);
+                    var password = AuthHelpers.ResidentPassword(building.Id, number, pin);
+                    await _fbAuth.CreateUserAsync(email, password);
+                }
+                catch (Exception ex)
+                {
+                    _log?.LogWarning(ex, "Firebase Auth create failed (mode=Sql?), skipping");
+                }
+            }
 
             number++;
         }
@@ -146,7 +299,6 @@ public class BuildingsService
         return floorId;
     }
 
-    // إضافة شقة واحدة في دور موجود
     public async Task AddApartmentAsync(string buildingId, string floorId, string phoneRaw, string pin)
     {
         var building = await GetByIdAsync(buildingId)
@@ -172,9 +324,20 @@ public class BuildingsService
             OpenDate = DateTime.UtcNow.ToString("o")
         });
 
-        var email = AuthHelpers.ResidentInternalEmail(building.Id, floor.Order, nextNum);
-        var password = AuthHelpers.ResidentPassword(building.Id, nextNum, pin);
-        await _fbAuth.CreateUserAsync(email, password);
+        var mode = await GetModeAsync();
+        if (mode != "Sql")
+        {
+            try
+            {
+                var email = AuthHelpers.ResidentInternalEmail(building.Id, floor.Order, nextNum);
+                var password = AuthHelpers.ResidentPassword(building.Id, nextNum, pin);
+                await _fbAuth.CreateUserAsync(email, password);
+            }
+            catch (Exception ex)
+            {
+                _log?.LogWarning(ex, "Firebase Auth create failed (mode=Sql?), skipping");
+            }
+        }
 
         await SaveFullAsync(building);
     }
@@ -194,32 +357,20 @@ public class BuildingsService
         new FinancialCategory{ Id="scrap",         Name="بيع خردة",    Color="#8E6BB2", Active=true, Order=2 },
         new FinancialCategory{ Id="other-revenue", Name="إيراد آخر",   Color="#B9853B", Active=true, Order=3 },
     };
-    // ✅ Helper: ترتيب الأدوار والشقق بشكل موحّد
+
     private static void NormalizeOrder(Building building)
     {
         building.Floors = building.Floors.OrderBy(f => f.Order).ToList();
-
         var floorOrderMap = building.Floors.ToDictionary(f => f.Id, f => f.Order);
-
         building.Apartments = building.Apartments
             .OrderBy(a => floorOrderMap.GetValueOrDefault(a.FloorId, int.MaxValue))
             .ThenBy(a => a.Number)
             .ToList();
     }
 
-    // ============================================================
-    // ✅ تحديث بيانات شقة
-    // ============================================================
     public async Task UpdateApartmentAsync(
-        string buildingId,
-        string aptId,
-        string owner,
-        string label,
-        string phone,
-        string pin,
-        double monthlyFee,
-        string notes,
-        string? email = null)
+        string buildingId, string aptId, string owner, string label,
+        string phone, string pin, double monthlyFee, string notes, string? email = null)
     {
         var building = await GetByIdAsync(buildingId)
             ?? throw new InvalidOperationException("building-not-found");
@@ -230,7 +381,6 @@ public class BuildingsService
         var oldPhone = apt.Phone;
         var oldPin = apt.Pin;
 
-        // ✅ حدّث الحقول
         apt.Owner = owner ?? "";
         apt.Label = label ?? "";
         apt.Phone = AuthHelpers.NormalizePhone(phone);
@@ -240,26 +390,75 @@ public class BuildingsService
         if (!string.IsNullOrWhiteSpace(email))
             apt.Email = email;
 
-        // ✅ لو الـ PIN أو الـ Phone اتغيروا، حدّث Firebase Auth
+        var mode = await GetModeAsync();
         var floor = building.Floors.FirstOrDefault(f => f.Id == apt.FloorId);
-        if (floor != null && (oldPin != pin || AuthHelpers.NormalizePhone(oldPhone) != apt.Phone))
+        if (mode != "Sql" && floor != null &&
+            (oldPin != pin || AuthHelpers.NormalizePhone(oldPhone) != apt.Phone))
         {
-            var fbEmail = AuthHelpers.ResidentInternalEmail(building.Id, floor.Order, apt.Number);
-            var fbPassword = AuthHelpers.ResidentPassword(building.Id, apt.Number, pin);
-
-            // ✅ جرّب تحديث الباسورد (لو المستخدم موجود)
-            var uid = await _fbAuth.GetUidByEmailAsync(fbEmail);
-            if (!string.IsNullOrEmpty(uid))
+            try
             {
-                await _fbAuth.UpdatePasswordAsync(uid, fbPassword);
+                var fbEmail = AuthHelpers.ResidentInternalEmail(building.Id, floor.Order, apt.Number);
+                var fbPassword = AuthHelpers.ResidentPassword(building.Id, apt.Number, pin);
+                var uid = await _fbAuth.GetUidByEmailAsync(fbEmail);
+                if (!string.IsNullOrEmpty(uid))
+                    await _fbAuth.UpdatePasswordAsync(uid, fbPassword);
+                else
+                    await _fbAuth.CreateUserAsync(fbEmail, fbPassword);
             }
-            else
+            catch (Exception ex)
             {
-                // ✅ المستخدم مش موجود، أنشئه
-                await _fbAuth.CreateUserAsync(fbEmail, fbPassword);
+                _log?.LogWarning(ex, "Firebase Auth update failed");
             }
         }
 
         await SaveFullAsync(building);
+    }
+
+    // ============================================================
+    // ✅ خصائص StorageSyncController + المزامنة
+    // ============================================================
+    public string StorageProvider => _useSqlFromConfig ? "Sql" : "Firestore";
+    public bool SqlMirrorEnabled => _sql != null;
+
+    public async Task<SyncReport> SyncAllToSqlAsync()
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var report = new SyncReport();
+
+        if (_sql == null)
+        {
+            report.Errors.Add("BuildingSqlStore مش مسجّل.");
+            return report;
+        }
+
+        try
+        {
+            // اقرأ من Firestore مباشرة (مش من GetAllAsync) عشان مايتأثرش بالوضع
+            var snap = await Col.GetSnapshotAsync();
+            var buildings = snap.Documents.Select(d => d.ConvertTo<Building>()).ToList();
+
+            foreach (var b in buildings)
+            {
+                try
+                {
+                    NormalizeOrder(b);
+                    await _sql.SaveFullAsync(b);
+                    report.Buildings++;
+                }
+                catch (Exception ex)
+                {
+                    report.Errors.Add($"عمارة {b.Id}: {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            report.Errors.Add($"خطأ عام: {ex.Message}");
+        }
+
+        sw.Stop();
+        report.Elapsed = sw.Elapsed;
+        SqlMirrorHealth.RecordSuccess();
+        return report;
     }
 }

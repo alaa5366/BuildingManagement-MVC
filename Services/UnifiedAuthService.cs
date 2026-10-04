@@ -12,6 +12,7 @@ public class UnifiedAuthService
     private readonly FirebaseAuthRestService _fbAuth;
     private readonly IMemoryCache _cache;
     private readonly ILogger<UnifiedAuthService> _logger;
+    private readonly StorageSettingsService _storageSettings;
 
     public UnifiedAuthService(
         AuthService auth,
@@ -19,7 +20,8 @@ public class UnifiedAuthService
         BuildingsService buildings,
         FirebaseAuthRestService fbAuth,
         IMemoryCache cache,
-        ILogger<UnifiedAuthService> logger)
+        ILogger<UnifiedAuthService> logger,
+        StorageSettingsService storageSettings)
     {
         _auth = auth;
         _users = users;
@@ -27,10 +29,11 @@ public class UnifiedAuthService
         _fbAuth = fbAuth;
         _cache = cache;
         _logger = logger;
+        _storageSettings = storageSettings;
     }
 
     // ============================================================
-    // 1. البحث عن كل السياقات للمستخدم
+    // 1. البحث عن كل السياقات للمستخدم (مع Local Auth Fallback)
     // ============================================================
     public async Task<List<UserContext>> FindAllContextsAsync(string identifier, string credential)
     {
@@ -64,19 +67,41 @@ public class UnifiedAuthService
         var phone = AuthHelpers.NormalizePhone(identifier);
         if (string.IsNullOrEmpty(phone)) return contexts;
 
+        var mode = await _storageSettings.GetModeAsync();
+        _logger.LogInformation("FindAllContexts: phone={Phone}, mode={Mode}", phone, mode);
+
         // ---------- فحص الأدمن ----------
         var admins = await _users.GetAdminsAsync();
+        _logger.LogInformation("Found {Count} admins", admins.Count);
+
         foreach (var admin in admins)
         {
             if (AuthHelpers.NormalizePhone(admin.Phone) != phone) continue;
             if (admin.Pin != credential) continue;
             if (admin.Disabled) continue;
 
-            // ✅ لازم نتأكد من Firebase Auth (نحاول ندخل مرة)
-            var adminPassword = AuthHelpers.AdminPasswordForPhone(admin.Phone, credential);
-            var signIn = await _fbAuth.SignInWithPasswordAsync(admin.Email, adminPassword);
-            if (!signIn.Success) continue;
+            // ✅ حاول Firebase Auth
+            string? uid = null;
+            try
+            {
+                var adminPassword = AuthHelpers.AdminPasswordForPhone(admin.Phone, credential);
+                var signIn = await _fbAuth.SignInWithPasswordAsync(admin.Email, adminPassword);
+                if (signIn.Success)
+                    uid = signIn.Uid;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Firebase Auth failed for admin {Email}", admin.Email);
+            }
 
+            // ✅ Local Auth Fallback: استخدم Uid من DB
+            if (string.IsNullOrEmpty(uid))
+            {
+                uid = admin.Uid;  // ← الـ Uid من Firestore/SQL
+                _logger.LogWarning("Using LOCAL auth for admin {Email}, uid={Uid}", admin.Email, uid);
+            }
+
+            // أضف السياق
             foreach (var bId in admin.BuildingIds)
             {
                 var building = await _buildings.GetByIdAsync(bId);
@@ -93,7 +118,7 @@ public class UnifiedAuthService
                     BuildingName = building.Name,
                     BuildingNumber = building.BuildingNumber,
                     Email = admin.Email,
-                    Uid = signIn.Uid,
+                    Uid = uid,
                     Name = admin.Name
                 });
             }
@@ -105,21 +130,35 @@ public class UnifiedAuthService
         {
             foreach (var apt in building.Apartments)
             {
-
                 if (AuthHelpers.NormalizePhone(apt.Phone) != phone) continue;
                 if (apt.Pin != credential) continue;
                 if (apt.Disabled) continue;
-                //if (apt.Closed) continue;
 
                 var floor = building.Floors.FirstOrDefault(f => f.Id == apt.FloorId);
                 if (floor == null) continue;
 
-                // ✅ نتأكد من Firebase Auth
-                var email = AuthHelpers.ResidentInternalEmail(building.Id, floor.Order, apt.Number);
-                var password = AuthHelpers.ResidentPassword(building.Id, apt.Number, credential);
-                var signIn = await _fbAuth.SignInWithPasswordAsync(email, password);
-                if (!signIn.Success) continue;
+                string? uid = null;
+                try
+                {
+                    var email = AuthHelpers.ResidentInternalEmail(building.Id, floor.Order, apt.Number);
+                    var password = AuthHelpers.ResidentPassword(building.Id, apt.Number, credential);
+                    var signIn = await _fbAuth.SignInWithPasswordAsync(email, password);
+                    if (signIn.Success)
+                        uid = signIn.Uid;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Firebase Auth failed for resident apt {AptId}", apt.Id);
+                }
 
+                // ✅ Local Auth Fallback
+                if (string.IsNullOrEmpty(uid))
+                {
+                    uid = $"local-{building.Id}-{apt.Id}";
+                    _logger.LogWarning("Using LOCAL auth for resident {AptId}, uid={Uid}", apt.Id, uid);
+                }
+
+                var email2 = AuthHelpers.ResidentInternalEmail(building.Id, floor.Order, apt.Number);
                 contexts.Add(new UserContext
                 {
                     Id = $"resident_{building.Id}_{apt.Id}",
@@ -132,10 +171,10 @@ public class UnifiedAuthService
                     BuildingNumber = building.BuildingNumber,
                     FloorOrder = floor.Order,
                     AptNumber = apt.Number,
-                    AptId = apt.Id,          
+                    AptId = apt.Id,
                     AptLabel = apt.Label,
-                    Email = email,
-                    Uid = signIn.Uid,
+                    Email = email2,
+                    Uid = uid,
                     Name = string.IsNullOrWhiteSpace(apt.Owner) ? Loc.T("Apartment_N", apt.Number) : apt.Owner
                 });
             }
@@ -185,13 +224,12 @@ public class UnifiedAuthService
     }
 
     // ============================================================
-    // 3. حفظ السياقات مؤقتاً (في Memory Cache)
+    // 3. حفظ السياقات
     // ============================================================
     public string StoreContexts(List<UserContext> contexts, string fullName)
     {
         var token = Guid.NewGuid().ToString("N");
         var data = new { Contexts = contexts, FullName = fullName };
-
         _cache.Set($"ctx_{token}", data, TimeSpan.FromMinutes(10));
         return token;
     }
@@ -202,9 +240,7 @@ public class UnifiedAuthService
         {
             dynamic? d = data;
             if (d != null)
-            {
                 return (d.Contexts as List<UserContext>, d.FullName as string);
-            }
         }
         return (null, null);
     }
