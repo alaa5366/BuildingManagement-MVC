@@ -42,11 +42,11 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">API Token</label>
-                        <input name="WhatsappApiToken" value="@Model.WhatsappApiToken" class="form-control" />
+                        <input name="WhatsappApiToken" value="@Model.WhatsappApiToken" class="form-control" dir="ltr" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Phone ID</label>
-                        <input name="WhatsappPhoneId" value="@Model.WhatsappPhoneId" class="form-control" />
+                        <input name="WhatsappPhoneId" value="@Model.WhatsappPhoneId" class="form-control" dir="ltr" />
                     </div>
                 </div>
             </div>
@@ -61,11 +61,11 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Cloud Name</label>
-                        <input name="CloudinaryCloudName" value="@Model.CloudinaryCloudName" class="form-control" />
+                        <input name="CloudinaryCloudName" value="@Model.CloudinaryCloudName" class="form-control" dir="ltr" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">API Key</label>
-                        <input name="CloudinaryApiKey" value="@Model.CloudinaryApiKey" class="form-control" />
+                        <input name="CloudinaryApiKey" value="@Model.CloudinaryApiKey" class="form-control" dir="ltr" />
                     </div>
                 </div>
             </div>
@@ -78,7 +78,7 @@
             </div>
             <div class="card-body">
                 <label class="form-label">Project ID</label>
-                <input value="@Model.FirebaseProjectId" class="form-control" disabled />
+                <input value="@Model.FirebaseProjectId" class="form-control" dir="ltr" disabled />
                 <div class="form-text">@Loc.T("Read_From_Appsettings_Json")</div>
             </div>
         </div>
@@ -89,40 +89,55 @@
                 <strong>🚩 Feature Flags</strong>
             </div>
             <div class="card-body">
-                <div class="row g-2">
+                <div class="row g-3">
                     <div class="col-md-4">
                         <div class="form-check form-switch">
-                            <input type="checkbox" name="FeatureFlags.EnablePolls" value="true" class="form-check-input"
+                            <input type="checkbox" name="FeatureFlags.EnablePolls" value="true"
+                                   class="form-check-input" id="flagPolls"
                             @(Model.FeatureFlags.EnablePolls ? "checked" : "") />
-                            <label class="form-check-label">@Loc.T("Polls_3")</label>
+                            <label class="form-check-label" for="flagPolls">
+                                @Loc.T("Polls_3")
+                            </label>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-check form-switch">
-                            <input type="checkbox" name="FeatureFlags.EnableMaintenance" value="true" class="form-check-input"
+                            <input type="checkbox" name="FeatureFlags.EnableMaintenance" value="true"
+                                   class="form-check-input" id="flagMaint"
                             @(Model.FeatureFlags.EnableMaintenance ? "checked" : "") />
-                            <label class="form-check-label">@Loc.T("Maintenance")</label>
+                            <label class="form-check-label" for="flagMaint">
+                                @Loc.T("Maintenance")
+                            </label>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-check form-switch">
-                            <input type="checkbox" name="FeatureFlags.EnableOcr" value="true" class="form-check-input"
+                            <input type="checkbox" name="FeatureFlags.EnableOcr" value="true"
+                                   class="form-check-input" id="flagOcr"
                             @(Model.FeatureFlags.EnableOcr ? "checked" : "") />
-                            <label class="form-check-label">@Loc.T("OCR_Receipt_Reading")</label>
+                            <label class="form-check-label" for="flagOcr">
+                                @Loc.T("OCR_Receipt_Reading")
+                            </label>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-check form-switch">
-                            <input type="checkbox" name="FeatureFlags.EnableQrAccess" value="true" class="form-check-input"
+                            <input type="checkbox" name="FeatureFlags.EnableQrAccess" value="true"
+                                   class="form-check-input" id="flagQr"
                             @(Model.FeatureFlags.EnableQrAccess ? "checked" : "") />
-                            <label class="form-check-label">QR Access</label>
+                            <label class="form-check-label" for="flagQr">
+                                QR Access
+                            </label>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-check form-switch">
-                            <input type="checkbox" name="FeatureFlags.EnableWhatsApp" value="true" class="form-check-input"
+                            <input type="checkbox" name="FeatureFlags.EnableWhatsApp" value="true"
+                                   class="form-check-input" id="flagWa"
                             @(Model.FeatureFlags.EnableWhatsApp ? "checked" : "") />
-                            <label class="form-check-label">@Loc.T("WhatsApp")</label>
+                            <label class="form-check-label" for="flagWa">
+                                @Loc.T("WhatsApp")
+                            </label>
                         </div>
                     </div>
                 </div>

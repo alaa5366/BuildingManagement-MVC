@@ -95,39 +95,66 @@
 
     @* ===== Quick Actions ===== *@
     <div class="row justify-content-center g-3 mt-4 mb-5">
-        <div class="col-md-3">
-            <a asp-controller="Wallet" asp-action="Index" class="btn btn-brand w-100 py-3">
+
+        @* المحفظة *@
+        <div class="col-md-3 col-6">
+            <a asp-controller="Wallet" asp-action="Index"
+               class="btn btn-outline-brand w-100 py-3">
+                <i class="bi bi-wallet2"></i>
                 @Loc.T("Wallet")
             </a>
         </div>
-        <div class="col-md-3">
-            <a asp-controller="AdminApts" asp-action="Index" class="btn btn-outline-warning w-100 py-3">
+
+        @* إدارة الشقق *@
+        <div class="col-md-3 col-6">
+            <a asp-controller="AdminApts" asp-action="Index"
+               class="btn btn-outline-warning w-100 py-3">
+                <i class="bi bi-door-closed"></i>
                 @Loc.T("Manage_Apartments_2")
             </a>
         </div>
-        <div class="col-md-3">
-            <a asp-controller="Reports" asp-action="Index" class="btn btn-outline-success w-100 py-3">
+
+        @* التقارير *@
+        <div class="col-md-3 col-6">
+            <a asp-controller="Reports" asp-action="Index"
+               class="btn btn-outline-success w-100 py-3">
+                <i class="bi bi-graph-up"></i>
                 @Loc.T("Reports")
             </a>
         </div>
+
+        @* الكاميرات — للأدمنز اللي عندهم الصلاحية *@
+        @if (User.HasClaim("perm", "cameras.view") || User.HasClaim("perm", "dvrs.manage"))
+        {
+            <div class="col-md-3 col-6">
+                <a asp-controller="Cameras" asp-action="Live"
+                   asp-route-buildingId="@Model.Building.Id"
+                   class="btn btn-outline-danger w-100 py-3">
+                    <i class="bi bi-camera-video"></i>
+                    @Loc.T("Nav_Cameras")
+                </a>
+            </div>
+        }
     </div>
-    @section Scripts {
-        <script>
-                window.I18N = Object.assign(window.I18N || {}, @Html.Raw(Loc.JsonDict(
-                                "Js_AptDetails_Title",
-                                "Js_Loading",
-                                "Js_Close",
-                                "Js_LoadFailed",
-                                "Js_ConfirmImpersonate",
-                                "Js_ConfirmOpenApt",
-                                "Js_PromptCloseApt",
-                                "Js_ConfirmCloseApt",
-                                "Js_PromptDisableApt",
-                                "Js_ConfirmDisableApt",
-                                "Js_PromptEnableApt",
-                                "Js_ConfirmEnableApt"
-                        )));
-        </script>
-        <script src="~/js/apartment-details.js" asp-append-version="true"></script>
-    }
+
 </div>
+
+@section Scripts {
+    <script>
+        window.I18N = Object.assign(window.I18N || {}, @Html.Raw(Loc.JsonDict(
+                            "Js_AptDetails_Title",
+                            "Js_Loading",
+                            "Js_Close",
+                            "Js_LoadFailed",
+                            "Js_ConfirmImpersonate",
+                            "Js_ConfirmOpenApt",
+                            "Js_PromptCloseApt",
+                            "Js_ConfirmCloseApt",
+                            "Js_PromptDisableApt",
+                            "Js_ConfirmDisableApt",
+                            "Js_PromptEnableApt",
+                            "Js_ConfirmEnableApt"
+                    )));
+    </script>
+    <script src="~/js/apartment-details.js" asp-append-version="true"></script>
+}

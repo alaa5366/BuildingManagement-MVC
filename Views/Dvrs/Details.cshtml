@@ -1,0 +1,265 @@
+﻿@model BuildingManagementMvc.Data.Entities.DvrEntity
+@{
+    ViewData["Title"] = Loc.T("DVR_Details");
+    var building = ViewBag.Building as BuildingManagementMvc.Models.Building;
+}
+
+<div class="container-fluid">
+
+    @* ===== Header ===== *@
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1">
+                <i class="bi bi-hdd-network"></i>
+                @Model.Name
+                @if (Model.IsActive)
+                {
+                    <span class="badge bg-success">@Loc.T("Active")</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">@Loc.T("Inactive")</span>
+                }
+            </h3>
+            <p class="text-muted mb-0">
+                @building?.Name — @building?.BuildingNumber
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Edit" asp-route-id="@Model.Id"
+               class="btn btn-warning">
+                <i class="bi bi-pencil"></i> @Loc.T("Edit")
+            </a>
+            <a asp-action="Index" asp-route-buildingId="@Model.BuildingId"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-right"></i> @Loc.T("Common_Back")
+            </a>
+        </div>
+    </div>
+
+    @* ===== Alerts ===== *@
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle"></i> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row g-3">
+
+        @* ===== DVR Info Card ===== *@
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <strong><i class="bi bi-info-circle"></i> @Loc.T("Device_Info")</strong>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0 small">
+                        <dt class="col-5">@Loc.T("IP_Address")</dt>
+                        <dd class="col-7" dir="ltr">@Model.IpAddress</dd>
+
+                        <dt class="col-5">@Loc.T("Port")</dt>
+                        <dd class="col-7">@Model.Port</dd>
+
+                        <dt class="col-5">@Loc.T("Brand")</dt>
+                        <dd class="col-7">@(string.IsNullOrEmpty(Model.Brand) ? "—" : Model.Brand)</dd>
+
+                        <dt class="col-5">@Loc.T("Username")</dt>
+                        <dd class="col-7" dir="ltr">@(string.IsNullOrEmpty(Model.Username) ? "—" : Model.Username)</dd>
+
+                        <dt class="col-5">@Loc.T("Password")</dt>
+                        <dd class="col-7">
+                            <span class="text-muted">●●●●●●●●</span>
+                            <i class="bi bi-shield-check text-success ms-1"
+                               title="@Loc.T("Password_Encrypted_Tooltip")"></i>
+                        </dd>
+
+                        <dt class="col-5">@Loc.T("Cameras_Count")</dt>
+                        <dd class="col-7">
+                            <span class="badge bg-info">@Model.Cameras.Count</span>
+                        </dd>
+
+                        <dt class="col-5">@Loc.T("Date_Added")</dt>
+                        <dd class="col-7">
+                            @Model.CreatedAt.ToString("yyyy-MM-dd")
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        @* ===== Add Camera Form ===== *@
+        <div class="col-md-8">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-success text-white">
+                    <strong><i class="bi bi-plus-circle"></i> @Loc.T("Add_New_Camera")</strong>
+                </div>
+                <div class="card-body">
+
+                    <form asp-action="AddCamera" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="dvrId" value="@Model.Id" />
+
+                        <div class="row g-3">
+                            <div class="col-md-5">
+                                <label class="form-label">
+                                    @Loc.T("Camera_Name") <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" name="name" class="form-control"
+                                       required maxlength="100"
+                                       placeholder="@Loc.T("Camera_Placeholder")" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">
+                                    @Loc.T("Channel") <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" name="channel" class="form-control"
+                                       required min="1" max="64" value="1" />
+                                <div class="form-text">@Loc.T("Channel_Hint")</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">
+                                    @Loc.T("Rtsp_Path_Optional")
+                                </label>
+                                <input type="text" name="rtspPath" class="form-control"
+                                       dir="ltr"
+                                       placeholder="@Loc.T("Rtsp_Auto_Generated")" />
+                                <div class="form-text">
+                                    @Loc.T("Rtsp_Auto_Hint")
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-success mt-3">
+                            <i class="bi bi-plus-circle"></i> @Loc.T("Add_Camera_Btn")
+                        </button>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ===== Cameras List ===== *@
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <strong>
+                <i class="bi bi-camera-video"></i>
+                @Loc.T("Cameras") (@Model.Cameras.Count)
+            </strong>
+            @if (Model.Cameras.Count > 0)
+            {
+                <a asp-controller="Cameras" asp-action="Live"
+                   asp-route-buildingId="@Model.BuildingId"
+                   class="btn btn-sm btn-outline-light">
+                    <i class="bi bi-play-circle"></i> @Loc.T("Live_View")
+                </a>
+            }
+        </div>
+        <div class="card-body p-0">
+
+            @if (Model.Cameras.Count == 0)
+            {
+                <div class="alert alert-info m-3 mb-0">
+                    <i class="bi bi-info-circle"></i>
+                    @Loc.T("No_Cameras_Add_Above")
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>@Loc.T("Camera_Name")</th>
+                                <th>@Loc.T("Channel")</th>
+                                <th>@Loc.T("Rtsp_Path_Optional")</th>
+                                <th>@Loc.T("Status")</th>
+                                <th>@Loc.T("Actions")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var cam in Model.Cameras.OrderBy(c => c.Channel))
+                            {
+                                <tr>
+                                    <td>@cam.Channel</td>
+                                    <td>
+                                        <i class="bi bi-camera-video text-primary"></i>
+                                        <strong>@cam.Name</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">@cam.Channel</span>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted" dir="ltr">
+                                            @(string.IsNullOrEmpty(cam.RtspPath) ? Loc.T("Rtsp_Auto_Generated") : cam.RtspPath)
+                                        </small>
+                                    </td>
+                                    <td>
+                                        @if (cam.IsActive)
+                                        {
+                                            <span class="badge bg-success">@Loc.T("Active")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">@Loc.T("Inactive")</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <form asp-action="DeleteCamera" method="post"
+                                              class="d-inline"
+                                              onsubmit="return confirm('@Loc.Js("Delete_Camera_Confirm")');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="cameraId" value="@cam.Id" />
+                                            <input type="hidden" name="dvrId" value="@Model.Id" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+        </div>
+    </div>
+
+    @* ===== Danger Zone ===== *@
+    <div class="card shadow-sm mt-4 border-danger">
+        <div class="card-header bg-danger text-white">
+            <strong><i class="bi bi-exclamation-triangle"></i> @Loc.T("Danger_Zone")</strong>
+        </div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>@Loc.T("Delete_DVR")</strong>
+                    <div class="text-muted small">
+                        @Loc.T("Delete_DVR_Warning")
+                    </div>
+                </div>
+                <form asp-action="Delete" asp-route-id="@Model.Id" method="post"
+                      onsubmit="return confirm('@Loc.Js("Delete_DVR_Confirm")');">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> @Loc.T("Delete_DVR")
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>

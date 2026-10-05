@@ -30,6 +30,11 @@ public class SessionRevalidator
     {
         var role = user.FindFirst(ClaimTypes.Role)?.Value;
 
+        if (user.HasClaim("impersonated", "true"))
+        {
+            return new Result(true, null);
+        }
+
         if (role == "superadmin")
         {
             var ok = AuthService.IsSuperAdminEmail(user.FindFirst(ClaimTypes.Email)?.Value);

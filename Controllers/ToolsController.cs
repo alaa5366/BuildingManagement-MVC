@@ -58,6 +58,11 @@ public class ToolsController : Controller
                 result = await _migration.MigrateBuildingAsync(buildingId, dryRun, CurrentUserId);
             }
 
+            // ✅ ضيف السطور دي عشان الـ View يقدر يعرض قائمة العمارات
+            ViewBag.Result = result;
+            ViewBag.IsDryRun = dryRun;
+            ViewBag.Buildings = await _buildings.GetAllAsync();
+
             return View("MigrationResult", result);
         }
         catch (Exception ex)
@@ -100,6 +105,11 @@ public class ToolsController : Controller
                     Details = new List<string> { tool }
                 }
             };
+
+            // ✅ ضيف السطور دي عشان الـ View يقدر يعرض قائمة العمارات
+            ViewBag.Result = result;
+            ViewBag.Buildings = await _buildings.GetAllAsync();
+            ViewBag.SelectedTool = tool;
 
             return View("MaintenanceResult", result);
         }
@@ -177,6 +187,7 @@ public class ToolsController : Controller
 
         return RedirectToAction(nameof(Index));
     }
+
     // ============================================================
     // ✅ تنظيف شامل: شهور غلط + carryOver غلط
     // ============================================================
@@ -194,7 +205,6 @@ public class ToolsController : Controller
 
             foreach (var building in allBuildings)
             {
-
                 // ✅ 1. حدد نقطة البداية من CreatedAt
                 var createdAt = DateTime.TryParse(building.CreatedAt, out var dt)
                     ? dt.ToUniversalTime()

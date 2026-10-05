@@ -111,7 +111,27 @@ public class ImpersonationService
             metadata: new { adminName },
             severity: "warning");
     }
+    // ============================================================
+    // Audit — SuperAdmin يدخل كأدمن على عمارة
+    // ============================================================
+    public async Task LogEnterBuildingAdminAsync(Building building, string superAdminUid, string superAdminName)
+    {
+        await _audit.LogAsync(
+            action: "impersonation.enter_as_admin",
+            buildingId: building.Id,
+            userId: superAdminUid,
+            userRole: "superadmin",
+            metadata: new
+            {
+                superAdminName,
+                buildingName = building.Name,
+                buildingNumber = building.BuildingNumber
+            },
+            severity: "critical");
+    }
 }
+
+
 
 // ============================================================
 // ✅ Model — بيانات الأدمن المحفوظة

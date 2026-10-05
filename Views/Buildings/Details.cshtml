@@ -8,6 +8,19 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>@Model.BuildingNumber — @Model.Name</h3>
     <div class="d-flex gap-2">
+        @* في الـ header actions — ضيف ده *@
+        @if (User.IsInRole("superadmin"))
+        {
+            <form asp-controller="Impersonation" asp-action="EnterBuildingAdmin"
+                  method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="buildingId" value="@Model.Id" />
+                <button type="submit" class="btn btn-warning">
+                    <i class="bi bi-person-badge"></i>
+                    دخول كأدمن على العمارة
+                </button>
+            </form>
+        }
         <a asp-action="QrCodes" asp-route-id="@Model.Id" class="btn btn-outline-primary btn-sm">
             📱 QR Codes
         </a>

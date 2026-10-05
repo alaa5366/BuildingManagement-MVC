@@ -1,0 +1,103 @@
+﻿@model List<BuildingManagementMvc.Data.Entities.CameraEntity>
+@{
+    ViewData["Title"] = Loc.T("Live_Cameras");
+    var building = ViewBag.Building as BuildingManagementMvc.Models.Building;
+    var buildingId = ViewBag.BuildingId as string;
+}
+
+<link href="https://cdn.jsdelivr.net/npm/video.js@8/dist/video-js.min.css" rel="stylesheet" />
+
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1">
+                <i class="bi bi-camera-video-fill text-danger"></i>
+                @Loc.T("Live_Cameras")
+            </h3>
+            <p class="text-muted mb-0">
+                @building?.Name
+                <span class="badge bg-secondary">@Model.Count @Loc.T("Cameras_Count")</span>
+            </p>
+        </div>
+        <a asp-controller="Dvrs" asp-action="Index" asp-route-buildingId="@buildingId"
+           class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-right"></i> @Loc.T("Common_Back")
+        </a>
+    </div>
+
+    @if (Model.Count == 0)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i>
+            @Loc.T("No_Active_Cameras")
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var cam in Model)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-dark text-white d-flex justify-content-between">
+                            <span>
+                                <i class="bi bi-camera-video"></i>
+                                @cam.Name
+                            </span>
+                            <span class="badge bg-success">
+                                @Loc.T("Channel_Label") @cam.Channel
+                            </span>
+                        </div>
+                        <div class="card-body p-0" style="background:#000; min-height: 240px;">
+                            <video id="cam-@cam.Id"
+                                   class="video-js vjs-default-skin vjs-big-play-centered w-100"
+                                   controls
+                                   preload="none"
+                                   width="100%"
+                                   height="240">
+                                <p class="vjs-no-js">
+                                    @Loc.T("Enable_JS")
+                                </p>
+                            </video>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/video.js@8/dist/video.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const cameras = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                                            Model.Select(c => new { id = c.Id, name = c.Name })));
+
+            cameras.forEach(async function (cam) {
+                try {
+                    const res = await fetch(`/Cameras/GetHlsUrl?cameraId=${cam.id}`);
+                    if (!res.ok) {
+                        console.warn(`Failed to get HLS URL for ${cam.name}`);
+                        return;
+                    }
+                    const data = await res.json();
+
+                    videojs(`cam-${cam.id}`, {
+                        sources: [{ src: data.hlsUrl, type: 'application/x-mpegURL' }],
+                        liveui: true,
+                        autoplay: false,
+                        controls: true,
+                        fluid: true,
+                        html5: {
+                            vhs: { withCredentials: false, overrideNative: true }
+                        }
+                    });
+                } catch (err) {
+                    console.error(`Error loading camera ${cam.name}:`, err);
+                }
+            });
+        });
+    </script>
+}

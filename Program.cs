@@ -31,6 +31,9 @@ builder.Services.AddControllersWithViews(options =>
             new BuildingManagementMvc.Services.LocStringLocalizer();
     });
 
+// ============================================================
+// Firebase + Storage
+// ============================================================
 builder.Services.AddSingleton<FirestoreContext>();
 builder.Services.AddSingleton<StorageSettingsService>();
 
@@ -51,9 +54,19 @@ if (!storageProvider.Equals("Firestore", StringComparison.OrdinalIgnoreCase))
 }
 else
 {
-    Console.WriteLine("[Storage] Provider = Firestore (UnEnabled SQL Mirror)");
+    // حتى في وضع Firestore، لازم IDbContextFactory عشان CamerasController وغيره
+    var sqlConn = builder.Configuration.GetConnectionString("Default");
+    if (!string.IsNullOrWhiteSpace(sqlConn))
+    {
+        builder.Services.AddDbContextFactory<AppDbContext>(o => o.UseSqlServer(sqlConn));
+    }
+
+    Console.WriteLine("[Storage] Provider = Firestore");
 }
 
+// ============================================================
+// Services — Core
+// ============================================================
 builder.Services.AddSingleton<BuildingsService>();
 builder.Services.AddSingleton<UsersService>();
 builder.Services.AddHttpClient<FirebaseAuthRestService>();
@@ -107,8 +120,17 @@ builder.Services.AddScoped<AdminManagementService>();
 
 builder.Services.AddSingleton<UserSqlStore>();
 
-builder.Services.AddMemoryCache();
+// ============================================================
+// ✅ جديد — DVR + Cameras + MediaMTX + Encryption
+// ============================================================
+builder.Services.AddSingleton<IEncryptionService, AesEncryptionService>();
+builder.Services.AddScoped<DvrService>();
+builder.Services.AddHttpClient<MediaMtxService>();
 
+// ============================================================
+// Localization
+// ============================================================
+builder.Services.AddMemoryCache();
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 
 builder.Services.Configure<RequestLocalizationOptions>(options =>
@@ -135,6 +157,9 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
     options.RequestCultureProviders.Add(new AcceptLanguageHeaderRequestCultureProvider());
 });
 
+// ============================================================
+// ✅ Authentication + SessionRevalidator (مُحسّن)
+// ============================================================
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -152,8 +177,22 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             OnValidatePrincipal = async ctx =>
             {
                 var revalidator = ctx.HttpContext.RequestServices.GetRequiredService<SessionRevalidator>();
-                var result = await revalidator.ValidateAsync(ctx.Principal!);
 
+                // ⚠️ حماية: لو حصل exception، متطردش المستخدم
+                SessionRevalidator.Result result;
+                try
+                {
+                    result = await revalidator.ValidateAsync(ctx.Principal!);
+                }
+                catch (Exception ex)
+                {
+                    // سجّل الخطأ واعتبر الجلسة صالحة
+                    var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                    logger.LogWarning(ex, "[SessionRevalidator] Failed to validate principal");
+                    return; // خلي الجلسة زي ما هي
+                }
+
+                // ✅ لو الجلسة مش صالحة فعلاً (الحساب معطّل / اتحذف) => اطرد
                 if (!result.Valid)
                 {
                     ctx.RejectPrincipal();
@@ -161,17 +200,21 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                     return;
                 }
 
+                // ✅ لو الصلاحيات اتغيرت، حدّث الـ claims (بدون logout)
                 if (result.Permissions != null)
                 {
                     var current = ctx.Principal!.FindAll("perm").Select(c => c.Value).OrderBy(x => x);
                     var fresh = result.Permissions.Distinct().OrderBy(x => x);
+
                     if (!current.SequenceEqual(fresh))
                     {
                         var old = ctx.Principal!.Identities.First();
                         var updated = new ClaimsIdentity(
                             old.Claims.Where(c => c.Type != "perm"),
                             old.AuthenticationType, old.NameClaimType, old.RoleClaimType);
-                        foreach (var p in fresh) updated.AddClaim(new Claim("perm", p));
+
+                        foreach (var p in fresh)
+                            updated.AddClaim(new Claim("perm", p));
 
                         ctx.ReplacePrincipal(new ClaimsPrincipal(updated));
                         ctx.ShouldRenew = true;
@@ -199,6 +242,9 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 var app = builder.Build();
 
+// ============================================================
+// Config validation
+// ============================================================
 ConfigSecrets.Require(app.Configuration, "Firebase:ProjectId");
 ConfigSecrets.Require(app.Configuration, "Firebase:WebApiKey");
 ConfigSecrets.Require(app.Configuration, "Excel:SecretKey");
@@ -207,6 +253,9 @@ AuthService.ConfigureSuperAdmins(ConfigSecrets.Require(app.Configuration, "Auth:
 
 app.UseForwardedHeaders();
 
+// ============================================================
+// Fonts
+// ============================================================
 var fontsDir = Path.Combine(app.Environment.WebRootPath, "fonts");
 
 if (Directory.Exists(fontsDir))
@@ -231,6 +280,9 @@ else
     Console.WriteLine("[Startup] ERROR: Fonts directory not found!");
 }
 
+// ============================================================
+// Pipeline
+// ============================================================
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");

@@ -3,9 +3,6 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace BuildingManagementMvc.Attributes;
 
-// بيفرض صلاحية دقيقة على دور "admin" (السوبر أدمن مش بيتأثر).
-// مفعّل بس لما Auth:EnforceAdminPermissions = true — الافتراضي false عشان
-// الأدمنز القدام اللي مالهمش permissions مايتقفلش عليهم النظام فجأة.
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false)]
 public class AdminPermissionAttribute : Attribute, IAuthorizationFilter
 {

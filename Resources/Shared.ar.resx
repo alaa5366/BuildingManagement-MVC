@@ -4074,10 +4074,241 @@
   <data name="Selected" xml:space="preserve">
   <value>محدد</value>
 </data>
-<data name="Deposit_Confirmed_Successfully" xml:space="preserve">
+  <data name="Deposit_Confirmed_Successfully" xml:space="preserve">
   <value>✅ تم تأكيد الدفعة بنجاح</value>
 </data>
-<data name="Deposit_Cancelled_Successfully" xml:space="preserve">
+  <data name="Deposit_Cancelled_Successfully" xml:space="preserve">
   <value>✅ تم إلغاء الدفعة بنجاح</value>
 </data>
+  <data name="Nav_Cameras">
+    <value>الكاميرات</value>
+  </data>
+  <data name="Nav_DVRs">
+    <value>أجهزة DVR</value>
+  </data>
+  <data name="Add_DVR">
+    <value>إضافة DVR</value>
+  </data>
+  <data name="No_DVRs_Yet">
+    <value>لا توجد أجهزة DVR بعد.</value>
+  </data>
+  <data name="No_Cameras_Yet">
+    <value>لا توجد كاميرات نشطة.</value>
+  </data>
+  <data name="Confirm_Delete_DVR">
+    <value>حذف DVR وكل كاميراته؟</value>
+  </data>
+  <data name="IP_Address">
+    <value>عنوان IP</value>
+  </data>
+  <data name="Port">
+    <value>المنفذ</value>
+  </data>
+  <data name="Brand">
+    <value>الماركة</value>
+  </data>
+  <data name="Cameras">
+    <value>الكاميرات</value>
+  </data>
+  <data name="Camera">
+    <value>كاميرا</value>
+  </data>
+  <data name="Channel">
+    <value>قناة</value>
+  </data>
+  <data name="Enable_JS">
+    <value>الرجاء تفعيل JavaScript</value>
+  </data>
+  <data name="Manage_DVRs">
+    <value>إدارة أجهزة DVR</value>
+  </data>
+  <data name="View_Cameras">
+    <value>عرض الكاميرات</value>
+  </data>
+  <data name="Manage_Cameras">
+    <value>إدارة الكاميرات</value>
+  </data>
+  <data name="Import_Template">
+    <value>استيراد قالب</value>
+  </data>
+  <data name="Manage_DVRs_Desc">
+    <value>إضافة/تعديل/حذف أجهزة DVR</value>
+  </data>
+  <data name="View_Cameras_Desc">
+    <value>عرض الكاميرات المباشرة</value>
+  </data>
+  <data name="Manage_Cameras_Desc">
+    <value>إضافة/تعديل/حذف الكاميرات</value>
+  </data>
+  <data name="Import_Template_Desc">
+    <value>استيراد عمارة/شقق من ملف Excel</value>
+  </data>
+  <data name="Nav_Storage_Status" xml:space="preserve">
+    <value>حالة التخزين</value>
+  </data>
+  <!-- DVR -->
+  <data name="DVRs" xml:space="preserve">
+    <value>أجهزة DVR</value>
+  </data>
+  <data name="DVR_Name" xml:space="preserve">
+    <value>اسم الـ DVR</value>
+  </data>
+  <data name="DVR_Name_Hint" xml:space="preserve">
+    <value>اسم مميز للتعرف على الجهاز</value>
+  </data>
+  <data name="DVR_Name_Placeholder" xml:space="preserve">
+    <value>مثال: DVR المدخل الرئيسي</value>
+  </data>
+  <data name="Brand_Hint" xml:space="preserve">
+    <value>نوع الجهاز — يحدد صيغة RTSP تلقائياً</value>
+  </data>
+  <data name="Choose" xml:space="preserve">
+    <value>— اختر —</value>
+  </data>
+  <data name="Basic_Info" xml:space="preserve">
+    <value>البيانات الأساسية</value>
+  </data>
+  <data name="Connection_Data" xml:space="preserve">
+    <value>بيانات الاتصال</value>
+  </data>
+  <data name="Login_Data" xml:space="preserve">
+    <value>بيانات الدخول</value>
+  </data>
+  <data name="IP_Example" xml:space="preserve">
+    <value>مثال: 192.168.1.100</value>
+  </data>
+  <data name="Port_Hint" xml:space="preserve">
+    <value>الافتراضي: 554 (RTSP)</value>
+  </data>
+  <data name="Username" xml:space="preserve">
+    <value>اسم المستخدم</value>
+  </data>
+  <data name="Username_Hint" xml:space="preserve">
+    <value>اسم المستخدم للـ DVR</value>
+  </data>
+  <data name="Password_Encrypted_Note" xml:space="preserve">
+    <value>يُخزَّن مشفّراً (AES) في قاعدة البيانات فقط</value>
+  </data>
+  <data name="Save_DVR" xml:space="preserve">
+    <value>حفظ DVR</value>
+  </data>
+  <data name="DVR_Note" xml:space="preserve">
+    <value>بعد إضافة الـ DVR، هتقدر تضيف الكاميرات بتاعتها من صفحة التفاصيل. كل كاميرا هتتربط بـ RTSP path (يتولّد تلقائياً حسب الماركة).</value>
+  </data>
+  <!-- Edit DVR -->
+  <data name="Edit_DVR" xml:space="preserve">
+    <value>تعديل DVR</value>
+  </data>
+  <data name="Password_New_Optional" xml:space="preserve">
+    <value>Password جديد (اتركه فاضي لو مش هتغيره)</value>
+  </data>
+  <data name="Password_Keep_Note" xml:space="preserve">
+    <value>لو فاضي — الباسورد الحالي هيفضل زي ما هو</value>
+  </data>
+  <data name="DVR_Is_Active" xml:space="preserve">
+    <value>الجهاز نشط</value>
+  </data>
+  <data name="DVR_Active_Warning" xml:space="preserve">
+    <value>لو موقوف — كل الكاميرات هتتوقف عن العمل</value>
+  </data>
+  <!-- Details -->
+  <data name="DVR_Details" xml:space="preserve">
+    <value>تفاصيل DVR</value>
+  </data>
+  <data name="Device_Info" xml:space="preserve">
+    <value>معلومات الجهاز</value>
+  </data>
+  <data name="Cameras_Count" xml:space="preserve">
+    <value>الكاميرات</value>
+  </data>
+  <data name="Date_Added" xml:space="preserve">
+    <value>تاريخ الإضافة</value>
+  </data>
+  <data name="Password_Protected" xml:space="preserve">
+    <value>●●●●●●●●</value>
+  </data>
+  <data name="Password_Encrypted_Tooltip" xml:space="preserve">
+    <value>مشفّر</value>
+  </data>
+  <data name="Add_New_Camera" xml:space="preserve">
+    <value>إضافة كاميرا جديدة</value>
+  </data>
+  <data name="Camera_Name" xml:space="preserve">
+    <value>اسم الكاميرا</value>
+  </data>
+  <data name="Camera_Placeholder" xml:space="preserve">
+    <value>مثال: كاميرا المدخل</value>
+  </data>
+  <data name="Channel_Hint" xml:space="preserve">
+    <value>1, 2, 3, ...</value>
+  </data>
+  <data name="Rtsp_Path_Optional" xml:space="preserve">
+    <value>RTSP Path (اختياري)</value>
+  </data>
+  <data name="Rtsp_Auto_Generated" xml:space="preserve">
+    <value>يتولّد تلقائياً</value>
+  </data>
+  <data name="Rtsp_Auto_Hint" xml:space="preserve">
+    <value>اتركه فاضي — هيتم إنشاؤه حسب الماركة</value>
+  </data>
+  <data name="Add_Camera_Btn" xml:space="preserve">
+    <value>إضافة الكاميرا</value>
+  </data>
+  <data name="No_Cameras_Add_Above" xml:space="preserve">
+    <value>لا توجد كاميرات بعد. أضف كاميرا من النموذج فوق.</value>
+  </data>
+  <data name="Live_View" xml:space="preserve">
+    <value>عرض مباشر</value>
+  </data>
+  <data name="Delete_Camera_Confirm" xml:space="preserve">
+    <value>حذف الكاميرا؟</value>
+  </data>
+  <data name="Danger_Zone" xml:space="preserve">
+    <value>منطقة الخطر</value>
+  </data>
+  <data name="Delete_DVR" xml:space="preserve">
+    <value>حذف DVR</value>
+  </data>
+  <data name="Delete_DVR_Warning" xml:space="preserve">
+    <value>سيتم حذف كل الكاميرات المرتبطة بالجهاز. لا يمكن التراجع.</value>
+  </data>
+  <data name="Delete_DVR_Confirm" xml:space="preserve">
+    <value>حذف DVR وكل كاميراته؟</value>
+  </data>
+  <!-- Choose Building -->
+  <data name="Choose_Building_Title" xml:space="preserve">
+    <value>🏢 اختر العمارة</value>
+  </data>
+  <data name="Choose_Building_For_DVR" xml:space="preserve">
+    <value>اختر العمارة لإدارة أجهزة DVR والكاميرات</value>
+  </data>
+  <data name="No_Buildings_Create_First" xml:space="preserve">
+    <value>لا توجد عمارات بعد. ابدأ بإنشاء عمارة أولاً.</value>
+  </data>
+  <data name="Create_Building_Btn" xml:space="preserve">
+    <value>إنشاء عمارة جديدة</value>
+  </data>
+  <!-- Live Cameras -->
+  <data name="Live_Cameras" xml:space="preserve">
+    <value>الكاميرات المباشرة</value>
+  </data>
+  <data name="No_Active_Cameras" xml:space="preserve">
+    <value>لا توجد كاميرات نشطة لهذه العمارة. أضف DVR أولاً.</value>
+  </data>
+  <!-- Status/Active -->
+  <data name="Inactive" xml:space="preserve">
+    <value>موقوف</value>
+  </data>
+  <data name="Channel_Label" xml:space="preserve">
+    <value>قناة</value>
+  </data>
+  <!-- DVR -->
+  <!-- Edit DVR -->
+  <!-- Details -->
+  <!-- Choose Building -->
+  <!-- Live Cameras -->
+  <!-- Status -->
+  <data name="Other" xml:space="preserve">
+    <value>أخرى</value>
+  </data>
 </root>

@@ -450,3 +450,34 @@ public class SyncPendingChangeEntity
     public int RetryCount { get; set; }
     public string? ErrorMessage { get; set; }
 }
+public class DvrEntity
+{
+    public string Id { get; set; } = "";             // GUID
+    public string BuildingId { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string IpAddress { get; set; } = "";
+    public int Port { get; set; } = 554;
+    public string Brand { get; set; } = "";          // Hikvision / Dahua / ONVIF
+    public string Username { get; set; } = "";
+    public string PasswordEncrypted { get; set; } = "";  // AES
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
+
+    public List<CameraEntity> Cameras { get; set; } = new();
+}
+
+public class CameraEntity
+{
+    public string Id { get; set; } = "";
+    public string DvrId { get; set; } = "";
+    public string BuildingId { get; set; } = "";     // denormalized للفلترة السريعة
+    public string Name { get; set; } = "";
+    public int Channel { get; set; }
+    public string RtspPath { get; set; } = "";
+    public string HlsUrl { get; set; } = "";
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public DvrEntity? Dvr { get; set; }
+}

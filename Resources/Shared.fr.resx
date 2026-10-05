@@ -4076,10 +4076,191 @@ Cette opération peut prendre quelques secondes.</value>
   <data name="Selected" xml:space="preserve">
   <value>sélectionné(s)</value>
 </data>
-<data name="Deposit_Confirmed_Successfully" xml:space="preserve">
+  <data name="Deposit_Confirmed_Successfully" xml:space="preserve">
   <value>✅ Paiement confirmé avec succès</value>
 </data>
-<data name="Deposit_Cancelled_Successfully" xml:space="preserve">
+  <data name="Deposit_Cancelled_Successfully" xml:space="preserve">
   <value>✅ Paiement annulé avec succès</value>
 </data>
+  <data name="Nav_Storage_Status" xml:space="preserve">
+    <value>État du stockage</value>
+  </data>
+  <!-- DVR -->
+  <data name="DVRs" xml:space="preserve">
+    <value>DVRs</value>
+  </data>
+  <data name="Add_DVR" xml:space="preserve">
+    <value>Ajouter un DVR</value>
+  </data>
+  <data name="No_DVRs_Yet" xml:space="preserve">
+    <value>Aucun DVR pour le moment. Cliquez sur "Ajouter un DVR" pour commencer.</value>
+  </data>
+  <data name="DVR_Name" xml:space="preserve">
+    <value>Nom du DVR</value>
+  </data>
+  <data name="DVR_Name_Hint" xml:space="preserve">
+    <value>Un nom distinctif pour identifier l'appareil</value>
+  </data>
+  <data name="DVR_Name_Placeholder" xml:space="preserve">
+    <value>Exemple : DVR Entrée principale</value>
+  </data>
+  <data name="Brand" xml:space="preserve">
+    <value>Marque</value>
+  </data>
+  <data name="Brand_Hint" xml:space="preserve">
+    <value>Marque de l'appareil — détermine le format RTSP automatiquement</value>
+  </data>
+  <data name="Choose" xml:space="preserve">
+    <value>— Choisir —</value>
+  </data>
+  <data name="Basic_Info" xml:space="preserve">
+    <value>Informations de base</value>
+  </data>
+  <data name="Connection_Data" xml:space="preserve">
+    <value>Données de connexion</value>
+  </data>
+  <data name="Login_Data" xml:space="preserve">
+    <value>Données de connexion</value>
+  </data>
+  <data name="IP_Address" xml:space="preserve">
+    <value>Adresse IP</value>
+  </data>
+  <data name="IP_Example" xml:space="preserve">
+    <value>Exemple : 192.168.1.100</value>
+  </data>
+  <data name="Port" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="Port_Hint" xml:space="preserve">
+    <value>Par défaut : 554 (RTSP)</value>
+  </data>
+  <data name="Username" xml:space="preserve">
+    <value>Nom d'utilisateur</value>
+  </data>
+  <data name="Username_Hint" xml:space="preserve">
+    <value>Nom d'utilisateur du DVR</value>
+  </data>
+  <data name="Password_Encrypted_Note" xml:space="preserve">
+    <value>Stocké chiffré (AES) dans la base de données uniquement</value>
+  </data>
+  <data name="Save_DVR" xml:space="preserve">
+    <value>Enregistrer le DVR</value>
+  </data>
+  <data name="DVR_Note" xml:space="preserve">
+    <value>Après avoir ajouté le DVR, vous pourrez ajouter ses caméras depuis la page de détails. Chaque caméra sera liée à un chemin RTSP (généré automatiquement selon la marque).</value>
+  </data>
+  <data name="Edit_DVR" xml:space="preserve">
+    <value>Modifier le DVR</value>
+  </data>
+  <data name="Password_New_Optional" xml:space="preserve">
+    <value>Nouveau mot de passe (laisser vide pour conserver l'actuel)</value>
+  </data>
+  <data name="Password_Keep_Note" xml:space="preserve">
+    <value>Si vide — le mot de passe actuel reste inchangé</value>
+  </data>
+  <data name="DVR_Is_Active" xml:space="preserve">
+    <value>L'appareil est actif</value>
+  </data>
+  <data name="DVR_Active_Warning" xml:space="preserve">
+    <value>Si désactivé — toutes les caméras cesseront de fonctionner</value>
+  </data>
+  <data name="DVR_Details" xml:space="preserve">
+    <value>Détails du DVR</value>
+  </data>
+  <data name="Device_Info" xml:space="preserve">
+    <value>Informations sur l'appareil</value>
+  </data>
+  <data name="Cameras_Count" xml:space="preserve">
+    <value>Caméras</value>
+  </data>
+  <data name="Date_Added" xml:space="preserve">
+    <value>Date d'ajout</value>
+  </data>
+  <data name="Password_Protected" xml:space="preserve">
+    <value>●●●●●●●●</value>
+  </data>
+  <data name="Password_Encrypted_Tooltip" xml:space="preserve">
+    <value>Chiffré</value>
+  </data>
+  <data name="Add_New_Camera" xml:space="preserve">
+    <value>Ajouter une nouvelle caméra</value>
+  </data>
+  <data name="Camera_Name" xml:space="preserve">
+    <value>Nom de la caméra</value>
+  </data>
+  <data name="Camera_Placeholder" xml:space="preserve">
+    <value>Exemple : Caméra d'entrée</value>
+  </data>
+  <data name="Channel" xml:space="preserve">
+    <value>Canal</value>
+  </data>
+  <data name="Channel_Hint" xml:space="preserve">
+    <value>1, 2, 3, ...</value>
+  </data>
+  <data name="Rtsp_Path_Optional" xml:space="preserve">
+    <value>Chemin RTSP (facultatif)</value>
+  </data>
+  <data name="Rtsp_Auto_Generated" xml:space="preserve">
+    <value>Généré automatiquement</value>
+  </data>
+  <data name="Rtsp_Auto_Hint" xml:space="preserve">
+    <value>Laisser vide — sera généré selon la marque</value>
+  </data>
+  <data name="Add_Camera_Btn" xml:space="preserve">
+    <value>Ajouter la caméra</value>
+  </data>
+  <data name="Cameras" xml:space="preserve">
+    <value>Caméras</value>
+  </data>
+  <data name="No_Cameras_Add_Above" xml:space="preserve">
+    <value>Aucune caméra pour le moment. Ajoutez-en une depuis le formulaire ci-dessus.</value>
+  </data>
+  <data name="Live_View" xml:space="preserve">
+    <value>Vue en direct</value>
+  </data>
+  <data name="Delete_Camera_Confirm" xml:space="preserve">
+    <value>Supprimer la caméra ?</value>
+  </data>
+  <data name="Danger_Zone" xml:space="preserve">
+    <value>Zone dangereuse</value>
+  </data>
+  <data name="Delete_DVR" xml:space="preserve">
+    <value>Supprimer le DVR</value>
+  </data>
+  <data name="Delete_DVR_Warning" xml:space="preserve">
+    <value>Toutes les caméras liées à cet appareil seront supprimées. Action irréversible.</value>
+  </data>
+  <data name="Delete_DVR_Confirm" xml:space="preserve">
+    <value>Supprimer le DVR et toutes ses caméras ?</value>
+  </data>
+  <data name="Choose_Building_Title" xml:space="preserve">
+    <value>🏢 Choisir un immeuble</value>
+  </data>
+  <data name="Choose_Building_For_DVR" xml:space="preserve">
+    <value>Choisissez un immeuble pour gérer les DVR et les caméras</value>
+  </data>
+  <data name="No_Buildings_Create_First" xml:space="preserve">
+    <value>Aucun immeuble pour le moment. Commencez par créer un immeuble.</value>
+  </data>
+  <data name="Create_Building_Btn" xml:space="preserve">
+    <value>Créer un nouvel immeuble</value>
+  </data>
+  <data name="Live_Cameras" xml:space="preserve">
+    <value>Caméras en direct</value>
+  </data>
+  <data name="No_Active_Cameras" xml:space="preserve">
+    <value>Aucune caméra active pour cet immeuble. Ajoutez d'abord un DVR.</value>
+  </data>
+  <data name="Inactive" xml:space="preserve">
+    <value>Inactif</value>
+  </data>
+  <data name="Channel_Label" xml:space="preserve">
+    <value>Canal</value>
+  </data>
+  <data name="Other" xml:space="preserve">
+    <value>Autre</value>
+  </data>
+  <data name="Enable_JS" xml:space="preserve">
+    <value>Veuillez activer JavaScript</value>
+  </data>
 </root>

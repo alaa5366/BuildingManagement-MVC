@@ -42,6 +42,8 @@ public class AppDbContext : DbContext
     public DbSet<BackupHistoryEntity> BackupHistory => Set<BackupHistoryEntity>();
     public DbSet<ApartmentWalletMovementsView> ApartmentWalletMovements => Set<ApartmentWalletMovementsView>();
     public DbSet<SyncPendingChangeEntity> SyncPendingChanges => Set<SyncPendingChangeEntity>();
+    public DbSet<DvrEntity> Dvrs => Set<DvrEntity>();
+    public DbSet<CameraEntity> Cameras => Set<CameraEntity>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder cb)
     {
@@ -305,5 +307,28 @@ public class AppDbContext : DbContext
             e.HasIndex(x => new { x.Applied, x.CreatedAt });
             e.HasIndex(x => new { x.EntityType, x.EntityId });
         });
+
+
+    // في OnModelCreating:
+    mb.Entity<DvrEntity>(e =>
+{
+    e.ToTable("Dvrs");
+    e.HasKey(x => x.Id);
+    e.HasIndex(x => x.BuildingId);
+    e.HasOne<BuildingEntity>().WithMany()
+        .HasForeignKey(x => x.BuildingId)
+        .OnDelete(DeleteBehavior.Cascade);
+});
+
+mb.Entity<CameraEntity>(e =>
+{
+    e.ToTable("Cameras");
+    e.HasKey(x => x.Id);
+    e.HasIndex(x => new { x.DvrId, x.Channel }).IsUnique();
+e.HasIndex(x => x.BuildingId);
+    e.HasOne(x => x.Dvr).WithMany(d => d.Cameras)
+        .HasForeignKey(x => x.DvrId)
+        .OnDelete(DeleteBehavior.Cascade);
+});
     }
 }

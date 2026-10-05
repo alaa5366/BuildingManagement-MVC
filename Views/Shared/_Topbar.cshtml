@@ -1,0 +1,124 @@
+﻿@using Microsoft.AspNetCore.Localization
+@{
+    var name = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "?";
+    var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
+    var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+    var initial = string.IsNullOrWhiteSpace(name) ? "?" : name.Trim()[0].ToString().ToUpper();
+
+    var isSuperAdmin = role == "superadmin";
+    var isAdmin = role == "admin";
+    var isResident = role == "resident";
+}
+
+<header class="topbar" id="appTopbar">
+    <div class="topbar-inner">
+
+        @* ===== Mobile Menu Toggle ===== *@
+        <button type="button" class="topbar-btn" id="sidebarToggle" aria-label="Menu">
+            <i class="bi bi-list"></i>
+        </button>
+
+        @* ===== Page Title (Mobile) ===== *@
+        <div class="topbar-title d-md-none">
+            @ViewData["Title"]
+        </div>
+
+        @* ===== Right Side Actions ===== *@
+        <div class="topbar-actions ms-auto">
+
+            @* ===== Notifications — للأدمن والساكن بس ===== *@
+            @if (isAdmin || isResident)
+            {
+                <a asp-controller="Notifications" asp-action="Index"
+                   class="topbar-btn" title="@Loc.T("Nav_Notifications")">
+                    <i class="bi bi-bell"></i>
+                </a>
+            }
+
+            @* ===== Language Switcher — Simple Select ===== *@
+            <div style="display: inline-flex; align-items: center;">
+                @{
+                    var currentLang = Context.Features.Get<IRequestCultureFeature>()
+                        ?.RequestCulture?.UICulture?.Name ?? "ar";
+                    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+                }
+                <select class="form-select form-select-sm"
+                        style="width: auto; min-width: 130px; border-radius: 8px; font-size: 13px;"
+                        onchange="window.location.href=this.value">
+                    <option value="/Language/Set?lang=ar&returnUrl=@returnUrl"
+                            selected="@(currentLang == "ar")">
+                        🇪🇬 العربية
+                    </option>
+                    <option value="/Language/Set?lang=en&returnUrl=@returnUrl"
+                            selected="@(currentLang == "en")">
+                        🇬🇧 English
+                    </option>
+                    <option value="/Language/Set?lang=fr&returnUrl=@returnUrl"
+                            selected="@(currentLang == "fr")">
+                        🇫🇷 Français
+                    </option>
+                    <option value="/Language/Set?lang=de&returnUrl=@returnUrl"
+                            selected="@(currentLang == "de")">
+                        🇩🇪 Deutsch
+                    </option>
+                </select>
+            </div>
+
+            @* ===== User Menu ===== *@
+            <div class="dropdown">
+                <button type="button" class="topbar-user" data-bs-toggle="dropdown">
+                    <div class="topbar-user-avatar">@initial</div>
+                    <div class="topbar-user-info d-none d-md-block">
+                        <div class="topbar-user-name">@name</div>
+                        <div class="topbar-user-role">
+                            @if (isSuperAdmin)
+                            {
+                                <text>@Loc.T("Role_SuperAdmin")</text>
+                            }
+                            else if (isAdmin)
+                            {
+
+                                <text>@Loc.T("Role_Admin")</text>
+                            }
+                            else
+                            {
+
+                                <text>@Loc.T("Role_Resident")</text>
+                            }
+                        </div>
+                    </div>
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li class="dropdown-header">
+                        <strong>@name</strong>
+                        <div class="small text-muted">@email</div>
+                    </li>
+                    <li><hr class="dropdown-divider" /></li>
+                    <li>
+                        <a class="dropdown-item" asp-controller="Settings" asp-action="Own">
+                            <i class="bi bi-person-gear"></i> @Loc.T("Nav_MySettings")
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" asp-controller="Help" asp-action="Index">
+                            <i class="bi bi-question-circle"></i> @Loc.T("Nav_Help")
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider" /></li>
+                    <li>
+                        <form asp-controller="Account" asp-action="Logout" method="post">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="dropdown-item text-danger">
+                                <i class="bi bi-box-arrow-right"></i> @Loc.T("Nav_Logout")
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</header>
+
+@* ===== Sidebar Overlay (Mobile) ===== *@
+<div class="sidebar-overlay" id="sidebarOverlay"></div>

@@ -1,0 +1,282 @@
+﻿@{
+    var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    var userBuildingId = User.FindFirst("buildingId")?.Value;
+
+    var isSuperAdmin = role == "superadmin";
+    var isAdmin = role == "admin";
+    var isResident = role == "resident";
+
+    bool Has(string perm) => User.HasClaim("perm", perm);
+
+    string Active(string ctrl, string? action = null)
+    {
+        if (currentController != ctrl) return "";
+        if (action == null || currentAction == action) return "active";
+        return "";
+    }
+}
+
+<aside class="sidebar" id="appSidebar">
+
+    @* ===== Brand ===== *@
+    <div class="sidebar-brand">
+        <div class="brand-icon"><i class="bi bi-building"></i></div>
+        <div class="brand-text">
+            <span class="brand-title">@Loc.T("App_ShortName")</span>
+            <span class="brand-subtitle">
+                @if (isSuperAdmin)
+                {
+                    <text>@Loc.T("Role_SuperAdmin")</text>
+                }
+                else if (isAdmin)
+                {
+
+                    <text>@Loc.T("Role_Admin")</text>
+                }
+                else
+                {
+
+                    <text>@Loc.T("Role_Resident")</text>
+                }
+            </span>
+        </div>
+    </div>
+
+    @* ===== User Card ===== *@
+    <div class="sidebar-user">
+        <div class="user-avatar">
+            @{
+                var name = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "?";
+                var initial = string.IsNullOrWhiteSpace(name) ? "?" : name.Trim()[0].ToString().ToUpper();
+            }
+            @initial
+        </div>
+        <div class="user-info">
+            <div class="user-name">@name</div>
+            <div class="user-role">
+                @if (isSuperAdmin)
+                {
+                    <span>👑 @Loc.T("Role_SuperAdmin")</span>
+                }
+                else if (isAdmin)
+                {
+
+                    <span>🏢 @Loc.T("Role_Admin")</span>
+                }
+                else
+                {
+
+                    <span>🏠 @Loc.T("Role_Resident")</span>
+                }
+            </div>
+        </div>
+    </div>
+
+    @* ===== Navigation ===== *@
+    <nav class="sidebar-nav">
+
+        @* ============================================ *@
+        @* Resident Menu                                *@
+        @* ============================================ *@
+        @if (isResident)
+        {
+            <div class="nav-section">
+                <div class="nav-section-title">@Loc.T("Nav_Home")</div>
+                <ul class="nav-list">
+                    <li><a asp-controller="ResidentHome" asp-action="Index" class="nav-link @Active("ResidentHome")"><i class="bi bi-house-door"></i><span>@Loc.T("Nav_Home")</span></a></li>
+                    <li><a asp-controller="ResidentWallet" asp-action="Index" class="nav-link @Active("ResidentWallet")"><i class="bi bi-wallet2"></i><span>@Loc.T("Nav_MyWallet")</span></a></li>
+                    <li><a asp-controller="ResidentPolls" asp-action="Index" class="nav-link @Active("ResidentPolls")"><i class="bi bi-bar-chart"></i><span>@Loc.T("Nav_Polls")</span></a></li>
+                    <li><a asp-controller="ResidentMaintenance" asp-action="Index" class="nav-link @Active("ResidentMaintenance")"><i class="bi bi-tools"></i><span>@Loc.T("Nav_Maintenance")</span></a></li>
+                    <li><a asp-controller="Notifications" asp-action="Index" class="nav-link @Active("Notifications")"><i class="bi bi-bell"></i><span>@Loc.T("Nav_Notifications")</span></a></li>
+                    <li><a asp-controller="AuditLog" asp-action="Index" class="nav-link @Active("AuditLog")"><i class="bi bi-journal-text"></i><span>@Loc.T("Nav_MyLog")</span></a></li>
+                    <li>
+                        <a asp-controller="Cameras" asp-action="Live"
+                           asp-route-buildingId="@userBuildingId"
+                           class="nav-link @Active("Cameras")">
+                            <i class="bi bi-camera-video"></i>
+                            <span>@Loc.T("Nav_Cameras")</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        }
+
+        @* ============================================ *@
+        @* Admin Menu                                   *@
+        @* ============================================ *@
+        @if (isAdmin)
+        {
+            <div class="nav-section">
+                <div class="nav-section-title">@Loc.T("Management")</div>
+                <ul class="nav-list">
+                    <li><a asp-controller="AdminHome" asp-action="Index" class="nav-link @Active("AdminHome")"><i class="bi bi-speedometer2"></i><span>@Loc.T("Nav_Home")</span></a></li>
+
+                    @if (Has("residents.manage"))
+                    {
+                        <li><a asp-controller="AdminApts" asp-action="Index" class="nav-link @Active("AdminApts")"><i class="bi bi-door-closed"></i><span>@Loc.T("Nav_Apts")</span></a></li>
+                    }
+                </ul>
+            </div>
+
+            @* ✅ قسم الكاميرات و DVR للأدمن *@
+            @if (Has("dvrs.manage") || Has("cameras.view"))
+            {
+                <div class="nav-section">
+                    <div class="nav-section-title">@Loc.T("Nav_Cameras")</div>
+                    <ul class="nav-list">
+                        <li>
+                            <a asp-controller="Cameras" asp-action="Live"
+                               asp-route-buildingId="@userBuildingId"
+                               class="nav-link @Active("Cameras")">
+                                <i class="bi bi-camera-video"></i>
+                                <span>@Loc.T("Nav_Cameras")</span>
+                            </a>
+                        </li>
+                        @if (Has("dvrs.manage"))
+                        {
+                            <li>
+                                <a asp-controller="Dvrs" asp-action="Index"
+                                   asp-route-buildingId="@userBuildingId"
+                                   class="nav-link @Active("Dvrs")">
+                                    <i class="bi bi-hdd-network"></i>
+                                    <span>@Loc.T("Nav_DVRs")</span>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            <div class="nav-section">
+                <div class="nav-section-title">@Loc.T("Finance_2")</div>
+                <ul class="nav-list">
+                    @if (Has("wallet.manage"))
+                    {
+                        <li><a asp-controller="Wallet" asp-action="Index" class="nav-link @Active("Wallet")"><i class="bi bi-wallet2"></i><span>@Loc.T("Nav_Wallet")</span></a></li>
+                    }
+                    @if (Has("expenses.manage"))
+                    {
+                        <li><a asp-controller="Expenses" asp-action="Index" class="nav-link @Active("Expenses")"><i class="bi bi-receipt"></i><span>@Loc.T("Nav_Expenses")</span></a></li>
+                    }
+                    @if (Has("revenues.manage"))
+                    {
+                        <li><a asp-controller="Revenues" asp-action="Index" class="nav-link @Active("Revenues")"><i class="bi bi-cash-coin"></i><span>@Loc.T("Nav_Revenues")</span></a></li>
+                    }
+                    @if (Has("categories.manage"))
+                    {
+                        <li><a asp-controller="Categories" asp-action="Index" class="nav-link @Active("Categories")"><i class="bi bi-tags"></i><span>@Loc.T("Nav_Categories")</span></a></li>
+                    }
+                    @if (Has("reports.view"))
+                    {
+                        <li><a asp-controller="Reports" asp-action="Index" class="nav-link @Active("Reports")"><i class="bi bi-graph-up"></i><span>@Loc.T("Reports_3")</span></a></li>
+                    }
+                </ul>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">@Loc.T("Services")</div>
+                <ul class="nav-list">
+                    @if (Has("polls.manage"))
+                    {
+                        <li><a asp-controller="Polls" asp-action="Index" class="nav-link @Active("Polls")"><i class="bi bi-bar-chart"></i><span>@Loc.T("Nav_Polls")</span></a></li>
+                    }
+                    @if (Has("maintenance.manage"))
+                    {
+                        <li><a asp-controller="Maintenance" asp-action="Index" class="nav-link @Active("Maintenance")"><i class="bi bi-tools"></i><span>@Loc.T("Nav_Maintenance")</span></a></li>
+                    }
+                    <li><a asp-controller="Notifications" asp-action="Index" class="nav-link @Active("Notifications")"><i class="bi bi-bell"></i><span>@Loc.T("Nav_Notifications")</span></a></li>
+                    @if (Has("whatsapp.use"))
+                    {
+                        <li><a asp-controller="WhatsApp" asp-action="Index" class="nav-link @Active("WhatsApp")"><i class="bi bi-whatsapp"></i><span>@Loc.T("Nav_WhatsApp")</span></a></li>
+                    }
+                </ul>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">@Loc.T("System")</div>
+                <ul class="nav-list">
+                    <li><a asp-controller="AuditLog" asp-action="Index" class="nav-link @Active("AuditLog")"><i class="bi bi-journal-text"></i><span>@Loc.T("Nav_AuditLog")</span></a></li>
+                    <li><a asp-controller="Settings" asp-action="Index" class="nav-link @Active("Settings")"><i class="bi bi-sliders"></i><span>@Loc.T("Nav_Settings")</span></a></li>
+                </ul>
+            </div>
+        }
+
+        @* ============================================ *@
+        @* Super Admin Menu                             *@
+        @* ============================================ *@
+        @if (isSuperAdmin)
+        {
+            <div class="nav-section">
+                <div class="nav-section-title">@Loc.T("Management")</div>
+                <ul class="nav-list">
+                    <li><a asp-controller="SuperAdminHome" asp-action="Index" class="nav-link @Active("SuperAdminHome")"><i class="bi bi-speedometer2"></i><span>@Loc.T("Nav_Home")</span></a></li>
+                    <li><a asp-controller="Buildings" asp-action="Index" class="nav-link @Active("Buildings")"><i class="bi bi-buildings"></i><span>@Loc.T("Nav_Buildings")</span></a></li>
+                    <li><a asp-controller="Admins" asp-action="Index" class="nav-link @Active("Admins")"><i class="bi bi-people"></i><span>@Loc.T("Nav_Admins")</span></a></li>
+                    <li><a asp-controller="Permissions" asp-action="Index" class="nav-link @Active("Permissions")"><i class="bi bi-shield-lock"></i><span>@Loc.T("Nav_Permissions")</span></a></li>
+                    <li><a asp-controller="Categories" asp-action="Index" class="nav-link @Active("Categories")"><i class="bi bi-tags"></i><span>@Loc.T("Nav_Categories")</span></a></li>
+                </ul>
+            </div>
+
+            @* ✅ قسم الكاميرات و DVR للـ SuperAdmin *@
+            <div class="nav-section">
+                <div class="nav-section-title">@Loc.T("Nav_Cameras")</div>
+                <ul class="nav-list">
+                    <li>
+                        <a asp-controller="Dvrs" asp-action="Index"
+                           class="nav-link @Active("Dvrs")">
+                            <i class="bi bi-hdd-network"></i>
+                            <span>@Loc.T("Nav_DVRs")</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="Cameras" asp-action="Live"
+                           class="nav-link @Active("Cameras")">
+                            <i class="bi bi-camera-video"></i>
+                            <span>@Loc.T("Nav_Cameras")</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">@Loc.T("System")</div>
+                <ul class="nav-list">
+                    <li><a asp-controller="AuditLog" asp-action="Index" class="nav-link @Active("AuditLog")"><i class="bi bi-journal-text"></i><span>@Loc.T("Nav_AuditLog")</span></a></li>
+                    <li><a asp-controller="Settings" asp-action="Index" class="nav-link @Active("Settings")"><i class="bi bi-sliders"></i><span>@Loc.T("Nav_Settings")</span></a></li>
+                </ul>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">@Loc.T("Advanced_Tools")</div>
+                <ul class="nav-list">
+                    <li><a asp-controller="Tools" asp-action="Index" class="nav-link @Active("Tools")"><i class="bi bi-gear-wide-connected"></i><span>@Loc.T("Nav_Tools")</span></a></li>
+                    <li><a asp-controller="Sync" asp-action="Index" class="nav-link @Active("Sync")"><i class="bi bi-arrow-repeat"></i><span>@Loc.T("Nav_Sync")</span></a></li>
+                    <li><a asp-controller="Backup" asp-action="Index" class="nav-link @Active("Backup")"><i class="bi bi-cloud-arrow-down"></i><span>@Loc.T("Nav_Backup")</span></a></li>
+                    <li><a asp-controller="StorageSync" asp-action="Index" class="nav-link @Active("StorageSync")"><i class="bi bi-database"></i><span>@Loc.T("Nav_Storage_Status")</span></a></li>
+                </ul>
+            </div>
+        }
+
+        @* ============================================ *@
+        @* Common (الكل)                                *@
+        @* ============================================ *@
+        <div class="nav-section">
+            <ul class="nav-list">
+                <li><a asp-controller="Help" asp-action="Index" class="nav-link @Active("Help")"><i class="bi bi-question-circle"></i><span>@Loc.T("Nav_Help")</span></a></li>
+            </ul>
+        </div>
+    </nav>
+
+    @* ===== Footer ===== *@
+    <div class="sidebar-footer">
+        <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline w-100">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn-logout">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>@Loc.T("Nav_Logout")</span>
+            </button>
+        </form>
+    </div>
+</aside>

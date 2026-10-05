@@ -1,0 +1,166 @@
+﻿@{
+    ViewData["Title"] = Loc.T("Add_DVR");
+    var building = ViewBag.Building as BuildingManagementMvc.Models.Building;
+    var buildingId = ViewBag.BuildingId as string;
+}
+
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1">
+                <i class="bi bi-plus-circle"></i>
+                @Loc.T("Add_DVR")
+            </h3>
+            <p class="text-muted mb-0">
+                @building?.Name — @building?.BuildingNumber
+            </p>
+        </div>
+        <a asp-action="Index" asp-route-buildingId="@buildingId"
+           class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-right"></i> @Loc.T("Common_Back")
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+
+            <form asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="buildingId" value="@buildingId" />
+
+                @* ===== البيانات الأساسية ===== *@
+                <h5 class="mb-3">
+                    <i class="bi bi-info-circle text-primary"></i>
+                    @Loc.T("Basic_Info")
+                </h5>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            @Loc.T("DVR_Name") <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" name="name" class="form-control"
+                               required maxlength="100"
+                               placeholder="@Loc.T("DVR_Name_Placeholder")" />
+                        <div class="form-text">@Loc.T("DVR_Name_Hint")</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            @Loc.T("Brand") <span class="text-danger">*</span>
+                        </label>
+                        <select name="brand" class="form-select" required>
+                            <option value="">@Loc.T("Choose")</option>
+                            <option value="Hikvision">Hikvision</option>
+                            <option value="Dahua">Dahua</option>
+                            <option value="ONVIF">ONVIF</option>
+                            <option value="Other">@Loc.T("Other")</option>
+                        </select>
+                        <div class="form-text">@Loc.T("Brand_Hint")</div>
+                    </div>
+                </div>
+
+                @* ===== الاتصال ===== *@
+                <h5 class="mb-3 mt-4">
+                    <i class="bi bi-wifi text-success"></i>
+                    @Loc.T("Connection_Data")
+                </h5>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-8">
+                        <label class="form-label">
+                            @Loc.T("IP_Address") <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" name="ip" class="form-control"
+                               required dir="ltr"
+                               placeholder="192.168.1.100"
+                               pattern="^(\d{1,3}\.){3}\d{1,3}$"
+                               title="@Loc.T("IP_Example")" />
+                        <div class="form-text">@Loc.T("IP_Example")</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">
+                            @Loc.T("Port") <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" name="port" class="form-control"
+                               required value="554"
+                               min="1" max="65535" />
+                        <div class="form-text">@Loc.T("Port_Hint")</div>
+                    </div>
+                </div>
+
+                @* ===== التسجيل ===== *@
+                <h5 class="mb-3 mt-4">
+                    <i class="bi bi-shield-lock text-warning"></i>
+                    @Loc.T("Login_Data")
+                </h5>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label">@Loc.T("Username")</label>
+                        <input type="text" name="username" class="form-control"
+                               dir="ltr" autocomplete="off"
+                               placeholder="admin" />
+                        <div class="form-text">@Loc.T("Username_Hint")</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            @Loc.T("Password") <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="password" name="password" id="passwordInput"
+                                   class="form-control" required dir="ltr"
+                                   autocomplete="new-password" />
+                            <button type="button" class="btn btn-outline-secondary"
+                                    onclick="togglePassword('passwordInput')">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">
+                            <i class="bi bi-shield-check text-success"></i>
+                            @Loc.T("Password_Encrypted_Note")
+                        </div>
+                    </div>
+                </div>
+
+                @* ===== تحذير ===== *@
+                <div class="alert alert-info small">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>@Loc.T("Note")</strong>
+                    @Loc.T("DVR_Note")
+                </div>
+
+                @* ===== الأزرار ===== *@
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="bi bi-check-circle"></i> @Loc.T("Save_DVR")
+                    </button>
+                    <a asp-action="Index" asp-route-buildingId="@buildingId"
+                       class="btn btn-secondary btn-lg">
+                        @Loc.T("Common_Cancel")
+                    </a>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function togglePassword(id) {
+            const input = document.getElementById(id);
+            const btn = event.currentTarget;
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.innerHTML = '<i class="bi bi-eye-slash"></i>';
+            } else {
+                input.type = 'password';
+                btn.innerHTML = '<i class="bi bi-eye"></i>';
+            }
+        }
+    </script>
+}

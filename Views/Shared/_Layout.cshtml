@@ -1,260 +1,112 @@
+@using Microsoft.AspNetCore.Localization
 @{
-    var Localizer = new BuildingManagementMvc.Services.LocStringLocalizer();
-}
-@{
-    var currentCulture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var currentCulture = Context.Features.Get<IRequestCultureFeature>()?.RequestCulture?.UICulture?.Name ?? "ar";
     var isRtl = currentCulture == "ar";
     var dir = isRtl ? "rtl" : "ltr";
-    var htmlLang = isRtl ? "ar" : "en";
-    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+
+    var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+    var isAuth = User.Identity?.IsAuthenticated == true;
+    var showSidebar = isAuth && !string.IsNullOrEmpty(role);
+    var isImpersonating = User.HasClaim("impersonated", "true");
 }
 <!DOCTYPE html>
-<html lang="@htmlLang" dir="@dir">
+<html lang="@currentCulture" dir="@dir">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>@ViewData["Title"] - @Localizer["App_Name"]</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — @Loc.T("App_Name")</title>
 
-    @* ✅ Bootstrap CSS محلي (بدون dist/) *@
-    @if (isRtl)
+    @* ===== Fonts ===== *@
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    @* ===== Bootstrap ===== *@
+    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
+
+    @* ===== Bootstrap Icons (CDN مؤقت) ===== *@
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+
+    @* ===== App CSS ===== *@
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @if (showSidebar)
     {
-        <link href="~/lib/bootstrap/css/bootstrap.rtl.min.css" rel="stylesheet" />
+        <link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
+    }
+
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="@(isRtl ? "rtl" : "ltr") @(showSidebar ? "has-sidebar" : "no-sidebar")">
+
+    @if (showSidebar)
+    {
+        @* ===== Sidebar ===== *@
+        <partial name="_Sidebar" />
+
+        @* ===== Topbar (Mobile + User Menu) ===== *@
+        <partial name="_Topbar" />
+
+        @* ===== Main Content ===== *@
+        <main class="main-content" id="mainContent">
+            @if (isImpersonating)
+            {
+                <div class="impersonation-banner">
+                    <div class="container-fluid d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-person-badge"></i>
+                            <strong>@Loc.T("You_Are_In_Impersonation_Mode")</strong>
+                            @Loc.T("Browsing_As") <strong>@User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value</strong>
+                        </div>
+                        <form asp-controller="Impersonation" asp-action="Exit" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-light btn-sm">
+                                <i class="bi bi-box-arrow-left"></i>
+                                @Loc.T("Back_To_My_Account_Admin")
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            }
+
+            @* ===== Alerts ===== *@
+            @if (TempData["Message"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show mx-3 mt-3" role="alert">
+                    <i class="bi bi-check-circle-fill"></i>
+                    @TempData["Message"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show mx-3 mt-3" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    @TempData["Error"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            @* ===== Page Content ===== *@
+            <div class="content-wrapper">
+                @RenderBody()
+            </div>
+        </main>
     }
     else
     {
-        <link href="~/lib/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+        @* ===== No Sidebar (Login Pages) ===== *@
+        <main class="auth-content">
+            @RenderBody()
+        </main>
     }
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 
-    @* ✅ PWA *@
-    <link rel="manifest" href="~/manifest.json" />
-    <meta name="theme-color" content="#12433C" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="@Localizer["App_ShortName"]" />
-    <link rel="apple-touch-icon" href="~/icons/icon-192.png" />
+    @* ===== Scripts ===== *@
+    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
 
-    @* ✅ Responsive tweaks *@
-    <style>
-        @@media (max-width: 768px) {
-            body { font-size: 14px; }
-            .app-navbar .navbar-brand { font-size: 1rem; }
-            main.container { padding-left: 12px; padding-right: 12px; }
-            .card { border-radius: 12px; }
-            .btn { padding: .5rem 1rem; }
-            table { font-size: 13px; }
-            .table-responsive { overflow-x: auto; }
-        }
-
-        .app-navbar .navbar-nav .nav-link {
-            padding: .5rem .75rem;
-            border-radius: 8px;
-        }
-        .app-navbar .navbar-nav .nav-link:hover {
-            background-color: rgba(255,255,255,.1);
-        }
-
-        html, body { overflow-x: hidden; }
-        .impersonation-banner {
-            background: linear-gradient(90deg, #dc3545, #c82333);
-            color: white;
-            padding: 10px 0;
-            font-size: 14px;
-            position: sticky;
-            top: 0;
-            z-index: 1050;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        }
-    </style>
-</head>
-<body>
-    @{
-        var isImpersonating = User.HasClaim("impersonated", "true");
-    }
-    @if (isImpersonating)
+    @if (showSidebar)
     {
-        <div class="impersonation-banner">
-            <div class="container-fluid d-flex flex-wrap justify-content-between align-items-center gap-2">
-                <div>
-                    🚪 <strong>@Loc.T("You_Are_In_Impersonation_Mode")</strong>
-                    @Loc.T("Browsing_As") <strong>@User.Identity?.Name</strong>
-                </div>
-                <form asp-controller="Impersonation" asp-action="Exit" method="post" class="m-0">
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-sm btn-light">
-                        @Loc.T("Back_To_My_Account_Admin")
-                    </button>
-                </form>
-            </div>
-        </div>
-    }
-
-    <nav class="navbar navbar-expand-lg navbar-dark app-navbar">
-        <div class="container-fluid">
-            <a class="navbar-brand fw-bold" asp-controller="Home" asp-action="Index">
-                🏢 @Localizer["App_Name"]
-            </a>
-
-            @if (User.Identity?.IsAuthenticated == true)
-            {
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar"
-                        aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-
-                <div class="collapse navbar-collapse" id="mainNavbar">
-                    <ul class="navbar-nav ms-auto mb-2 mb-lg-0 flex-wrap align-items-lg-center gap-lg-1">
-                        @if (User.IsInRole("superadmin"))
-                        {
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="SuperAdminHome" asp-action="Index">@Localizer["Nav_Buildings"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Admins" asp-action="Index">@Localizer["Nav_Admins"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Tools" asp-action="Index">@Localizer["Nav_Tools"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Sync" asp-action="Index">@Localizer["Nav_Sync"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Backup" asp-action="Index">@Localizer["Nav_Backup"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Permissions" asp-action="Index">@Localizer["Nav_Permissions"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Categories" asp-action="Index">@Localizer["Nav_Categories"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="AuditLog" asp-action="Index">@Localizer["Nav_AuditLog"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Settings" asp-action="Index">⚙️ @Localizer["Nav_Settings"]</a></li>
-                        }
-                        @if (User.IsInRole("admin"))
-                        {
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="AdminHome" asp-action="Index">@Localizer["Nav_Home"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="AdminApts" asp-action="Index">🏠 @Localizer["Nav_Apts"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Wallet" asp-action="Index">@Localizer["Nav_Wallet"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Expenses" asp-action="Index">@Localizer["Nav_Expenses"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Revenues" asp-action="Index">@Localizer["Nav_Revenues"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Categories" asp-action="Index">@Localizer["Nav_Categories"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Polls" asp-action="Index">@Localizer["Nav_Polls"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Maintenance" asp-action="Index">@Localizer["Nav_Maintenance"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Notifications" asp-action="Index">@Localizer["Nav_Notifications"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="WhatsApp" asp-action="Index">@Localizer["Nav_WhatsApp"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="AuditLog" asp-action="Index">@Localizer["Nav_AuditLog"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Settings" asp-action="Building">⚙️ @Localizer["Nav_Settings"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Settings" asp-action="Own">👤 @Localizer["Nav_MySettings"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Help" asp-action="Index">📖 @Localizer["Nav_Help"]</a></li>
-                        }
-                        @if (User.IsInRole("resident"))
-                        {
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="ResidentHome" asp-action="Index">@Localizer["Nav_Home"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="ResidentWallet" asp-action="Index">@Localizer["Nav_MyWallet"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="ResidentPolls" asp-action="Index">@Localizer["Nav_Polls"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="ResidentMaintenance" asp-action="Index">@Localizer["Nav_Maintenance"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Notifications" asp-action="Index">@Localizer["Nav_Notifications"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="AuditLog" asp-action="Index">@Localizer["Nav_MyLog"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Settings" asp-action="Own">⚙️ @Localizer["Nav_Settings"]</a></li>
-                            <li class="nav-item"><a class="nav-link text-white-50" asp-controller="Help" asp-action="Index">📖 @Localizer["Nav_Help"]</a></li>
-                        }
-
-                        <li class="nav-item dropdown">
-                            <button class="btn btn-sm btn-outline-light dropdown-toggle mt-2 mt-lg-0" 
-                                    type="button" 
-                                    id="langDropdown"
-                                    data-bs-toggle="dropdown" 
-                                    aria-expanded="false">
-                                🌐 @(currentCulture switch
-                                {
-                                    "ar" => "العربية",
-                                    "en" => "English",
-                                    "fr" => "Français",
-                                    "de" => "Deutsch",
-                                    _ => "العربية"
-                                })
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="langDropdown">
-                                <li>
-                                    <a class="dropdown-item" asp-controller="Language" asp-action="Set" 
-                                       asp-route-lang="ar" asp-route-returnUrl="@returnUrl">
-                                        🇪🇬 العربية
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" asp-controller="Language" asp-action="Set" 
-                                       asp-route-lang="en" asp-route-returnUrl="@returnUrl">
-                                        🇬🇧 English
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" asp-controller="Language" asp-action="Set" 
-                                       asp-route-lang="fr" asp-route-returnUrl="@returnUrl">
-                                        🇫🇷 Français
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" asp-controller="Language" asp-action="Set" 
-                                       asp-route-lang="de" asp-route-returnUrl="@returnUrl">
-                                        🇩🇪 Deutsch
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
-
-                        <li class="nav-item">
-                            <form asp-controller="Account" asp-action="Logout" method="post" class="m-0 mt-2 mt-lg-0">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-sm btn-outline-light w-100 w-lg-auto">@Localizer["Nav_Logout"]</button>
-                            </form>
-                        </li>
-                    </ul>
-                </div>
-            }
-        </div>
-    </nav>
-
-    <main class="container py-4">
-        @if (TempData["Message"] != null)
-        {
-            <div class="alert alert-success alert-dismissible fade show">
-                @TempData["Message"]
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        }
-        @if (TempData["Error"] != null)
-        {
-            <div class="alert alert-danger alert-dismissible fade show">
-                @TempData["Error"]
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        }
-
-        @RenderBody()
-    </main>
-
-    <footer class="text-center text-muted small py-4">
-        @Localizer["Footer_Copyright"]
-    </footer>
-
-    @* ============================================================ *@
-    @* ✅ Scripts — الترتيب مهم جداً                              *@
-    @* 1. jQuery   (لازم قبل bootstrap.min.js)                     *@
-    @* 2. Popper   (لازم قبل bootstrap.min.js للـ dropdowns)       *@
-    @* 3. Bootstrap JS                                              *@
-    @* ============================================================ *@
-
-    @* ✅ 1. jQuery من CDN *@
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-
-    @* ✅ 2. Popper من CDN (مطلوب للـ dropdowns و tooltips) *@
-    <script src="https://cdn.jsdelivr.net/npm/@@popperjs/core@@2.11.8/dist/umd/popper.min.js"></script>
-
-    @* ✅ 3. Bootstrap JS محلي *@
-    <script src="~/lib/bootstrap/js/bootstrap.min.js"></script>
-
-    @* ✅ PWA *@
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('[PWA] Service Worker registered:', reg.scope))
-                    .catch(err => console.warn('[PWA] Service Worker registration failed:', err));
-            });
-        }
-    </script>
-
-    @* ✅ Presence Heartbeat *@
-    @if (User.Identity?.IsAuthenticated == true)
-    {
-        <script src="~/js/presence-heartbeat.js" asp-append-version="true"></script>
+        <script src="~/js/admin-sidebar.js" asp-append-version="true"></script>
     }
 
     @await RenderSectionAsync("Scripts", required: false)

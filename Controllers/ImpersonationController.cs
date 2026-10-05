@@ -100,10 +100,9 @@ public class ImpersonationController : Controller
     // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Roles = "resident")]
+    [Authorize(Roles = "resident,admin")]
     public async Task<IActionResult> Exit()
     {
-        // ✅ الخروج متاح بس لجلسة impersonation حقيقية (الـ claims دي السيرفر هو اللي وقّعها)
         if (!_impersonation.IsImpersonating(HttpContext))
             return Forbid();
 
@@ -112,19 +111,20 @@ public class ImpersonationController : Controller
 
         if (backup == null || string.IsNullOrEmpty(impersonatedBy) || backup.Uid != impersonatedBy)
         {
-            // مفيش backup — بس نعمل logout ونرجع لصفحة الدخول
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction("LoginChoice", "Account");
         }
 
-        // 1. ابني Claims الأدمن تاني
+        // ✅ ابني Claims حسب الدور الأصلي
+        var isOriginalSuperAdmin = backup.Role == "superadmin";
+
         var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, backup.Uid),
-            new(ClaimTypes.Name, backup.Name),
-            new(ClaimTypes.Email, backup.Email),
-            new(ClaimTypes.Role, "admin")   // ✅ الدور ثابت، مش من الكوكي
-        };
+    {
+        new(ClaimTypes.NameIdentifier, backup.Uid),
+        new(ClaimTypes.Name, backup.Name),
+        new(ClaimTypes.Email, backup.Email),
+        new(ClaimTypes.Role, isOriginalSuperAdmin ? "superadmin" : "admin")
+    };
 
         foreach (var bId in backup.BuildingIds)
             claims.Add(new Claim("buildingId", bId));
@@ -139,13 +139,12 @@ public class ImpersonationController : Controller
             CookieAuthenticationDefaults.AuthenticationScheme,
             new ClaimsPrincipal(identity));
 
-        // 2. امسح backup
         _impersonation.ClearBackup(HttpContext);
-
-        // 3. Audit
         await _impersonation.LogExitAsync(backup.BuildingId, backup.Uid, backup.Name);
 
-        _logger.LogWarning("[Impersonation] Admin {Admin} returned from impersonation", backup.Uid);
+        // ✅ ارجع SuperAdmin لصفحته
+        if (isOriginalSuperAdmin)
+            return RedirectToAction("Index", "SuperAdminHome");
 
         return RedirectToAction("Index", "AdminHome");
     }
@@ -210,5 +209,58 @@ public class ImpersonationController : Controller
         _logger.LogWarning("[Impersonation] Admin {Admin} → Apt {Apt} (Wallet)", AdminUid, apt.Number);
 
         return RedirectToAction("Index", "ResidentWallet");
+    }
+    // ============================================================
+    // SuperAdmin → يدخل كأدمن على عمارة معينة
+    // ============================================================
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Roles = "superadmin")]
+    public async Task<IActionResult> EnterBuildingAdmin(string buildingId)
+    {
+        var building = await _buildings.GetByIdAsync(buildingId);
+        if (building == null) return NotFound();
+
+        // احفظ بيانات SuperAdmin للرجوع
+        var backup = new AdminBackupData
+        {
+            Uid = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "",
+            Name = User.FindFirst(ClaimTypes.Name)?.Value ?? "",
+            Email = User.FindFirst(ClaimTypes.Email)?.Value ?? "",
+            Role = "superadmin",                          // ← مهم: نحفظه كـ superadmin
+            BuildingIds = new List<string> { buildingId },
+            Permissions = AdminPermissions.SuperAdminAll.ToList(),
+            BuildingId = buildingId,
+            StartedAt = DateTime.UtcNow.ToString("o")
+        };
+        _impersonation.SaveBackup(HttpContext, backup);
+
+        // Claims كأدمن على العمارة دي
+        var claims = new List<Claim>
+    {
+        new(ClaimTypes.NameIdentifier, User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? ""),
+        new(ClaimTypes.Name, User.FindFirst(ClaimTypes.Name)?.Value ?? "Super Admin"),
+        new(ClaimTypes.Email, User.FindFirst(ClaimTypes.Email)?.Value ?? ""),
+        new(ClaimTypes.Role, "admin"),                // ← نعمل impersonation كأدمن
+        new("buildingId", building.Id),
+        new("impersonated", "true"),
+        new("impersonatedBy", User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? ""),
+        new("originalRole", "superadmin")             // ← عشان نعرف نرجعه
+    };
+
+        // كل صلاحيات الأدمن
+        foreach (var p in AdminPermissions.TemplateAdminSuper)
+            claims.Add(new Claim("perm", p));
+
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        await HttpContext.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            new ClaimsPrincipal(identity));
+
+        _logger.LogWarning("[Impersonation] SuperAdmin entered building {BuildingId} as admin", buildingId);
+
+        return RedirectToAction("Index", "AdminHome");
     }
 }

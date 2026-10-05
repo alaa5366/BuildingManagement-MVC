@@ -4071,10 +4071,37 @@ This operation can take a few seconds.</value>
   <data name="All_Months" xml:space="preserve">
   <value>All Months</value>
 </data>
-<data name="Deposit_Confirmed_Successfully" xml:space="preserve">
+  <data name="Deposit_Confirmed_Successfully" xml:space="preserve">
   <value>✅ Payment confirmed successfully</value>
 </data>
-<data name="Deposit_Cancelled_Successfully" xml:space="preserve">
+  <data name="Deposit_Cancelled_Successfully" xml:space="preserve">
   <value>✅ Payment cancelled successfully</value>
 </data>
+  <data name="Nav_Cameras" xml:space="preserve">
+    <value>Cameras</value>
+  </data>
+  <data name="Nav_DVRs" xml:space="preserve">
+    <value>DVRs</value>
+  </data>
+  <data name="Manage_DVRs" xml:space="preserve">
+    <value>Manage DVRs</value>
+  </data>
+  <data name="View_Cameras" xml:space="preserve">
+    <value>View cameras</value>
+  </data>
+  <data name="Manage_Cameras" xml:space="preserve">
+    <value>Manage cameras</value>
+  </data>
+  <data name="Import_Template" xml:space="preserve">
+    <value>Import template</value>
+  </data>
+  <data name="Nav_Storage_Status" xml:space="preserve">
+    <value>Storage Status</value>
+  </data>
+  <data name="Other" xml:space="preserve">
+    <value>Other</value>
+  </data>
+  <data name="Enable_JS" xml:space="preserve">
+    <value>Please enable JavaScript</value>
+  </data>
 </root>
