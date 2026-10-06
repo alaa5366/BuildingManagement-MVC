@@ -15,7 +15,7 @@
     var lastScheduledStatus = ViewBag.LastScheduledStatus as string;
 
     Func<string, string> tabClass = (tabName) =>
-        tabName == activeTab ? "nav-link active" : "nav-link";
+        tabName == activeTab ? "bm-tab-link active" : "bm-tab-link";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -28,7 +28,7 @@
 @* ============================================================ *@
 @* Tabs Navigation                                              *@
 @* ============================================================ *@
-<ul class="nav nav-tabs mb-3" role="tablist">
+<ul class="bm-tabs" role="tablist">
     <li class="nav-item">
         <a class="@tabClass("overview")" asp-action="Index" asp-route-tab="overview">
             @Loc.T("Overview")
@@ -512,29 +512,29 @@
                                 <td>@(h.FileSize / 1024) KB</td>
                                 <td>@h.DurationSeconds.ToString("0.0")s</td>
                                 <td class="text-nowrap">
-                                 @if (h.FileExists)
+                                    @if (h.FileExists)
                                     {
-                                       <a asp-action="DownloadBackup" asp-route-fileName="@h.FileName"
-                                        class="btn btn-sm btn-outline-primary" title="@Loc.T("Download_2")">
-                                         ⬇️
+                                        <a asp-action="DownloadBackup" asp-route-fileName="@h.FileName"
+                                           class="btn btn-sm btn-outline-primary" title="@Loc.T("Download_2")">
+                                            ⬇️
                                         </a>
-                                         }
-                                            else
-    {
-        <span class="text-muted small" title="@Loc.T("File_Deleted")">
-            <i>📁❌</i>
-        </span>
-    }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small" title="@Loc.T("File_Deleted")">
+                                            <i>📁❌</i>
+                                        </span>
+                                    }
 
-    <form method="post" asp-action="DeleteBackup" class="d-inline"
-          onsubmit="return confirm('@Loc.Js("Permanently_Delete_The_File_And_Its")');">
-        @Html.AntiForgeryToken()
-        <input type="hidden" name="fileName" value="@h.FileName" />
-        <button class="btn btn-sm btn-outline-danger" title="@Loc.T("Delete_2")">
-            🗑️
-        </button>
-    </form>
-</td>
+                                    <form method="post" asp-action="DeleteBackup" class="d-inline"
+                                          onsubmit="return confirm('@Loc.Js("Permanently_Delete_The_File_And_Its")');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="fileName" value="@h.FileName" />
+                                        <button class="btn btn-sm btn-outline-danger" title="@Loc.T("Delete_2")">
+                                            🗑️
+                                        </button>
+                                    </form>
+                                </td>
                             </tr>
                         }
                     </tbody>
@@ -543,27 +543,84 @@
         </div>
     </div>
 }
+
+@section Styles {
+    <style>
+        /* ✅ حل مشكلة التابس — نصوص واضحة */
+        .bm-tabs {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 6px !important;
+            padding: 0 !important;
+            margin: 0 0 1.5rem 0 !important;
+            list-style: none !important;
+            border-bottom: 3px solid #12433C !important;
+        }
+
+            .bm-tabs .nav-item {
+                margin-bottom: -3px !important;
+            }
+
+            .bm-tabs .bm-tab-link {
+                display: block !important;
+                padding: 12px 20px !important;
+                color: #12433C !important;
+                background-color: #E8F0EE !important;
+                border: 2px solid #12433C !important;
+                border-bottom: none !important;
+                border-radius: 10px 10px 0 0 !important;
+                text-decoration: none !important;
+                font-weight: 700 !important;
+                font-size: 15px !important;
+                transition: all 0.2s ease !important;
+                white-space: nowrap !important;
+            }
+
+                .bm-tabs .bm-tab-link:hover {
+                    background-color: #C8DCD7 !important;
+                    color: #0A2A26 !important;
+                    transform: translateY(-1px);
+                }
+
+                .bm-tabs .bm-tab-link.active {
+                    color: #FFFFFF !important;
+                    background-color: #12433C !important;
+                    border-color: #12433C !important;
+                    box-shadow: 0 -2px 6px rgba(18, 67, 60, 0.3);
+                }
+
+        /* Dark mode */
+        [data-bs-theme="dark"] .bm-tabs .bm-tab-link {
+            color: #E8F0EE !important;
+            background-color: #2c2c2c !important;
+            border-color: #12433C !important;
+        }
+
+            [data-bs-theme="dark"] .bm-tabs .bm-tab-link.active {
+                color: #FFFFFF !important;
+                background-color: #12433C !important;
+            }
+    </style>
+}
+
 @section Scripts {
     <script>
-        // Toggle DayOfWeek/DayOfMonth based on Frequency
         const freq = document.getElementById('frequency');
         if (freq) {
             function updateGroups() {
                 document.getElementById('dowGroup').style.display = freq.value === 'weekly' ? '' : 'none';
                 document.getElementById('domGroup').style.display = freq.value === 'monthly' ? '' : 'none';
-            }
+                    }
             freq.addEventListener('change', updateGroups);
             updateGroups();
-        }
+                }
 
-        // Select all checkboxes (Backup tab)
-        function selectAll(checked) {
+                function selectAll(checked) {
             document.querySelectorAll('.col-check').forEach(cb => cb.checked = checked);
         }
 
-        // Select all checkboxes (Scheduled tab)
         function selectAllCols(checked) {
-            document.querySelectorAll('.col-check-scheduled').forEach(cb => cb.checked = checked);
+                    document.querySelectorAll('.col-check-scheduled').forEach(cb => cb.checked = checked);
         }
     </script>
 }
