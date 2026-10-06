@@ -17,17 +17,20 @@ public class SyncController : Controller
     private readonly BuildingsService _buildings;
     private readonly StorageSettingsService _storageSettings;
     private readonly ReverseSyncService _reverseSync;
+    private readonly DvrService _dvrs;
 
     public SyncController(
         DbSyncService sync,
         BuildingsService buildings,
         StorageSettingsService storageSettings,
-        ReverseSyncService reverseSync)
+        ReverseSyncService reverseSync,
+        DvrService dvrs)
     {
         _sync = sync;
         _buildings = buildings;
         _storageSettings = storageSettings;
         _reverseSync = reverseSync;
+        _dvrs = dvrs;
     }
 
     private string CurrentUserId =>
@@ -87,7 +90,6 @@ public class SyncController : Controller
         return View("SqlResult");
     }
 
-    // ✅ مزامنة عكسية (SQL → Firebase)
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ReverseSync()
@@ -126,7 +128,7 @@ public class SyncController : Controller
         var mode = await _storageSettings.GetModeAsync();
         return Json(new { mode });
     }
-    // ✅ زر Seed: انسخ كل المستخدمين من Firestore إلى SQL
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SeedUsersToSql()
@@ -160,6 +162,95 @@ public class SyncController : Controller
         {
             TempData["Error"] = ex.Message;
         }
+        return RedirectToAction(nameof(Index));
+    }
+
+    // ============================================================
+    // ✅ جديد: مزامنة DVRs + Cameras
+    // ============================================================
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SyncDvrs()
+    {
+        try
+        {
+            var report = await _dvrs.SyncAllToSqlAsync();
+
+            if (report.Errors.Count > 0)
+            {
+                TempData["Error"] = $"تم النسخ مع {report.Errors.Count} أخطاء. " +
+                                    $"DVRs: +{report.DvrsAdded} / ~{report.DvrsUpdated} | " +
+                                    $"Cameras: +{report.CamerasAdded} / ~{report.CamerasUpdated}";
+            }
+            else
+            {
+                TempData["Success"] = $"✅ تم النسخ بنجاح في {report.Elapsed.TotalSeconds:0.0} ثانية — " +
+                                      $"DVRs: {report.DvrsTotal} | Cameras: {report.CamerasTotal}";
+            }
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = $"❌ خطأ: {ex.Message}";
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    // ============================================================
+    // ✅ جديد: مزامنة شاملة (كل حاجة مرة واحدة)
+    // ============================================================
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SyncEverything()
+    {
+        var results = new List<string>();
+        var errors = new List<string>();
+
+        try
+        {
+            // 1. Buildings + كل ما يتبعها (Apartments, Floors, Deposits, Expenses, ...)
+            var buildingReport = await _buildings.SyncAllToSqlAsync();
+            results.Add($"🏢 Buildings: {buildingReport.Buildings}");
+
+            if (buildingReport.Errors.Any())
+                errors.AddRange(buildingReport.Errors.Take(10));
+
+            // 2. Users + Permissions + BuildingAdmins
+            var usersService = HttpContext.RequestServices.GetRequiredService<UsersService>();
+            var users = await usersService.GetAllFromFirestoreAsync();
+            int userOk = 0, userFail = 0;
+            foreach (var u in users)
+            {
+                try
+                {
+                    if (await usersService.MirrorOneToSqlAsync(u)) userOk++;
+                    else userFail++;
+                }
+                catch (Exception ex)
+                {
+                    userFail++;
+                    errors.Add($"User {u.Uid}: {ex.Message}");
+                }
+            }
+            results.Add($"👥 Users: {userOk} (فشل {userFail})");
+
+            // 3. DVRs + Cameras
+            var dvrReport = await _dvrs.SyncAllToSqlAsync();
+            results.Add($"📹 DVRs: {dvrReport.DvrsTotal} | Cameras: {dvrReport.CamerasTotal}");
+
+            if (dvrReport.Errors.Any())
+                errors.AddRange(dvrReport.Errors.Take(10));
+
+            // ✅ النتيجة النهائية
+            TempData["Success"] = "✅ مزامنة شاملة نجحت: " + string.Join(" | ", results);
+            if (errors.Any())
+                TempData["Error"] = $"⚠️ {errors.Count} أخطاء: " + string.Join(" | ", errors.Take(5));
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = $"❌ فشل المزامنة الشاملة: {ex.Message}";
+        }
+
         return RedirectToAction(nameof(Index));
     }
 }

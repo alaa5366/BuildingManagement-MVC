@@ -1,5 +1,5 @@
 ﻿@{
-    ViewData["Title"] = "Migration";
+    ViewData["Title"] = Loc.T("Migration");
     var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Models.Building> ?? new();
     var result = ViewBag.Result as BuildingManagementMvc.Models.MigrationResult;
     var isDryRun = ViewBag.IsDryRun as bool? ?? false;

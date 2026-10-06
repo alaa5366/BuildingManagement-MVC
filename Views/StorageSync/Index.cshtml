@@ -1,6 +1,6 @@
 @using BuildingManagementMvc.Data
 @{
-    ViewData["Title"] = "مزامنة SQL";
+    ViewData["Title"] = Loc.T("Sql_Sync_Title");
     var provider = (string)ViewBag.Provider;
     var mirror = (bool)ViewBag.MirrorEnabled;
     var failures = (int)ViewBag.Failures;
@@ -12,31 +12,41 @@
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>التخزين المزدوج (Firestore + SQL)</h3>
-    <a asp-controller="SuperAdminHome" asp-action="Index" class="btn btn-outline-secondary btn-sm">رجوع</a>
+    <h3>@Loc.T("Dual_Storage_Firestore_Sql")</h3>
+    <a asp-controller="SuperAdminHome" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        @Loc.T("Back")
+    </a>
 </div>
 
 <div class="card mb-3">
     <div class="card-body">
-        <p class="mb-1">الوضع الحالي: <strong>@provider</strong></p>
+        <p class="mb-1">@Loc.T("Current_Mode"): <strong>@provider</strong></p>
         @if (mirror)
         {
-            <p class="mb-1 text-success">Firestore هو المصدر الأساسي، وكل تعديل بيتنسخ على SQL.</p>
+            <p class="mb-1 text-success">@Loc.T("Firestore_Is_Primary_Source_Synced_To_Sql")</p>
         }
         else
         {
-            <p class="mb-1 text-warning">المرآة مش شغالة. اضبط <code>Storage:Provider = Dual</code> وأعد التشغيل.</p>
+            <p class="mb-1 text-warning">@Html.Raw(Loc.T("Mirror_Not_Active_Set_Storage_Provider_Dual"))</p>
         }
-        <p class="mb-1">آخر نسخ ناجح: @(lastSuccessAt.HasValue ? lastSuccessAt.Value.ToString("yyyy-MM-dd HH:mm:ss") + " UTC" : "—")</p>
-        <p class="mb-1">عدد مرات فشل النسخ من آخر تشغيل: <strong class="@(failures > 0 ? "text-danger" : "")">@failures</strong></p>
+        <p class="mb-1">
+            @Loc.T("Last_Successful_Sync"):
+            @(lastSuccessAt.HasValue ? lastSuccessAt.Value.ToString("yyyy-MM-dd HH:mm:ss") + " UTC" : "—")
+        </p>
+        <p class="mb-1">
+            @Loc.T("Failed_Sync_Attempts_Since_Last_Run"):
+            <strong class="@(failures > 0 ? "text-danger" : "")">@failures</strong>
+        </p>
         @if (!string.IsNullOrEmpty(lastError))
         {
-            <p class="mb-1 text-danger small">آخر خطأ (@(lastErrorAt?.ToString("yyyy-MM-dd HH:mm:ss")) UTC): @lastError</p>
+            <p class="mb-1 text-danger small">
+                @Loc.T("Last_Error") (@(lastErrorAt?.ToString("yyyy-MM-dd HH:mm:ss")) UTC): @lastError
+            </p>
         }
         @if (failures > 0)
         {
             <form asp-action="ResetCounters" method="post" class="mt-2">
-                <button class="btn btn-sm btn-outline-secondary">تصفير العدّادات</button>
+                <button class="btn btn-sm btn-outline-secondary">@Loc.T("Reset_Counters")</button>
             </form>
         }
     </div>
@@ -46,13 +56,14 @@
 {
     <div class="card mb-3">
         <div class="card-body">
-            <h5>مزامنة كاملة من Firestore إلى SQL</h5>
+            <h5>@Loc.T("Full_Sync_Firestore_To_Sql")</h5>
             <p class="small text-muted mb-2">
-                بتنسخ كل المستخدمين وكل العمارات. شغّلها أول مرة بعد تفعيل Dual، وبعد أي استرجاع نسخة احتياطية
-                أو فشل في النسخ. آمنة للتكرار، وقد تاخد وقت لو العمارات كتير.
+                @Loc.T("Full_Sync_Description")
             </p>
             <form asp-action="Run" method="post">
-                <button class="btn btn-primary" onclick="this.disabled=true; this.form.submit();">ابدأ المزامنة</button>
+                <button class="btn btn-primary" onclick="this.disabled=true; this.form.submit();">
+                    @Loc.T("Start_Sync")
+                </button>
             </form>
         </div>
     </div>
@@ -67,27 +78,37 @@
 {
     <div class="card">
         <div class="card-body">
-            <h5>نتيجة المزامنة</h5>
-            <p class="mb-1">مستخدمين: <strong>@report.Users</strong> | عمارات: <strong>@report.Buildings</strong> | الوقت: @report.Elapsed.TotalSeconds.ToString("0.0") ثانية</p>
+            <h5>@Loc.T("Sync_Result_Title")</h5>
+            <p class="mb-1">
+                @Loc.T("Users"): <strong>@report.Users</strong> |
+                @Loc.T("Buildings"): <strong>@report.Buildings</strong> |
+                @Loc.T("Time"): @report.Elapsed.TotalSeconds.ToString("0.0") @Loc.T("Seconds")
+            </p>
 
             @if (report.Errors.Count > 0)
             {
-                <h6 class="text-danger mt-3">أخطاء (@report.Errors.Count)</h6>
+                <h6 class="text-danger mt-3">@Loc.T("Errors") (@report.Errors.Count)</h6>
                 <ul class="small">
-                    @foreach (var e in report.Errors.Take(100)) { <li>@e</li> }
+                    @foreach (var e in report.Errors.Take(100))
+                    {
+                        <li>@e</li>
+                    }
                 </ul>
             }
             @if (report.Warnings.Count > 0)
             {
-                <h6 class="text-warning mt-3">تحذيرات: صفوف اتخطّت (@report.Warnings.Count)</h6>
-                <p class="small text-muted">دي بيانات مش مطابقة لقيود القاعدة (شقة محذوفة، مبلغ صفر...). راجعها قبل الاعتماد على SQL.</p>
+                <h6 class="text-warning mt-3">@Loc.T("Warnings_Skipped_Rows") (@report.Warnings.Count)</h6>
+                <p class="small text-muted">@Loc.T("Warnings_Explanation")</p>
                 <ul class="small">
-                    @foreach (var w in report.Warnings.Take(200)) { <li>@w</li> }
+                    @foreach (var w in report.Warnings.Take(200))
+                    {
+                        <li>@w</li>
+                    }
                 </ul>
             }
             @if (report.Errors.Count == 0 && report.Warnings.Count == 0)
             {
-                <p class="text-success mb-0">تمت بدون أخطاء أو تحذيرات.</p>
+                <p class="text-success mb-0">@Loc.T("Sync_Completed_Without_Errors")</p>
             }
         </div>
     </div>

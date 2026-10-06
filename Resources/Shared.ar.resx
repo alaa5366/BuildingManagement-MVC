@@ -4398,4 +4398,160 @@
   <data name="Nav_Data_Integrity" xml:space="preserve">
   <value>فحص البيانات</value>
 </data>
+  <data name="Sync_Sql_Server" xml:space="preserve">
+    <value>مزامنة SQL Server</value>
+  </data>
+  <data name="Copy_All_Buildings_From_Firestore_To_Sql" xml:space="preserve">
+    <value>نسخ كل العمارات من Firestore إلى SQL Server</value>
+  </data>
+  <data name="Reverse_Sync_Sql_To_Firebase" xml:space="preserve">
+    <value>مزامنة عكسية (SQL → Firebase)</value>
+  </data>
+  <data name="Transfer_Changes_From_Sql_To_Firebase" xml:space="preserve">
+    <value>نقل التعديلات من SQL إلى Firebase</value>
+  </data>
+  <data name="Copy_Users_To_Sql" xml:space="preserve">
+    <value>نسخ المستخدمين إلى SQL</value>
+  </data>
+  <data name="Copy_All_Users_From_Firestore_To_Sql" xml:space="preserve">
+    <value>نسخ كل المستخدمين من Firestore إلى SQL Server</value>
+  </data>
+  <data name="Current_Storage_Mode" xml:space="preserve">
+    <value>وضع التخزين الحالي</value>
+  </data>
+  <data name="Choose_Read_Write_Source_Apply_Immediately" xml:space="preserve">
+    <value>اختار من أين تتم القراءة والكتابة. التغيير يطبق فورًا على الطلبات الجديدة.</value>
+  </data>
+  <data name="Confirm_Switch_To_Firestore" xml:space="preserve">
+    <value>تحويل إلى Firestore فقط؟</value>
+  </data>
+  <data name="Firestore_Only" xml:space="preserve">
+    <value>Firestore فقط</value>
+  </data>
+  <data name="Confirm_Switch_To_Dual" xml:space="preserve">
+    <value>تحويل إلى Dual (الاثنين)؟</value>
+  </data>
+  <data name="Dual_Firestore_Sql" xml:space="preserve">
+    <value>Dual (Firestore + SQL)</value>
+  </data>
+  <data name="Confirm_Switch_To_Sql" xml:space="preserve">
+    <value>تحويل إلى SQL Server فقط؟</value>
+  </data>
+  <data name="Sql_Server_Only" xml:space="preserve">
+    <value>SQL Server فقط</value>
+  </data>
+  <data name="Sql_Sync_Result" xml:space="preserve">
+    <value>نتيجة مزامنة SQL</value>
+  </data>
+  <data name="Current_Mode" xml:space="preserve">
+    <value>الوضع الحالي</value>
+  </data>
+  <data name="Mirror" xml:space="preserve">
+    <value>المرآة</value>
+  </data>
+  <data name="Enabled" xml:space="preserve">
+    <value>مفعّلة</value>
+  </data>
+  <data name="Time" xml:space="preserve">
+    <value>الوقت</value>
+  </data>
+  <data name="Seconds" xml:space="preserve">
+    <value>ثانية</value>
+  </data>
+  <data name="Warnings_Skipped_Rows" xml:space="preserve">
+    <value>تحذيرات: صفوف اتخطّت</value>
+  </data>
+  <data name="Sync_Completed_Without_Errors" xml:space="preserve">
+    <value>تمت المزامنة بدون أخطاء أو تحذيرات.</value>
+  </data>
+  <data name="Cleanup_Data_Title" xml:space="preserve">
+    <value>تنظيف البيانات (Cleanup Data)</value>
+  </data>
+  <data name="Cleanup_Data_Desc" xml:space="preserve">
+    <value>إصلاح الشهور الغلط + إعادة حساب carryOver</value>
+  </data>
+  <data name="Cleanup_Warn_Backup" xml:space="preserve">
+    <value>&lt;strong&gt;اعمل Backup قبل ما تشغّل ده.&lt;/strong&gt;</value>
+  </data>
+  <data name="Cleanup_Warn_FutureMonths" xml:space="preserve">
+    <value>هيمسح الشهور المستقبلية (بعد الشهر الحالي).</value>
+  </data>
+  <data name="Cleanup_Warn_BeforeBuildingDate" xml:space="preserve">
+    <value>هيمسح الشهور اللي قبل تاريخ إنشاء العمارة.</value>
+  </data>
+  <data name="Cleanup_Warn_RecalcCarryOver" xml:space="preserve">
+    <value>هيعيد حساب carryOver من الأول.</value>
+  </data>
+  <data name="Cleanup_Confirm" xml:space="preserve">
+    <value>⚠️ متأكد؟ تأكد إنك عملت Backup الأول.</value>
+  </data>
+  <data name="Cleanup_Run" xml:space="preserve">
+    <value>تشغيل التنظيف</value>
+  </data>
+  <data name="Cleanup_Details_Title" xml:space="preserve">
+    <value>تفاصيل التنظيف</value>
+  </data>
+  <data name="Migration" xml:space="preserve">
+    <value>الترحيل</value>
+  </data>
+  <data name="Sql_Sync_Title" xml:space="preserve">
+    <value>مزامنة SQL</value>
+  </data>
+  <data name="Dual_Storage_Firestore_Sql" xml:space="preserve">
+    <value>التخزين المزدوج (Firestore + SQL)</value>
+  </data>
+  <data name="Firestore_Is_Primary_Source_Synced_To_Sql" xml:space="preserve">
+    <value>Firestore هو المصدر الأساسي، وكل تعديل بيتنسخ على SQL.</value>
+  </data>
+  <data name="Mirror_Not_Active_Set_Storage_Provider_Dual" xml:space="preserve">
+    <value>المرآة مش شغالة. اضبط &lt;code&gt;Storage:Provider = Dual&lt;/code&gt; وأعد التشغيل.</value>
+  </data>
+  <data name="Last_Successful_Sync" xml:space="preserve">
+    <value>آخر نسخ ناجح</value>
+  </data>
+  <data name="Failed_Sync_Attempts_Since_Last_Run" xml:space="preserve">
+    <value>عدد مرات فشل النسخ من آخر تشغيل</value>
+  </data>
+  <data name="Last_Error" xml:space="preserve">
+    <value>آخر خطأ</value>
+  </data>
+  <data name="Reset_Counters" xml:space="preserve">
+    <value>تصفير العدّادات</value>
+  </data>
+  <data name="Full_Sync_Firestore_To_Sql" xml:space="preserve">
+    <value>مزامنة كاملة من Firestore إلى SQL</value>
+  </data>
+  <data name="Full_Sync_Description" xml:space="preserve">
+    <value>بتنسخ كل المستخدمين وكل العمارات. شغّلها أول مرة بعد تفعيل Dual، وبعد أي استرجاع نسخة احتياطية أو فشل في النسخ. آمنة للتكرار، وقد تاخد وقت لو العمارات كتير.</value>
+  </data>
+  <data name="Start_Sync" xml:space="preserve">
+    <value>ابدأ المزامنة</value>
+  </data>
+  <data name="Sync_Result_Title" xml:space="preserve">
+    <value>نتيجة المزامنة</value>
+  </data>
+  <data name="Warnings_Explanation" xml:space="preserve">
+    <value>دي بيانات مش مطابقة لقيود القاعدة (شقة محذوفة، مبلغ صفر...). راجعها قبل الاعتماد على SQL.</value>
+  </data>
+  <data name="Full_Sync_Everything" xml:space="preserve">
+  <value>مزامنة شاملة (كل حاجة مرة واحدة)</value>
+</data>
+  <data name="Full_Sync_Everything_Desc" xml:space="preserve">
+  <value>ينسخ كل حاجة من Firestore إلى SQL: العمارات، الشقق، المستخدمين، DVRs، الكاميرات، كل حاجة. ممكن ياخد وقت.</value>
+</data>
+  <data name="Confirm_Full_Sync" xml:space="preserve">
+  <value>⚠️ متأكد؟ ده هيعمل مزامنة كاملة لكل البيانات.</value>
+</data>
+  <data name="Run_Full_Sync" xml:space="preserve">
+  <value>ابدأ المزامنة الشاملة</value>
+</data>
+  <data name="Individual_Syncs" xml:space="preserve">
+  <value>مزامنة منفصلة</value>
+</data>
+  <data name="Sync_Dvrs_Cameras" xml:space="preserve">
+  <value>نسخ أجهزة DVR والكاميرات</value>
+</data>
+  <data name="Copy_All_Dvrs_Cameras_From_Firestore_To_Sql" xml:space="preserve">
+  <value>نسخ كل الـ DVRs والكاميرات من Firestore إلى SQL Server</value>
+</data>
 </root>

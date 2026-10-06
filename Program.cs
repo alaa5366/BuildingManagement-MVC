@@ -152,7 +152,7 @@ builder.Services.AddScoped<DataIntegrityService>();
 // ✅ جديد — DVR + Cameras + MediaMTX + Encryption
 // ============================================================
 builder.Services.AddSingleton<IEncryptionService, AesEncryptionService>();
-builder.Services.AddScoped<DvrService>();
+builder.Services.AddSingleton<DvrService>(); 
 builder.Services.AddHttpClient<MediaMtxService>();
 
 // ============================================================

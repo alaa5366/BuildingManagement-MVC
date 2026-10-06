@@ -1,6 +1,6 @@
 ﻿@using BuildingManagementMvc.Data
 @{
-    ViewData["Title"] = "نتيجة مزامنة SQL";
+    ViewData["Title"] = Loc.T("Sql_Sync_Result");
     var report = ViewBag.Report as SyncReport;
     var provider = ViewBag.Provider as string ?? "—";
     var mirrorEnabled = ViewBag.MirrorEnabled as bool? ?? false;
@@ -8,20 +8,20 @@
 }
 
 <div class="container">
-    <h2>نتيجة مزامنة SQL Server</h2>
+    <h2>@Loc.T("Sql_Sync_Result")</h2>
 
     <div class="card mb-3">
         <div class="card-body">
-            <p class="mb-1">الوضع الحالي: <strong>@provider</strong></p>
+            <p class="mb-1">@Loc.T("Current_Mode"): <strong>@provider</strong></p>
             <p class="mb-1">
-                المرآة:
+                @Loc.T("Mirror"):
                 @if (mirrorEnabled)
                 {
-                    <span class="text-success">مفعّلة ✅</span>
+                    <span class="text-success">@Loc.T("Enabled") ✅</span>
                 }
                 else
                 {
-                    <span class="text-warning">غير مفعّلة ⚠️</span>
+                    <span class="text-warning">@Loc.T("Disabled") ⚠️</span>
                 }
             </p>
         </div>
@@ -37,9 +37,9 @@
         <div class="card mb-3">
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-4"><strong>العمارات:</strong> @report.Buildings</div>
-                    <div class="col-md-4"><strong>المستخدمين:</strong> @report.Users</div>
-                    <div class="col-md-4"><strong>الوقت:</strong> @report.Elapsed.TotalSeconds.ToString("0.00") ثانية</div>
+                    <div class="col-md-4"><strong>@Loc.T("Buildings"):</strong> @report.Buildings</div>
+                    <div class="col-md-4"><strong>@Loc.T("Users"):</strong> @report.Users</div>
+                    <div class="col-md-4"><strong>@Loc.T("Time"):</strong> @report.Elapsed.TotalSeconds.ToString("0.00") @Loc.T("Seconds")</div>
                 </div>
             </div>
         </div>
@@ -47,7 +47,7 @@
         @if (report.Errors.Count > 0)
         {
             <div class="card mb-3">
-                <div class="card-header bg-danger text-white">أخطاء (@report.Errors.Count)</div>
+                <div class="card-header bg-danger text-white">@Loc.T("Errors") (@report.Errors.Count)</div>
                 <div class="card-body">
                     <ul class="mb-0">
                         @foreach (var e in report.Errors.Take(100))
@@ -62,7 +62,7 @@
         @if (report.Warnings.Count > 0)
         {
             <div class="card mb-3">
-                <div class="card-header bg-warning">تحذيرات: صفوف اتخطّت (@report.Warnings.Count)</div>
+                <div class="card-header bg-warning">@Loc.T("Warnings_Skipped_Rows") (@report.Warnings.Count)</div>
                 <div class="card-body">
                     <ul class="mb-0 small">
                         @foreach (var w in report.Warnings.Take(200))
@@ -76,9 +76,9 @@
 
         @if (report.Errors.Count == 0 && report.Warnings.Count == 0)
         {
-            <div class="alert alert-success">✅ تمت المزامنة بدون أخطاء أو تحذيرات.</div>
+            <div class="alert alert-success">✅ @Loc.T("Sync_Completed_Without_Errors")</div>
         }
     }
 
-    <a asp-action="Index" class="btn btn-secondary">رجوع</a>
+    <a asp-action="Index" class="btn btn-secondary">@Loc.T("Back")</a>
 </div>

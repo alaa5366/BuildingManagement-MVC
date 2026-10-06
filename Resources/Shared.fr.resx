@@ -4350,4 +4350,160 @@ Cette opération peut prendre quelques secondes.</value>
   <data name="Nav_Data_Integrity" xml:space="preserve">
   <value>Intégrité des données</value>
 </data>
+  <data name="Sync_Sql_Server" xml:space="preserve">
+    <value>Synchroniser SQL Server</value>
+  </data>
+  <data name="Copy_All_Buildings_From_Firestore_To_Sql" xml:space="preserve">
+    <value>Copier tous les bâtiments de Firestore vers SQL Server</value>
+  </data>
+  <data name="Reverse_Sync_Sql_To_Firebase" xml:space="preserve">
+    <value>Synchronisation inverse (SQL → Firebase)</value>
+  </data>
+  <data name="Transfer_Changes_From_Sql_To_Firebase" xml:space="preserve">
+    <value>Transférer les modifications de SQL vers Firebase</value>
+  </data>
+  <data name="Copy_Users_To_Sql" xml:space="preserve">
+    <value>Copier les utilisateurs vers SQL</value>
+  </data>
+  <data name="Copy_All_Users_From_Firestore_To_Sql" xml:space="preserve">
+    <value>Copier tous les utilisateurs de Firestore vers SQL Server</value>
+  </data>
+  <data name="Current_Storage_Mode" xml:space="preserve">
+    <value>Mode de stockage actuel</value>
+  </data>
+  <data name="Choose_Read_Write_Source_Apply_Immediately" xml:space="preserve">
+    <value>Choisissez la source de lecture/écriture. Les modifications s'appliquent immédiatement.</value>
+  </data>
+  <data name="Confirm_Switch_To_Firestore" xml:space="preserve">
+    <value>Passer à Firestore uniquement ?</value>
+  </data>
+  <data name="Firestore_Only" xml:space="preserve">
+    <value>Firestore uniquement</value>
+  </data>
+  <data name="Confirm_Switch_To_Dual" xml:space="preserve">
+    <value>Passer en mode Dual (les deux) ?</value>
+  </data>
+  <data name="Dual_Firestore_Sql" xml:space="preserve">
+    <value>Dual (Firestore + SQL)</value>
+  </data>
+  <data name="Confirm_Switch_To_Sql" xml:space="preserve">
+    <value>Passer à SQL Server uniquement ?</value>
+  </data>
+  <data name="Sql_Server_Only" xml:space="preserve">
+    <value>SQL Server uniquement</value>
+  </data>
+  <data name="Sql_Sync_Result" xml:space="preserve">
+    <value>Résultat de la synchronisation SQL</value>
+  </data>
+  <data name="Current_Mode" xml:space="preserve">
+    <value>Mode actuel</value>
+  </data>
+  <data name="Mirror" xml:space="preserve">
+    <value>Miroir</value>
+  </data>
+  <data name="Enabled" xml:space="preserve">
+    <value>Activé</value>
+  </data>
+  <data name="Time" xml:space="preserve">
+    <value>Temps</value>
+  </data>
+  <data name="Seconds" xml:space="preserve">
+    <value>secondes</value>
+  </data>
+  <data name="Warnings_Skipped_Rows" xml:space="preserve">
+    <value>Avertissements : lignes ignorées</value>
+  </data>
+  <data name="Sync_Completed_Without_Errors" xml:space="preserve">
+    <value>Synchronisation terminée sans erreurs ni avertissements.</value>
+  </data>
+  <data name="Cleanup_Data_Title" xml:space="preserve">
+    <value>Nettoyage des données (Cleanup Data)</value>
+  </data>
+  <data name="Cleanup_Data_Desc" xml:space="preserve">
+    <value>Corriger les mois erronés + recalculer carryOver</value>
+  </data>
+  <data name="Cleanup_Warn_Backup" xml:space="preserve">
+    <value>&lt;strong&gt;Faites une sauvegarde avant d'exécuter.&lt;/strong&gt;</value>
+  </data>
+  <data name="Cleanup_Warn_FutureMonths" xml:space="preserve">
+    <value>Supprimera les mois futurs (après le mois actuel).</value>
+  </data>
+  <data name="Cleanup_Warn_BeforeBuildingDate" xml:space="preserve">
+    <value>Supprimera les mois avant la date de création du bâtiment.</value>
+  </data>
+  <data name="Cleanup_Warn_RecalcCarryOver" xml:space="preserve">
+    <value>Recalculera carryOver depuis le début.</value>
+  </data>
+  <data name="Cleanup_Confirm" xml:space="preserve">
+    <value>⚠️ Êtes-vous sûr ? Assurez-vous d'avoir fait une sauvegarde.</value>
+  </data>
+  <data name="Cleanup_Run" xml:space="preserve">
+    <value>Exécuter le nettoyage</value>
+  </data>
+  <data name="Cleanup_Details_Title" xml:space="preserve">
+    <value>Détails du nettoyage</value>
+  </data>
+  <data name="Migration" xml:space="preserve">
+    <value>Migration</value>
+  </data>
+  <data name="Sql_Sync_Title" xml:space="preserve">
+    <value>Synchronisation SQL</value>
+  </data>
+  <data name="Dual_Storage_Firestore_Sql" xml:space="preserve">
+    <value>Stockage double (Firestore + SQL)</value>
+  </data>
+  <data name="Firestore_Is_Primary_Source_Synced_To_Sql" xml:space="preserve">
+    <value>Firestore est la source principale, chaque modification est répliquée vers SQL.</value>
+  </data>
+  <data name="Mirror_Not_Active_Set_Storage_Provider_Dual" xml:space="preserve">
+    <value>Le miroir n'est pas actif. Définissez &lt;code&gt;Storage:Provider = Dual&lt;/code&gt; et redémarrez.</value>
+  </data>
+  <data name="Last_Successful_Sync" xml:space="preserve">
+    <value>Dernière synchronisation réussie</value>
+  </data>
+  <data name="Failed_Sync_Attempts_Since_Last_Run" xml:space="preserve">
+    <value>Tentatives de synchronisation échouées depuis la dernière exécution</value>
+  </data>
+  <data name="Last_Error" xml:space="preserve">
+    <value>Dernière erreur</value>
+  </data>
+  <data name="Reset_Counters" xml:space="preserve">
+    <value>Réinitialiser les compteurs</value>
+  </data>
+  <data name="Full_Sync_Firestore_To_Sql" xml:space="preserve">
+    <value>Synchronisation complète de Firestore vers SQL</value>
+  </data>
+  <data name="Full_Sync_Description" xml:space="preserve">
+    <value>Copie tous les utilisateurs et tous les bâtiments. Exécutez-la la première fois après avoir activé Dual, et après toute restauration de sauvegarde ou échec de synchronisation. Sûre à répéter, peut prendre du temps si les bâtiments sont nombreux.</value>
+  </data>
+  <data name="Start_Sync" xml:space="preserve">
+    <value>Démarrer la synchronisation</value>
+  </data>
+  <data name="Sync_Result_Title" xml:space="preserve">
+    <value>Résultat de la synchronisation</value>
+  </data>
+  <data name="Warnings_Explanation" xml:space="preserve">
+    <value>Ces lignes ne respectent pas les contraintes de la base (appartement supprimé, montant nul, ...). Vérifiez-les avant de vous fier à SQL.</value>
+  </data>
+  <data name="Full_Sync_Everything" xml:space="preserve">
+    <value>Synchronisation complète (tout à la fois)</value>
+  </data>
+  <data name="Full_Sync_Everything_Desc" xml:space="preserve">
+    <value>Copie tout depuis Firestore vers SQL : bâtiments, appartements, utilisateurs, DVRs, caméras, tout. Peut prendre du temps.</value>
+  </data>
+  <data name="Confirm_Full_Sync" xml:space="preserve">
+    <value>⚠️ Êtes-vous sûr ? Cela effectuera une synchronisation complète des données.</value>
+  </data>
+  <data name="Run_Full_Sync" xml:space="preserve">
+    <value>Démarrer la synchronisation complète</value>
+  </data>
+  <data name="Individual_Syncs" xml:space="preserve">
+    <value>Synchronisations individuelles</value>
+  </data>
+  <data name="Sync_Dvrs_Cameras" xml:space="preserve">
+    <value>Synchroniser DVRs et caméras</value>
+  </data>
+  <data name="Copy_All_Dvrs_Cameras_From_Firestore_To_Sql" xml:space="preserve">
+    <value>Copier tous les DVRs et caméras de Firestore vers SQL Server</value>
+  </data>
 </root>

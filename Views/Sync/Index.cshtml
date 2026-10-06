@@ -7,6 +7,42 @@
     <h2>@Loc.T("Database_Sync_2")</h2>
     <p class="text-muted">@Loc.T("Check_And_Fix_Differences_Between_Firebase")</p>
 
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- ✅ المزامنة الشاملة -->
+    <div class="card mb-4 border-primary shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">⚡ @Loc.T("Full_Sync_Everything")</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-3">
+                @Loc.T("Full_Sync_Everything_Desc")
+            </p>
+            <form method="post" asp-action="SyncEverything"
+                  onsubmit="return confirm('@Loc.T("Confirm_Full_Sync")');">
+                @Html.AntiForgeryToken()
+                <button class="btn btn-primary btn-lg w-100">
+                    ⚡ @Loc.T("Run_Full_Sync")
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <h5 class="mb-3">@Loc.T("Individual_Syncs")</h5>
+
     <div class="row g-3">
         <div class="col-md-4">
             <form method="post" asp-action="SyncAdmins" class="card h-100">
@@ -53,9 +89,9 @@
             <form method="post" asp-action="SyncSql" class="card h-100">
                 @Html.AntiForgeryToken()
                 <div class="card-body">
-                    <h5>مزامنة SQL Server</h5>
-                    <p class="text-muted">نسخ كل العمارات من Firestore إلى SQL Server</p>
-                    <button class="btn btn-success w-100">تشغيل</button>
+                    <h5>@Loc.T("Sync_Sql_Server")</h5>
+                    <p class="text-muted">@Loc.T("Copy_All_Buildings_From_Firestore_To_Sql")</p>
+                    <button class="btn btn-success w-100">@Loc.T("Run")</button>
                 </div>
             </form>
         </div>
@@ -64,29 +100,43 @@
             <form method="post" asp-action="ReverseSync" class="card h-100">
                 @Html.AntiForgeryToken()
                 <div class="card-body">
-                    <h5>مزامنة عكسية (SQL → Firebase)</h5>
-                    <p class="text-muted">نقل التعديلات من SQL إلى Firebase</p>
-                    <button class="btn btn-info w-100">تشغيل</button>
+                    <h5>@Loc.T("Reverse_Sync_Sql_To_Firebase")</h5>
+                    <p class="text-muted">@Loc.T("Transfer_Changes_From_Sql_To_Firebase")</p>
+                    <button class="btn btn-info w-100">@Loc.T("Run")</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-md-4">
+            <form method="post" asp-action="SeedUsersToSql" class="card h-100">
+                @Html.AntiForgeryToken()
+                <div class="card-body">
+                    <h5>@Loc.T("Copy_Users_To_Sql")</h5>
+                    <p class="text-muted">@Loc.T("Copy_All_Users_From_Firestore_To_Sql")</p>
+                    <button class="btn btn-dark w-100">@Loc.T("Run")</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ✅ جديد: DVRs + Cameras -->
+        <div class="col-md-4">
+            <form method="post" asp-action="SyncDvrs" class="card h-100">
+                @Html.AntiForgeryToken()
+                <div class="card-body">
+                    <h5>📹 @Loc.T("Sync_Dvrs_Cameras")</h5>
+                    <p class="text-muted">@Loc.T("Copy_All_Dvrs_Cameras_From_Firestore_To_Sql")</p>
+                    <button class="btn btn-info w-100">@Loc.T("Run")</button>
                 </div>
             </form>
         </div>
     </div>
-    <div class="col-md-4">
-        <form method="post" asp-action="SeedUsersToSql" class="card h-100">
-            @Html.AntiForgeryToken()
-            <div class="card-body">
-                <h5>نسخ المستخدمين إلى SQL</h5>
-                <p class="text-muted">نسخ كل المستخدمين من Firestore إلى SQL Server</p>
-                <button class="btn btn-dark w-100">تشغيل</button>
-            </div>
-        </form>
-    </div>
-    <!-- ✅ قسم تبديل وضع التخزين -->
+
+    <!-- ✅ وضع التخزين -->
     <div class="card mt-4">
         <div class="card-body">
-            <h5>وضع التخزين الحالي: <span class="badge bg-primary">@currentMode</span></h5>
+            <h5>@Loc.T("Current_Storage_Mode") <span class="badge bg-primary">@currentMode</span></h5>
             <p class="text-muted">
-                اختار من أين تتم القراءة والكتابة. التغيير يطبق فورًا على الطلبات الجديدة.
+                @Loc.T("Choose_Read_Write_Source_Apply_Immediately")
             </p>
 
             <div class="d-flex gap-2 flex-wrap">
@@ -94,8 +144,8 @@
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="mode" value="Firestore" />
                     <button class="btn btn-outline-danger"
-                            onclick="return confirm('تحويل إلى Firestore فقط؟')">
-                        🔥 Firestore فقط
+                            onclick="return confirm('@Loc.T("Confirm_Switch_To_Firestore")')">
+                        🔥 @Loc.T("Firestore_Only")
                     </button>
                 </form>
 
@@ -103,8 +153,8 @@
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="mode" value="Dual" />
                     <button class="btn btn-outline-primary"
-                            onclick="return confirm('تحويل إلى Dual (الاثنين)؟')">
-                        🔄 Dual (Firestore + SQL)
+                            onclick="return confirm('@Loc.T("Confirm_Switch_To_Dual")')">
+                        🔄 @Loc.T("Dual_Firestore_Sql")
                     </button>
                 </form>
 
@@ -112,20 +162,11 @@
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="mode" value="Sql" />
                     <button class="btn btn-outline-success"
-                            onclick="return confirm('تحويل إلى SQL Server فقط؟')">
-                        🗄️ SQL Server فقط
+                            onclick="return confirm('@Loc.T("Confirm_Switch_To_Sql")')">
+                        🗄️ @Loc.T("Sql_Server_Only")
                     </button>
                 </form>
             </div>
-
-            @if (TempData["Success"] != null)
-            {
-                <div class="alert alert-success mt-3">@TempData["Success"]</div>
-            }
-            @if (TempData["Error"] != null)
-            {
-                <div class="alert alert-danger mt-3">@TempData["Error"]</div>
-            }
         </div>
     </div>
 </div>

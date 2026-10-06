@@ -61,14 +61,12 @@ public class DvrService
         var id = Guid.NewGuid().ToString("N");
         var now = DateTime.UtcNow;
 
-        // ✅ حماية من null
         name = string.IsNullOrWhiteSpace(name) ? "DVR" : name.Trim();
         ip = string.IsNullOrWhiteSpace(ip) ? "127.0.0.1" : ip.Trim();
         brand = string.IsNullOrWhiteSpace(brand) ? "Other" : brand.Trim();
         username = username?.Trim() ?? "";
         password = password ?? "";
 
-        // 1) SQL
         await using (var db = await _sqlFactory.CreateDbContextAsync())
         {
             db.Dvrs.Add(new DvrEntity
@@ -79,7 +77,7 @@ public class DvrService
                 IpAddress = ip,
                 Port = port,
                 Brand = brand,
-                Username = username,                          // ✅ مش هيبقى null
+                Username = username,
                 PasswordEncrypted = _enc.Encrypt(password),
                 IsActive = true,
                 CreatedAt = now
@@ -87,7 +85,6 @@ public class DvrService
             await db.SaveChangesAsync();
         }
 
-        // 2) Firestore
         try
         {
             await DvrsCol.Document(id).SetAsync(new Dictionary<string, object>
@@ -117,7 +114,6 @@ public class DvrService
         string id, string name, string ip, int port,
         string brand, string username, string? newPassword, bool isActive)
     {
-        // ✅ حماية من null
         name = string.IsNullOrWhiteSpace(name) ? "DVR" : name.Trim();
         ip = string.IsNullOrWhiteSpace(ip) ? "127.0.0.1" : ip.Trim();
         brand = string.IsNullOrWhiteSpace(brand) ? "Other" : brand.Trim();
@@ -132,7 +128,7 @@ public class DvrService
             entity.IpAddress = ip;
             entity.Port = port;
             entity.Brand = brand;
-            entity.Username = username;                       // ✅ مش هيبقى null
+            entity.Username = username;
             entity.IsActive = isActive;
             entity.UpdatedAt = DateTime.UtcNow;
 
@@ -142,7 +138,6 @@ public class DvrService
             await db.SaveChangesAsync();
         }
 
-        // Firestore
         try
         {
             await DvrsCol.Document(id).SetAsync(new Dictionary<string, object>
@@ -190,7 +185,6 @@ public class DvrService
     public async Task<string> AddCameraAsync(
         string dvrId, string name, int channel, string rtspPath)
     {
-        // ✅ حماية من null
         name = string.IsNullOrWhiteSpace(name) ? $"Camera {channel}" : name.Trim();
         rtspPath = rtspPath?.Trim() ?? "";
 
@@ -277,4 +271,212 @@ public class DvrService
         entity.IsActive = doc.IsActive;
         await db.SaveChangesAsync();
     }
+
+    // ============================================================
+    // ✅ المزامنة الكاملة: Firestore → SQL
+    // ============================================================
+    public async Task<SyncDvrReport> SyncAllToSqlAsync()
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var report = new SyncDvrReport();
+
+        try
+        {
+            var dvrsSnapshot = await DvrsCol.GetSnapshotAsync();
+            _log.LogInformation("Found {Count} DVRs in Firestore", dvrsSnapshot.Documents.Count);
+
+            await using var db = await _sqlFactory.CreateDbContextAsync();
+
+            foreach (var doc in dvrsSnapshot.Documents)
+            {
+                try
+                {
+                    var data = doc.ToDictionary();
+
+                    var id = doc.Id;
+                    var buildingId = GetString(data, "buildingId");
+                    var name = GetString(data, "name", "DVR");
+                    var ip = GetString(data, "ip");
+                    var port = GetInt(data, "port", 554);
+                    var brand = GetString(data, "brand", "Other");
+                    var username = GetString(data, "username");
+                    var isActive = GetBool(data, "isActive", true);
+                    var createdAtStr = GetString(data, "createdAt");
+
+                    if (string.IsNullOrWhiteSpace(buildingId))
+                    {
+                        report.Errors.Add($"DVR {id}: buildingId مفقود - اتخطّى");
+                        continue;
+                    }
+
+                    var buildingExists = await db.Buildings.AnyAsync(b => b.Id == buildingId);
+                    if (!buildingExists)
+                    {
+                        report.Errors.Add($"DVR {id}: العمارة '{buildingId}' مش موجودة في SQL - اتخطّى");
+                        continue;
+                    }
+
+                    var existing = await db.Dvrs.FirstOrDefaultAsync(d => d.Id == id);
+                    if (existing == null)
+                    {
+                        db.Dvrs.Add(new DvrEntity
+                        {
+                            Id = id,
+                            BuildingId = buildingId,
+                            Name = name,
+                            IpAddress = ip,
+                            Port = port,
+                            Brand = brand,
+                            Username = username,
+                            PasswordEncrypted = "",
+                            IsActive = isActive,
+                            CreatedAt = ParseTs(createdAtStr) ?? DateTime.UtcNow
+                        });
+                        report.DvrsAdded++;
+                    }
+                    else
+                    {
+                        existing.BuildingId = buildingId;
+                        existing.Name = name;
+                        existing.IpAddress = ip;
+                        existing.Port = port;
+                        existing.Brand = brand;
+                        existing.Username = username;
+                        existing.IsActive = isActive;
+                        existing.UpdatedAt = DateTime.UtcNow;
+                        report.DvrsUpdated++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    report.Errors.Add($"DVR {doc.Id}: {ex.Message}");
+                    _log.LogWarning(ex, "Failed to sync DVR {Id}", doc.Id);
+                }
+            }
+
+            await db.SaveChangesAsync();
+
+            var camerasSnapshot = await CamerasCol.GetSnapshotAsync();
+            _log.LogInformation("Found {Count} cameras in Firestore", camerasSnapshot.Documents.Count);
+
+            foreach (var doc in camerasSnapshot.Documents)
+            {
+                try
+                {
+                    var data = doc.ToDictionary();
+
+                    var id = doc.Id;
+                    var dvrId = GetString(data, "dvrId");
+                    var buildingId = GetString(data, "buildingId");
+                    var name = GetString(data, "name", "Camera");
+                    var channel = GetInt(data, "channel", 1);
+                    var rtspPath = GetString(data, "rtspPath");
+                    var hlsUrl = GetString(data, "hlsUrl");
+                    var isActive = GetBool(data, "isActive", true);
+                    var createdAtStr = GetString(data, "createdAt");
+
+                    if (string.IsNullOrWhiteSpace(dvrId))
+                    {
+                        report.Errors.Add($"Camera {id}: dvrId مفقود - اتخطّت");
+                        continue;
+                    }
+
+                    var dvrExists = await db.Dvrs.AnyAsync(d => d.Id == dvrId);
+                    if (!dvrExists)
+                    {
+                        report.Errors.Add($"Camera {id}: DVR '{dvrId}' مش موجود في SQL - اتخطّت");
+                        continue;
+                    }
+
+                    var existing = await db.Cameras.FirstOrDefaultAsync(c => c.Id == id);
+                    if (existing == null)
+                    {
+                        db.Cameras.Add(new CameraEntity
+                        {
+                            Id = id,
+                            DvrId = dvrId,
+                            BuildingId = buildingId,
+                            Name = name,
+                            Channel = channel,
+                            RtspPath = rtspPath,
+                            HlsUrl = hlsUrl,
+                            IsActive = isActive,
+                            CreatedAt = ParseTs(createdAtStr) ?? DateTime.UtcNow
+                        });
+                        report.CamerasAdded++;
+                    }
+                    else
+                    {
+                        existing.DvrId = dvrId;
+                        existing.BuildingId = buildingId;
+                        existing.Name = name;
+                        existing.Channel = channel;
+                        existing.RtspPath = rtspPath;
+                        existing.HlsUrl = hlsUrl;
+                        existing.IsActive = isActive;
+                        report.CamerasUpdated++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    report.Errors.Add($"Camera {doc.Id}: {ex.Message}");
+                    _log.LogWarning(ex, "Failed to sync Camera {Id}", doc.Id);
+                }
+            }
+
+            await db.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            report.Errors.Add($"خطأ عام: {ex.Message}");
+            _log.LogError(ex, "SyncAllToSqlAsync failed");
+        }
+
+        sw.Stop();
+        report.Elapsed = sw.Elapsed;
+        return report;
+    }
+
+    // ============================================================
+    // Helpers
+    // ============================================================
+    private static string GetString(Dictionary<string, object> d, string key, string def = "")
+        => d.TryGetValue(key, out var v) && v != null ? v.ToString() ?? def : def;
+
+    private static int GetInt(Dictionary<string, object> d, string key, int def)
+        => d.TryGetValue(key, out var v) && v != null && int.TryParse(v.ToString(), out var i) ? i : def;
+
+    private static bool GetBool(Dictionary<string, object> d, string key, bool def)
+    {
+        if (!d.TryGetValue(key, out var v) || v == null) return def;
+        if (v is bool b) return b;
+        return bool.TryParse(v.ToString(), out var parsed) ? parsed : def;
+    }
+
+    private static DateTime? ParseTs(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return null;
+        if (DateTime.TryParse(s, null,
+                System.Globalization.DateTimeStyles.AdjustToUniversal |
+                System.Globalization.DateTimeStyles.AssumeUniversal,
+                out var dt))
+            return new DateTime(dt.Ticks - dt.Ticks % TimeSpan.TicksPerSecond, DateTimeKind.Utc);
+        return null;
+    }
+}
+
+// ============================================================
+// SyncDvrReport
+// ============================================================
+public class SyncDvrReport
+{
+    public int DvrsAdded { get; set; }
+    public int DvrsUpdated { get; set; }
+    public int CamerasAdded { get; set; }
+    public int CamerasUpdated { get; set; }
+    public TimeSpan Elapsed { get; set; }
+    public List<string> Errors { get; set; } = new();
+
+    public int DvrsTotal => DvrsAdded + DvrsUpdated;
+    public int CamerasTotal => CamerasAdded + CamerasUpdated;
 }

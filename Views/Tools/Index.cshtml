@@ -25,34 +25,34 @@
     }
 
     @* ============================================================ *@
-    @* ✅ Cleanup Data — الأولوية القصوى                              *@
+    @* ✅ Cleanup Data                                               *@
     @* ============================================================ *@
     <div class="card mb-3 border-0 shadow-sm">
         <div class="card-header bg-danger text-white">
             <div class="d-flex align-items-center gap-2">
                 <span style="font-size: 22px;">🧹</span>
                 <div>
-                    <strong class="fs-5">تنظيف البيانات (Cleanup Data)</strong>
-                    <div class="small">إصلاح الشهور الغلط + إعادة حساب carryOver</div>
+                    <strong class="fs-5">@Loc.T("Cleanup_Data_Title")</strong>
+                    <div class="small">@Loc.T("Cleanup_Data_Desc")</div>
                 </div>
             </div>
         </div>
         <div class="card-body">
             <div class="alert alert-danger small mb-3">
-                <strong>⚠️ تحذير مهم:</strong>
+                <strong>⚠️ @Loc.T("Warning")</strong>
                 <ul class="mb-0 mt-2">
-                    <li><strong>اعمل Backup قبل ما تشغّل ده.</strong></li>
-                    <li>هيمسح الشهور المستقبلية (بعد الشهر الحالي).</li>
-                    <li>هيمسح الشهور اللي قبل تاريخ إنشاء العمارة.</li>
-                    <li>هيعيد حساب carryOver من الأول.</li>
+                    <li>@Html.Raw(Loc.T("Cleanup_Warn_Backup"))</li>
+                    <li>@Loc.T("Cleanup_Warn_FutureMonths")</li>
+                    <li>@Loc.T("Cleanup_Warn_BeforeBuildingDate")</li>
+                    <li>@Loc.T("Cleanup_Warn_RecalcCarryOver")</li>
                 </ul>
             </div>
 
             <form method="post" asp-action="CleanupData" class="m-0"
-                  onsubmit="return confirm('⚠️ متأكد؟ تأكد إنك عملت Backup الأول.');">
+                  onsubmit="return confirm('@Html.Raw(Loc.Js("Cleanup_Confirm"))');">
                 @Html.AntiForgeryToken()
                 <button type="submit" class="btn btn-danger btn-lg w-100">
-                    🧹 تشغيل التنظيف
+                    🧹 @Loc.T("Cleanup_Run")
                 </button>
             </form>
         </div>
@@ -174,13 +174,13 @@
     </div>
 
     @* ============================================================ *@
-    @* ✅ تفاصيل التنظيف (لو موجودة)                                *@
+    @* ✅ تفاصيل التنظيف                                            *@
     @* ============================================================ *@
     @if (TempData["CleanupDetails"] != null)
     {
         <div class="card mb-3 border-0 shadow-sm">
             <div class="card-header bg-secondary text-white">
-                <strong>📋 تفاصيل التنظيف</strong>
+                <strong>📋 @Loc.T("Cleanup_Details_Title")</strong>
             </div>
             <div class="card-body">
                 <pre style="max-height: 400px; overflow-y: auto; font-size: 12px;">@TempData["CleanupDetails"]</pre>
