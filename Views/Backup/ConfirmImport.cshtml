@@ -1,105 +1,139 @@
-﻿@using BuildingManagementMvc.Services
-@model BuildingImportData
+﻿@model BuildingManagementMvc.Services.BuildingImportData
 @{
     ViewData["Title"] = Loc.T("Confirm_Import");
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>@Loc.T("Confirm_Building_Import")</h3>
-    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">@Loc.T("Back")</a>
-</div>
+<div class="container-fluid">
 
-<div class="alert alert-success">
-    @Loc.T("The_File_Is_Valid_Review_The")
-</div>
-
-<div class="bg-white rounded shadow-sm p-4 mb-3">
-    <h5>@Loc.T("Building_Data")</h5>
-    <dl class="row mb-0">
-        <dt class="col-sm-3">@Loc.T("Name")</dt>
-        <dd class="col-sm-9">@Model.Name</dd>
-
-        <dt class="col-sm-3">@Loc.T("Building_Number")</dt>
-        <dd class="col-sm-9">
-            @(string.IsNullOrEmpty(Model.BuildingNumber) ? Loc.T("Automatic_BLD_XXX") : Model.BuildingNumber)
-        </dd>
-
-        <dt class="col-sm-3">@Loc.T("Admin_PIN")</dt>
-        <dd class="col-sm-9">@Model.AdminPin</dd>
-
-        <dt class="col-sm-3">@Loc.T("Admin_WhatsApp")</dt>
-        <dd class="col-sm-9">@Model.AdminWhatsapp</dd>
-    </dl>
-</div>
-
-<div class="bg-white rounded shadow-sm p-4 mb-3">
-    <h5>@Loc.T("Apartments_N", Model.Apartments.Count)</h5>
-    <table class="table table-sm">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>@Loc.T("Role")</th>
-                <th>@Loc.T("Apartment_Number")</th>
-                <th>@Loc.T("Owner")</th>
-                <th>@Loc.T("WhatsApp")</th>
-                <th>PIN</th>
-                <th>@Loc.T("Fee")</th>
-                <th>@Loc.T("Status")</th>
-            </tr>
-        </thead>
-        <tbody>
-            @{
-                int index = 1;
-                var grouped = Model.Apartments
-                    .GroupBy(a => new { a.FloorLabel, a.FloorOrder })
-                    .OrderBy(g => g.Key.FloorOrder);
-            }
-            @foreach (var group in grouped)
-            {
-                foreach (var apt in group.OrderBy(a => a.AptNumber))
-                {
-                    <tr>
-                        <td>@index</td>
-                        <td>@group.Key.FloorLabel</td>
-                        <td>@apt.AptNumber</td>
-                        <td>@apt.Owner</td>
-                        <td>@apt.WhatsApp</td>
-                        <td><code>@apt.Pin</code></td>
-                        <td>@apt.MonthlyFee.ToString("0.##")</td>
-                        <td>
-                            @if (apt.Status == "closed")
-                            {
-                                <span class="badge bg-secondary">@Loc.T("Closed")</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-success">@Loc.T("Open_2")</span>
-                            }
-                        </td>
-                    </tr>
-                    index++;
-                }
-            }
-        </tbody>
-    </table>
-</div>
-
-<div class="bg-white rounded shadow-sm p-4">
-    <h5>@Loc.T("Final_Confirmation")</h5>
-    <p class="text-muted small">
-        @Loc.T("Once_You_Click_Confirm_Import_A")
-    </p>
-
-    <form method="post" asp-action="ConfirmImport">
-        @Html.AntiForgeryToken()
-
-        <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-success">
-                @Loc.T("Confirm_Import_2")
-            </button>
-            <a asp-action="Index" class="btn btn-outline-secondary">
-                @Loc.T("Cancel")
-            </a>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1">
+                <i class="bi bi-check-circle text-success"></i>
+                @Loc.T("Confirm_Building_Import")
+            </h3>
+            <p class="text-muted mb-0">
+                @Loc.T("The_File_Is_Valid_Review_The")
+            </p>
         </div>
-    </form>
+        <a asp-action="Index" asp-route-tab="import" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-right"></i> @Loc.T("Common_Back")
+        </a>
+    </div>
+
+    @* ===== Building Info ===== *@
+    <div class="card shadow-sm mb-3">
+        <div class="card-header bg-primary text-white">
+            <strong>@Loc.T("Building_Data")</strong>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="text-muted small">@Loc.T("Building_Name")</label>
+                    <div class="fw-bold">@Model.Name</div>
+                </div>
+                <div class="col-md-4">
+                    <label class="text-muted small">@Loc.T("Building_Number")</label>
+                    <div class="fw-bold">
+                        @(string.IsNullOrEmpty(Model.BuildingNumber)
+                            ? Loc.T("Automatic_BLD_XXX")
+                            : Model.BuildingNumber)
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="text-muted small">@Loc.T("Admin_PIN")</label>
+                    <div class="fw-bold">●●●●</div>
+                </div>
+                <div class="col-md-4">
+                    <label class="text-muted small">@Loc.T("Admin_WhatsApp")</label>
+                    <div class="fw-bold" dir="ltr">@Model.AdminWhatsapp</div>
+                </div>
+                <div class="col-md-4">
+                    <label class="text-muted small">@Loc.T("Logo_URL")</label>
+                    <div class="fw-bold">
+                        @(string.IsNullOrEmpty(Model.LogoUrl) ? "—" : "✅")
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ===== Apartments ===== *@
+    <div class="card shadow-sm mb-3">
+        <div class="card-header bg-info text-white">
+            <strong>@Loc.T("Apartments_N", Model.Apartments.Count)</strong>
+        </div>
+        <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+            <table class="table table-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>@Loc.T("Floor_Label")</th>
+                        <th>@Loc.T("Floor_Order")</th>
+                        <th>@Loc.T("Apartment_Number")</th>
+                        <th>@Loc.T("Owner")</th>
+                        <th>@Loc.T("WhatsApp")</th>
+                        <th>@Loc.T("Fee")</th>
+                        <th>@Loc.T("Status")</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var i = 0;
+                    }
+                    @foreach (var apt in Model.Apartments)
+                    {
+                        i++;
+                        <tr>
+                            <td>@i</td>
+                            <td>@apt.FloorLabel</td>
+                            <td>@apt.FloorOrder</td>
+                            <td><span class="badge bg-secondary">@apt.AptNumber</span></td>
+                            <td>@apt.Owner</td>
+                            <td dir="ltr">@apt.WhatsApp</td>
+                            <td>@apt.MonthlyFee</td>
+                            <td>
+                                @if (apt.Status == "open")
+                                {
+                                    <span class="badge bg-success">@Loc.T("Open_2")</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning">@Loc.T("Closed")</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    @* ===== Final Confirmation ===== *@
+    <div class="card shadow-sm mb-3 border-success">
+        <div class="card-header bg-success text-white">
+            <strong>@Loc.T("Final_Confirmation")</strong>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning mb-3">
+                <i class="bi bi-exclamation-triangle"></i>
+                @Loc.T("Once_You_Click_Confirm_Import_A")
+            </div>
+
+            @* ✅ الـ Form بسيط — البيانات في TempData *@
+            <form method="post" asp-action="ConfirmImport" class="m-0">
+                @Html.AntiForgeryToken()
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="bi bi-check-circle"></i>
+                        @Loc.T("Confirm_Import_2")
+                    </button>
+                    <a asp-action="Index" asp-route-tab="import" class="btn btn-secondary btn-lg">
+                        @Loc.T("Common_Cancel")
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
 </div>

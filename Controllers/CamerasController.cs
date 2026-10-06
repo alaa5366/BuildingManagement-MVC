@@ -8,30 +8,33 @@ using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
 
-[Authorize] // أي حد مسجل
+[Authorize]
 public class CamerasController : Controller
 {
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly BuildingsService _buildings;
+    private readonly IConfiguration _config;
     private readonly ILogger<CamerasController> _log;
 
     public CamerasController(
         IDbContextFactory<AppDbContext> sqlFactory,
         BuildingsService buildings,
+        IConfiguration config,
         ILogger<CamerasController> log)
     {
         _sqlFactory = sqlFactory;
         _buildings = buildings;
+        _config = config;
         _log = log;
     }
 
     // ============================================================
-    // Live view للعمارة
+    // Live View
     // ============================================================
     [HttpGet]
     public async Task<IActionResult> Live(string? buildingId)
     {
-        // ✅ لو SuperAdmin ومفيش buildingId → يروح لصفحة اختيار العمارة
+        // SuperAdmin بدون buildingId → صفحة اختيار العمارة
         if (User.IsInRole("superadmin") && string.IsNullOrEmpty(buildingId))
         {
             return RedirectToAction("Index", "Dvrs");
@@ -67,7 +70,7 @@ public class CamerasController : Controller
     }
 
     // ============================================================
-    // HLS URL — يرجع الـ HLS للكاميرا
+    // Get HLS URL — ✅ HLS مباشر من MediaMTX
     // ============================================================
     [HttpGet]
     public async Task<IActionResult> GetHlsUrl(string cameraId)
@@ -87,8 +90,30 @@ public class CamerasController : Controller
         if (role != "superadmin" && userBuildingId != cam.BuildingId)
             return Forbid();
 
-        var pathName = $"cam_{cameraId}";
-        var hlsUrl = $"/hls/{pathName}/index.m3u8";
+        // ✅ استخرج اسم الـ stream من RTSP Path
+        var streamName = cam.RtspPath?.Trim() ?? "";
+
+        // لو الـ RtspPath كامل (rtsp://...)، استخرج اسم المسار
+        if (streamName.StartsWith("rtsp://", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var uri = new Uri(streamName);
+                streamName = uri.AbsolutePath.TrimStart('/');
+            }
+            catch
+            {
+                streamName = $"cam{cam.Channel}";
+            }
+        }
+
+        // لو فاضي، استخدم "cam{channel}"
+        if (string.IsNullOrWhiteSpace(streamName))
+            streamName = $"cam{cam.Channel}";
+
+        // ✅ HLS URL من MediaMTX
+        var hlsBase = _config["MediaMtx:HlsBaseUrl"] ?? "http://localhost:8888";
+        var hlsUrl = $"{hlsBase.TrimEnd('/')}/{streamName}/index.m3u8";
 
         return Json(new
         {

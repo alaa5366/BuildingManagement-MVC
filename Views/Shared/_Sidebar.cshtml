@@ -32,12 +32,10 @@
                 }
                 else if (isAdmin)
                 {
-
                     <text>@Loc.T("Role_Admin")</text>
                 }
                 else
                 {
-
                     <text>@Loc.T("Role_Resident")</text>
                 }
             </span>
@@ -62,12 +60,10 @@
                 }
                 else if (isAdmin)
                 {
-
                     <span>🏢 @Loc.T("Role_Admin")</span>
                 }
                 else
                 {
-
                     <span>🏠 @Loc.T("Role_Resident")</span>
                 }
             </div>
@@ -255,6 +251,15 @@
                     <li><a asp-controller="Sync" asp-action="Index" class="nav-link @Active("Sync")"><i class="bi bi-arrow-repeat"></i><span>@Loc.T("Nav_Sync")</span></a></li>
                     <li><a asp-controller="Backup" asp-action="Index" class="nav-link @Active("Backup")"><i class="bi bi-cloud-arrow-down"></i><span>@Loc.T("Nav_Backup")</span></a></li>
                     <li><a asp-controller="StorageSync" asp-action="Index" class="nav-link @Active("StorageSync")"><i class="bi bi-database"></i><span>@Loc.T("Nav_Storage_Status")</span></a></li>
+
+                    @* ✅ جديد: فحص تكامل البيانات *@
+                    <li>
+                        <a asp-controller="DataIntegrity" asp-action="Index"
+                           class="nav-link @Active("DataIntegrity")">
+                            <i class="bi bi-shield-check"></i>
+                            <span>@Loc.T("Nav_Data_Integrity")</span>
+                        </a>
+                    </li>
                 </ul>
             </div>
         }

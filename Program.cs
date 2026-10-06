@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using BuildingManagementMvc.Services;
 using BuildingManagementMvc.Data;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Http.Features;
 
 QuestPDF.Settings.License = LicenseType.Community;
 QuestPDF.Settings.UseEnvironmentFonts = false;
@@ -19,6 +21,30 @@ var builder = WebApplication.CreateBuilder(args);
 var cookieSecurePolicy = builder.Environment.IsDevelopment()
     ? CookieSecurePolicy.SameAsRequest
     : CookieSecurePolicy.Always;
+
+// ============================================================
+// ✅ Form Options — عشان الاستيراد من Excel (431 Fix)
+// ============================================================
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.ValueCountLimit = 10000;                    // 10000 form field
+    options.KeyLengthLimit = 4096;                       // 4 KB لكل key
+    options.ValueLengthLimit = 4 * 1024 * 1024;          // 4 MB لكل value
+    options.MultipartBodyLengthLimit = 100 * 1024 * 1024; // 100 MB
+    options.MultipartHeadersCountLimit = 32;
+    options.MultipartHeadersLengthLimit = 32 * 1024;     // 32 KB
+});
+
+// ============================================================
+// ✅ Kestrel Limits — عشان نتجنب 431
+// ============================================================
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestHeadersTotalSize = 4 * 1024 * 1024; // 4 MB
+    options.Limits.MaxRequestLineSize = 1024 * 1024;             // 1 MB
+    options.Limits.MaxRequestBodySize = 100 * 1024 * 1024;       // 100 MB
+    options.Limits.MaxRequestBufferSize = 4 * 1024 * 1024;       // 4 MB
+});
 
 builder.Services.AddControllersWithViews(options =>
 {
@@ -120,12 +146,27 @@ builder.Services.AddScoped<AdminManagementService>();
 
 builder.Services.AddSingleton<UserSqlStore>();
 
+builder.Services.AddScoped<DataIntegrityService>();
+
 // ============================================================
 // ✅ جديد — DVR + Cameras + MediaMTX + Encryption
 // ============================================================
 builder.Services.AddSingleton<IEncryptionService, AesEncryptionService>();
 builder.Services.AddScoped<DvrService>();
 builder.Services.AddHttpClient<MediaMtxService>();
+
+// ============================================================
+// ✅ Session — عشان TempData تشتغل مع البيانات الكبيرة
+// ============================================================
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.Name = "bm_session";
+    options.Cookie.SecurePolicy = cookieSecurePolicy;
+});
 
 // ============================================================
 // Localization
@@ -186,7 +227,6 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                 }
                 catch (Exception ex)
                 {
-                    // سجّل الخطأ واعتبر الجلسة صالحة
                     var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
                     logger.LogWarning(ex, "[SessionRevalidator] Failed to validate principal");
                     return; // خلي الجلسة زي ما هي
@@ -225,6 +265,14 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
 
 builder.Services.AddAuthorization();
+
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.CookieTempDataProviderOptions>(options =>
+{
+    options.Cookie.Name = "bm_tempdata";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = cookieSecurePolicy;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+});
 
 builder.Services.AddAntiforgery(options =>
 {
@@ -296,6 +344,9 @@ var locOptions = app.Services.GetRequiredService<IOptions<RequestLocalizationOpt
 app.UseRequestLocalization(locOptions.Value);
 
 app.UseRouting();
+
+// ✅ Session — لازم يكون قبل Authentication
+app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -52,7 +52,7 @@ public class DvrService
     }
 
     // ============================================================
-    // الإنشاء (Firestore + SQL)
+    // الإنشاء
     // ============================================================
     public async Task<string> CreateAsync(
         string buildingId, string name, string ip, int port,
@@ -61,7 +61,14 @@ public class DvrService
         var id = Guid.NewGuid().ToString("N");
         var now = DateTime.UtcNow;
 
-        // 1) SQL (مع الباسورد المشفّر)
+        // ✅ حماية من null
+        name = string.IsNullOrWhiteSpace(name) ? "DVR" : name.Trim();
+        ip = string.IsNullOrWhiteSpace(ip) ? "127.0.0.1" : ip.Trim();
+        brand = string.IsNullOrWhiteSpace(brand) ? "Other" : brand.Trim();
+        username = username?.Trim() ?? "";
+        password = password ?? "";
+
+        // 1) SQL
         await using (var db = await _sqlFactory.CreateDbContextAsync())
         {
             db.Dvrs.Add(new DvrEntity
@@ -72,7 +79,7 @@ public class DvrService
                 IpAddress = ip,
                 Port = port,
                 Brand = brand,
-                Username = username,
+                Username = username,                          // ✅ مش هيبقى null
                 PasswordEncrypted = _enc.Encrypt(password),
                 IsActive = true,
                 CreatedAt = now
@@ -80,20 +87,19 @@ public class DvrService
             await db.SaveChangesAsync();
         }
 
-        // 2) Firestore (metadata فقط)
+        // 2) Firestore
         try
         {
-            await DvrsCol.Document(id).SetAsync(new DvrDoc
+            await DvrsCol.Document(id).SetAsync(new Dictionary<string, object>
             {
-                Id = id,
-                BuildingId = buildingId,
-                Name = name,
-                IpAddress = ip,
-                Port = port,
-                Brand = brand,
-                Username = username,
-                IsActive = true,
-                CreatedAt = now.ToString("o")
+                ["buildingId"] = buildingId,
+                ["name"] = name,
+                ["ip"] = ip,
+                ["port"] = port,
+                ["brand"] = brand,
+                ["username"] = username,
+                ["isActive"] = true,
+                ["createdAt"] = now.ToString("o")
             });
         }
         catch (Exception ex)
@@ -104,10 +110,19 @@ public class DvrService
         return id;
     }
 
+    // ============================================================
+    // التعديل
+    // ============================================================
     public async Task UpdateAsync(
         string id, string name, string ip, int port,
         string brand, string username, string? newPassword, bool isActive)
     {
+        // ✅ حماية من null
+        name = string.IsNullOrWhiteSpace(name) ? "DVR" : name.Trim();
+        ip = string.IsNullOrWhiteSpace(ip) ? "127.0.0.1" : ip.Trim();
+        brand = string.IsNullOrWhiteSpace(brand) ? "Other" : brand.Trim();
+        username = username?.Trim() ?? "";
+
         await using (var db = await _sqlFactory.CreateDbContextAsync())
         {
             var entity = await db.Dvrs.FirstOrDefaultAsync(d => d.Id == id)
@@ -117,7 +132,7 @@ public class DvrService
             entity.IpAddress = ip;
             entity.Port = port;
             entity.Brand = brand;
-            entity.Username = username;
+            entity.Username = username;                       // ✅ مش هيبقى null
             entity.IsActive = isActive;
             entity.UpdatedAt = DateTime.UtcNow;
 
@@ -146,6 +161,9 @@ public class DvrService
         }
     }
 
+    // ============================================================
+    // الحذف
+    // ============================================================
     public async Task DeleteAsync(string id)
     {
         await using (var db = await _sqlFactory.CreateDbContextAsync())
@@ -156,7 +174,6 @@ public class DvrService
         try
         {
             await DvrsCol.Document(id).DeleteAsync();
-            // امسح الكاميرات في Firestore
             var cams = await CamerasCol.WhereEqualTo("dvrId", id).GetSnapshotAsync();
             foreach (var c in cams.Documents)
                 await c.Reference.DeleteAsync();
@@ -173,6 +190,10 @@ public class DvrService
     public async Task<string> AddCameraAsync(
         string dvrId, string name, int channel, string rtspPath)
     {
+        // ✅ حماية من null
+        name = string.IsNullOrWhiteSpace(name) ? $"Camera {channel}" : name.Trim();
+        rtspPath = rtspPath?.Trim() ?? "";
+
         await using var db = await _sqlFactory.CreateDbContextAsync();
         var dvr = await db.Dvrs.FirstOrDefaultAsync(d => d.Id == dvrId)
             ?? throw new KeyNotFoundException($"DVR {dvrId} not found");
@@ -192,15 +213,14 @@ public class DvrService
 
         try
         {
-            await CamerasCol.Document(id).SetAsync(new CameraDoc
+            await CamerasCol.Document(id).SetAsync(new Dictionary<string, object>
             {
-                Id = id,
-                DvrId = dvrId,
-                BuildingId = dvr.BuildingId,
-                Name = name,
-                Channel = channel,
-                IsActive = true,
-                CreatedAt = DateTime.UtcNow.ToString("o")
+                ["dvrId"] = dvrId,
+                ["buildingId"] = dvr.BuildingId,
+                ["name"] = name,
+                ["channel"] = channel,
+                ["isActive"] = true,
+                ["createdAt"] = DateTime.UtcNow.ToString("o")
             });
         }
         catch (Exception ex)
@@ -253,7 +273,7 @@ public class DvrService
         entity.IpAddress = doc.IpAddress;
         entity.Port = doc.Port;
         entity.Brand = doc.Brand;
-        entity.Username = doc.Username;
+        entity.Username = doc.Username ?? "";
         entity.IsActive = doc.IsActive;
         await db.SaveChangesAsync();
     }

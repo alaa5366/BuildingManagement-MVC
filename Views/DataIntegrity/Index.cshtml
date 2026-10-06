@@ -1,0 +1,433 @@
+﻿@model BuildingManagementMvc.Services.DataIntegrityReport
+@{
+    ViewData["Title"] = Loc.T("Data_Integrity_Title");
+    var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Services.BuildingComparison> ?? new();
+    var users = ViewBag.Users as List<BuildingManagementMvc.Services.UserComparison> ?? new();
+    var dvrs = ViewBag.Dvrs as List<BuildingManagementMvc.Services.DvrComparison> ?? new();
+    var cameras = ViewBag.Cameras as List<BuildingManagementMvc.Services.CameraComparison> ?? new();
+}
+
+<div class="container-fluid">
+
+    @* ===== Header ===== *@
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1">
+                <i class="bi bi-shield-check"></i>
+                @Loc.T("Data_Integrity_Title")
+            </h3>
+            <p class="text-muted mb-0">
+                @Loc.T("Data_Integrity_Desc")
+                <small class="text-muted">
+                    (@Loc.T("Last_Update"): @Model.GeneratedAt.ToString("yyyy-MM-dd HH:mm:ss"))
+                </small>
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Refresh" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-clockwise"></i>
+                @Loc.T("Refresh")
+            </a>
+            <form asp-action="RunReverseSync" method="post" class="d-inline"
+                  onsubmit="return confirm('@Html.Raw(Loc.Js("Reverse_Sync_Confirm"))');">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-warning">
+                    <i class="bi bi-arrow-repeat"></i>
+                    @Loc.T("Reverse_Sync")
+                </button>
+            </form>
+        </div>
+    </div>
+
+    @* ===== Alerts ===== *@
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle"></i> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @* ============================================================ *@
+    @* 1. الإحصائيات العامة                                          *@
+    @* ============================================================ *@
+    <div class="row g-3 mb-4">
+
+        @* Firestore Collections *@
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-warning text-dark">
+                    <strong>@Loc.T("Firestore_Collections")</strong>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Collection</th>
+                                <th class="text-end">@Loc.T("Documents")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var col in Model.FirestoreCollections)
+                            {
+                                <tr>
+                                    <td><code>@col.Name</code></td>
+                                    <td class="text-end">
+                                        @if (col.Count < 0)
+                                        {
+                                            <span class="badge bg-danger">@Loc.T("Error_Label")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-info">@col.Count</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        @* SQL Tables *@
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <strong>@Loc.T("SQL_Tables")</strong>
+                </div>
+                <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Table</th>
+                                <th class="text-end">@Loc.T("Rows")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var t in Model.SqlTables)
+                            {
+                                <tr>
+                                    <td><code>@t.Name</code></td>
+                                    <td class="text-end">
+                                        @if (t.Count < 0)
+                                        {
+                                            <span class="badge bg-danger" title="@t.Error">@Loc.T("Error_Label")</span>
+                                        }
+                                        else if (t.Count == 0)
+                                        {
+                                            <span class="badge bg-secondary">0</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">@t.Count</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ============================================================ *@
+    @* 2. Pending Changes (SyncPendingChanges)                     *@
+    @* ============================================================ *@
+    @if (Model.PendingChanges.Any())
+    {
+        <div class="card shadow-sm mb-4 border-warning">
+            <div class="card-header bg-warning text-dark">
+                <strong>
+                    <i class="bi bi-exclamation-triangle"></i>
+                    @Loc.T("Pending_Changes") — @Model.PendingChanges.Count
+                </strong>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>@Loc.T("Entity_Type")</th>
+                            <th>@Loc.T("Entity_ID")</th>
+                            <th>@Loc.T("Operation")</th>
+                            <th>@Loc.T("Created_At")</th>
+                            <th class="text-center">@Loc.T("Retries")</th>
+                            <th>@Loc.T("Error_Label")</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in Model.PendingChanges)
+                        {
+                            <tr>
+                                <td><span class="badge bg-secondary">@p.EntityType</span></td>
+                                <td><code class="small">@p.EntityId</code></td>
+                                <td>
+                                    @if (p.Operation == "Insert")
+                                    {
+                                        <span class="badge bg-success">@p.Operation</span>
+                                    }
+                                    else if (p.Operation == "Update")
+                                    {
+                                        <span class="badge bg-info">@p.Operation</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">@p.Operation</span>
+                                    }
+                                </td>
+                                <td class="small text-muted">@p.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td class="text-center">
+                                    @if (p.RetryCount > 0)
+                                    {
+                                        <span class="badge bg-warning">@p.RetryCount</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">0</span>
+                                    }
+                                </td>
+                                <td class="small text-danger">@p.ErrorMessage</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    @* ============================================================ *@
+    @* 3. مقارنة Buildings                                         *@
+    @* ============================================================ *@
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-info text-white">
+            <strong>
+                <i class="bi bi-buildings"></i>
+                @Loc.T("Buildings_Comparison") (@buildings.Count)
+            </strong>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Firestore</th>
+                        <th>SQL</th>
+                        <th class="text-center">@Loc.T("Status")</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var b in buildings)
+                    {
+                        <tr>
+                            <td><code class="small">@b.Id</code></td>
+                            <td>
+                                @if (b.InFirestore)
+                                {
+                                    <span class="text-success">@b.FirestoreName (@b.FirestoreNumber)</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (b.InSql)
+                                {
+                                    <span class="text-success">@b.SqlName (@b.SqlNumber)</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td class="text-center">@b.Status</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    @* ============================================================ *@
+    @* 4. مقارنة Users                                             *@
+    @* ============================================================ *@
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-secondary text-white">
+            <strong>
+                <i class="bi bi-people"></i>
+                @Loc.T("Users_Comparison") (@users.Count)
+            </strong>
+        </div>
+        <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+            <table class="table table-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>UID</th>
+                        <th>Firestore</th>
+                        <th>SQL</th>
+                        <th class="text-center">@Loc.T("Status")</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var u in users)
+                    {
+                        <tr>
+                            <td><code class="small">@u.Uid</code></td>
+                            <td>
+                                @if (u.InFirestore)
+                                {
+                                    <span class="badge bg-warning">@u.FirestoreRole</span>
+                                    <small class="text-muted">@u.FirestoreEmail</small>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (u.InSql)
+                                {
+                                    <span class="badge bg-success">@u.SqlRole</span>
+                                    <small class="text-muted">@u.SqlEmail</small>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td class="text-center">@u.Status</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    @* ============================================================ *@
+    @* 5. مقارنة Dvrs                                              *@
+    @* ============================================================ *@
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-dark text-white">
+            <strong>
+                <i class="bi bi-hdd-network"></i>
+                @Loc.T("DVRs_Comparison") (@dvrs.Count)
+            </strong>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Firestore</th>
+                        <th>SQL</th>
+                        <th class="text-center">@Loc.T("Password_Protected")</th>
+                        <th class="text-center">@Loc.T("Status")</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var d in dvrs)
+                    {
+                        <tr>
+                            <td><code class="small">@d.Id</code></td>
+                            <td>
+                                @if (d.InFirestore)
+                                {
+                                    <span class="text-success">@d.FirestoreName</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (d.InSql)
+                                {
+                                    <span class="text-success">@d.SqlName</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                @if (d.HasPassword)
+                                {
+                                    <i class="bi bi-shield-check text-success" title="@Loc.T("Password_Protected")"></i>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-shield-x text-danger" title="@Loc.T("Password_Missing")"></i>
+                                }
+                            </td>
+                            <td class="text-center">@d.Status</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    @* ============================================================ *@
+    @* 6. مقارنة Cameras                                           *@
+    @* ============================================================ *@
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-danger text-white">
+            <strong>
+                <i class="bi bi-camera-video"></i>
+                @Loc.T("Cameras_Comparison") (@cameras.Count)
+            </strong>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Firestore</th>
+                        <th>SQL</th>
+                        <th class="text-center">@Loc.T("Channel")</th>
+                        <th class="text-center">@Loc.T("Status")</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in cameras)
+                    {
+                        <tr>
+                            <td><code class="small">@c.Id</code></td>
+                            <td>
+                                @if (c.InFirestore)
+                                {
+                                    <span class="text-success">@c.FirestoreName</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (c.InSql)
+                                {
+                                    <span class="text-success">@c.SqlName</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td class="text-center">@c.Channel</td>
+                            <td class="text-center">@c.Status</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>

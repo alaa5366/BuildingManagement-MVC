@@ -1,17 +1,25 @@
 ﻿using System.Text.RegularExpressions;
+using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Models;
 using ClosedXML.Excel;
+using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
 
 public class ExcelImportService
 {
     private readonly ExcelTemplateService _templateService;
+    private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly ILogger<ExcelImportService> _logger;
-    private const string TemplateId = "tpl_v2";
+    private const string TemplateId = "tpl_v3";
 
-    public ExcelImportService(ExcelTemplateService templateService, ILogger<ExcelImportService> logger)
+    public ExcelImportService(
+        ExcelTemplateService templateService,
+        IDbContextFactory<AppDbContext> sqlFactory,
+        ILogger<ExcelImportService> logger)
     {
         _templateService = templateService;
+        _sqlFactory = sqlFactory;
         _logger = logger;
     }
 
@@ -21,41 +29,32 @@ public class ExcelImportService
         {
             using var workbook = new XLWorkbook(fileStream);
 
-            // 1. تحقق من وجود _meta
             if (!workbook.Worksheets.Contains("_meta"))
                 return ImportValidationResult.Fail(Loc.T("This_File_Is_Not_From_The"));
 
             var metaSheet = workbook.Worksheet("_meta");
-
             var generatedAtStr = metaSheet.Cell(2, 2).Value.ToString();
             var expiresAtStr = metaSheet.Cell(3, 2).Value.ToString();
             var templateId = metaSheet.Cell(4, 2).Value.ToString();
             var buildingId = metaSheet.Cell(5, 2).Value.ToString();
-            var issuedBy = metaSheet.Cell(6, 2).Value.ToString();
             var signature = metaSheet.Cell(7, 2).Value.ToString();
 
-            // 2. تحقق من الـ TemplateId
             if (templateId != TemplateId)
                 return ImportValidationResult.Fail(Loc.T("The_Template_Version_Is_Outdated_Download"));
 
-            // 3. تحقق من صحة التواريخ
             if (!DateTime.TryParse(expiresAtStr, out var expiresAt))
                 return ImportValidationResult.Fail(Loc.T("The_File_Is_Corrupted"));
 
-            // 4. تحقق من انتهاء الصلاحية
             if (DateTime.UtcNow > expiresAt)
             {
                 var days = (DateTime.UtcNow - expiresAt).Days;
                 return ImportValidationResult.Fail(Loc.T("This_Template_Expired_N_Days_Ago", days));
             }
 
-            // 5. تحقق من الـ Signature (باستخدام النصوص الخام)
             var expectedSignature = _templateService.ComputeSignatureRaw(generatedAtStr, expiresAtStr, buildingId);
-
             if (signature != expectedSignature)
                 return ImportValidationResult.Fail(Loc.T("The_File_Was_Modified_Or_Is"));
 
-            // 6. تحقق من الـ Sheets المطلوبة
             var requiredSheets = new[] { "Building Info", "Floors & Apartments" };
             foreach (var sheet in requiredSheets)
             {
@@ -63,7 +62,6 @@ public class ExcelImportService
                     return ImportValidationResult.Fail(Loc.T("Sheet_N_Is_Missing", sheet));
             }
 
-            // 7. استخرج البيانات
             var data = ExtractData(workbook);
 
             if (string.IsNullOrWhiteSpace(data.Name))
@@ -93,54 +91,70 @@ public class ExcelImportService
         data.AdminWhatsapp = GetValue(infoSheet, 5, 2);
         data.LogoUrl = GetValue(infoSheet, 6, 2);
 
+        if (data.BuildingNumber == "(تلقائي)" || string.IsNullOrWhiteSpace(data.BuildingNumber))
+            data.BuildingNumber = "";
+
         // ============ Floors & Apartments ============
         var aptsSheet = workbook.Worksheet("Floors & Apartments");
 
-        foreach (var row in aptsSheet.RowsUsed().Skip(1))
-        {
-            var notes = row.Cell(11).Value.ToString() ?? "";
-            var floorLabel = row.Cell(1).Value.ToString() ?? "";
+        int globalAptNumber = 1;
 
-            // تجاهل الصفوف التوضيحية والأمثلة
-            if (notes.Contains("مثال") || notes.Contains("توضيحي") ||
-                floorLabel.Contains("مثال") || floorLabel.Contains("توضيحي") ||
-                floorLabel.Contains("الصفوف من"))
+        foreach (var row in aptsSheet.RowsUsed().Skip(5))
+        {
+            var floorLabel = row.Cell(1).Value.ToString() ?? "";
+            var owner = row.Cell(4).Value.ToString() ?? "";
+            var whatsapp = row.Cell(5).Value.ToString() ?? "";
+            var pin = row.Cell(6).Value.ToString() ?? "";
+            var monthlyFeeStr = row.Cell(7).Value.ToString() ?? "";
+            var aptLabel = row.Cell(8).Value.ToString() ?? "";
+            var status = row.Cell(9).Value.ToString() ?? "open";
+            var isDisabledStr = row.Cell(10).Value.ToString() ?? "لا";
+            var closedReason = row.Cell(11).Value.ToString() ?? "";
+            var notes = row.Cell(12).Value.ToString() ?? "";
+
+            // تجاهل الصفوف التوضيحية
+            if (floorLabel.Contains("الصفوف من") || floorLabel.Contains("توضيح"))
                 continue;
 
             if (string.IsNullOrWhiteSpace(floorLabel))
                 continue;
 
-            if (!int.TryParse(row.Cell(3).Value.ToString(), out var aptNumber) || aptNumber <= 0)
-                continue;
+            // ✅ Floor Order — استنتجها من Floor Label (حتى لو الـ Formula مشتغلتش)
+            int floorOrder = MapFloorLabelToOrder(floorLabel);
 
-            // تحقق من PIN
-            var pin = row.Cell(6).Value.ToString() ?? "";
-            if (!Regex.IsMatch(pin, @"^\d{4}$"))
-            {
-                _logger.LogWarning($"[ExcelImport] صف {row.RowNumber()}: PIN غير صحيح: '{pin}'");
-                continue;
-            }
+            // ✅ Apt Number — عدّاد تصاعدي
+            int aptNumber = globalAptNumber++;
 
-            // تحقق من WhatsApp
-            var whatsapp = row.Cell(5).Value.ToString() ?? "";
-            if (!Regex.IsMatch(whatsapp, @"^\+?[\d\s\-]{7,20}$"))
-            {
-                _logger.LogWarning($"[ExcelImport] صف {row.RowNumber()}: رقم واتساب غير صالح: '{whatsapp}'");
-                continue;
-            }
+            if (string.IsNullOrWhiteSpace(whatsapp))
+                whatsapp = "0";
+
+            if (string.IsNullOrWhiteSpace(pin))
+                pin = "0000";
+
+            if (pin.Length != 4)
+                pin = pin.PadRight(4, '0').Substring(0, 4);
+
+            double monthlyFee = 0;
+            if (double.TryParse(monthlyFeeStr, out var mf))
+                monthlyFee = mf;
+
+            bool isDisabled = isDisabledStr == "نعم"
+                || isDisabledStr.Equals("yes", StringComparison.OrdinalIgnoreCase)
+                || isDisabledStr.Equals("true", StringComparison.OrdinalIgnoreCase);
 
             var apt = new ApartmentImportData
             {
                 FloorLabel = floorLabel,
-                FloorOrder = int.TryParse(row.Cell(2).Value.ToString(), out var order) ? order : 0,
+                FloorOrder = floorOrder,
                 AptNumber = aptNumber,
-                Owner = row.Cell(4).Value.ToString() ?? "",
+                Owner = string.IsNullOrWhiteSpace(owner) ? "0" : owner,
                 WhatsApp = whatsapp,
                 Pin = pin,
-                MonthlyFee = double.TryParse(row.Cell(7).Value.ToString(), out var fee) ? fee : 0,
-                AptLabel = row.Cell(8).Value.ToString() ?? "",
-                Status = row.Cell(9).Value.ToString() ?? "open",
-                ClosedReason = row.Cell(10).Value.ToString() ?? "",
+                MonthlyFee = monthlyFee,
+                AptLabel = string.IsNullOrWhiteSpace(aptLabel) ? "" : aptLabel,
+                Status = string.IsNullOrWhiteSpace(status) ? "open" : status,
+                IsDisabled = isDisabled,
+                ClosedReason = closedReason,
                 Notes = notes
             };
 
@@ -150,9 +164,61 @@ public class ExcelImportService
         return data;
     }
 
+    private static int MapFloorLabelToOrder(string floorLabel)
+    {
+        if (string.IsNullOrWhiteSpace(floorLabel)) return 0;
+
+        return floorLabel.Trim() switch
+        {
+            "البدروم" => -1,
+            "الدور الأرضي" => 0,
+            "الدور الأول" => 1,
+            "الدور الثاني" => 2,
+            "الدور الثالث" => 3,
+            "الدور الرابع" => 4,
+            "الدور الخامس" => 5,
+            "الدور السادس" => 6,
+            "الدور السابع" => 7,
+            "الدور الثامن" => 8,
+            "الدور التاسع" => 9,
+            "الدور العاشر" => 10,
+            "الدور الحادي عشر" => 11,
+            "الدور الثاني عشر" => 12,
+            "الدور الثالث عشر" => 13,
+            "الدور الرابع عشر" => 14,
+            "الدور الخامس عشر" => 15,
+            "الروف" => 99,
+            _ => 0
+        };
+    }
+
     private string GetValue(IXLWorksheet sheet, int row, int col)
     {
         return sheet.Cell(row, col).Value.ToString() ?? "";
+    }
+
+    public async Task<string> GenerateBuildingNumberAsync()
+    {
+        try
+        {
+            await using var db = await _sqlFactory.CreateDbContextAsync();
+            var existingNumbers = await db.Buildings.Select(b => b.BuildingNumber).ToListAsync();
+
+            var maxNumber = 0;
+            foreach (var num in existingNumbers)
+            {
+                var match = Regex.Match(num ?? "", @"^BLD-(\d+)$");
+                if (match.Success && int.TryParse(match.Groups[1].Value, out var n))
+                    maxNumber = Math.Max(maxNumber, n);
+            }
+
+            return "BLD-" + (maxNumber + 1).ToString("D3");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[ExcelImport] GenerateBuildingNumber failed");
+            return "BLD-" + DateTime.UtcNow.Ticks.ToString().Substring(10, 3);
+        }
     }
 }
 
@@ -190,6 +256,7 @@ public class ApartmentImportData
     public double MonthlyFee { get; set; }
     public string AptLabel { get; set; } = "";
     public string Status { get; set; } = "open";
+    public bool IsDisabled { get; set; } = false;
     public string ClosedReason { get; set; } = "";
     public string Notes { get; set; } = "";
 }

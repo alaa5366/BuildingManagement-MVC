@@ -4311,4 +4311,91 @@
   <data name="Other" xml:space="preserve">
     <value>أخرى</value>
   </data>
+  <!-- ============================================================ -->
+  <!-- Data Integrity — فحص تكامل البيانات                          -->
+  <!-- ============================================================ -->
+  <data name="Data_Integrity_Title" xml:space="preserve">
+  <value>فحص تكامل البيانات</value>
+</data>
+  <data name="Data_Integrity_Desc" xml:space="preserve">
+  <value>مقارنة بين Firestore و SQL Server</value>
+</data>
+  <data name="Last_Update" xml:space="preserve">
+  <value>آخر تحديث</value>
+</data>
+  <data name="Refresh" xml:space="preserve">
+  <value>تحديث</value>
+</data>
+  <data name="Reverse_Sync" xml:space="preserve">
+  <value>مزامنة عكسية</value>
+</data>
+  <data name="Reverse_Sync_Confirm" xml:space="preserve">
+  <value>سيتم مزامنة التغييرات من SQL إلى Firestore. متأكد؟</value>
+</data>
+  <data name="Firestore_Collections" xml:space="preserve">
+  <value>🔥 Firestore Collections</value>
+</data>
+  <data name="SQL_Tables" xml:space="preserve">
+  <value>🗄️ SQL Tables</value>
+</data>
+  <data name="Rows" xml:space="preserve">
+  <value>عدد الصفوف</value>
+</data>
+  <data name="Pending_Changes" xml:space="preserve">
+  <value>تغييرات معلقة</value>
+</data>
+  <data name="Entity_Type" xml:space="preserve">
+  <value>نوع الكيان</value>
+</data>
+  <data name="Entity_ID" xml:space="preserve">
+  <value>معرّف الكيان</value>
+</data>
+  <data name="Operation" xml:space="preserve">
+  <value>العملية</value>
+</data>
+  <data name="Created_At" xml:space="preserve">
+  <value>تاريخ الإنشاء</value>
+</data>
+  <data name="Retries" xml:space="preserve">
+  <value>المحاولات</value>
+</data>
+  <data name="Error_Label" xml:space="preserve">
+  <value>خطأ</value>
+</data>
+  <data name="Buildings_Comparison" xml:space="preserve">
+  <value>مقارنة العمارات</value>
+</data>
+  <data name="Users_Comparison" xml:space="preserve">
+  <value>مقارنة المستخدمين</value>
+</data>
+  <data name="DVRs_Comparison" xml:space="preserve">
+  <value>مقارنة أجهزة DVR</value>
+</data>
+  <data name="Cameras_Comparison" xml:space="preserve">
+  <value>مقارنة الكاميرات</value>
+</data>
+  <data name="Exists_In_Both" xml:space="preserve">
+  <value>✅ موجود في الاتنين</value>
+</data>
+  <data name="Only_In_Firestore" xml:space="preserve">
+  <value>⚠️ في Firestore بس</value>
+</data>
+  <data name="Only_In_SQL" xml:space="preserve">
+  <value>⚠️ في SQL بس</value>
+</data>
+  <data name="Not_Found" xml:space="preserve">
+  <value>❌ مش موجود</value>
+</data>
+  <data name="Password_Missing" xml:space="preserve">
+  <value>مش محمي</value>
+</data>
+  <data name="Data_Integrity_Error" xml:space="preserve">
+  <value>فشل فحص البيانات</value>
+</data>
+  <data name="Reverse_Sync_Success" xml:space="preserve">
+  <value>✅ تمت المزامنة العكسية: {0} مضاف، {1} محدّث، {2} خطأ</value>
+</data>
+  <data name="Nav_Data_Integrity" xml:space="preserve">
+  <value>فحص البيانات</value>
+</data>
 </root>

@@ -304,7 +304,8 @@ public class BackupController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ConfirmImport()
+    public async Task<IActionResult> ConfirmImport(
+    [FromServices] ExcelImportService importService)
     {
         var json = TempData["ImportDataJson"] as string;
         if (string.IsNullOrEmpty(json))
@@ -332,6 +333,12 @@ public class BackupController : Controller
 
         try
         {
+            // ✅ توليد Building Number تلقائياً لو فاضي
+            if (string.IsNullOrWhiteSpace(data.BuildingNumber))
+            {
+                data.BuildingNumber = await importService.GenerateBuildingNumberAsync();
+            }
+
             var (buildingId, buildingNumber) = await _buildings.CreateAsync(
                 data.Name, data.AdminPin, data.AdminWhatsapp, data.LogoUrl, data.BuildingNumber,
                 addDefaultExpenseCategories: true,
@@ -344,26 +351,38 @@ public class BackupController : Controller
                 return RedirectToAction(nameof(Index), new { tab = "import" });
             }
 
+            // ✅ ترتيب الشقق + توليد Apt Number
             var floorsGrouped = data.Apartments
                 .GroupBy(a => new { a.FloorLabel, a.FloorOrder })
                 .OrderBy(g => g.Key.FloorOrder)
                 .ToList();
 
+            int globalAptNumber = 1;
+
             foreach (var group in floorsGrouped)
             {
                 var floorId = Guid.NewGuid().ToString("N");
-                building.Floors.Add(new Floor { Id = floorId, Label = group.Key.FloorLabel, Order = group.Key.FloorOrder });
+                building.Floors.Add(new Floor
+                {
+                    Id = floorId,
+                    Label = group.Key.FloorLabel,
+                    Order = group.Key.FloorOrder
+                });
 
                 foreach (var aptData in group.OrderBy(a => a.AptNumber))
                 {
                     var phone = AuthHelpers.NormalizePhone(aptData.WhatsApp);
                     var aptId = Guid.NewGuid().ToString("N");
 
+                    int finalAptNumber = aptData.AptNumber > 0
+                        ? aptData.AptNumber
+                        : globalAptNumber++;
+
                     building.Apartments.Add(new Apartment
                     {
                         Id = aptId,
                         FloorId = floorId,
-                        Number = aptData.AptNumber,
+                        Number = finalAptNumber,
                         Owner = aptData.Owner,
                         Phone = phone,
                         MonthlyFee = aptData.MonthlyFee,
@@ -373,25 +392,28 @@ public class BackupController : Controller
                         Notes = aptData.Notes,
                         CloseDate = aptData.Status.Equals("closed", StringComparison.OrdinalIgnoreCase)
                             ? DateTime.UtcNow.ToString("o") : null,
-                        OpenDate = DateTime.UtcNow.ToString("o")
+                        OpenDate = DateTime.UtcNow.ToString("o"),
+                        Disabled = aptData.IsDisabled,
+                        DisabledReason = aptData.IsDisabled ? aptData.ClosedReason : ""
                     });
 
                     try
                     {
-                        var email = AuthHelpers.ResidentInternalEmail(buildingId, group.Key.FloorOrder, aptData.AptNumber);
-                        var password = AuthHelpers.ResidentPassword(buildingId, aptData.AptNumber, aptData.Pin);
+                        var email = AuthHelpers.ResidentInternalEmail(buildingId, group.Key.FloorOrder, finalAptNumber);
+                        var password = AuthHelpers.ResidentPassword(buildingId, finalAptNumber, aptData.Pin);
                         await _fbAuth.CreateUserAsync(email, password);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, $"[Backup] Failed to create auth for apt {aptData.AptNumber}");
+                        _logger.LogWarning(ex, $"[Backup] Failed to create auth for apt {finalAptNumber}");
                     }
                 }
             }
 
             await _buildings.SaveFullAsync(building);
 
-            TempData["Message"] = Loc.T("Building_N_Imported_Successfully_N_Apartments", data.Name, data.Apartments.Count);
+            TempData["Message"] = Loc.T("Building_N_Imported_Successfully_N_Apartments",
+                data.Name, data.Apartments.Count);
             return RedirectToAction("Details", "Buildings", new { id = buildingId });
         }
         catch (Exception ex)

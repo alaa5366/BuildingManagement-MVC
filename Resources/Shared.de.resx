@@ -4261,4 +4261,91 @@ Dieser Vorgang kann einige Sekunden dauern.</value>
   <data name="Enable_JS" xml:space="preserve">
     <value>Bitte JavaScript aktivieren</value>
   </data>
+  <!-- ============================================================ -->
+  <!-- Data Integrity                                              -->
+  <!-- ============================================================ -->
+  <data name="Data_Integrity_Title" xml:space="preserve">
+  <value>Datenintegritätsprüfung</value>
+</data>
+  <data name="Data_Integrity_Desc" xml:space="preserve">
+  <value>Vergleich zwischen Firestore und SQL Server</value>
+</data>
+  <data name="Last_Update" xml:space="preserve">
+  <value>Letzte Aktualisierung</value>
+</data>
+  <data name="Refresh" xml:space="preserve">
+  <value>Aktualisieren</value>
+</data>
+  <data name="Reverse_Sync" xml:space="preserve">
+  <value>Umgekehrte Synchronisierung</value>
+</data>
+  <data name="Reverse_Sync_Confirm" xml:space="preserve">
+  <value>Änderungen werden von SQL nach Firestore synchronisiert. Sind Sie sicher?</value>
+</data>
+  <data name="Firestore_Collections" xml:space="preserve">
+  <value>🔥 Firestore-Sammlungen</value>
+</data>
+  <data name="SQL_Tables" xml:space="preserve">
+  <value>🗄️ SQL-Tabellen</value>
+</data>
+  <data name="Rows" xml:space="preserve">
+  <value>Zeilen</value>
+</data>
+  <data name="Pending_Changes" xml:space="preserve">
+  <value>Ausstehende Änderungen</value>
+</data>
+  <data name="Entity_Type" xml:space="preserve">
+  <value>Entitätstyp</value>
+</data>
+  <data name="Entity_ID" xml:space="preserve">
+  <value>Entitäts-ID</value>
+</data>
+  <data name="Operation" xml:space="preserve">
+  <value>Vorgang</value>
+</data>
+  <data name="Created_At" xml:space="preserve">
+  <value>Erstellt am</value>
+</data>
+  <data name="Retries" xml:space="preserve">
+  <value>Wiederholungen</value>
+</data>
+  <data name="Error_Label" xml:space="preserve">
+  <value>Fehler</value>
+</data>
+  <data name="Buildings_Comparison" xml:space="preserve">
+  <value>Gebäudevergleich</value>
+</data>
+  <data name="Users_Comparison" xml:space="preserve">
+  <value>Benutzervergleich</value>
+</data>
+  <data name="DVRs_Comparison" xml:space="preserve">
+  <value>DVR-Vergleich</value>
+</data>
+  <data name="Cameras_Comparison" xml:space="preserve">
+  <value>Kameravergleich</value>
+</data>
+  <data name="Exists_In_Both" xml:space="preserve">
+  <value>✅ In beiden vorhanden</value>
+</data>
+  <data name="Only_In_Firestore" xml:space="preserve">
+  <value>⚠️ Nur in Firestore</value>
+</data>
+  <data name="Only_In_SQL" xml:space="preserve">
+  <value>⚠️ Nur in SQL</value>
+</data>
+  <data name="Not_Found" xml:space="preserve">
+  <value>❌ Nicht gefunden</value>
+</data>
+  <data name="Password_Missing" xml:space="preserve">
+  <value>Fehlt</value>
+</data>
+  <data name="Data_Integrity_Error" xml:space="preserve">
+  <value>Datenintegritätsprüfung fehlgeschlagen</value>
+</data>
+  <data name="Reverse_Sync_Success" xml:space="preserve">
+  <value>✅ Umgekehrte Sync: {0} hinzugefügt, {1} aktualisiert, {2} Fehler</value>
+</data>
+  <data name="Nav_Data_Integrity" xml:space="preserve">
+  <value>Datenintegrität</value>
+</data>
 </root>
