@@ -22,15 +22,12 @@
         </div>
     }
 
-    <!-- ✅ المزامنة الشاملة -->
     <div class="card mb-4 border-primary shadow-sm">
         <div class="card-header bg-primary text-white">
             <h5 class="mb-0">⚡ @Loc.T("Full_Sync_Everything")</h5>
         </div>
         <div class="card-body">
-            <p class="text-muted mb-3">
-                @Loc.T("Full_Sync_Everything_Desc")
-            </p>
+            <p class="text-muted mb-3">@Loc.T("Full_Sync_Everything_Desc")</p>
             <form method="post" asp-action="SyncEverything"
                   onsubmit="return confirm('@Loc.T("Confirm_Full_Sync")');">
                 @Html.AntiForgeryToken()
@@ -118,7 +115,6 @@
             </form>
         </div>
 
-        <!-- ✅ جديد: DVRs + Cameras -->
         <div class="col-md-4">
             <form method="post" asp-action="SyncDvrs" class="card h-100">
                 @Html.AntiForgeryToken()
@@ -129,15 +125,23 @@
                 </div>
             </form>
         </div>
+
+        <div class="col-md-4">
+            <form method="post" asp-action="SyncAuditLog" class="card h-100">
+                @Html.AntiForgeryToken()
+                <div class="card-body">
+                    <h5>📋 @Loc.T("Sync_AuditLog")</h5>
+                    <p class="text-muted">@Loc.T("Copy_All_AuditLogs_From_Firestore_To_Sql")</p>
+                    <button class="btn btn-secondary w-100">@Loc.T("Run")</button>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <!-- ✅ وضع التخزين -->
     <div class="card mt-4">
         <div class="card-body">
             <h5>@Loc.T("Current_Storage_Mode") <span class="badge bg-primary">@currentMode</span></h5>
-            <p class="text-muted">
-                @Loc.T("Choose_Read_Write_Source_Apply_Immediately")
-            </p>
+            <p class="text-muted">@Loc.T("Choose_Read_Write_Source_Apply_Immediately")</p>
 
             <div class="d-flex gap-2 flex-wrap">
                 <form method="post" asp-action="SetStorageMode" class="d-inline">

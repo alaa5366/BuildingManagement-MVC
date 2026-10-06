@@ -22,28 +22,22 @@ var cookieSecurePolicy = builder.Environment.IsDevelopment()
     ? CookieSecurePolicy.SameAsRequest
     : CookieSecurePolicy.Always;
 
-// ============================================================
-// ✅ Form Options — عشان الاستيراد من Excel (431 Fix)
-// ============================================================
 builder.Services.Configure<FormOptions>(options =>
 {
-    options.ValueCountLimit = 10000;                    // 10000 form field
-    options.KeyLengthLimit = 4096;                       // 4 KB لكل key
-    options.ValueLengthLimit = 4 * 1024 * 1024;          // 4 MB لكل value
-    options.MultipartBodyLengthLimit = 100 * 1024 * 1024; // 100 MB
+    options.ValueCountLimit = 10000;
+    options.KeyLengthLimit = 4096;
+    options.ValueLengthLimit = 4 * 1024 * 1024;
+    options.MultipartBodyLengthLimit = 100 * 1024 * 1024;
     options.MultipartHeadersCountLimit = 32;
-    options.MultipartHeadersLengthLimit = 32 * 1024;     // 32 KB
+    options.MultipartHeadersLengthLimit = 32 * 1024;
 });
 
-// ============================================================
-// ✅ Kestrel Limits — عشان نتجنب 431
-// ============================================================
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.Limits.MaxRequestHeadersTotalSize = 4 * 1024 * 1024; // 4 MB
-    options.Limits.MaxRequestLineSize = 1024 * 1024;             // 1 MB
-    options.Limits.MaxRequestBodySize = 100 * 1024 * 1024;       // 100 MB
-    options.Limits.MaxRequestBufferSize = 4 * 1024 * 1024;       // 4 MB
+    options.Limits.MaxRequestHeadersTotalSize = 4 * 1024 * 1024;
+    options.Limits.MaxRequestLineSize = 1024 * 1024;
+    options.Limits.MaxRequestBodySize = 100 * 1024 * 1024;
+    options.Limits.MaxRequestBufferSize = 4 * 1024 * 1024;
 });
 
 builder.Services.AddControllersWithViews(options =>
@@ -57,9 +51,6 @@ builder.Services.AddControllersWithViews(options =>
             new BuildingManagementMvc.Services.LocStringLocalizer();
     });
 
-// ============================================================
-// Firebase + Storage
-// ============================================================
 builder.Services.AddSingleton<FirestoreContext>();
 builder.Services.AddSingleton<StorageSettingsService>();
 
@@ -80,19 +71,14 @@ if (!storageProvider.Equals("Firestore", StringComparison.OrdinalIgnoreCase))
 }
 else
 {
-    // حتى في وضع Firestore، لازم IDbContextFactory عشان CamerasController وغيره
     var sqlConn = builder.Configuration.GetConnectionString("Default");
     if (!string.IsNullOrWhiteSpace(sqlConn))
     {
         builder.Services.AddDbContextFactory<AppDbContext>(o => o.UseSqlServer(sqlConn));
     }
-
     Console.WriteLine("[Storage] Provider = Firestore");
 }
 
-// ============================================================
-// Services — Core
-// ============================================================
 builder.Services.AddSingleton<BuildingsService>();
 builder.Services.AddSingleton<UsersService>();
 builder.Services.AddHttpClient<FirebaseAuthRestService>();
@@ -148,16 +134,11 @@ builder.Services.AddSingleton<UserSqlStore>();
 
 builder.Services.AddScoped<DataIntegrityService>();
 
-// ============================================================
-// ✅ جديد — DVR + Cameras + MediaMTX + Encryption
-// ============================================================
 builder.Services.AddSingleton<IEncryptionService, AesEncryptionService>();
-builder.Services.AddSingleton<DvrService>(); 
+builder.Services.AddSingleton<DvrService>();
 builder.Services.AddHttpClient<MediaMtxService>();
+builder.Services.AddSingleton<AuditLogSyncService>();
 
-// ============================================================
-// ✅ Session — عشان TempData تشتغل مع البيانات الكبيرة
-// ============================================================
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -168,9 +149,6 @@ builder.Services.AddSession(options =>
     options.Cookie.SecurePolicy = cookieSecurePolicy;
 });
 
-// ============================================================
-// Localization
-// ============================================================
 builder.Services.AddMemoryCache();
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 
@@ -189,18 +167,14 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
     options.SupportedUICultures = supportedCultures;
 
     options.RequestCultureProviders.Clear();
-    options.RequestCultureProviders.Add(
-        new CookieRequestCultureProvider
-        {
-            CookieName = CookieRequestCultureProvider.DefaultCookieName
-        });
+    options.RequestCultureProviders.Add(new CookieRequestCultureProvider
+    {
+        CookieName = CookieRequestCultureProvider.DefaultCookieName
+    });
     options.RequestCultureProviders.Add(new QueryStringRequestCultureProvider());
     options.RequestCultureProviders.Add(new AcceptLanguageHeaderRequestCultureProvider());
 });
 
-// ============================================================
-// ✅ Authentication + SessionRevalidator (مُحسّن)
-// ============================================================
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -219,7 +193,6 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             {
                 var revalidator = ctx.HttpContext.RequestServices.GetRequiredService<SessionRevalidator>();
 
-                // ⚠️ حماية: لو حصل exception، متطردش المستخدم
                 SessionRevalidator.Result result;
                 try
                 {
@@ -229,10 +202,9 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                 {
                     var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
                     logger.LogWarning(ex, "[SessionRevalidator] Failed to validate principal");
-                    return; // خلي الجلسة زي ما هي
+                    return;
                 }
 
-                // ✅ لو الجلسة مش صالحة فعلاً (الحساب معطّل / اتحذف) => اطرد
                 if (!result.Valid)
                 {
                     ctx.RejectPrincipal();
@@ -240,7 +212,6 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                     return;
                 }
 
-                // ✅ لو الصلاحيات اتغيرت، حدّث الـ claims (بدون logout)
                 if (result.Permissions != null)
                 {
                     var current = ctx.Principal!.FindAll("perm").Select(c => c.Value).OrderBy(x => x);
@@ -290,9 +261,6 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 var app = builder.Build();
 
-// ============================================================
-// Config validation
-// ============================================================
 ConfigSecrets.Require(app.Configuration, "Firebase:ProjectId");
 ConfigSecrets.Require(app.Configuration, "Firebase:WebApiKey");
 ConfigSecrets.Require(app.Configuration, "Excel:SecretKey");
@@ -301,15 +269,11 @@ AuthService.ConfigureSuperAdmins(ConfigSecrets.Require(app.Configuration, "Auth:
 
 app.UseForwardedHeaders();
 
-// ============================================================
-// Fonts
-// ============================================================
 var fontsDir = Path.Combine(app.Environment.WebRootPath, "fonts");
 
 if (Directory.Exists(fontsDir))
 {
     var fontFiles = Directory.GetFiles(fontsDir, "*.ttf");
-
     foreach (var fontFile in fontFiles)
     {
         try
@@ -328,9 +292,6 @@ else
     Console.WriteLine("[Startup] ERROR: Fonts directory not found!");
 }
 
-// ============================================================
-// Pipeline
-// ============================================================
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -345,9 +306,7 @@ app.UseRequestLocalization(locOptions.Value);
 
 app.UseRouting();
 
-// ✅ Session — لازم يكون قبل Authentication
 app.UseSession();
-
 app.UseAuthentication();
 app.UseAuthorization();
 

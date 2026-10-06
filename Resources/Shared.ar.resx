@@ -4554,4 +4554,10 @@
   <data name="Copy_All_Dvrs_Cameras_From_Firestore_To_Sql" xml:space="preserve">
   <value>نسخ كل الـ DVRs والكاميرات من Firestore إلى SQL Server</value>
 </data>
+  <data name="Sync_AuditLog" xml:space="preserve">
+    <value>نسخ سجل المراجعة</value>
+  </data>
+  <data name="Copy_All_AuditLogs_From_Firestore_To_Sql" xml:space="preserve">
+    <value>نسخ كل سجلات المراجعة من Firestore إلى SQL Server</value>
+  </data>
 </root>

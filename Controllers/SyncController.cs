@@ -18,19 +18,22 @@ public class SyncController : Controller
     private readonly StorageSettingsService _storageSettings;
     private readonly ReverseSyncService _reverseSync;
     private readonly DvrService _dvrs;
+    private readonly AuditLogSyncService _auditLogSync;
 
     public SyncController(
         DbSyncService sync,
         BuildingsService buildings,
         StorageSettingsService storageSettings,
         ReverseSyncService reverseSync,
-        DvrService dvrs)
+        DvrService dvrs,
+        AuditLogSyncService auditLogSync)
     {
         _sync = sync;
         _buildings = buildings;
         _storageSettings = storageSettings;
         _reverseSync = reverseSync;
         _dvrs = dvrs;
+        _auditLogSync = auditLogSync;
     }
 
     private string CurrentUserId =>
@@ -165,9 +168,6 @@ public class SyncController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // ============================================================
-    // ✅ جديد: مزامنة DVRs + Cameras
-    // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SyncDvrs()
@@ -196,9 +196,31 @@ public class SyncController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // ============================================================
-    // ✅ جديد: مزامنة شاملة (كل حاجة مرة واحدة)
-    // ============================================================
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SyncAuditLog()
+    {
+        try
+        {
+            var report = await _auditLogSync.SyncAllToSqlAsync();
+
+            if (report.Errors.Count > 0)
+            {
+                TempData["Error"] = $"AuditLog: +{report.Added} / تخطي {report.Skipped} / فشل {report.Failed}";
+            }
+            else
+            {
+                TempData["Success"] = $"✅ AuditLog: +{report.Added}، تخطي {report.Skipped} في {report.Elapsed.TotalSeconds:0.0} ثانية";
+            }
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = $"❌ خطأ: {ex.Message}";
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SyncEverything()
@@ -208,14 +230,12 @@ public class SyncController : Controller
 
         try
         {
-            // 1. Buildings + كل ما يتبعها (Apartments, Floors, Deposits, Expenses, ...)
             var buildingReport = await _buildings.SyncAllToSqlAsync();
             results.Add($"🏢 Buildings: {buildingReport.Buildings}");
 
             if (buildingReport.Errors.Any())
                 errors.AddRange(buildingReport.Errors.Take(10));
 
-            // 2. Users + Permissions + BuildingAdmins
             var usersService = HttpContext.RequestServices.GetRequiredService<UsersService>();
             var users = await usersService.GetAllFromFirestoreAsync();
             int userOk = 0, userFail = 0;
@@ -234,14 +254,18 @@ public class SyncController : Controller
             }
             results.Add($"👥 Users: {userOk} (فشل {userFail})");
 
-            // 3. DVRs + Cameras
             var dvrReport = await _dvrs.SyncAllToSqlAsync();
             results.Add($"📹 DVRs: {dvrReport.DvrsTotal} | Cameras: {dvrReport.CamerasTotal}");
 
             if (dvrReport.Errors.Any())
                 errors.AddRange(dvrReport.Errors.Take(10));
 
-            // ✅ النتيجة النهائية
+            var auditReport = await _auditLogSync.SyncAllToSqlAsync();
+            results.Add($"📋 AuditLog: +{auditReport.Added}");
+
+            if (auditReport.Errors.Any())
+                errors.AddRange(auditReport.Errors.Take(10));
+
             TempData["Success"] = "✅ مزامنة شاملة نجحت: " + string.Join(" | ", results);
             if (errors.Any())
                 TempData["Error"] = $"⚠️ {errors.Count} أخطاء: " + string.Join(" | ", errors.Take(5));

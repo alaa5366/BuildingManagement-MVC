@@ -4504,4 +4504,10 @@ Dieser Vorgang kann einige Sekunden dauern.</value>
   <data name="Copy_All_Dvrs_Cameras_From_Firestore_To_Sql" xml:space="preserve">
     <value>Alle DVRs und Kameras von Firestore nach SQL Server kopieren</value>
   </data>
+    <data name="Sync_AuditLog" xml:space="preserve">
+    <value>Audit-Protokoll synchronisieren</value>
+  </data>
+  <data name="Copy_All_AuditLogs_From_Firestore_To_Sql" xml:space="preserve">
+    <value>Alle Audit-Protokolle von Firestore nach SQL Server kopieren</value>
+  </data>
 </root>

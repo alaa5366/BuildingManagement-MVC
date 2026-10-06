@@ -31,7 +31,7 @@ public class SettingsService
     FirebaseAuthRestService firebaseAuth,
     FirebaseAdminService fbAdmin,
     ILogger<SettingsService> logger,
-    BuildingSqlStore? sqlStore = null)          
+    BuildingSqlStore? sqlStore = null)
     {
         _db = ctx.Db;
         _audit = audit;
@@ -40,12 +40,9 @@ public class SettingsService
         _firebaseAuth = firebaseAuth;
         _fbAdmin = fbAdmin;
         _logger = logger;
-        _sqlStore = sqlStore;                        
+        _sqlStore = sqlStore;
     }
 
-    // ============================================================
-    // 1. Global Settings
-    // ============================================================
     public async Task<GlobalSettings> GetGlobalAsync()
     {
         var doc = await _db.Collection(SystemSettingsCol).Document(GlobalDocId).GetSnapshotAsync();
@@ -85,9 +82,6 @@ public class SettingsService
             severity: "warning");
     }
 
-    // ============================================================
-    // 2. Building Settings
-    // ============================================================
     public async Task<BuildingSettings> GetBuildingAsync(string buildingId)
     {
         var building = await _buildings.GetByIdAsync(buildingId);
@@ -96,13 +90,15 @@ public class SettingsService
         var doc = await _db.Collection(BuildingsCol).Document(buildingId).GetSnapshotAsync();
         if (!doc.Exists) throw new InvalidOperationException("building-not-found");
 
+        BuildingSettings result;
+
         var data = doc.ToDictionary();
         if (data.TryGetValue("settings", out var settingsRaw) && settingsRaw != null)
         {
             var settingsDict = ToDict(settingsRaw);
             if (settingsDict != null)
             {
-                return new BuildingSettings
+                result = new BuildingSettings
                 {
                     DisplayName = GetString(settingsDict, "displayName", building.Name),
                     Address = GetString(settingsDict, "address"),
@@ -115,13 +111,49 @@ public class SettingsService
                     UpdatedBy = GetStringOrNull(settingsDict, "updatedBy")
                 };
             }
+            else
+            {
+                result = new BuildingSettings
+                {
+                    DisplayName = building.Name,
+                    WhatsappNumber = building.AdminWhatsapp
+                };
+            }
+        }
+        else
+        {
+            result = new BuildingSettings
+            {
+                DisplayName = building.Name,
+                WhatsappNumber = building.AdminWhatsapp
+            };
         }
 
-        return new BuildingSettings
+        if (_sqlStore != null)
         {
-            DisplayName = building.Name,
-            WhatsappNumber = building.AdminWhatsapp
-        };
+            try
+            {
+                var settingsForSql = new Dictionary<string, object>
+                {
+                    ["displayName"] = result.DisplayName ?? "",
+                    ["address"] = result.Address ?? "",
+                    ["whatsappNumber"] = result.WhatsappNumber ?? "",
+                    ["invoiceDayOfMonth"] = result.InvoiceDayOfMonth,
+                    ["expenseDistribution"] = result.ExpenseDistribution ?? "equal",
+                    ["votingQuorumPercent"] = result.VotingQuorumPercent,
+                    ["currency"] = result.Currency ?? "EGP",
+                    ["updatedAt"] = result.UpdatedAt ?? DateTime.UtcNow.ToString("o"),
+                    ["updatedBy"] = result.UpdatedBy ?? "system-migration"
+                };
+                await _sqlStore.SaveSettingsAsync(buildingId, settingsForSql);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "SQL settings mirror failed for {BuildingId}", buildingId);
+            }
+        }
+
+        return result;
     }
 
     public async Task SaveBuildingAsync(string buildingId, BuildingSettings settings, string userId, string userRole)
@@ -131,13 +163,13 @@ public class SettingsService
 
         var dict = new Dictionary<string, object>
         {
-            ["displayName"] = settings.DisplayName,
-            ["address"] = settings.Address,
-            ["whatsappNumber"] = settings.WhatsappNumber,
+            ["displayName"] = settings.DisplayName ?? "",
+            ["address"] = settings.Address ?? "",
+            ["whatsappNumber"] = settings.WhatsappNumber ?? "",
             ["invoiceDayOfMonth"] = settings.InvoiceDayOfMonth,
-            ["expenseDistribution"] = settings.ExpenseDistribution,
+            ["expenseDistribution"] = settings.ExpenseDistribution ?? "equal",
             ["votingQuorumPercent"] = settings.VotingQuorumPercent,
-            ["currency"] = settings.Currency,
+            ["currency"] = settings.Currency ?? "EGP",
             ["updatedAt"] = settings.UpdatedAt,
             ["updatedBy"] = settings.UpdatedBy
         };
@@ -173,92 +205,45 @@ public class SettingsService
             severity: "warning");
     }
 
-    // ============================================================
-    // 3. Own Settings — القراءة
-    // ============================================================
     public async Task<OwnSettings> GetOwnAsync(string uid, string? role = null,
         string? buildingId = null, string? apartmentId = null)
     {
-        _logger.LogWarning(">>> GetOwnAsync START: uid={Uid}, role={Role}, bid={Bid}, aid={Aid}",
-            uid, role, buildingId, apartmentId);
-
-        // 1. users/{uid} — Super Admin, Admin
         var userDoc = await _db.Collection(UsersCol).Document(uid).GetSnapshotAsync();
         if (userDoc.Exists)
         {
             var data = userDoc.ToDictionary();
-
             if (data.TryGetValue("settings", out var settingsRaw) && settingsRaw != null)
             {
                 var settingsDict = ToDict(settingsRaw);
                 if (settingsDict != null)
-                {
-                    _logger.LogWarning(">>> GetOwnAsync (admin/superadmin) returning parsed");
                     return ParseSettingsFlexible(settingsDict);
-                }
             }
-
-            _logger.LogWarning(">>> GetOwnAsync (admin/superadmin) — no settings found");
             return new OwnSettings();
         }
 
-        // 2. Resident — اقرأ من buildings/{buildingId}.apartments[i].settings
-        if (role != "resident")
-        {
-            _logger.LogWarning(">>> GetOwnAsync: role != resident and user doc not found");
-            return new OwnSettings();
-        }
-
-        if (string.IsNullOrEmpty(buildingId) || string.IsNullOrEmpty(apartmentId))
-        {
-            _logger.LogWarning(">>> GetOwnAsync (resident): missing bid/aid");
-            return new OwnSettings();
-        }
+        if (role != "resident") return new OwnSettings();
+        if (string.IsNullOrEmpty(buildingId) || string.IsNullOrEmpty(apartmentId)) return new OwnSettings();
 
         var buildingDoc = await _db.Collection(BuildingsCol).Document(buildingId).GetSnapshotAsync();
-        if (!buildingDoc.Exists)
-        {
-            _logger.LogWarning(">>> GetOwnAsync (resident): building not found");
-            return new OwnSettings();
-        }
+        if (!buildingDoc.Exists) return new OwnSettings();
 
-        // ✅ ConvertTo<Building> — أسرع وأدق
         var building = buildingDoc.ConvertTo<Building>();
-        if (building?.Apartments == null)
-        {
-            _logger.LogWarning(">>> GetOwnAsync (resident): building.Apartments is null");
-            return new OwnSettings();
-        }
+        if (building?.Apartments == null) return new OwnSettings();
 
         var apt = building.Apartments.FirstOrDefault(a => a.Id == apartmentId);
-        if (apt == null)
+        if (apt?.Settings == null) return new OwnSettings();
+
+        return new OwnSettings
         {
-            _logger.LogWarning(">>> GetOwnAsync (resident): apartment {Aid} not found in building {Bid}",
-                apartmentId, buildingId);
-            return new OwnSettings();
-        }
-
-        if (apt.Settings != null)
-        {
-            _logger.LogWarning(">>> GetOwnAsync (resident) returning parsed: lang={Lang}, wa={Wa}",
-                apt.Settings.Language, apt.Settings.NotificationPreferences?.WhatsApp);
-
-            return new OwnSettings
-            {
-                Language = string.IsNullOrWhiteSpace(apt.Settings.Language) ? "ar" : apt.Settings.Language,
-                NotificationPreferences = apt.Settings.NotificationPreferences ?? new(),
-                PreferredPaymentMethod = string.IsNullOrWhiteSpace(apt.Settings.PreferredPaymentMethod)
-                    ? "instapay" : apt.Settings.PreferredPaymentMethod,
-                UpdatedAt = apt.Settings.UpdatedAt,
-                UpdatedBy = apt.Settings.UpdatedBy
-            };
-        }
-
-        _logger.LogWarning(">>> GetOwnAsync (resident): apt.Settings is null");
-        return new OwnSettings();
+            Language = string.IsNullOrWhiteSpace(apt.Settings.Language) ? "ar" : apt.Settings.Language,
+            NotificationPreferences = apt.Settings.NotificationPreferences ?? new(),
+            PreferredPaymentMethod = string.IsNullOrWhiteSpace(apt.Settings.PreferredPaymentMethod)
+                ? "instapay" : apt.Settings.PreferredPaymentMethod,
+            UpdatedAt = apt.Settings.UpdatedAt,
+            UpdatedBy = apt.Settings.UpdatedBy
+        };
     }
 
-    // ✅ helper يدوي لقراءة settings من dict
     private static OwnSettings ParseSettingsFlexible(Dictionary<string, object> settingsDict)
     {
         var notif = new NotificationPreferences();
@@ -284,15 +269,9 @@ public class SettingsService
         };
     }
 
-    // ============================================================
-    // 4. Own Settings — الحفظ
-    // ============================================================
     public async Task SaveOwnAsync(string uid, OwnSettings settings, string userId, string userRole,
         string? buildingId = null, string? apartmentId = null)
     {
-        _logger.LogWarning(">>> SaveOwnAsync START: uid={Uid}, role={Role}, bid={Bid}, aid={Aid}",
-            uid, userRole, buildingId, apartmentId);
-
         settings.UpdatedAt = DateTime.UtcNow.ToString("o");
         settings.UpdatedBy = userId;
 
@@ -338,9 +317,6 @@ public class SettingsService
             severity: "info");
     }
 
-    // ============================================================
-    // 5. تحديث بيانات الساكن
-    // ============================================================
     public async Task UpdateResidentProfileAsync(
         string buildingId,
         string apartmentId,
@@ -372,11 +348,8 @@ public class SettingsService
         var phoneChanged = false;
         var pinChanged = false;
 
-        if (!string.IsNullOrWhiteSpace(ownerName))
-            apt.Owner = ownerName.Trim();
-
-        if (!string.IsNullOrWhiteSpace(aptLabel))
-            apt.Label = aptLabel.Trim();
+        if (!string.IsNullOrWhiteSpace(ownerName)) apt.Owner = ownerName.Trim();
+        if (!string.IsNullOrWhiteSpace(aptLabel)) apt.Label = aptLabel.Trim();
 
         if (!string.IsNullOrWhiteSpace(newPhone))
         {
@@ -406,14 +379,12 @@ public class SettingsService
             if (!string.IsNullOrEmpty(uid))
             {
                 var ok = await _fbAdmin.UpdatePasswordAsync(email, password);
-                if (!ok)
-                    throw new InvalidOperationException("firebase-auth-update-failed (resident)");
+                if (!ok) throw new InvalidOperationException("firebase-auth-update-failed (resident)");
             }
             else
             {
                 var created = await _fbAdmin.CreateOrGetUserAsync(email, password);
-                if (string.IsNullOrEmpty(created))
-                    throw new InvalidOperationException("firebase-auth-create-failed (resident)");
+                if (string.IsNullOrEmpty(created)) throw new InvalidOperationException("firebase-auth-create-failed (resident)");
             }
         }
 
@@ -437,9 +408,6 @@ public class SettingsService
             severity: "warning");
     }
 
-    // ============================================================
-    // 6. تحديث بيانات الأدمن
-    // ============================================================
     public async Task UpdateAdminProfileAsync(
         string uid,
         string name,
@@ -453,8 +421,7 @@ public class SettingsService
         if (user == null) throw new InvalidOperationException("admin-not-found");
 
         var buildingId = user.BuildingIds.FirstOrDefault() ?? "";
-        if (string.IsNullOrEmpty(buildingId))
-            throw new InvalidOperationException("admin-has-no-building");
+        if (string.IsNullOrEmpty(buildingId)) throw new InvalidOperationException("admin-has-no-building");
 
         var phoneChangedByUser = !string.IsNullOrWhiteSpace(newPhone) &&
                                  AuthHelpers.NormalizePhone(newPhone) != user.Phone;
@@ -467,8 +434,7 @@ public class SettingsService
         var oldPin = user.Pin;
         var updates = new Dictionary<string, object>();
 
-        if (!string.IsNullOrWhiteSpace(name) && name != user.Name)
-            updates["name"] = name.Trim();
+        if (!string.IsNullOrWhiteSpace(name) && name != user.Name) updates["name"] = name.Trim();
 
         var newNormPhone = oldPhone;
         if (phoneChangedByUser)
@@ -480,8 +446,7 @@ public class SettingsService
         if (!string.IsNullOrWhiteSpace(newWhatsapp))
         {
             var normWa = AuthHelpers.NormalizePhone(newWhatsapp);
-            if (normWa != user.Whatsapp)
-                updates["whatsapp"] = normWa;
+            if (normWa != user.Whatsapp) updates["whatsapp"] = normWa;
         }
 
         var newPinValue = oldPin;
@@ -503,26 +468,15 @@ public class SettingsService
 
             var newPassword = AuthHelpers.AdminPasswordForPhone(newNormPhone, newPinValue);
 
-            _logger.LogInformation(
-                "[UpdateAdminProfile] uid={Uid} buildingId={BuildingId} " +
-                "derivedOldEmail={OldEmail} storedEmail={StoredEmail} " +
-                "phoneChanged={PhoneChanged} pinChanged={PinChanged}",
-                uid, buildingId, derivedOldEmail, user.Email ?? "(null)",
-                phoneChangedByUser, pinChanged);
-
             var oldUid = await _fbAdmin.GetUidByEmailAsync(derivedOldEmail);
 
             if (string.IsNullOrEmpty(oldUid) && !string.IsNullOrWhiteSpace(user.Email))
-            {
                 oldUid = await _fbAdmin.GetUidByEmailAsync(user.Email);
-            }
 
             if (string.IsNullOrEmpty(oldUid))
             {
                 var newUid = await _fbAdmin.CreateOrGetUserAsync(derivedNewEmail, newPassword);
-                if (string.IsNullOrEmpty(newUid))
-                    throw new InvalidOperationException("firebase-auth-create-failed (admin sdk)");
-
+                if (string.IsNullOrEmpty(newUid)) throw new InvalidOperationException("firebase-auth-create-failed (admin sdk)");
                 updates["email"] = derivedNewEmail;
             }
             else if (phoneChangedByUser)
@@ -532,19 +486,15 @@ public class SettingsService
                 if (string.IsNullOrEmpty(existingNewUid))
                 {
                     var created = await _fbAdmin.CreateOrGetUserAsync(derivedNewEmail, newPassword);
-                    if (string.IsNullOrEmpty(created))
-                        throw new InvalidOperationException("firebase-auth-create-failed (admin sdk)");
+                    if (string.IsNullOrEmpty(created)) throw new InvalidOperationException("firebase-auth-create-failed (admin sdk)");
                 }
                 else
                 {
                     var upd = await _fbAdmin.UpdatePasswordAsync(derivedNewEmail, newPassword);
-                    if (!upd)
-                        throw new InvalidOperationException("firebase-auth-update-failed (admin sdk)");
+                    if (!upd) throw new InvalidOperationException("firebase-auth-update-failed (admin sdk)");
                 }
 
-                if (oldUid != existingNewUid)
-                    await _fbAdmin.DeleteUserAsync(derivedOldEmail);
-
+                if (oldUid != existingNewUid) await _fbAdmin.DeleteUserAsync(derivedOldEmail);
                 updates["email"] = derivedNewEmail;
             }
             else
@@ -553,12 +503,10 @@ public class SettingsService
                 if (!upd)
                 {
                     var created = await _fbAdmin.CreateOrGetUserAsync(derivedOldEmail, newPassword);
-                    if (string.IsNullOrEmpty(created))
-                        throw new InvalidOperationException("firebase-auth-update-failed (admin sdk)");
+                    if (string.IsNullOrEmpty(created)) throw new InvalidOperationException("firebase-auth-update-failed (admin sdk)");
                 }
 
-                if (user.Email != derivedOldEmail)
-                    updates["email"] = derivedOldEmail;
+                if (user.Email != derivedOldEmail) updates["email"] = derivedOldEmail;
             }
         }
 
@@ -586,9 +534,6 @@ public class SettingsService
             severity: "warning");
     }
 
-    // ============================================================
-    // 7. تحديث اسم السوبر أدمن
-    // ============================================================
     public async Task UpdateSuperAdminNameAsync(string uid, string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return;
@@ -608,24 +553,17 @@ public class SettingsService
             severity: "info");
     }
 
-    // ============================================================
-    // Helpers
-    // ============================================================
     private async Task UpdateApartmentSettingsAsync(string buildingId, string apartmentId, Dictionary<string, object> settingsDict)
     {
-        _logger.LogWarning(">>> UpdateApartmentSettingsAsync START: bid={Bid}, aid={Aid}", buildingId, apartmentId);
-
         var buildingDoc = await _db.Collection(BuildingsCol).Document(buildingId).GetSnapshotAsync();
         if (!buildingDoc.Exists) throw new InvalidOperationException("building-not-found");
 
-        // ✅ ConvertTo<Building> بدل ToDictionary
         var building = buildingDoc.ConvertTo<Building>();
         if (building == null) throw new InvalidOperationException("building-convert-failed");
 
         var apt = building.Apartments.FirstOrDefault(a => a.Id == apartmentId);
         if (apt == null) throw new InvalidOperationException("apartment-not-found");
 
-        // ✅ اقرأ القيم من settingsDict
         var newSettings = new UserSettingsDoc
         {
             Language = settingsDict.TryGetValue("language", out var lang)
@@ -638,7 +576,6 @@ public class SettingsService
                 ? updBy?.ToString() : null
         };
 
-        // ✅ notificationPreferences
         if (settingsDict.TryGetValue("notificationPreferences", out var notifRaw) && notifRaw != null)
         {
             var notifDict = ToDict(notifRaw);
@@ -655,29 +592,16 @@ public class SettingsService
 
         apt.Settings = newSettings;
 
-        _logger.LogWarning(">>> UpdateApartmentSettingsAsync: saving lang={Lang}, wa={Wa}",
-            newSettings.Language, newSettings.NotificationPreferences?.WhatsApp);
-
-        // ✅ حفظ كامل للـ building
         await _db.Collection(BuildingsCol).Document(buildingId)
             .SetAsync(building, SetOptions.Overwrite);
-
-        _logger.LogWarning(">>> UpdateApartmentSettingsAsync DONE");
     }
 
-    // ✅ قوي جدًا — بيشتغل مع كل أنواع الـ Dictionary والـ Map
     private static Dictionary<string, object>? ToDict(object? obj)
     {
         if (obj == null) return null;
-
         if (obj is Dictionary<string, object> d1) return d1;
-
-        if (obj is IDictionary<string, object> d2)
-            return new Dictionary<string, object>(d2);
-
-        if (obj is IReadOnlyDictionary<string, object> d3)
-            return new Dictionary<string, object>(d3);
-
+        if (obj is IDictionary<string, object> d2) return new Dictionary<string, object>(d2);
+        if (obj is IReadOnlyDictionary<string, object> d3) return new Dictionary<string, object>(d3);
         if (obj is System.Collections.IDictionary d4)
         {
             var r = new Dictionary<string, object>();
@@ -685,7 +609,6 @@ public class SettingsService
                 if (e.Key is string k) r[k] = e.Value!;
             return r;
         }
-
         try
         {
             var json = System.Text.Json.JsonSerializer.Serialize(obj);
@@ -693,8 +616,6 @@ public class SettingsService
             if (parsed != null) return parsed;
         }
         catch { }
-
-        Console.WriteLine($"[ToDict] Unsupported type: {obj.GetType().FullName}");
         return null;
     }
 
