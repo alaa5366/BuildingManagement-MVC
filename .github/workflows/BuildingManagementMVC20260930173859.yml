@@ -10,11 +10,10 @@ env:
   AZURE_WEBAPP_NAME: 'BuildingManagementMVC20260930173859'
   DOTNET_VERSION: '8.x'
   BUILD_CONFIGURATION: 'Release'
-  AZURE_RESOURCE_GROUP: 'buildingmanagement_group'
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest   # ← غُيّر من windows-latest
     permissions:
       contents: read
 
@@ -27,13 +26,13 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore BuildingManagementMVC.csproj
 
       - name: Build
-        run: dotnet build --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
+        run: dotnet build BuildingManagementMVC.csproj --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
 
       - name: Publish
-        run: dotnet publish -c ${{ env.BUILD_CONFIGURATION }} --no-build -o publish
+        run: dotnet publish BuildingManagementMVC.csproj -c ${{ env.BUILD_CONFIGURATION }} --no-build -o publish
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -42,7 +41,7 @@ jobs:
           path: publish
 
   deploy:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest   # ← غُيّر من windows-latest
     needs: build
     permissions:
       id-token: write
@@ -68,9 +67,3 @@ jobs:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           slot-name: 'Production'
           package: publish
-
-      - name: Restart App Service
-        uses: azure/CLI@v2
-        with:
-          inlineScript: |
-            az webapp restart --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }}
