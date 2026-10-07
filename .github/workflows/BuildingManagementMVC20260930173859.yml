@@ -42,7 +42,7 @@ jobs:
           path: publish
 
   deploy:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     needs: build
     permissions:
       id-token: write
@@ -69,36 +69,24 @@ jobs:
           slot-name: 'Production'
           package: publish
 
+      # ✅ رفع Firebase SA عبر Azure CLI (بدون Kudu credentials)
       - name: Ensure Firebase Service Account is present
-        shell: pwsh
-        run: |
-          $kuduUrl = "https://${{ env.AZURE_WEBAPP_NAME }}.scm.azurewebsites.net/api/vfs/home/firebase-service-account.json"
-          $username = "${{ secrets.KUDU_USERNAME }}"
-          $password = "${{ secrets.KUDU_PASSWORD }}"
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}' | base64 -d > firebase-sa.json
 
-          $base64 = "${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}"
-          if ([string]::IsNullOrWhiteSpace($base64)) {
-            Write-Error "❌ FIREBASE_SERVICE_ACCOUNT_BASE64 is empty"
-            exit 1
-          }
-          $bytes = [Convert]::FromBase64String($base64)
-
-          $auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${username}:${password}"))
-          $headers = @{ Authorization = "Basic $auth" }
-
-          Write-Host "📤 Uploading firebase-service-account.json to /home..."
-          try {
-            Invoke-RestMethod -Uri $kuduUrl -Method Put -Headers $headers -Body $bytes -ContentType "application/octet-stream"
-            Write-Host "✅ Uploaded successfully."
-          } catch {
-            Write-Error "❌ Upload failed: $_"
-            exit 1
-          }
+            az webapp deploy \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --name ${{ env.AZURE_WEBAPP_NAME }} \
+              --src-path firebase-sa.json \
+              --target-path /home/firebase-service-account.json \
+              --type static
 
       - name: Restart App Service
         uses: azure/CLI@v2
         with:
           inlineScript: |
-            az webapp restart `
-              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} `
+            az webapp restart \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
               --name ${{ env.AZURE_WEBAPP_NAME }}
