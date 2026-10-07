@@ -1,8 +1,6 @@
 # Build results
 bin/
 obj/
-x64/
-x86/
 
 # Visual Studio
 .vs/
