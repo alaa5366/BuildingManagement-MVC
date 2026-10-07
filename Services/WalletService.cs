@@ -294,7 +294,9 @@ public class WalletService
     public List<WalletAdjustment> GetApartmentAdjustments(Building building, string aptId) =>
         building.WalletAdjustments.Where(a => a.AptId == aptId).OrderByDescending(a => a.CreatedAt).ToList();
 
-    // -------- Unified transactions (لكشف حساب الشقة — شهر واحد) --------
+    // ============================================================
+    // ✅ Unified transactions (لكشف حساب الشقة — شهر واحد)
+    // ============================================================
     public List<WalletTransactionVm> GetUnifiedTransactions(Building building, string aptId, string monthKey)
     {
         var txs = new List<WalletTransactionVm>();
@@ -302,24 +304,9 @@ public class WalletService
 
         var apt = building.Apartments.FirstOrDefault(a => a.Id == aptId);
         var monthlyFee = apt?.MonthlyFee ?? 0;
+        var now = DateTime.UtcNow.ToString("o");
 
-        // ✅ 1. الدفعات
-        foreach (var d in m.Deposits.Where(d => d.AptId == aptId))
-        {
-            txs.Add(new WalletTransactionVm
-            {
-                Type = "deposit",
-                Status = d.Status,
-                Id = d.Id,
-                Number = d.Number,
-                Amount = d.Amount,
-                Note = d.Note,
-                CreatedAt = d.CreatedAt,
-                ReceiptUrl = d.Receipt?.Success == true ? d.Receipt.Url : null
-            });
-        }
-
-        // ✅ 2. الرسم الشهري (دايماً — لو الشقة مفتوحة)
+        // ✅ 1. الرسم الشهري (دايماً — لو الشقة مفتوحة)
         if (apt != null && !apt.Closed && monthlyFee > 0)
         {
             txs.Add(new WalletTransactionVm
@@ -329,7 +316,21 @@ public class WalletService
                 Id = "fee-" + monthKey,
                 Amount = -monthlyFee,
                 Note = Loc.T("Monthly_Fee_Due"),
-                CreatedAt = monthKey + "-01T00:00:00Z"
+                CreatedAt = now
+            });
+        }
+
+        // ✅ 2. نصيب الإيرادات
+        if (m.RevenueDistribution.TryGetValue(aptId, out var revDist) && revDist > 0)
+        {
+            txs.Add(new WalletTransactionVm
+            {
+                Type = "revenue",
+                Status = "confirmed",
+                Id = "revenue-" + monthKey,
+                Amount = revDist,
+                Note = Loc.T("Your_Share_Of_The_Building_S"),
+                CreatedAt = now
             });
         }
 
@@ -343,21 +344,23 @@ public class WalletService
                 Id = "expense-" + monthKey,
                 Amount = -dist,
                 Note = Loc.T("Your_Share_Of_This_Month_S"),
-                CreatedAt = monthKey + "-28T23:59:59Z"
+                CreatedAt = now
             });
         }
 
-        // ✅ 4. نصيب الإيرادات
-        if (m.RevenueDistribution.TryGetValue(aptId, out var revDist) && revDist > 0)
+        // ✅ 4. الدفعات (تاريخها الفعلي)
+        foreach (var d in m.Deposits.Where(d => d.AptId == aptId))
         {
             txs.Add(new WalletTransactionVm
             {
-                Type = "revenue",
-                Status = "confirmed",
-                Id = "revenue-" + monthKey,
-                Amount = revDist,
-                Note = Loc.T("Your_Share_Of_The_Building_S"),
-                CreatedAt = monthKey + "-15T12:00:00Z"
+                Type = "deposit",
+                Status = d.Status,
+                Id = d.Id,
+                Number = d.Number,
+                Amount = d.Amount,
+                Note = d.Note,
+                CreatedAt = d.CreatedAt,
+                ReceiptUrl = d.Receipt?.Success == true ? d.Receipt.Url : null
             });
         }
 
@@ -375,10 +378,181 @@ public class WalletService
             });
         }
 
-        return txs.OrderByDescending(t => t.CreatedAt).ToList();
+        return OrderTransactions(txs);
     }
 
-    // -------- Building-level totals --------
+    // ============================================================
+    // ✅ جميع الحركات لكل الشهور
+    // ============================================================
+    public List<WalletTransactionVm> GetAllTransactions(
+        Building building,
+        string aptId,
+        string? fromMonth = null,
+        string? toMonth = null,
+        string? typeFilter = null,
+        string? statusFilter = null)
+    {
+        var txs = new List<WalletTransactionVm>();
+        var apt = building.Apartments.FirstOrDefault(a => a.Id == aptId);
+        if (apt == null) return txs;
+
+        var selectedTypes = (typeFilter ?? "all")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(t => t.Trim().ToLowerInvariant())
+            .ToList();
+        var isAll = selectedTypes.Contains("all") || selectedTypes.Count == 0;
+
+        var currentMonth = CurrentMonthKey();
+        var now = DateTime.UtcNow.ToString("o");
+
+        var months = building.Months.Keys
+            .Where(k => string.Compare(k, currentMonth, StringComparison.Ordinal) <= 0)
+            .Where(k => string.IsNullOrWhiteSpace(fromMonth) ||
+                        string.Compare(k, fromMonth, StringComparison.Ordinal) >= 0)
+            .Where(k => string.IsNullOrWhiteSpace(toMonth) ||
+                        string.Compare(k, toMonth, StringComparison.Ordinal) <= 0)
+            .OrderBy(k => k)
+            .ToList();
+
+        foreach (var monthKey in months)
+        {
+            if (!building.Months.TryGetValue(monthKey, out var m)) continue;
+
+            // ✅ 1. carry_over
+            if ((isAll || selectedTypes.Contains("carry_over")) &&
+                m.CarryOver != null &&
+                m.CarryOver.TryGetValue(aptId, out var carry) &&
+                carry != 0)
+            {
+                txs.Add(new WalletTransactionVm
+                {
+                    Type = "carry_over",
+                    Status = "confirmed",
+                    Id = "carry-" + monthKey,
+                    Amount = carry,
+                    Note = Loc.T("Previous_Balance"),
+                    CreatedAt = now
+                });
+            }
+
+            // ✅ 2. الدفعات
+            foreach (var d in m.Deposits.Where(d => d.AptId == aptId))
+            {
+                bool typeMatch = isAll || selectedTypes.Contains("deposits");
+                bool statusMatch = true;
+
+                if (!isAll)
+                {
+                    var hasStatusFilter = selectedTypes.Contains("success")
+                                       || selectedTypes.Contains("failed")
+                                       || selectedTypes.Contains("pending");
+                    if (hasStatusFilter)
+                    {
+                        statusMatch =
+                            (selectedTypes.Contains("success") && d.Status == "confirmed") ||
+                            (selectedTypes.Contains("failed") && d.Status == "cancelled") ||
+                            (selectedTypes.Contains("pending") && d.Status == "pending");
+                    }
+                }
+
+                if (typeMatch && statusMatch)
+                {
+                    txs.Add(new WalletTransactionVm
+                    {
+                        Type = "deposit",
+                        Status = d.Status,
+                        Id = d.Id,
+                        Number = d.Number,
+                        Amount = d.Amount,
+                        Note = d.Note,
+                        CreatedAt = d.CreatedAt,
+                        ReceiptUrl = d.Receipt?.Success == true ? d.Receipt.Url : null
+                    });
+                }
+            }
+
+            // ✅ 3. الرسم الشهري
+            var monthlyFee = apt.MonthlyFee;
+            if (!apt.Closed && monthlyFee > 0 &&
+                (isAll || selectedTypes.Contains("monthly_fee")))
+            {
+                txs.Add(new WalletTransactionVm
+                {
+                    Type = "monthly_fee_due",
+                    Status = "confirmed",
+                    Id = "fee-" + monthKey,
+                    Amount = -monthlyFee,
+                    Note = Loc.T("Monthly_Fee_Due"),
+                    CreatedAt = now
+                });
+            }
+
+            // ✅ 4. مصاريف
+            if ((isAll || selectedTypes.Contains("expenses")) &&
+                m.Distribution.TryGetValue(aptId, out var dist) && dist > 0)
+            {
+                txs.Add(new WalletTransactionVm
+                {
+                    Type = "expense",
+                    Status = "confirmed",
+                    Id = "expense-" + monthKey,
+                    Amount = -dist,
+                    Note = Loc.T("Your_Share_Of_This_Month_S"),
+                    CreatedAt = now
+                });
+            }
+
+            // ✅ 5. إيرادات
+            if ((isAll || selectedTypes.Contains("revenues")) &&
+                m.RevenueDistribution.TryGetValue(aptId, out var revDist) && revDist > 0)
+            {
+                txs.Add(new WalletTransactionVm
+                {
+                    Type = "revenue",
+                    Status = "confirmed",
+                    Id = "revenue-" + monthKey,
+                    Amount = revDist,
+                    Note = Loc.T("Your_Share_Of_The_Building_S"),
+                    CreatedAt = now
+                });
+            }
+
+            // ✅ 6. التسويات
+            foreach (var adj in building.WalletAdjustments.Where(a => a.AptId == aptId && a.MonthKey == monthKey))
+            {
+                if (!isAll && !selectedTypes.Contains("adjustments")) continue;
+
+                txs.Add(new WalletTransactionVm
+                {
+                    Type = "adjustment",
+                    Status = "confirmed",
+                    Id = adj.Id,
+                    Amount = adj.Amount,
+                    Note = adj.Reason,
+                    CreatedAt = adj.CreatedAt
+                });
+            }
+        }
+
+        return OrderTransactions(txs);
+    }
+
+    // ============================================================
+    // ✅ Helper: ترتيب موحّد للحركات
+    // ============================================================
+    private static List<WalletTransactionVm> OrderTransactions(List<WalletTransactionVm> txs)
+    {
+        return txs
+            .OrderByDescending(t => t.CreatedAt)
+            .ThenBy(t => t.Type == "monthly_fee_due" ? 1 :
+                         t.Type == "revenue" ? 2 :
+                         t.Type == "expense" ? 3 : 4)
+            .ToList();
+    }
+
+    // ============================================================
+    // ✅ Building-level totals
+    // ============================================================
     public (double Collected, double Expenses, double Revenues, int OpenCount, int ClosedCount, double Balance, double TotalWallet)
         TotalsOf(Building building, string monthKey)
     {
@@ -392,6 +566,34 @@ public class WalletService
 
         return (collected, expenses, revenues, openApts.Count,
             building.Apartments.Count - openApts.Count, collected + revenues - expenses, totalWallet);
+    }
+
+    // ============================================================
+    // ✅ كل الدفعات المعلقة من كل الشهور
+    // ============================================================
+    public List<(Apartment Apt, Deposit Deposit, string MonthKey)> GetAllPendingDepositsCrossMonth(
+        Building building)
+    {
+        var list = new List<(Apartment Apt, Deposit Deposit, string MonthKey)>();
+
+        if (building.Months == null) return list;
+
+        foreach (var kv in building.Months.OrderByDescending(x => x.Key))
+        {
+            var monthKey = kv.Key;
+            var m = kv.Value;
+
+            foreach (var d in m.Deposits.Where(d => d.Status == "pending"))
+            {
+                var apt = building.Apartments.FirstOrDefault(a => a.Id == d.AptId);
+                if (apt != null)
+                    list.Add((apt, d, monthKey));
+            }
+        }
+
+        return list
+            .OrderByDescending(x => x.Deposit.CreatedAt)
+            .ToList();
     }
 
     // ============================================================
@@ -465,188 +667,5 @@ public class WalletService
                 m.CarryOver = building.Apartments.ToDictionary(a => a.Id, a => 0.0);
             }
         }
-    }
-
-    // ============================================================
-    // ✅ جميع الحركات لكل الشهور (Multi-Select)
-    // ============================================================
-    public List<WalletTransactionVm> GetAllTransactions(
-        Building building,
-        string aptId,
-        string? fromMonth = null,
-        string? toMonth = null,
-        string? typeFilter = null,
-        string? statusFilter = null)
-    {
-        var txs = new List<WalletTransactionVm>();
-        var apt = building.Apartments.FirstOrDefault(a => a.Id == aptId);
-        if (apt == null) return txs;
-
-        var selectedTypes = (typeFilter ?? "all")
-            .Split(',', StringSplitOptions.RemoveEmptyEntries)
-            .Select(t => t.Trim().ToLowerInvariant())
-            .ToList();
-        var isAll = selectedTypes.Contains("all") || selectedTypes.Count == 0;
-
-        var currentMonth = CurrentMonthKey();
-
-        var months = building.Months.Keys
-            .Where(k => string.Compare(k, currentMonth, StringComparison.Ordinal) <= 0)
-            .Where(k => string.IsNullOrWhiteSpace(fromMonth) ||
-                        string.Compare(k, fromMonth, StringComparison.Ordinal) >= 0)
-            .Where(k => string.IsNullOrWhiteSpace(toMonth) ||
-                        string.Compare(k, toMonth, StringComparison.Ordinal) <= 0)
-            .OrderBy(k => k)
-            .ToList();
-
-        foreach (var monthKey in months)
-        {
-            if (!building.Months.TryGetValue(monthKey, out var m)) continue;
-
-            // ✅ 1. carry_over
-            if ((isAll || selectedTypes.Contains("carry_over")) &&
-                m.CarryOver != null &&
-                m.CarryOver.TryGetValue(aptId, out var carry) &&
-                carry != 0)
-            {
-                txs.Add(new WalletTransactionVm
-                {
-                    Type = "carry_over",
-                    Status = "confirmed",
-                    Id = "carry-" + monthKey,
-                    Amount = carry,
-                    Note = Loc.T("Previous_Balance"),
-                    CreatedAt = monthKey + "-01T00:00:00Z"
-                });
-            }
-
-            // ✅ 2. الدفعات
-            foreach (var d in m.Deposits.Where(d => d.AptId == aptId))
-            {
-                bool typeMatch = isAll || selectedTypes.Contains("deposits");
-                bool statusMatch = true;
-
-                if (!isAll)
-                {
-                    var hasStatusFilter = selectedTypes.Contains("success")
-                                       || selectedTypes.Contains("failed")
-                                       || selectedTypes.Contains("pending");
-                    if (hasStatusFilter)
-                    {
-                        statusMatch =
-                            (selectedTypes.Contains("success") && d.Status == "confirmed") ||
-                            (selectedTypes.Contains("failed") && d.Status == "cancelled") ||
-                            (selectedTypes.Contains("pending") && d.Status == "pending");
-                    }
-                }
-
-                if (typeMatch && statusMatch)
-                {
-                    txs.Add(new WalletTransactionVm
-                    {
-                        Type = "deposit",
-                        Status = d.Status,
-                        Id = d.Id,
-                        Number = d.Number,
-                        Amount = d.Amount,
-                        Note = d.Note,
-                        CreatedAt = d.CreatedAt,
-                        ReceiptUrl = d.Receipt?.Success == true ? d.Receipt.Url : null
-                    });
-                }
-            }
-
-            // ✅ 3. الرسم الشهري (دايماً — لو الشقة مفتوحة)
-            var monthlyFee = apt.MonthlyFee;
-            if (!apt.Closed && monthlyFee > 0 &&
-                (isAll || selectedTypes.Contains("monthly_fee")))
-            {
-                txs.Add(new WalletTransactionVm
-                {
-                    Type = "monthly_fee_due",
-                    Status = "confirmed",
-                    Id = "fee-" + monthKey,
-                    Amount = -monthlyFee,
-                    Note = Loc.T("Monthly_Fee_Due"),
-                    CreatedAt = monthKey + "-01T00:00:00Z"
-                });
-            }
-
-            // ✅ 4. مصاريف
-            if ((isAll || selectedTypes.Contains("expenses")) &&
-                m.Distribution.TryGetValue(aptId, out var dist) && dist > 0)
-            {
-                txs.Add(new WalletTransactionVm
-                {
-                    Type = "expense",
-                    Status = "confirmed",
-                    Id = "expense-" + monthKey,
-                    Amount = -dist,
-                    Note = Loc.T("Your_Share_Of_This_Month_S"),
-                    CreatedAt = monthKey + "-28T23:59:59Z"
-                });
-            }
-
-            // ✅ 5. إيرادات
-            if ((isAll || selectedTypes.Contains("revenues")) &&
-                m.RevenueDistribution.TryGetValue(aptId, out var revDist) && revDist > 0)
-            {
-                txs.Add(new WalletTransactionVm
-                {
-                    Type = "revenue",
-                    Status = "confirmed",
-                    Id = "revenue-" + monthKey,
-                    Amount = revDist,
-                    Note = Loc.T("Your_Share_Of_The_Building_S"),
-                    CreatedAt = monthKey + "-15T12:00:00Z"
-                });
-            }
-
-            // ✅ 6. التسويات
-            foreach (var adj in building.WalletAdjustments.Where(a => a.AptId == aptId && a.MonthKey == monthKey))
-            {
-                if (!isAll && !selectedTypes.Contains("adjustments")) continue;
-
-                txs.Add(new WalletTransactionVm
-                {
-                    Type = "adjustment",
-                    Status = "confirmed",
-                    Id = adj.Id,
-                    Amount = adj.Amount,
-                    Note = adj.Reason,
-                    CreatedAt = adj.CreatedAt
-                });
-            }
-        }
-
-        return txs.OrderByDescending(t => t.CreatedAt).ToList();
-    }
-
-    // ============================================================
-    // ✅ كل الدفعات المعلقة من كل الشهور
-    // ============================================================
-    public List<(Apartment Apt, Deposit Deposit, string MonthKey)> GetAllPendingDepositsCrossMonth(
-        Building building)
-    {
-        var list = new List<(Apartment Apt, Deposit Deposit, string MonthKey)>();
-
-        if (building.Months == null) return list;
-
-        foreach (var kv in building.Months.OrderByDescending(x => x.Key))
-        {
-            var monthKey = kv.Key;
-            var m = kv.Value;
-
-            foreach (var d in m.Deposits.Where(d => d.Status == "pending"))
-            {
-                var apt = building.Apartments.FirstOrDefault(a => a.Id == d.AptId);
-                if (apt != null)
-                    list.Add((apt, d, monthKey));
-            }
-        }
-
-        return list
-            .OrderByDescending(x => x.Deposit.CreatedAt)
-            .ToList();
     }
 }
