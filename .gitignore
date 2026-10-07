@@ -6,15 +6,13 @@ obj/
 .vs/
 *.user
 *.suo
-*.ps1
-*.sql
+REXX-Correct-01.ps1
+BuildingManagement-Schem_01.sql
 
 # Rider
 .idea/
 
 # Build firebase
 firebase-service-account.json
-appsettings.json
-appsettings.Development.json
 
 
