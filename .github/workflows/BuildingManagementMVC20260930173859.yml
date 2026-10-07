@@ -69,7 +69,6 @@ jobs:
           slot-name: 'Production'
           package: publish
 
-      # ✅ رفع Firebase SA عبر Kudu API (يعمل على Windows)
       - name: Ensure Firebase Service Account is present
         shell: pwsh
         run: |
@@ -103,4 +102,3 @@ jobs:
             az webapp restart `
               --resource-group ${{ env.AZURE_RESOURCE_GROUP }} `
               --name ${{ env.AZURE_WEBAPP_NAME }}
-        shell: pwsh
