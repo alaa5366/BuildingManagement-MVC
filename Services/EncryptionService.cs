@@ -15,7 +15,7 @@ public class AesEncryptionService : IEncryptionService
 
     public AesEncryptionService(IConfiguration config)
     {
-        var keyStr = config["Encryption:Key"]
+        var keyStr = config["Encryption:SecretKey"]
             ?? throw new InvalidOperationException("Encryption:Key missing");
         _key = SHA256.HashData(Encoding.UTF8.GetBytes(keyStr));
     }
