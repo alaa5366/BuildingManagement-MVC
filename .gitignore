@@ -17,12 +17,10 @@ obj/
 # Secrets — لا ترفع أبدًا
 # ============================================
 firebase-service-account.json
-appsettings.json
 **/firebase-service-account.json
 appsettings.Development.json
 appsettings.Local.json
 secrets.json
-
 .env
 *.secrets.json
 
