@@ -18,6 +18,14 @@ QuestPDF.Settings.UseEnvironmentFonts = false;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ============================================================
+// ✅ إصلاح أمني #1: قراءة User Secrets في بيئة التطوير
+// ============================================================
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddUserSecrets<Program>(optional: true);
+}
+
 var cookieSecurePolicy = builder.Environment.IsDevelopment()
     ? CookieSecurePolicy.SameAsRequest
     : CookieSecurePolicy.Always;
@@ -259,14 +267,74 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 
+
+// ============================================================
+// بناء التطبيق — نقطة التحول
+// ============================================================
 var app = builder.Build();
+
+
+// ============================================================
+// ✅ إصلاح أمني #2: التحقق من الأسرار المطلوبة
+// ============================================================
+// ملاحظة: ConfigSecrets.Require يرفض null / فارغ / CHANGE_ME
+// أسماء المفاتيح هنا يجب أن تطابق ما هو موجود في user-secrets
+
+// --- تشخيص مؤقت (احذف هذا القسم بعد التأكد من عمل كل شيء) ---
+if (app.Environment.IsDevelopment())
+{
+    Console.WriteLine("=== Configuration Sources ===");
+    if (app.Configuration is IConfigurationRoot root)
+    {
+        foreach (var source in root.Providers)
+            Console.WriteLine($"  - {source}");
+    }
+    // Note: _key and _pth may be the same value if using a JSON file for the service account
+    var _pidfire = app.Configuration["Firebase:ProjectId"];
+    var _keyfire = app.Configuration["Firebase:WebApiKey"];
+    var _pthfire = app.Configuration["Firebase:ServiceAccountJsonPath"];
+    var _pidclo = app.Configuration["Cloudinary:CloudName"];
+    var _keycol = app.Configuration["Cloudinary:ApiKey"];
+    var _pthcol = app.Configuration["Cloudinary:ApiSecret"];
+    var _xl = app.Configuration["Excel:SecretKey"];
+    var _qr = app.Configuration["Qr:SecretKey"];
+    var _enc = app.Configuration["Encryption:SecretKey"];
+    var _adm = app.Configuration["Auth:SuperAdminEmails"];
+    Console.WriteLine("==============================");
+    Console.WriteLine($"  Firebase:ProjectId              = {_pidfire ?? "NULL"}");
+    Console.WriteLine($"  Firebase:WebApiKey              = {(_keyfire != null ? $"loaded ({_keyfire.Length} chars)" : "NULL")}");
+    Console.WriteLine($"  Firebase:ServiceAccountJsonPath = {(_pthfire != null ? $"loaded ({_pthfire.Length} chars)" : "NULL")}");
+    Console.WriteLine("==============================");
+    Console.WriteLine($"  Cloudinary:CloudName            = {_pidclo ?? "NULL"}");
+    Console.WriteLine($"  Cloudinary:ApiKey               = {(_keycol != null ? $"loaded ({_keycol.Length} chars)" : "NULL")}");
+    Console.WriteLine($"  Cloudinary:ApiSecret            = {(_pthcol != null ? $"loaded ({_pthcol.Length} chars)" : "NULL")}");
+    Console.WriteLine("==============================");
+    Console.WriteLine($"  Excel:SecretKey                 = {(_xl != null ? $"loaded ({_xl.Length} chars)" : "NULL")}");
+    Console.WriteLine($"  Qr:SecretKey                    = {(_qr != null ? $"loaded ({_qr.Length} chars)" : "NULL")}");
+    Console.WriteLine($"  Encryption:SecretKey            = {(_enc != null ? $"loaded ({_enc.Length} chars)" : "NULL")}");
+    Console.WriteLine("==============================");
+    Console.WriteLine($"  Auth:SuperAdminEmails           = {(_adm != null ? "loaded" : "NULL")}");
+    Console.WriteLine("==============================");
+}
+// --- نهاية التشخيص المؤقت ---
 
 ConfigSecrets.Require(app.Configuration, "Firebase:ProjectId");
 ConfigSecrets.Require(app.Configuration, "Firebase:WebApiKey");
+
+// ✅ إصلاح أمني #3: فصل مفتاح Excel عن مفتاح QR
 ConfigSecrets.Require(app.Configuration, "Excel:SecretKey");
-ConfigSecrets.Require(app.Configuration, "Qr:SecretKey", "Excel:SecretKey");
+ConfigSecrets.Require(app.Configuration, "Qr:SecretKey");
+// (أزلنا fallback الذي كان يسمح باستخدام Excel:SecretKey مكان Qr:SecretKey)
+
+// مفتاح التشفير (إذا كان AesEncryptionService يقرأه من الإعدادات)
+ConfigSecrets.Require(app.Configuration, "Encryption:SecretKey");
+
 AuthService.ConfigureSuperAdmins(ConfigSecrets.Require(app.Configuration, "Auth:SuperAdminEmails"));
 
+
+// ============================================================
+// بقية الـ Middleware
+// ============================================================
 app.UseForwardedHeaders();
 
 var fontsDir = Path.Combine(app.Environment.WebRootPath, "fonts");

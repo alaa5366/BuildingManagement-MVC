@@ -1,15 +1,22 @@
 # Build results
 bin/
 obj/
+x64/
+x86/
 
 # Visual Studio
 .vs/
 *.user
 *.suo
+*.ps1
+*.sql
 
 # Rider
 .idea/
 
 # Build firebase
 firebase-service-account.json
+appsettings.json
 appsettings.Development.json
+
+
