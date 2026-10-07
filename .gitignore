@@ -1,18 +1,45 @@
+# ============================================
 # Build results
+# ============================================
 bin/
 obj/
 
-# Visual Studio
+# ============================================
+# Visual Studio / Rider / VS Code
+# ============================================
 .vs/
+.idea/
+.vscode/
 *.user
 *.suo
+
+# ============================================
+# Secrets — لا ترفع أبدًا
+# ============================================
+firebase-service-account.json
+**/firebase-service-account.json
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+.env
+*.secrets.json
+
+# ============================================
+# ملفات محلية خاصة (لا تُرفع)
+# ============================================
 REXX-Correct-01.ps1
 BuildingManagement-Schem_01.sql
 
-# Rider
-.idea/
+# ============================================
+# Archives & Logs
+# ============================================
+*.zip
+*.rar
+*.log
+logs/
 
-# Build firebase
-firebase-service-account.json
-
-
+# ============================================
+# OS files
+# ============================================
+.DS_Store
+Thumbs.db
