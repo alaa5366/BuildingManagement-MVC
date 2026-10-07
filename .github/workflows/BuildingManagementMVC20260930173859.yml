@@ -1,10 +1,16 @@
-name: Build and deploy ASP.Net Core app to Azure Web App - BuildingManagementMVC20260930173859
+name: Build and deploy ASP.NET Core app to Azure Web App
 
 on:
   push:
     branches:
       - main
   workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: 'BuildingManagementMVC20260930173859'
+  DOTNET_VERSION: '8.x'
+  BUILD_CONFIGURATION: 'Release'
+  AZURE_RESOURCE_GROUP: 'buildingmanagement_group'
 
 jobs:
   build:
@@ -15,28 +21,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up .NET Core
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.x'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Build with dotnet
-        run: dotnet build --configuration Release
+      - name: Restore
+        run: dotnet restore
 
-      - name: dotnet publish
-        run: dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
+      - name: Build
+        run: dotnet build --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
 
-      - name: Write firebase-service-account.json
-        shell: pwsh
-        run: |
-          $bytes = [Convert]::FromBase64String("${{ secrets.FIREBASE_SERVICE_ACCOUNT }}")
-          [IO.File]::WriteAllBytes("${{env.DOTNET_ROOT}}/myapp/firebase-service-account.json", $bytes)
+      - name: Publish
+        run: dotnet publish -c ${{ env.BUILD_CONFIGURATION }} --no-build -o publish
 
-      - name: Upload artifact for deployment job
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
+          path: publish
 
   deploy:
     runs-on: windows-latest
@@ -46,10 +49,11 @@ jobs:
       contents: read
 
     steps:
-      - name: Download artifact from build job
+      - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: .net-app
+          path: publish
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -59,9 +63,14 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Deploy to Azure Web App
-        id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'BuildingManagementMVC20260930173859'
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
           slot-name: 'Production'
-          package: .
+          package: publish
+
+      - name: Restart App Service
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az webapp restart --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }}
