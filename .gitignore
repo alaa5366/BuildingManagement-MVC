@@ -21,6 +21,7 @@ firebase-service-account.json
 appsettings.Development.json
 appsettings.Local.json
 secrets.json
+appsettings.json
 .env
 *.secrets.json
 
