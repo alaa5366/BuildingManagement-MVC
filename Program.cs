@@ -19,7 +19,7 @@ QuestPDF.Settings.UseEnvironmentFonts = false;
 var builder = WebApplication.CreateBuilder(args);
 
 // ============================================================
-// ✅ إصلاح أمني #1: قراءة User Secrets في بيئة التطوير
+// ✅ إصلاح أمني #1: قراءة User Secrets في بيئة التطوير     
 // ============================================================
 if (builder.Environment.IsDevelopment())
 {
