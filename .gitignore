@@ -29,7 +29,7 @@ secrets.json
 # ============================================
 REXX-Correct-01.ps1
 BuildingManagement-Schem_01.sql
-appsettings.Local.json
+appsettings.json
 firebase-service-account.json
 
 # ============================================
