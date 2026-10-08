@@ -1,9 +1,5 @@
 // =====================================================================
 //  AppDbContext - مطابق لسكربت BuildingManagement-Schema.sql
-//
-//  الاستخدام: Database-First. السكربت هو المصدر الأساسي للسكيما
-//  (فيه الـ CHECK constraints والـ defaults)، والـ DbContext ده بيعمل Mapping
-//  بس. ماتشغّلش dotnet ef migrations فوق القاعدة دي من غير ما تراجع.
 // =====================================================================
 using BuildingManagementMvc.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -28,7 +24,7 @@ public class AppDbContext : DbContext
     public DbSet<DepositEntity> Deposits => Set<DepositEntity>();
     public DbSet<DepositEditEntity> DepositEditHistory => Set<DepositEditEntity>();
     public DbSet<WalletAdjustmentEntity> WalletAdjustments => Set<WalletAdjustmentEntity>();
-    public DbSet<ReceiptEntity> Receipts => Set<ReceiptEntity>();
+    // ❌ محذوف: DbSet<ReceiptEntity> Receipts
     public DbSet<AuditLogEntity> AuditLog => Set<AuditLogEntity>();
     public DbSet<NotificationEntity> Notifications => Set<NotificationEntity>();
     public DbSet<PollEntity> Polls => Set<PollEntity>();
@@ -36,6 +32,7 @@ public class AppDbContext : DbContext
     public DbSet<PollVoteEntity> PollVotes => Set<PollVoteEntity>();
     public DbSet<MaintenanceRecordEntity> MaintenanceRecords => Set<MaintenanceRecordEntity>();
     public DbSet<QrTokenEntity> QrTokens => Set<QrTokenEntity>();
+    public DbSet<QrUsageEntity> QrUsages => Set<QrUsageEntity>();   // ✅ جديد
     public DbSet<PresenceEntity> Presence => Set<PresenceEntity>();
     public DbSet<GlobalSettingsEntity> GlobalSettings => Set<GlobalSettingsEntity>();
     public DbSet<ScheduledBackupSettingsEntity> ScheduledBackupSettings => Set<ScheduledBackupSettingsEntity>();
@@ -184,14 +181,7 @@ public class AppDbContext : DbContext
                 .HasForeignKey(x => new { x.BuildingId, x.ApartmentId }).OnDelete(DeleteBehavior.NoAction);
         });
 
-        mb.Entity<ReceiptEntity>(e =>
-        {
-            e.ToTable("Receipts");
-            e.HasKey(x => x.ReceiptId);
-            e.Property(x => x.ReceiptId).ValueGeneratedOnAdd();
-            e.HasOne<BuildingEntity>().WithMany()
-                .HasForeignKey(x => x.BuildingId).OnDelete(DeleteBehavior.SetNull);
-        });
+        // ❌ محذوف: mb.Entity<ReceiptEntity>(...)
 
         // ---------------- السجل والإشعارات ----------------
         mb.Entity<AuditLogEntity>(e =>
@@ -266,6 +256,17 @@ public class AppDbContext : DbContext
                 .HasForeignKey(x => new { x.BuildingId, x.ApartmentId }).OnDelete(DeleteBehavior.NoAction);
         });
 
+        // ✅ جديد: QrUsages
+        mb.Entity<QrUsageEntity>(e =>
+        {
+            e.ToTable("QrUsages");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasMaxLength(128);
+            e.Property(x => x.TokenId).HasMaxLength(128);
+            e.HasIndex(x => x.TokenId);
+            e.HasIndex(x => x.CreatedAt);
+        });
+
         mb.Entity<PresenceEntity>(e =>
         {
             e.ToTable("Presence");
@@ -298,7 +299,7 @@ public class AppDbContext : DbContext
             e.HasNoKey();
             e.ToView("vw_ApartmentWalletMovements");
         });
-        // في OnModelCreating:
+
         mb.Entity<SyncPendingChangeEntity>(e =>
         {
             e.ToTable("SyncPendingChanges");
@@ -308,27 +309,25 @@ public class AppDbContext : DbContext
             e.HasIndex(x => new { x.EntityType, x.EntityId });
         });
 
+        mb.Entity<DvrEntity>(e =>
+        {
+            e.ToTable("Dvrs");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.BuildingId);
+            e.HasOne<BuildingEntity>().WithMany()
+                .HasForeignKey(x => x.BuildingId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
 
-    // في OnModelCreating:
-    mb.Entity<DvrEntity>(e =>
-{
-    e.ToTable("Dvrs");
-    e.HasKey(x => x.Id);
-    e.HasIndex(x => x.BuildingId);
-    e.HasOne<BuildingEntity>().WithMany()
-        .HasForeignKey(x => x.BuildingId)
-        .OnDelete(DeleteBehavior.Cascade);
-});
-
-mb.Entity<CameraEntity>(e =>
-{
-    e.ToTable("Cameras");
-    e.HasKey(x => x.Id);
-    e.HasIndex(x => new { x.DvrId, x.Channel }).IsUnique();
-e.HasIndex(x => x.BuildingId);
-    e.HasOne(x => x.Dvr).WithMany(d => d.Cameras)
-        .HasForeignKey(x => x.DvrId)
-        .OnDelete(DeleteBehavior.Cascade);
-});
+        mb.Entity<CameraEntity>(e =>
+        {
+            e.ToTable("Cameras");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.DvrId, x.Channel }).IsUnique();
+            e.HasIndex(x => x.BuildingId);
+            e.HasOne(x => x.Dvr).WithMany(d => d.Cameras)
+                .HasForeignKey(x => x.DvrId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
     }
 }

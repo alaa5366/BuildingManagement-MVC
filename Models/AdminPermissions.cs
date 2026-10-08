@@ -78,14 +78,16 @@ public static class AdminPermissions
 
     public static readonly List<string> TemplateAdminFull = new()
     {
-        ManageResidents, DisableApartment,
-        ImportTemplate,
-        ManageDvrs, ViewCameras, ManageCameras,
-        ManageWallet, ManageExpenses, ManageRevenues,
-        ManageCategories, ViewReports, ManagePolls, ManageMaintenance,
-        SendNotifications, UseWhatsApp,
-        ViewAuditLogBuilding, ManageSettingsBuilding
+    ManageResidents, DisableApartment,
+    ImportTemplate,
+    ManageDvrs, ViewCameras, ManageCameras,
+    ManageWallet, ManageExpenses, ManageRevenues,
+    ManageCategories, ViewReports,
+    ManagePolls, ManageMaintenance,
+    SendNotifications, UseWhatsApp,
+    ViewAuditLogBuilding, ManageSettingsBuilding
     };
+    // ← 17 عنصر
 
     public static readonly List<string> TemplateAdminFinancial = new()
     {
@@ -101,16 +103,17 @@ public static class AdminPermissions
     };
 
     public static readonly List<string> TemplateAdminSuper = new()
-    {
-        ManageBuildings, ManageAdmins, ManageResidents, ImportTemplate,
-        ManageDvrs, ViewCameras, ManageCameras,
-        ManageWallet, ManageExpenses, ManageRevenues,
-        ManageCategories, ViewReports,
-        ManagePolls, ManageMaintenance, SendNotifications, UseWhatsApp,
-        ViewAuditLogAll, ViewAuditLogBuilding, ViewAuditLogOwn,
-        ManageSettingsGlobal, ManageSettingsBuilding, ManageSettingsOwn,
-        ManageTools, ManageBackup, ManageSync, SecretAccess
-    };
+{
+    ManageBuildings, ManageAdmins, ManageResidents, ImportTemplate,
+    ManageDvrs, ViewCameras, ManageCameras,
+    ManageWallet, ManageExpenses, ManageRevenues,
+    ManageCategories, ViewReports,
+    ManagePolls, ManageMaintenance, SendNotifications, UseWhatsApp,
+    ViewAuditLogAll, ViewAuditLogBuilding, ViewAuditLogOwn,
+    ManageSettingsGlobal, ManageSettingsBuilding, ManageSettingsOwn,
+    ManageTools, ManageBackup, ManageSync, SecretAccess
+};
+    // ← 27 عنصر
 
     public static readonly List<string> SuperAdminAll = All;
 

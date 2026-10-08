@@ -24,7 +24,7 @@
     @* ===== Bootstrap ===== *@
     <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
 
-    @* ===== Bootstrap Icons (CDN مؤقت) ===== *@
+    @* ===== Bootstrap Icons ===== *@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 
     @* ===== App CSS ===== *@
@@ -40,13 +40,9 @@
 
     @if (showSidebar)
     {
-        @* ===== Sidebar ===== *@
         <partial name="_Sidebar" />
-
-        @* ===== Topbar (Mobile + User Menu) ===== *@
         <partial name="_Topbar" />
 
-        @* ===== Main Content ===== *@
         <main class="main-content" id="mainContent">
             @if (isImpersonating)
             {
@@ -68,7 +64,6 @@
                 </div>
             }
 
-            @* ===== Alerts ===== *@
             @if (TempData["Message"] != null)
             {
                 <div class="alert alert-success alert-dismissible fade show mx-3 mt-3" role="alert">
@@ -86,7 +81,6 @@
                 </div>
             }
 
-            @* ===== Page Content ===== *@
             <div class="content-wrapper">
                 @RenderBody()
             </div>
@@ -94,7 +88,6 @@
     }
     else
     {
-        @* ===== No Sidebar (Login Pages) ===== *@
         <main class="auth-content">
             @RenderBody()
         </main>
@@ -107,6 +100,9 @@
     @if (showSidebar)
     {
         <script src="~/js/admin-sidebar.js" asp-append-version="true"></script>
+
+        @* ✅ Presence Heartbeat — يسجّل المستخدم كـ "نشط" *@
+        <script src="~/js/presence-heartbeat.js" asp-append-version="true"></script>
     }
 
     @await RenderSectionAsync("Scripts", required: false)

@@ -1049,3 +1049,158 @@ body.ltr .topbar-actions .dropdown-menu {
         background: #F7F5F1;
         color: #12433C;
     }
+/* ============================================================ */
+/* Apartment Cards — 4 أزرار بأحجام موحدة                       */
+/* ============================================================ */
+
+.apt-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.apt-card-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    background: #F8F9FA;
+    border-radius: 10px;
+    border: 1px solid #E9ECEF;
+    transition: all 0.2s;
+}
+
+    .apt-card-row:hover {
+        background: #FFFFFF;
+        border-color: #DEE2E6;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+/* معلومات الشقة */
+.apt-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 13px;
+}
+
+.apt-title {
+    font-weight: 700;
+    color: #212529;
+    font-size: 14px;
+}
+
+.apt-owner {
+    color: #6C757D;
+    font-size: 12.5px;
+}
+
+.apt-phone {
+    color: #6C757D;
+    font-size: 11.5px;
+    background: #E9ECEF;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-family: 'Consolas', monospace;
+}
+
+/* ============================================================ */
+/* 4 أزرار بأحجام موحدة — Grid 4 أعمدة                          */
+/* ============================================================ */
+.apt-actions {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    width: 100%;
+}
+
+.apt-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 38px;
+    padding: 6px 4px;
+    border: 1.5px solid;
+    border-radius: 8px;
+    background: #FFFFFF;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+}
+
+    .apt-action-btn .icon {
+        font-size: 14px;
+        line-height: 1;
+        flex-shrink: 0;
+    }
+
+    .apt-action-btn .label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .apt-action-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* QR — أصفر */
+    .apt-action-btn.btn-qr {
+        border-color: #FFC107;
+        color: #856404;
+    }
+
+        .apt-action-btn.btn-qr:hover {
+            background: #FFF3CD;
+        }
+
+    /* ترحيب — أخضر */
+    .apt-action-btn.btn-welcome {
+        border-color: #28A745;
+        color: #155724;
+    }
+
+        .apt-action-btn.btn-welcome:hover {
+            background: #D4EDDA;
+        }
+
+    /* محفظة — أزرق فاتح */
+    .apt-action-btn.btn-wallet {
+        border-color: #17A2B8;
+        color: #0C5460;
+    }
+
+        .apt-action-btn.btn-wallet:hover {
+            background: #D1ECF1;
+        }
+
+    /* فاتورة — أزرق */
+    .apt-action-btn.btn-invoice {
+        border-color: #007BFF;
+        color: #004085;
+    }
+
+        .apt-action-btn.btn-invoice:hover {
+            background: #CCE5FF;
+        }
+
+/* Responsive */
+@media (max-width: 576px) {
+    .apt-actions {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* RTL Support */
+body.rtl .apt-action-btn {
+    direction: rtl;
+}

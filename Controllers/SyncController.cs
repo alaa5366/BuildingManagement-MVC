@@ -19,6 +19,8 @@ public class SyncController : Controller
     private readonly ReverseSyncService _reverseSync;
     private readonly DvrService _dvrs;
     private readonly AuditLogSyncService _auditLogSync;
+    private readonly OneTimeFullSyncService _oneTimeSync;
+    private readonly OrphanedCleanupService _cleanup;
 
     public SyncController(
         DbSyncService sync,
@@ -26,7 +28,9 @@ public class SyncController : Controller
         StorageSettingsService storageSettings,
         ReverseSyncService reverseSync,
         DvrService dvrs,
-        AuditLogSyncService auditLogSync)
+        AuditLogSyncService auditLogSync,
+        OneTimeFullSyncService oneTimeSync,
+        OrphanedCleanupService cleanup)
     {
         _sync = sync;
         _buildings = buildings;
@@ -34,6 +38,8 @@ public class SyncController : Controller
         _reverseSync = reverseSync;
         _dvrs = dvrs;
         _auditLogSync = auditLogSync;
+        _oneTimeSync = oneTimeSync;
+        _cleanup = cleanup;
     }
 
     private string CurrentUserId =>
@@ -221,6 +227,31 @@ public class SyncController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    // ============================================================
+    // ✅ Sync Qr + Presence + QrUsage
+    // ============================================================
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SyncQrAndPresence()
+    {
+        try
+        {
+            var report = await _oneTimeSync.RunAllAsync();
+
+            TempData["Success"] = Loc.T("Sync_QrPresence_Success",
+                report.QrTokens, report.Presence, report.QrUsages, report.Elapsed.TotalSeconds);
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = Loc.T("Cleanup_Error_Generic", ex.Message);
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    // ============================================================
+    // SyncEverything
+    // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SyncEverything()
@@ -230,12 +261,13 @@ public class SyncController : Controller
 
         try
         {
+            // 1. Buildings
             var buildingReport = await _buildings.SyncAllToSqlAsync();
             results.Add($"🏢 Buildings: {buildingReport.Buildings}");
-
             if (buildingReport.Errors.Any())
                 errors.AddRange(buildingReport.Errors.Take(10));
 
+            // 2. Users
             var usersService = HttpContext.RequestServices.GetRequiredService<UsersService>();
             var users = await usersService.GetAllFromFirestoreAsync();
             int userOk = 0, userFail = 0;
@@ -254,27 +286,78 @@ public class SyncController : Controller
             }
             results.Add($"👥 Users: {userOk} (فشل {userFail})");
 
+            // 3. DVRs + Cameras
             var dvrReport = await _dvrs.SyncAllToSqlAsync();
             results.Add($"📹 DVRs: {dvrReport.DvrsTotal} | Cameras: {dvrReport.CamerasTotal}");
-
             if (dvrReport.Errors.Any())
                 errors.AddRange(dvrReport.Errors.Take(10));
 
+            // 4. AuditLog
             var auditReport = await _auditLogSync.SyncAllToSqlAsync();
             results.Add($"📋 AuditLog: +{auditReport.Added}");
-
             if (auditReport.Errors.Any())
                 errors.AddRange(auditReport.Errors.Take(10));
 
-            TempData["Success"] = "✅ مزامنة شاملة نجحت: " + string.Join(" | ", results);
+            // 5. QR/Presence/QrUsage
+            var qrReport = await _oneTimeSync.RunAllAsync();
+            results.Add($"🔑 QrTokens: +{qrReport.QrTokens}");
+            results.Add($"📡 Presence: +{qrReport.Presence}");
+            results.Add($"📱 QrUsages: +{qrReport.QrUsages}");
+
+            TempData["Success"] = "✅ " + string.Join(" | ", results);
             if (errors.Any())
-                TempData["Error"] = $"⚠️ {errors.Count} أخطاء: " + string.Join(" | ", errors.Take(5));
+                TempData["Error"] = $"⚠️ {errors.Count}: " + string.Join(" | ", errors.Take(5));
         }
         catch (Exception ex)
         {
-            TempData["Error"] = $"❌ فشل المزامنة الشاملة: {ex.Message}";
+            TempData["Error"] = Loc.T("Cleanup_Error_Generic", ex.Message);
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    // ============================================================
+    // ✅ Cleanup: الصفحة الرئيسية
+    // ============================================================
+    [HttpGet]
+    public IActionResult Cleanup()
+    {
+        ViewBag.Collections = OrphanedCleanupService.SupportedCollections();
+        return View();
+    }
+
+    // ============================================================
+    // ✅ Cleanup: تنفيذ
+    // ============================================================
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CleanupOrphaned(string collection, bool dryRun = true)
+    {
+        try
+        {
+            var report = await _cleanup.RunAsync(collection, dryRun);
+
+            if (report.Errors.Any())
+            {
+                TempData["Error"] = string.Join(" | ", report.Errors);
+            }
+            else if (dryRun)
+            {
+                TempData["Success"] = Loc.T("Cleanup_Success_DryRun",
+                    report.ItemsFound, collection);
+            }
+            else
+            {
+                TempData["Success"] = Loc.T("Cleanup_Success_Deleted",
+                    report.ItemsDeleted, collection);
+            }
+
+            return View("CleanupResult", report);
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = Loc.T("Cleanup_Error_Generic", ex.Message);
+            return RedirectToAction(nameof(Cleanup));
+        }
     }
 }

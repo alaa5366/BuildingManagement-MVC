@@ -4504,10 +4504,203 @@ Dieser Vorgang kann einige Sekunden dauern.</value>
   <data name="Copy_All_Dvrs_Cameras_From_Firestore_To_Sql" xml:space="preserve">
     <value>Alle DVRs und Kameras von Firestore nach SQL Server kopieren</value>
   </data>
-    <data name="Sync_AuditLog" xml:space="preserve">
+  <data name="Sync_AuditLog" xml:space="preserve">
     <value>Audit-Protokoll synchronisieren</value>
   </data>
   <data name="Copy_All_AuditLogs_From_Firestore_To_Sql" xml:space="preserve">
     <value>Alle Audit-Protokolle von Firestore nach SQL Server kopieren</value>
   </data>
+  <!-- ==================== Cleanup ==================== -->
+  <data name="Cleanup_Title" xml:space="preserve">
+    <value>Verwaiste Datensätze bereinigen</value>
+  </data>
+  <data name="Cleanup_Subtitle" xml:space="preserve">
+    <value>Firestore-Datensätze löschen, die auf fehlende SQL-Elemente verweisen</value>
+  </data>
+  <data name="Cleanup_Warning_Title" xml:space="preserve">
+    <value>Wichtige Warnung</value>
+  </data>
+  <data name="Cleanup_Warning_Line1" xml:space="preserve">
+    <value>Die Bereinigung löscht Datensätze dauerhaft aus Firestore</value>
+  </data>
+  <data name="Cleanup_Warning_Line2" xml:space="preserve">
+    <value>Standardmodus: Nur Testlauf</value>
+  </data>
+  <data name="Cleanup_Warning_Line3" xml:space="preserve">
+    <value>Sie müssen "Tatsächlich löschen" selbst wählen</value>
+  </data>
+  <data name="Cleanup_Warning_Line4" xml:space="preserve">
+    <value>Kein Rückgängigmachen nach dem Löschen</value>
+  </data>
+  <data name="Cleanup_Mode_Label" xml:space="preserve">
+    <value>Modus:</value>
+  </data>
+  <data name="Cleanup_Mode_DryRun" xml:space="preserve">
+    <value>Nur Testlauf</value>
+  </data>
+  <data name="Cleanup_Mode_DryRunDesc" xml:space="preserve">
+    <value>Zeigt verwaiste Datensätze ohne Löschen</value>
+  </data>
+  <data name="Cleanup_Mode_Delete" xml:space="preserve">
+    <value>Tatsächlich löschen</value>
+  </data>
+  <data name="Cleanup_Mode_DeleteDesc" xml:space="preserve">
+    <value>Löscht Datensätze dauerhaft aus Firestore</value>
+  </data>
+  <data name="Cleanup_RunBtn" xml:space="preserve">
+    <value>Bereinigung starten</value>
+  </data>
+  <data name="Cleanup_Back" xml:space="preserve">
+    <value>Zurück</value>
+  </data>
+  <data name="Cleanup_NoCollections" xml:space="preserve">
+    <value>Keine Sammlungen für die Bereinigung unterstützt</value>
+  </data>
+  <!-- ==================== Cleanup Result ==================== -->
+  <data name="CleanupResult_Title" xml:space="preserve">
+    <value>Bereinigungsergebnis</value>
+  </data>
+  <data name="CleanupResult_DryRunBadge" xml:space="preserve">
+    <value>Testlauf</value>
+  </data>
+  <data name="CleanupResult_DeleteBadge" xml:space="preserve">
+    <value>Tatsächlich löschen</value>
+  </data>
+  <data name="CleanupResult_OrphanedCount" xml:space="preserve">
+    <value>Verwaiste Datensätze</value>
+  </data>
+  <data name="CleanupResult_DeletedCount" xml:space="preserve">
+    <value>Gelöscht</value>
+  </data>
+  <data name="CleanupResult_Duration" xml:space="preserve">
+    <value>Dauer</value>
+  </data>
+  <data name="CleanupResult_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="CleanupResult_StatusOK" xml:space="preserve">
+    <value>Fertig</value>
+  </data>
+  <data name="CleanupResult_StatusError" xml:space="preserve">
+    <value>Fehler</value>
+  </data>
+  <data name="CleanupResult_NoOrphans" xml:space="preserve">
+    <value>✅ Keine verwaisten Datensätze in</value>
+  </data>
+  <data name="CleanupResult_DryRunInfo" xml:space="preserve">
+    <value>Dies ist ein Testlauf — nichts wurde gelöscht. Um zu löschen, gehen Sie zurück und wählen Sie "Tatsächlich löschen".</value>
+  </data>
+  <data name="CleanupResult_DeleteInfo" xml:space="preserve">
+    <value>Gelöscht:</value>
+  </data>
+  <data name="CleanupResult_Records" xml:space="preserve">
+    <value>Details der Datensätze</value>
+  </data>
+  <data name="CleanupResult_Column_Hash" xml:space="preserve">
+    <value>#</value>
+  </data>
+  <data name="CleanupResult_Column_Id" xml:space="preserve">
+    <value>ID</value>
+  </data>
+  <data name="CleanupResult_Column_Reason" xml:space="preserve">
+    <value>Grund</value>
+  </data>
+  <data name="CleanupResult_Errors" xml:space="preserve">
+    <value>Fehler:</value>
+  </data>
+  <data name="CleanupResult_CleanAnother" xml:space="preserve">
+    <value>Andere Sammlung bereinigen</value>
+  </data>
+  <data name="CleanupResult_HomePage" xml:space="preserve">
+    <value>Startseite</value>
+  </data>
+  <data name="CleanupResult_Record" xml:space="preserve">
+    <value>Datensatz</value>
+  </data>
+  <data name="CleanupResult_RecordsPlural" xml:space="preserve">
+    <value>Datensätze</value>
+  </data>
+  <!-- ==================== Cleanup Reasons ==================== -->
+  <data name="Cleanup_Reason_NoBld" xml:space="preserve">
+    <value>bld fehlt</value>
+  </data>
+  <data name="Cleanup_Reason_BldNotFound" xml:space="preserve">
+    <value>Gebäude '{0}' nicht in SQL gefunden</value>
+  </data>
+  <data name="Cleanup_Reason_NoBuildingId" xml:space="preserve">
+    <value>buildingId fehlt</value>
+  </data>
+  <data name="Cleanup_Reason_NoDvrId" xml:space="preserve">
+    <value>dvrId fehlt</value>
+  </data>
+  <data name="Cleanup_Reason_DvrNotFound" xml:space="preserve">
+    <value>DVR '{0}' nicht in SQL gefunden</value>
+  </data>
+  <data name="Cleanup_Reason_CollectionNotSupported" xml:space="preserve">
+    <value>Sammlung '{0}' nicht unterstützt</value>
+  </data>
+  <data name="Cleanup_Reason_AlreadyInSql" xml:space="preserve">
+    <value>Bereits in SQL</value>
+  </data>
+  <!-- ==================== Cleanup Collections ==================== -->
+  <data name="Cleanup_Col_QrTokens" xml:space="preserve">
+    <value>QR-Token</value>
+  </data>
+  <data name="Cleanup_Col_Presence" xml:space="preserve">
+    <value>Benutzerpräsenz</value>
+  </data>
+  <data name="Cleanup_Col_Dvrs" xml:space="preserve">
+    <value>DVR-Geräte</value>
+  </data>
+  <data name="Cleanup_Col_Cameras" xml:space="preserve">
+    <value>Kameras</value>
+  </data>
+  <!-- ==================== Cleanup Card ==================== -->
+  <data name="Cleanup_Card_Title" xml:space="preserve">
+    <value>Verwaiste Datensätze bereinigen</value>
+  </data>
+  <data name="Cleanup_Card_Desc" xml:space="preserve">
+    <value>Firestore-Datensätze löschen, die auf fehlende SQL-Elemente verweisen</value>
+  </data>
+  <data name="Cleanup_Card_Open" xml:space="preserve">
+    <value>Bereinigungsseite öffnen</value>
+  </data>
+  <!-- ==================== Cleanup Messages ==================== -->
+  <data name="Cleanup_Success_Deleted" xml:space="preserve">
+    <value>✅ {0} Datensätze aus {1} gelöscht</value>
+  </data>
+  <data name="Cleanup_Success_DryRun" xml:space="preserve">
+    <value>🔍 Testlauf: {0} verwaiste Datensätze in {1}</value>
+  </data>
+  <data name="Cleanup_Error_Generic" xml:space="preserve">
+    <value>❌ Fehler: {0}</value>
+  </data>
+  <!-- ==================== Sync QrPresence ==================== -->
+  <data name="Sync_QrPresence_Title" xml:space="preserve">
+    <value>QR + Presence + QrUsage synchronisieren</value>
+  </data>
+  <data name="Sync_QrPresence_Desc" xml:space="preserve">
+    <value>qr-tokens + presence + qr_usage von Firestore nach SQL kopieren</value>
+  </data>
+  <data name="Sync_QrPresence_Success" xml:space="preserve">
+    <value>✅ QR/Presence-Sync: QrTokens=+{0}, Presence=+{1}, QrUsages=+{2} — {3:0.0}s</value>
+  </data>
+  <data name="27_Permissions_Super_Admin_Permissions" xml:space="preserve">
+    <value>27 Berechtigungen — ⚠️ Vollständige Super-Admin-Berechtigungen</value>
+  </data>
+  <data name="Super_27_Permissions_Everything" xml:space="preserve">
+    <value>&lt;strong&gt;Super&lt;/strong&gt; — 27 Berechtigungen (alles)</value>
+  </data>
+  <data name="Super_Template_27" xml:space="preserve">
+    <value>👑 Super-Vorlage (27)</value>
+  </data>
+  <data name="Full_17" xml:space="preserve">
+  <value>Vollständig (17)</value>
+</data>
+<data name="Full_Template_17" xml:space="preserve">
+  <value>⚡ Vollständige Vorlage (17)</value>
+</data>
+<data name="17_Permissions_For_A_Regular_Admin" xml:space="preserve">
+  <value>17 Berechtigungen — für einen regulären Administrator</value>
+</data>
 </root>

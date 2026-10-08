@@ -1,6 +1,7 @@
 ﻿@model Building
 @{
     ViewData["Title"] = Loc.T("Manage_Apartments");
+    var currentMonth = BuildingManagementMvc.Services.WalletService.CurrentMonthKey();
 }
 
 @Html.AntiForgeryToken()
@@ -8,7 +9,9 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>@Loc.T("Apartments_Of_N_N", Model.Name, Model.BuildingNumber)</h3>
     <div class="d-flex gap-2">
-        <a asp-action="Index" asp-controller="AdminHome" class="btn btn-outline-secondary btn-sm">@Loc.T("Back")</a>
+        <a asp-action="Index" asp-controller="AdminHome" class="btn btn-outline-secondary btn-sm">
+            @Loc.T("Back")
+        </a>
     </div>
 </div>
 
@@ -18,47 +21,86 @@
     @foreach (var floor in Model.Floors.OrderBy(f => f.Order))
     {
         var apts = Model.Apartments.Where(a => a.FloorId == floor.Id).OrderBy(a => a.Number).ToList();
-        <div class="col-md-6 mb-3">
+        <div class="col-lg-6 mb-3">
             <div class="bg-white rounded shadow-sm p-3">
-                <h5>@floor.Label <span class="text-muted small">@Loc.T("Floor_No_N", floor.Order)</span></h5>
-                <ul class="list-group list-group-flush">
+                <h5 class="mb-3">@floor.Label <span class="text-muted small">@Loc.T("Floor_No_N", floor.Order)</span></h5>
+
+                <div class="apt-list">
                     @foreach (var apt in apts)
                     {
-                        <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <div>
-                                <span>@Loc.T("Apartment_N_N", apt.Number, string.IsNullOrEmpty(apt.Label) ? "" : "— " + apt.Label)</span>
-                                <div class="text-muted small">@apt.Owner</div>
+                        <div class="apt-card-row">
+                            @* ===== Header: معلومات الشقة ===== *@
+                            <div class="apt-info">
+                                <div class="apt-title">
+                                    <i class="bi bi-house-door-fill text-primary"></i>
+                                    @Loc.T("Apartment_N", apt.Number)
+                                    @if (!string.IsNullOrEmpty(apt.Label))
+                                    {
+                                        <span class="text-muted small">— @apt.Label</span>
+                                    }
+                                    @if (apt.Closed)
+                                    {
+                                        <span class="badge bg-secondary ms-1">🔒 @Loc.T("Closed")</span>
+                                    }
+                                </div>
+                                <div class="apt-owner">@apt.Owner</div>
+                                <div class="apt-phone" dir="ltr">@apt.Phone</div>
                             </div>
-                            <div class="d-flex gap-2 align-items-center flex-wrap">
-                                <span class="text-muted small">@apt.Phone @(apt.Closed ? "🔒" : "")</span>
 
-                                @* ✅ QR سريع *@
-                                <button type="button" class="btn btn-sm btn-outline-warning"
+                            @* ===== Actions: 4 أزرار بنفس الحجم ===== *@
+                            <div class="apt-actions">
+                                @* 1. QR سريع *@
+                                <button type="button" class="apt-action-btn btn-qr"
                                         onclick="openQuickQrModal('@apt.Id', '@apt.Number', '@floor.Label')">
-                                    @Loc.T("Quick_QR_2")
+                                    <span class="icon">⚡</span>
+                                    <span class="label">@Loc.T("Quick_QR_2")</span>
                                 </button>
 
-                                @* ✅ جديد — رسالة ترحيب *@
-                                <form method="post" asp-action="GenerateWelcome" style="display:inline">
+                                @* 2. ترحيب *@
+                                <form method="post" asp-action="GenerateWelcome" class="d-inline">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="aptId" value="@apt.Id" />
                                     <input type="hidden" name="validityHours" value="24" />
-                                    <button type="submit" class="btn btn-sm btn-outline-success"
+                                    <button type="submit" class="apt-action-btn btn-welcome"
                                             title="@Loc.T("Welcome_Message_QR_For_Quick_Login")">
-                                        @Loc.T("Welcome_2")
+                                        <span class="icon">❤️</span>
+                                        <span class="label">@Loc.T("Welcome_2")</span>
                                     </button>
                                 </form>
+
+                                @* 3. محفظة (Impersonation) *@
+                                <form method="post" asp-controller="Impersonation"
+                                      asp-action="EnterResidentWallet" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="aptId" value="@apt.Id" />
+                                    <button type="submit" class="apt-action-btn btn-wallet"
+                                            title="@Loc.T("Wallet_2")">
+                                        <span class="icon">💼</span>
+                                        <span class="label">@Loc.T("Wallet_2")</span>
+                                    </button>
+                                </form>
+
+                                @* 4. فاتورة PDF *@
+                                <a asp-controller="Invoice" asp-action="Download"
+                                   asp-route-aptId="@apt.Id"
+                                   asp-route-month="@currentMonth"
+                                   target="_blank"
+                                   class="apt-action-btn btn-invoice"
+                                   title="@Loc.T("PDF_Invoice")">
+                                    <span class="icon">🧾</span>
+                                    <span class="label">@Loc.T("PDF_Invoice")</span>
+                                </a>
                             </div>
-                        </li>
+                        </div>
                     }
-                </ul>
+                </div>
             </div>
         </div>
     }
 </div>
 
 <!-- ============================================================ -->
-<!-- Modal QR سريع (نفس بتاع Super Admin) -->
+<!-- Modal QR سريع -->
 <!-- ============================================================ -->
 <div class="modal fade" id="quickQrModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -111,11 +153,9 @@
 
                 <div id="quickQrResult" style="display:none">
                     <div class="alert alert-success text-center">@Loc.T("Quick_QR_Generated_Successfully")</div>
-
                     <div class="text-center mb-3">
                         <img id="quickQrImage" src="" alt="QR" class="img-fluid border rounded p-2" style="max-width:280px" />
                     </div>
-
                     <div class="mb-3">
                         <label class="form-label small fw-bold">@Loc.T("Quick_Link")</label>
                         <div class="input-group">
@@ -124,9 +164,7 @@
                             <a id="quickQrOpenLink" href="" target="_blank" class="btn btn-sm btn-outline-success">@Loc.T("Open")</a>
                         </div>
                     </div>
-
                     <div class="text-muted small" id="quickQrInfo"></div>
-
                     <div class="alert alert-warning small mt-3">
                         @Loc.T("Send_This_Link_To_The_Resident")
                     </div>
@@ -147,7 +185,6 @@
 
         function openQuickQrModal(aptId, aptNum, floorLabel) {
             currentAptId = aptId;
-            document.getElementById('quickAptInfo').textContent = `${floorLabel} — @Html.Raw(Loc.Js("Apt")) ${aptNum}`;
             resetQuickQrForm();
             new bootstrap.Modal(document.getElementById('quickQrModal')).show();
         }

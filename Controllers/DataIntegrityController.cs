@@ -12,15 +12,18 @@ public class DataIntegrityController : Controller
 {
     private readonly DataIntegrityService _integrity;
     private readonly ReverseSyncService _reverseSync;
+    private readonly OneTimeFullSyncService _oneTimeSync;
     private readonly ILogger<DataIntegrityController> _log;
 
     public DataIntegrityController(
         DataIntegrityService integrity,
         ReverseSyncService reverseSync,
+        OneTimeFullSyncService oneTimeSync,
         ILogger<DataIntegrityController> log)
     {
         _integrity = integrity;
         _reverseSync = reverseSync;
+        _oneTimeSync = oneTimeSync;
         _log = log;
     }
 
@@ -51,11 +54,11 @@ public class DataIntegrityController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Refresh()
-    {
-        return RedirectToAction(nameof(Index));
-    }
+    public IActionResult Refresh() => RedirectToAction(nameof(Index));
 
+    // ============================================================
+    // Reverse Sync (SQL → Firestore)
+    // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RunReverseSync()
@@ -63,21 +66,16 @@ public class DataIntegrityController : Controller
         try
         {
             var report = await _reverseSync.SyncSqlToFirebaseAsync();
-
-            TempData["Success"] = $"✅ Reverse Sync: " +
-                $"{report.Added} مضاف، {report.Updated} محدّث، {report.Errors.Count} خطأ";
-
+            TempData["Success"] = $"✅ Reverse Sync: {report.Added} مضاف، {report.Updated} محدّث، {report.Errors.Count} خطأ";
             if (report.Errors.Any())
-            {
                 TempData["Error"] = string.Join(" | ", report.Errors.Take(5));
-            }
         }
         catch (Exception ex)
         {
             _log.LogError(ex, "Reverse Sync failed");
             TempData["Error"] = "❌ " + ex.Message;
         }
-
         return RedirectToAction(nameof(Index));
     }
+
 }

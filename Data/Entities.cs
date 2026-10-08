@@ -245,17 +245,7 @@ public class WalletAdjustmentEntity
     public ApartmentEntity? Apartment { get; set; }
 }
 
-public class ReceiptEntity
-{
-    public long ReceiptId { get; set; }
-    public string? BuildingId { get; set; }
-    public string Url { get; set; } = "";
-    public string PublicId { get; set; } = "";
-    public string FileName { get; set; } = "";
-    public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
-    public string? OcrText { get; set; }
-    public decimal? OcrAmountGuess { get; set; }
-}
+// ❌ محذوف: ReceiptEntity (مش مستخدم — الـ Receipt مدمج في DepositEntity)
 
 // ----------------------------- السجل والإشعارات -----------------------------
 public class AuditLogEntity
@@ -365,6 +355,19 @@ public class QrTokenEntity
     public ApartmentEntity? Apartment { get; set; }
 }
 
+// ✅ جديد: QrUsage — سجل استخدام توكنات QR
+public class QrUsageEntity
+{
+    public string Id { get; set; } = "";                 // Firestore doc id
+    public string TokenId { get; set; } = "";            // qr-tokens/{uid}
+    public int UseCount { get; set; }
+    public string FirstUsedAt { get; set; } = "";
+    public string LastUsedAt { get; set; } = "";
+    public string? DeviceFingerprint { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
 public class PresenceEntity
 {
     public string Uid { get; set; } = "";
@@ -379,7 +382,7 @@ public class GlobalSettingsEntity
     public string Id { get; set; } = "global";
     public string AppName { get; set; } = "نظام إدارة العمارات";
     public string DefaultLanguage { get; set; } = "ar";
-    public string WhatsappApiToken { get; set; } = "";   // الأفضل ما يتخزنش هنا
+    public string WhatsappApiToken { get; set; } = "";
     public string WhatsappPhoneId { get; set; } = "";
     public string CloudinaryCloudName { get; set; } = "";
     public string CloudinaryApiKey { get; set; } = "";
@@ -393,8 +396,7 @@ public class GlobalSettingsEntity
     public int MaxPinAttempts { get; set; } = 5;
     public DateTime? UpdatedAt { get; set; }
     public string? UpdatedBy { get; set; }
-    public string StorageMode { get; set; } = "Dual";  // Firestore | Sql | Dual
-
+    public string StorageMode { get; set; } = "Dual";
 }
 
 public class ScheduledBackupSettingsEntity
@@ -437,6 +439,7 @@ public class ApartmentWalletMovementsView
     public decimal Adjustments { get; set; }
     public decimal NetMovements { get; set; }
 }
+
 public class SyncPendingChangeEntity
 {
     public long Id { get; set; }
@@ -450,16 +453,17 @@ public class SyncPendingChangeEntity
     public int RetryCount { get; set; }
     public string? ErrorMessage { get; set; }
 }
+
 public class DvrEntity
 {
-    public string Id { get; set; } = "";             // GUID
+    public string Id { get; set; } = "";
     public string BuildingId { get; set; } = "";
     public string Name { get; set; } = "";
     public string IpAddress { get; set; } = "";
     public int Port { get; set; } = 554;
-    public string Brand { get; set; } = "";          // Hikvision / Dahua / ONVIF
+    public string Brand { get; set; } = "";
     public string Username { get; set; } = "";
-    public string PasswordEncrypted { get; set; } = "";  // AES
+    public string PasswordEncrypted { get; set; } = "";
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
@@ -471,7 +475,7 @@ public class CameraEntity
 {
     public string Id { get; set; } = "";
     public string DvrId { get; set; } = "";
-    public string BuildingId { get; set; } = "";     // denormalized للفلترة السريعة
+    public string BuildingId { get; set; } = "";
     public string Name { get; set; } = "";
     public int Channel { get; set; }
     public string RtspPath { get; set; } = "";

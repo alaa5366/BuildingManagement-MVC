@@ -1,0 +1,145 @@
+﻿@model BuildingManagementMvc.Services.CleanupReport
+@{
+    ViewData["Title"] = Loc.T("CleanupResult_Title");
+}
+
+<div class="container" style="max-width: 1000px;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                🧹 @Loc.T("CleanupResult_Title") —
+                <code>@Model.CollectionName</code>
+                @if (Model.DryRun)
+                {
+                    <span class="badge bg-info">🔍 @Loc.T("CleanupResult_DryRunBadge")</span>
+                }
+                else
+                {
+                    <span class="badge bg-danger">🗑️ @Loc.T("CleanupResult_DeleteBadge")</span>
+                }
+            </h2>
+            <p class="text-muted mb-0">
+                @Model.StartedAt.ToString("yyyy-MM-dd HH:mm:ss") UTC
+            </p>
+        </div>
+        <a asp-action="Cleanup" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-right"></i> @Loc.T("Cleanup_Back")
+        </a>
+    </div>
+
+    @* ===== Stats ===== *@
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card text-center p-3 border-warning">
+                <div class="text-muted small">@Loc.T("CleanupResult_OrphanedCount")</div>
+                <div class="fs-2 fw-bold text-warning">@Model.ItemsFound</div>
+            </div>
+        </div>
+        @if (!Model.DryRun)
+        {
+            <div class="col-md-3">
+                <div class="card text-center p-3 border-danger">
+                    <div class="text-muted small">@Loc.T("CleanupResult_DeletedCount")</div>
+                    <div class="fs-2 fw-bold text-danger">@Model.ItemsDeleted</div>
+                </div>
+            </div>
+        }
+        <div class="col-md-3">
+            <div class="card text-center p-3">
+                <div class="text-muted small">@Loc.T("CleanupResult_Duration")</div>
+                <div class="fs-2 fw-bold">@Model.Duration.TotalSeconds.ToString("0.0")s</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center p-3">
+                <div class="text-muted small">@Loc.T("CleanupResult_Status")</div>
+                <div class="fs-2 fw-bold @(Model.Errors.Any() ? "text-danger" : "text-success")">
+                    @(Model.Errors.Any() ? Loc.T("CleanupResult_StatusError") : Loc.T("CleanupResult_StatusOK"))
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ===== Result ===== *@
+    @if (Model.ItemsFound == 0)
+    {
+        <div class="alert alert-success">
+            <i class="bi bi-check-circle"></i>
+            @Loc.T("CleanupResult_NoOrphans") <code>@Model.CollectionName</code>
+        </div>
+    }
+    else
+    {
+        @if (Model.DryRun)
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                <strong>@Loc.T("CleanupResult_DryRunInfo")</strong>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-danger">
+                <i class="bi bi-check-circle"></i>
+                <strong>@Loc.T("CleanupResult_DeleteInfo")</strong>
+                @Model.ItemsDeleted @Loc.T("CleanupResult_RecordsPlural")
+            </div>
+        }
+
+        <div class="card">
+            <div class="card-header bg-light">
+                <strong>@Loc.T("CleanupResult_Records") (@Model.Items.Count)</strong>
+            </div>
+            <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                <table class="table table-sm mb-0 table-hover">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th style="width: 60px;">@Loc.T("CleanupResult_Column_Hash")</th>
+                            <th>@Loc.T("CleanupResult_Column_Id")</th>
+                            <th>@Loc.T("CleanupResult_Column_Reason")</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            var i = 0;
+                        }
+                        @foreach (var item in Model.Items)
+                        {
+                            i++;
+                            <tr>
+                                <td class="text-muted small">@i</td>
+                                <td><code class="small">@item.Id</code></td>
+                                <td class="small text-muted">@item.Reason</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    @* ===== Errors ===== *@
+    @if (Model.Errors.Any())
+    {
+        <div class="alert alert-danger mt-3">
+            <strong><i class="bi bi-exclamation-triangle"></i> @Loc.T("CleanupResult_Errors")</strong>
+            <ul class="mb-0 mt-2">
+                @foreach (var err in Model.Errors)
+                {
+                    <li>@err</li>
+                }
+            </ul>
+        </div>
+    }
+
+    @* ===== Actions ===== *@
+    <div class="d-flex gap-2 mt-4">
+        <a asp-action="Cleanup" class="btn btn-secondary">
+            <i class="bi bi-arrow-right"></i> @Loc.T("CleanupResult_CleanAnother")
+        </a>
+        <a asp-action="Index" class="btn btn-outline-primary">
+            @Loc.T("CleanupResult_HomePage")
+        </a>
+    </div>
+</div>

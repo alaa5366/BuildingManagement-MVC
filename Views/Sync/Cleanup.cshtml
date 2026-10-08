@@ -1,0 +1,87 @@
+﻿@{
+    ViewData["Title"] = Loc.T("Cleanup_Title");
+    var collections = ViewBag.Collections as List<(string Name, string LabelAr)> ?? new();
+}
+
+<div class="container" style="max-width: 1000px;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">🧹 @Loc.T("Cleanup_Title")</h2>
+            <p class="text-muted mb-0">@Loc.T("Cleanup_Subtitle")</p>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-right"></i> @Loc.T("Cleanup_Back")
+        </a>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="alert alert-warning">
+        <strong>⚠️ @Loc.T("Cleanup_Warning_Title")</strong>
+        <ul class="mb-0 mt-2">
+            <li>@Loc.T("Cleanup_Warning_Line1")</li>
+            <li>@Loc.T("Cleanup_Warning_Line2")</li>
+            <li>@Loc.T("Cleanup_Warning_Line3")</li>
+            <li>@Loc.T("Cleanup_Warning_Line4")</li>
+        </ul>
+    </div>
+
+    <div class="row g-3">
+        @foreach (var col in collections)
+        {
+            <div class="col-md-6">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header bg-dark text-white">
+                        <strong><code class="text-warning">@col.Name</code></strong>
+                        <span class="text-muted small">— @col.LabelAr</span>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" asp-action="CleanupOrphaned">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="collection" value="@col.Name" />
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">@Loc.T("Cleanup_Mode_Label")</label>
+
+                                <div class="form-check">
+                                    <input type="radio" name="dryRun" value="true"
+                                           class="form-check-input" id="dry-@col.Name" checked />
+                                    <label class="form-check-label" for="dry-@col.Name">
+                                        🔍 <strong>@Loc.T("Cleanup_Mode_DryRun")</strong>
+                                        <div class="small text-muted">@Loc.T("Cleanup_Mode_DryRunDesc")</div>
+                                    </label>
+                                </div>
+
+                                <div class="form-check mt-2">
+                                    <input type="radio" name="dryRun" value="false"
+                                           class="form-check-input" id="del-@col.Name" />
+                                    <label class="form-check-label text-danger" for="del-@col.Name">
+                                        🗑️ <strong>@Loc.T("Cleanup_Mode_Delete")</strong>
+                                        <div class="small text-muted">@Loc.T("Cleanup_Mode_DeleteDesc")</div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-warning w-100"
+                                    onclick="return confirm('@Loc.T("Cleanup_Confirm")');">
+                                <i class="bi bi-play-circle"></i> @Loc.T("Cleanup_RunBtn")
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (!collections.Any())
+    {
+        <div class="alert alert-info">@Loc.T("Cleanup_NoCollections")</div>
+    }
+</div>

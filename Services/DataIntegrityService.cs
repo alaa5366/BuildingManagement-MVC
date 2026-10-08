@@ -74,7 +74,7 @@ public class DataIntegrityService
             ("Cameras",         async () => await db.Cameras.CountAsync()),
             ("Presence",        async () => await db.Presence.CountAsync()),
             ("QrTokens",        async () => await db.QrTokens.CountAsync()),
-            ("Receipts",        async () => await db.Receipts.CountAsync()),
+            ("QrUsages",        async () => await db.QrUsages.CountAsync()),  
             ("WalletAdjustments", async () => await db.WalletAdjustments.CountAsync()),
             ("SyncPendingChanges", async () => await db.SyncPendingChanges.CountAsync())
         };

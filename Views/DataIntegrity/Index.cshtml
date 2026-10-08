@@ -10,7 +10,7 @@
 <div class="container-fluid">
 
     @* ===== Header ===== *@
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
             <h3 class="mb-1">
                 <i class="bi bi-shield-check"></i>
@@ -23,11 +23,12 @@
                 </small>
             </p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
             <a asp-action="Refresh" class="btn btn-outline-primary">
                 <i class="bi bi-arrow-clockwise"></i>
                 @Loc.T("Refresh")
             </a>
+
             <form asp-action="RunReverseSync" method="post" class="d-inline"
                   onsubmit="return confirm('@Html.Raw(Loc.Js("Reverse_Sync_Confirm"))');">
                 @Html.AntiForgeryToken()
@@ -82,7 +83,7 @@
                                     <td class="text-end">
                                         @if (col.Count < 0)
                                         {
-                                            <span class="badge bg-danger">@Loc.T("Error_Label")</span>
+                                            <span class="badge bg-danger">Error</span>
                                         }
                                         else
                                         {
@@ -117,18 +118,21 @@
                                 <tr>
                                     <td><code>@t.Name</code></td>
                                     <td class="text-end">
-                                        @if (t.Count < 0)
-                                        {
-                                            <span class="badge bg-danger" title="@t.Error">@Loc.T("Error_Label")</span>
+                                        @{
+                                            var badgeClass = "bg-secondary";
+                                            var badgeText = "0";
+                                            if (t.Count < 0)
+                                            {
+                                                badgeClass = "bg-danger";
+                                                badgeText = "Error";
+                                            }
+                                            else if (t.Count > 0)
+                                            {
+                                                badgeClass = "bg-success";
+                                                badgeText = t.Count.ToString();
+                                            }
                                         }
-                                        else if (t.Count == 0)
-                                        {
-                                            <span class="badge bg-secondary">0</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-success">@t.Count</span>
-                                        }
+                                        <span class="badge @badgeClass" title="@t.Error">@badgeText</span>
                                     </td>
                                 </tr>
                             }
@@ -140,7 +144,7 @@
     </div>
 
     @* ============================================================ *@
-    @* 2. Pending Changes (SyncPendingChanges)                     *@
+    @* 2. Pending Changes                                           *@
     @* ============================================================ *@
     @if (Model.PendingChanges.Any())
     {
@@ -166,23 +170,16 @@
                     <tbody>
                         @foreach (var p in Model.PendingChanges)
                         {
+                            var opBadge = p.Operation switch
+                            {
+                                "Insert" => "bg-success",
+                                "Update" => "bg-info",
+                                _ => "bg-danger"
+                            };
                             <tr>
                                 <td><span class="badge bg-secondary">@p.EntityType</span></td>
                                 <td><code class="small">@p.EntityId</code></td>
-                                <td>
-                                    @if (p.Operation == "Insert")
-                                    {
-                                        <span class="badge bg-success">@p.Operation</span>
-                                    }
-                                    else if (p.Operation == "Update")
-                                    {
-                                        <span class="badge bg-info">@p.Operation</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-danger">@p.Operation</span>
-                                    }
-                                </td>
+                                <td><span class="badge @opBadge">@p.Operation</span></td>
                                 <td class="small text-muted">@p.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
                                 <td class="text-center">
                                     @if (p.RetryCount > 0)
@@ -360,11 +357,11 @@
                             <td class="text-center">
                                 @if (d.HasPassword)
                                 {
-                                    <i class="bi bi-shield-check text-success" title="@Loc.T("Password_Protected")"></i>
+                                    <i class="bi bi-shield-check text-success"></i>
                                 }
                                 else
                                 {
-                                    <i class="bi bi-shield-x text-danger" title="@Loc.T("Password_Missing")"></i>
+                                    <i class="bi bi-shield-x text-danger"></i>
                                 }
                             </td>
                             <td class="text-center">@d.Status</td>

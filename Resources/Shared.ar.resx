@@ -4560,4 +4560,199 @@
   <data name="Copy_All_AuditLogs_From_Firestore_To_Sql" xml:space="preserve">
     <value>نسخ كل سجلات المراجعة من Firestore إلى SQL Server</value>
   </data>
+  <!-- ==================== Cleanup ==================== -->
+  <data name="Cleanup_Title" xml:space="preserve">
+    <value>تنظيف السجلات اليتيمة</value>
+  </data>
+  <data name="Cleanup_Subtitle" xml:space="preserve">
+    <value>حذف السجلات من Firestore اللي بتشاور على حاجات مش موجودة في SQL</value>
+  </data>
+  <data name="Cleanup_Warning_Title" xml:space="preserve">
+    <value>تحذير مهم</value>
+  </data>
+  <data name="Cleanup_Warning_Line1" xml:space="preserve">
+    <value>التنظيف بيحذف السجلات نهائيًا من Firestore</value>
+  </data>
+  <data name="Cleanup_Warning_Line2" xml:space="preserve">
+    <value>الوضع الافتراضي: عرض فقط (Dry-Run)</value>
+  </data>
+  <data name="Cleanup_Warning_Line3" xml:space="preserve">
+    <value>لازم تختار "حذف فعلي" بنفسك</value>
+  </data>
+  <data name="Cleanup_Warning_Line4" xml:space="preserve">
+    <value>مفيش رجعة بعد الحذف</value>
+  </data>
+  <data name="Cleanup_Mode_Label" xml:space="preserve">
+    <value>الوضع:</value>
+  </data>
+  <data name="Cleanup_Mode_DryRun" xml:space="preserve">
+    <value>عرض فقط (Dry-Run)</value>
+  </data>
+  <data name="Cleanup_Mode_DryRunDesc" xml:space="preserve">
+    <value>يعرض السجلات اليتيمة بدون حذف</value>
+  </data>
+  <data name="Cleanup_Mode_Delete" xml:space="preserve">
+    <value>حذف فعلي</value>
+  </data>
+  <data name="Cleanup_Mode_DeleteDesc" xml:space="preserve">
+    <value>يحذف السجلات نهائيًا من Firestore</value>
+  </data>
+  <data name="Cleanup_RunBtn" xml:space="preserve">
+    <value>تشغيل التنظيف</value>
+  </data>
+  <data name="Cleanup_Back" xml:space="preserve">
+    <value>رجوع</value>
+  </data>
+  <data name="Cleanup_NoCollections" xml:space="preserve">
+    <value>مفيش Collections مدعومة للتنظيف</value>
+  </data>
+  <!-- ==================== Cleanup Result ==================== -->
+  <data name="CleanupResult_Title" xml:space="preserve">
+    <value>نتيجة التنظيف</value>
+  </data>
+  <data name="CleanupResult_DryRunBadge" xml:space="preserve">
+    <value>Dry-Run</value>
+  </data>
+  <data name="CleanupResult_DeleteBadge" xml:space="preserve">
+    <value>حذف فعلي</value>
+  </data>
+  <data name="CleanupResult_OrphanedCount" xml:space="preserve">
+    <value>سجلات يتيمة</value>
+  </data>
+  <data name="CleanupResult_DeletedCount" xml:space="preserve">
+    <value>اتحذف</value>
+  </data>
+  <data name="CleanupResult_Duration" xml:space="preserve">
+    <value>الوقت</value>
+  </data>
+  <data name="CleanupResult_Status" xml:space="preserve">
+    <value>الحالة</value>
+  </data>
+  <data name="CleanupResult_StatusOK" xml:space="preserve">
+    <value>تم</value>
+  </data>
+  <data name="CleanupResult_StatusError" xml:space="preserve">
+    <value>خطأ</value>
+  </data>
+  <data name="CleanupResult_NoOrphans" xml:space="preserve">
+    <value>✅ مفيش سجلات يتيمة في</value>
+  </data>
+  <data name="CleanupResult_DryRunInfo" xml:space="preserve">
+    <value>ده Dry-Run — مفيش حاجة اتحذفت. لو عايز تحذف السجلات دي، ارجع واختار "حذف فعلي".</value>
+  </data>
+  <data name="CleanupResult_DeleteInfo" xml:space="preserve">
+    <value>تم الحذف:</value>
+  </data>
+  <data name="CleanupResult_Records" xml:space="preserve">
+    <value>تفاصيل السجلات</value>
+  </data>
+  <data name="CleanupResult_Column_Hash" xml:space="preserve">
+    <value>#</value>
+  </data>
+  <data name="CleanupResult_Column_Id" xml:space="preserve">
+    <value>ID</value>
+  </data>
+  <data name="CleanupResult_Column_Reason" xml:space="preserve">
+    <value>السبب</value>
+  </data>
+  <data name="CleanupResult_Errors" xml:space="preserve">
+    <value>أخطاء:</value>
+  </data>
+  <data name="CleanupResult_CleanAnother" xml:space="preserve">
+    <value>تنظيف Collection تانية</value>
+  </data>
+  <data name="CleanupResult_HomePage" xml:space="preserve">
+    <value>الصفحة الرئيسية</value>
+  </data>
+  <data name="CleanupResult_Record" xml:space="preserve">
+    <value>سجل</value>
+  </data>
+  <data name="CleanupResult_RecordsPlural" xml:space="preserve">
+    <value>سجلات</value>
+  </data>
+  <!-- ==================== Cleanup Reasons ==================== -->
+  <data name="Cleanup_Reason_NoBld" xml:space="preserve">
+    <value>مفيش bld</value>
+  </data>
+  <data name="Cleanup_Reason_BldNotFound" xml:space="preserve">
+    <value>العمارة '{0}' مش موجودة في SQL</value>
+  </data>
+  <data name="Cleanup_Reason_NoBuildingId" xml:space="preserve">
+    <value>مفيش buildingId</value>
+  </data>
+  <data name="Cleanup_Reason_NoDvrId" xml:space="preserve">
+    <value>مفيش dvrId</value>
+  </data>
+  <data name="Cleanup_Reason_DvrNotFound" xml:space="preserve">
+    <value>DVR '{0}' مش موجود في SQL</value>
+  </data>
+  <data name="Cleanup_Reason_CollectionNotSupported" xml:space="preserve">
+    <value>Collection '{0}' غير مدعومة للتنظيف</value>
+  </data>
+  <data name="Cleanup_Reason_AlreadyInSql" xml:space="preserve">
+    <value>موجود في SQL مسبقًا</value>
+  </data>
+  <!-- ==================== Cleanup Collections ==================== -->
+  <data name="Cleanup_Col_QrTokens" xml:space="preserve">
+    <value>رموز QR (توكنات الدخول)</value>
+  </data>
+  <data name="Cleanup_Col_Presence" xml:space="preserve">
+    <value>حضور المستخدمين</value>
+  </data>
+  <data name="Cleanup_Col_Dvrs" xml:space="preserve">
+    <value>أجهزة DVR</value>
+  </data>
+  <data name="Cleanup_Col_Cameras" xml:space="preserve">
+    <value>الكاميرات</value>
+  </data>
+  <!-- ==================== Cleanup Card (Index) ==================== -->
+  <data name="Cleanup_Card_Title" xml:space="preserve">
+    <value>تنظيف السجلات اليتيمة</value>
+  </data>
+  <data name="Cleanup_Card_Desc" xml:space="preserve">
+    <value>حذف السجلات من Firestore اللي بتشاور على حاجات مش موجودة في SQL</value>
+  </data>
+  <data name="Cleanup_Card_Open" xml:space="preserve">
+    <value>فتح صفحة التنظيف</value>
+  </data>
+  <!-- ==================== Cleanup Messages ==================== -->
+  <data name="Cleanup_Success_Deleted" xml:space="preserve">
+    <value>✅ تم حذف {0} سجل من {1}</value>
+  </data>
+  <data name="Cleanup_Success_DryRun" xml:space="preserve">
+    <value>🔍 Dry-Run: {0} سجل يتيم في {1}</value>
+  </data>
+  <data name="Cleanup_Error_Generic" xml:space="preserve">
+    <value>❌ خطأ: {0}</value>
+  </data>
+  <!-- ==================== Sync QrPresence ==================== -->
+  <data name="Sync_QrPresence_Title" xml:space="preserve">
+    <value>مزامنة QR + Presence + QrUsage</value>
+  </data>
+  <data name="Sync_QrPresence_Desc" xml:space="preserve">
+    <value>نسخ qr-tokens + presence + qr_usage من Firestore إلى SQL</value>
+  </data>
+  <data name="Sync_QrPresence_Success" xml:space="preserve">
+    <value>✅ QR/Presence Sync: QrTokens=+{0}، Presence=+{1}، QrUsages=+{2} — {3:0.0}s</value>
+  </data>
+  <!-- ==================== Updated 22→27 ==================== -->
+  <data name="27_Permissions_Super_Admin_Permissions" xml:space="preserve">
+    <value>27 صلاحية — ⚠️ صلاحيات Super Admin الكاملة</value>
+  </data>
+  <data name="Super_27_Permissions_Everything" xml:space="preserve">
+    <value>&lt;strong&gt;Super&lt;/strong&gt; — 27 صلاحية (كل حاجة)</value>
+  </data>
+  <data name="Super_Template_27" xml:space="preserve">
+    <value>👑 قالب Super (27)</value>
+  </data>
+  <!-- ==================== Updated 12→17 ==================== -->
+ <data name="Full_17" xml:space="preserve">
+  <value>كامل (17)</value>
+</data>
+<data name="Full_Template_17" xml:space="preserve">
+  <value>⚡ قالب كامل (17)</value>
+</data>
+<data name="17_Permissions_For_A_Regular_Admin" xml:space="preserve">
+  <value>17 صلاحية — للأدمن العادي</value>
+</data>
 </root>

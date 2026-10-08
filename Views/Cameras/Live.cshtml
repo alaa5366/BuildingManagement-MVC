@@ -3,13 +3,25 @@
     ViewData["Title"] = Loc.T("Live_Cameras");
     var building = ViewBag.Building as BuildingManagementMvc.Models.Building;
     var buildingId = ViewBag.BuildingId as string;
+
+    // ✅ زرار الرجوع حسب الدور
+    var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+    var backUrl = role switch
+    {
+        "superadmin" or "admin" => Url.Action("Index", "Dvrs", new { buildingId }),
+        "resident" => Url.Action("Index", "ResidentHome"),
+        _ => Url.Action("Index", "Home")
+    };
+    var backLabel = role == "resident"
+        ? Loc.T("Back_To_Home")
+        : Loc.T("Common_Back");
 }
 
 <link href="https://cdn.jsdelivr.net/npm/video.js@8/dist/video-js.min.css" rel="stylesheet" />
 
 <div class="container-fluid">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
             <h3 class="mb-1">
                 <i class="bi bi-camera-video-fill text-danger"></i>
@@ -20,9 +32,8 @@
                 <span class="badge bg-secondary">@Model.Count @Loc.T("Cameras_Count")</span>
             </p>
         </div>
-        <a asp-controller="Dvrs" asp-action="Index" asp-route-buildingId="@buildingId"
-           class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-right"></i> @Loc.T("Common_Back")
+        <a href="@backUrl" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-right"></i> @backLabel
         </a>
     </div>
 
@@ -73,7 +84,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const cameras = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-                                            Model.Select(c => new { id = c.Id, name = c.Name })));
+                                                                                                    Model.Select(c => new { id = c.Id, name = c.Name })));
 
             cameras.forEach(async function (cam) {
                 try {

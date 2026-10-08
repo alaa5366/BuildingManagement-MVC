@@ -1,7 +1,6 @@
-﻿using BuildingManagementMvc.Models;   // ← ضيف ده
+﻿using BuildingManagementMvc.Models;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
-
 
 namespace BuildingManagementMvc.Services;
 
@@ -33,7 +32,8 @@ public class CloudinaryService
     /// <summary>
     /// يرفع صورة إيصال ويـرجع بيانات الصورة (URL، المسار، الحجم، النوع).
     /// </summary>
-    public async Task<ReceiptData?> UploadReceiptAsync(Stream imageStream, string fileName, string buildingId, string aptId)
+    public async Task<ReceiptData?> UploadReceiptAsync(
+        Stream imageStream, string fileName, string buildingId, string aptId)
     {
         if (_cloudinary == null)
         {
@@ -60,13 +60,16 @@ public class CloudinaryService
                 return null;
             }
 
+            // ✅ Normalize file type: "image/jpeg" → "jpeg", "jpg" → "jpg"
+            var normalizedType = NormalizeFileType(result.Format);
+
             return new ReceiptData
             {
                 Url = result.SecureUrl.ToString(),
                 Path = result.PublicId,
-                FileName = fileName,
+                FileName = fileName,        // ← الاسم الأصلي من IFormFile
                 FileSize = result.Bytes,
-                FileType = result.Format,
+                FileType = normalizedType,
                 Success = true
             };
         }
@@ -75,5 +78,25 @@ public class CloudinaryService
             _logger.LogError(ex, "[Cloudinary] Upload exception");
             return null;
         }
+    }
+
+    // ============================================================
+    // Helper: توحيد صيغة نوع الملف
+    // ============================================================
+    private static string NormalizeFileType(string? format)
+    {
+        if (string.IsNullOrWhiteSpace(format)) return "";
+
+        var f = format.Trim().ToLowerInvariant();
+
+        // شيل "image/"
+        if (f.StartsWith("image/")) f = f[6..];
+
+        // توحيد jpeg
+        return f switch
+        {
+            "jpg" or "jpeg" => "jpg",
+            _ => f
+        };
     }
 }

@@ -141,6 +141,9 @@ builder.Services.AddScoped<AdminManagementService>();
 builder.Services.AddSingleton<UserSqlStore>();
 
 builder.Services.AddScoped<DataIntegrityService>();
+builder.Services.AddScoped<OneTimeFullSyncService>();
+builder.Services.AddScoped<OrphanedCleanupService>();
+
 
 builder.Services.AddSingleton<IEncryptionService, AesEncryptionService>();
 builder.Services.AddSingleton<DvrService>();
