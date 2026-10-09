@@ -4552,4 +4552,142 @@ This operation can take a few seconds.</value>
 <data name="17_Permissions_For_A_Regular_Admin" xml:space="preserve">
   <value>17 permissions — for a regular admin</value>
 </data>
+  <data name="Resident_Dashboard_Title" xml:space="preserve">
+    <value>Resident Dashboard</value>
+  </data>
+
+  <data name="Welcome_Back_N" xml:space="preserve">
+    <value>Welcome back, {0}</value>
+  </data>
+
+  <data name="Status_Regular" xml:space="preserve">
+    <value>Regular</value>
+  </data>
+
+  <data name="Status_Debtor" xml:space="preserve">
+    <value>Has Dues</value>
+  </data>
+
+  <data name="Status_Pending" xml:space="preserve">
+    <value>Has Pending Payments</value>
+  </data>
+
+  <data name="Quick_Actions_Title" xml:space="preserve">
+    <value>Quick Actions</value>
+  </data>
+
+  <data name="Quick_Action_Wallet" xml:space="preserve">
+    <value>My Wallet</value>
+  </data>
+
+  <data name="Quick_Action_Invoice" xml:space="preserve">
+    <value>Invoices</value>
+  </data>
+
+  <data name="Quick_Action_Polls" xml:space="preserve">
+    <value>Polls</value>
+  </data>
+
+  <data name="Quick_Action_Maintenance" xml:space="preserve">
+    <value>Maintenance</value>
+  </data>
+
+  <data name="Quick_Action_Notifications" xml:space="preserve">
+    <value>Notifications</value>
+  </data>
+
+  <data name="Quick_Action_Cameras" xml:space="preserve">
+    <value>Cameras</value>
+  </data>
+
+  <data name="Financial_View_Statement" xml:space="preserve">
+    <value>Account Statement</value>
+  </data>
+
+  <data name="Financial_Download_Invoice" xml:space="preserve">
+    <value>Download Invoice</value>
+  </data>
+
+  <data name="Recent_Transactions_Title" xml:space="preserve">
+    <value>Recent Transactions</value>
+  </data>
+
+  <data name="Recent_Notifications_Title" xml:space="preserve">
+    <value>Recent Notifications</value>
+  </data>
+
+  <data name="Recent_Maintenance_Title" xml:space="preserve">
+    <value>Recent Maintenance</value>
+  </data>
+
+  <data name="Pending_Payments_Title" xml:space="preserve">
+    <value>Pending Payments</value>
+  </data>
+
+  <data name="Active_Polls_Title" xml:space="preserve">
+    <value>Active Polls</value>
+  </data>
+
+  <data name="Vote_Now" xml:space="preserve">
+    <value>Vote Now</value>
+  </data>
+
+  <data name="View_All" xml:space="preserve">
+    <value>View All</value>
+  </data>
+
+  <data name="No_Transactions_Yet" xml:space="preserve">
+    <value>No transactions yet</value>
+  </data>
+  <data name="Greeting_Morning" xml:space="preserve"><value>Good morning</value></data>
+<data name="Greeting_Afternoon" xml:space="preserve"><value>Good afternoon</value></data>
+<data name="Greeting_Evening" xml:space="preserve"><value>Good evening</value></data>
+<data name="Action_Center_Title" xml:space="preserve"><value>Needs your attention today</value></data>
+<data name="N_Pending_Payments_Action" xml:space="preserve"><value>{0} pending payments</value></data>
+<data name="Waiting_For_Admin_Confirmation" xml:space="preserve"><value>Waiting for admin confirmation</value></data>
+<data name="N_Unread_Notifications" xml:space="preserve"><value>{0} unread notifications</value></data>
+<data name="New_Updates_Waiting_For_You" xml:space="preserve"><value>New updates waiting for you</value></data>
+<data name="N_Active_Polls_Action" xml:space="preserve"><value>{0} active polls</value></data>
+<data name="Your_Vote_Matters" xml:space="preserve"><value>Your vote matters</value></data>
+<data name="Stats_Paid" xml:space="preserve"><value>Paid</value></data>
+<data name="Stats_Expenses" xml:space="preserve"><value>Expenses</value></data>
+<data name="Stats_Revenue" xml:space="preserve"><value>Revenue</value></data>
+<data name="Stats_Months" xml:space="preserve"><value>Months</value></data>
+<data name="Last_Payment" xml:space="preserve"><value>Last payment</value></data>
+<data name="Progress_Of_Expected" xml:space="preserve"><value>Progress of expected</value></data>
+<data name="Insight_All_Good" xml:space="preserve"><value>All clear! Your account is up to date ✅</value></data>
+<data name="Insight_Pending_Payments" xml:space="preserve"><value>You have {0} pending payments — waiting for admin</value></data>
+<data name="Insight_Debtor" xml:space="preserve"><value>You owe {0} EGP — try to settle soon</value></data>
+<data name="Timeline_Today" xml:space="preserve"><value>Today</value></data>
+<data name="Timeline_Yesterday" xml:space="preserve"><value>Yesterday</value></data>
+<data name="Empty_All_Clear_Title" xml:space="preserve"><value>All clear!</value></data>
+<data name="Empty_All_Clear_Desc" xml:space="preserve"><value>No new transactions, your wallet is up to date</value>
+</data>
+<data name="Stats_Paid_This_Month" xml:space="preserve">
+    <value>Total paid this month</value>
+</data>
+<data name="Hero_Fully_Paid_This_Month" xml:space="preserve">
+    <value>✅ Fully paid this month</value>
+</data>
+<data name="Action_Just_Now" xml:space="preserve">
+    <value>Just now</value>
+</data>
+<data name="Action_Yesterday" xml:space="preserve">
+    <value>Yesterday</value>
+</data>
+<data name="Action_Days_Ago" xml:space="preserve">
+    <value>{0} days ago</value>
+</data>
+<data name="Timeline_This_Month" xml:space="preserve">
+    <value>This month</value>
+</data>
+<data name="Timeline_Last_Month" xml:space="preserve">
+    <value>Last month</value>
+</data>
+<data name="Insight_Fully_Paid" xml:space="preserve">
+    <value>🎉 You fully paid this month — well done!</value>
+</data>
+<data name="Hero_Remaining" xml:space="preserve">
+    <value>Remaining:</value>
+</data>
 </root>

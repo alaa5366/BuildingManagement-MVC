@@ -1,17 +1,647 @@
 @model Apartment
-@{ ViewData["Title"] = Loc.T("Resident_Dashboard"); }
-@{ var building = ViewBag.Building as Building; }
+@{
+    ViewData["Title"] = Loc.T("Resident_Dashboard_Title");
+    var building = ViewBag.Building as Building;
+    var hasData = ViewBag.HasData as bool? ?? false;
 
-@if (Model == null || building == null)
-{
-    <div class="alert alert-warning">@Loc.T("Your_Apartment_Details_Could_Not_Be")</div>
+    var balance = (double)(ViewBag.Balance ?? 0.0);
+    var currentMonth = ViewBag.CurrentMonth as string ?? "";
+
+    // Stats
+    var totalPaid = (double)(ViewBag.TotalPaid ?? 0.0);
+    var totalExpenses = (double)(ViewBag.TotalExpenses ?? 0.0);
+    var totalRevenue = (double)(ViewBag.TotalRevenue ?? 0.0);
+    var monthsCount = (int)(ViewBag.MonthsCount ?? 0);
+
+    // Lists
+    var pendingDeposits = ViewBag.PendingDeposits as List<Deposit> ?? new();
+    var timelineTx = ViewBag.TimelineTransactions as List<WalletTransactionVm> ?? new();
+    var activePolls = ViewBag.ActivePolls as List<Poll> ?? new();
+    var notifications = ViewBag.Notifications as List<Notification> ?? new();
+    var maintenance = ViewBag.Maintenance as List<MaintenanceRecord> ?? new();
+    var unreadCount = (int)(ViewBag.UnreadCount ?? 0);
+
+    // Hero
+    var expectedMonthly = (double)(ViewBag.ExpectedMonthly ?? 0.0);
+    var paidThisMonth = (double)(ViewBag.PaidThisMonth ?? 0.0);
+    var totalPaidAllTime = (double)(ViewBag.TotalPaidAllTime ?? 0.0);
+    var progressPercent = (int)(ViewBag.ProgressPercent ?? 0);
+    var lastDepositAmount = (double)(ViewBag.LastDepositAmount ?? 0.0);
+    var lastDepositDate = ViewBag.LastDepositDate as string ?? "";
+
+    var hasPending = pendingDeposits.Any();
+    var statusClass = balance < 0 ? "danger" : (hasPending ? "warning" : "success");
+    var statusLabel = balance < 0
+        ? Loc.T("Status_Debtor")
+        : (hasPending ? Loc.T("Status_Pending") : Loc.T("Status_Regular"));
+
+    // Greeting حسب الوقت
+    var hour = DateTime.Now.Hour;
+    var greetingKey = hour < 12 ? "Greeting_Morning" : (hour < 18 ? "Greeting_Afternoon" : "Greeting_Evening");
+
+    // التاريخ حسب اللغة الحالية
+    var culture = System.Globalization.CultureInfo.GetCultureInfo("ar-EG");
+    var dayName = DateTime.Now.ToString("dddd", culture);
+    var dateStr = DateTime.Now.ToString("d MMMM yyyy", culture);
+
+    // عدد الحاجات المهمة
+    var actionCount = (hasPending ? 1 : 0) + activePolls.Count + (unreadCount > 0 ? 1 : 0);
+
+    var ownerName = string.IsNullOrWhiteSpace(Model?.Owner) ? Loc.T("Resident_2") : Model.Owner;
+
+    // آخر دفعة نص
+    var lastDepositText = lastDepositAmount > 0
+        ? $"{lastDepositDate.Substring(0, Math.Min(10, lastDepositDate.Length))} — {lastDepositAmount:N0} {Loc.T("EGP")}"
+        : "—";
+
+    // Progress
+    var showProgress = expectedMonthly > 0 && !Model!.Closed && paidThisMonth < expectedMonthly;
+    var showPaidFull = expectedMonthly > 0 && !Model!.Closed && paidThisMonth >= expectedMonthly;
+    var remaining = Math.Max(0, expectedMonthly - paidThisMonth);
+
+    // Insights — دايماً يظهر
+    string insightText;
+    string insightIcon;
+    string insightCss;
+
+    if (balance < 0)
+    {
+        insightText = Loc.T("Insight_Debtor", Math.Abs(balance).ToString("N0"));
+        insightIcon = "⚠️";
+        insightCss = "rh-insight-danger";
+    }
+    else if (hasPending)
+    {
+        insightText = Loc.T("Insight_Pending_Payments", pendingDeposits.Count);
+        insightIcon = "⏳";
+        insightCss = "rh-insight-warning";
+    }
+    else if (showPaidFull)
+    {
+        insightText = Loc.T("Insight_Fully_Paid");
+        insightIcon = "🎉";
+        insightCss = "rh-insight-success";
+    }
+    else
+    {
+        insightText = Loc.T("Insight_All_Good");
+        insightIcon = "✨";
+        insightCss = "rh-insight-success";
+    }
+
+    // Unread days text
+    var unreadDays = (int)(ViewBag.UnreadDays ?? 0);
+    var unreadTimeText = unreadDays == 0
+        ? Loc.T("Action_Just_Now")
+        : (unreadDays == 1 ? Loc.T("Action_Yesterday")
+                          : Loc.T("Action_Days_Ago", unreadDays));
 }
-else
+
+@if (!hasData || Model == null || building == null)
 {
-    <h3>@Loc.T("Welcome_Apartment_N_N", Model.Number, building.Name)</h3>
-    <p class="text-muted">@Loc.T("Monthly_Fee_N_EGP", Model.MonthlyFee)</p>
-    <div class="mb-3 d-flex gap-2">
-        <a asp-controller="ResidentWallet" asp-action="Index" class="btn btn-brand">@Loc.T("My_Wallet_3")</a>
-        <a asp-controller="Invoice" asp-action="Download" class="btn btn-outline-secondary">@Loc.T("Download_My_Invoice_PDF")</a>
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i>
+        @Loc.T("Your_Apartment_Details_Could_Not_Be")
     </div>
+    return;
+}
+
+<div class="resident-home">
+
+    @* ============================================================ *@
+    @* 1. GREETING BAR                                               *@
+    @* ============================================================ *@
+    <div class="rh-greeting rh-animate">
+        <div class="rh-greeting-text">
+            <h1 class="rh-greeting-name">
+                <span class="rh-wave">👋</span>
+                @Loc.T(greetingKey)، @ownerName
+            </h1>
+            <p class="rh-greeting-sub">
+                <i class="bi bi-calendar3"></i>
+                <span>@dayName، @dateStr</span>
+                <span> · </span>
+                <i class="bi bi-house-door-fill"></i>
+                <span>@Loc.T("Apartment_N", Model.Number)</span>
+            </p>
+        </div>
+        <div class="rh-greeting-actions">
+            <a asp-controller="Notifications" asp-action="Index" class="rh-header-btn" title="@Loc.T("Notifications_3")">
+                <i class="bi bi-bell"></i>
+                @if (unreadCount > 0)
+                {
+                    <span class="rh-header-badge">@unreadCount</span>
+                }
+            </a>
+            <a asp-controller="Settings" asp-action="Own" class="rh-header-btn" title="@Loc.T("My_Settings")">
+                <i class="bi bi-gear"></i>
+            </a>
+        </div>
+    </div>
+
+    @* ============================================================ *@
+    @* 2. ACTION CENTER                                              *@
+    @* ============================================================ *@
+    @if (actionCount > 0)
+    {
+        <div class="rh-action-center rh-animate rh-animate-d1">
+            <div class="rh-action-center-header">
+                <span class="rh-action-center-icon">⚠️</span>
+                <h2 class="rh-action-center-title">@Loc.T("Action_Center_Title")</h2>
+                <span class="rh-action-center-count">@actionCount</span>
+            </div>
+            <div class="rh-action-list">
+                @if (hasPending)
+                {
+                    <a asp-controller="ResidentWallet" asp-action="Index" class="rh-action-item rh-action-urgent">
+                        <div class="rh-action-item-icon">⏳</div>
+                        <div class="rh-action-item-info">
+                            <div class="rh-action-item-title">
+                                @Loc.T("N_Pending_Payments_Action", pendingDeposits.Count)
+                            </div>
+                            <div class="rh-action-item-desc">
+                                @Loc.T("Waiting_For_Admin_Confirmation")
+                            </div>
+                        </div>
+                        <i class="bi bi-chevron-left rh-action-item-arrow"></i>
+                    </a>
+                }
+                @if (unreadCount > 0)
+                {
+                    <a asp-controller="Notifications" asp-action="Index" class="rh-action-item rh-action-info">
+                        <div class="rh-action-item-icon">🔔</div>
+                        <div class="rh-action-item-info">
+                            <div class="rh-action-item-title">
+                                @Loc.T("N_Unread_Notifications", unreadCount)
+                            </div>
+                            <div class="rh-action-item-desc">
+                                @unreadTimeText
+                            </div>
+                        </div>
+                        <i class="bi bi-chevron-left rh-action-item-arrow"></i>
+                    </a>
+                }
+                @if (activePolls.Any())
+                {
+                    <a asp-controller="ResidentPolls" asp-action="Index" class="rh-action-item rh-action-info">
+                        <div class="rh-action-item-icon">🗳️</div>
+                        <div class="rh-action-item-info">
+                            <div class="rh-action-item-title">
+                                @Loc.T("N_Active_Polls_Action", activePolls.Count)
+                            </div>
+                            <div class="rh-action-item-desc">
+                                @Loc.T("Your_Vote_Matters")
+                            </div>
+                        </div>
+                        <i class="bi bi-chevron-left rh-action-item-arrow"></i>
+                    </a>
+                }
+            </div>
+        </div>
+    }
+
+    @* ============================================================ *@
+    @* 3. HERO                                                       *@
+    @* ============================================================ *@
+    <div class="rh-hero rh-animate rh-animate-d2">
+        <div class="rh-hero-inner">
+
+            <div class="rh-hero-top">
+                <div class="rh-hero-label">
+                    <i class="bi bi-wallet2"></i>
+                    @Loc.T("Your_Current_Balance")
+                </div>
+                <span class="rh-hero-status rh-status-@statusClass">
+                    @if (statusClass == "success")
+                    {
+                        <span>✅</span>
+                    }
+                    else if (statusClass == "warning")
+                    {
+
+                        <span>⏳</span>
+                    }
+                    else
+                    {
+
+                        <span>⚠️</span>
+                    }
+                    <span>@statusLabel</span>
+                </span>
+            </div>
+
+            <div class="rh-hero-value">
+                @balance.ToString("N0")
+                <span class="rh-currency">@Loc.T("EGP")</span>
+            </div>
+
+            <div class="rh-hero-last">
+                <i class="bi bi-clock-history"></i>
+                <span>@Loc.T("Last_Payment"): @lastDepositText</span>
+            </div>
+
+            @if (showProgress)
+            {
+                <div class="rh-hero-progress">
+                    <div class="rh-progress-label">
+                        <span>@Loc.T("Progress_Of_Expected")</span>
+                        <span>@paidThisMonth.ToString("N0") / @expectedMonthly.ToString("N0") @Loc.T("EGP")</span>
+                    </div>
+                    <div class="rh-progress-bar">
+                        <div class="rh-progress-fill" style="width: @progressPercent%"></div>
+                    </div>
+                    <div class="rh-progress-remaining">
+                        @Loc.T("Hero_Remaining") @remaining.ToString("N0") @Loc.T("EGP")
+                    </div>
+                </div>
+            }
+            else if (showPaidFull)
+            {
+                <div class="rh-hero-paid-full">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span>@Loc.T("Hero_Fully_Paid_This_Month")</span>
+                </div>
+            }
+
+            <div class="rh-hero-actions">
+                <a asp-controller="ResidentWallet" asp-action="Index" class="rh-hero-btn rh-hero-btn-primary">
+                    <i class="bi bi-wallet2"></i>
+                    <span>@Loc.T("Financial_View_Statement")</span>
+                </a>
+                <a asp-controller="Invoice" asp-action="Download"
+                   asp-route-month="@currentMonth"
+                   target="_blank"
+                   class="rh-hero-btn rh-hero-btn-ghost">
+                    <i class="bi bi-file-earmark-pdf"></i>
+                    <span>@Loc.T("Financial_Download_Invoice")</span>
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+    @* ============================================================ *@
+    @* 4. STATS ROW                                                  *@
+    @* ============================================================ *@
+    <div class="rh-stats-row rh-animate rh-animate-d3">
+        <div class="rh-stat rh-stat-success">
+            <div class="rh-stat-icon">💰</div>
+            <div class="rh-stat-value">@paidThisMonth.ToString("N0")</div>
+            <div class="rh-stat-label">@Loc.T("Stats_Paid_This_Month")</div>
+        </div>
+        <div class="rh-stat rh-stat-danger">
+            <div class="rh-stat-icon">💸</div>
+            <div class="rh-stat-value">@totalExpenses.ToString("N0")</div>
+            <div class="rh-stat-label">@Loc.T("Stats_Expenses")</div>
+        </div>
+        <div class="rh-stat rh-stat-info">
+            <div class="rh-stat-icon">📈</div>
+            <div class="rh-stat-value">@totalRevenue.ToString("N0")</div>
+            <div class="rh-stat-label">@Loc.T("Stats_Revenue")</div>
+        </div>
+        <div class="rh-stat rh-stat-gold">
+            <div class="rh-stat-icon">📅</div>
+            <div class="rh-stat-value">@monthsCount</div>
+            <div class="rh-stat-label">@Loc.T("Stats_Months")</div>
+        </div>
+    </div>
+
+    @* ============================================================ *@
+    @* 5. INSIGHT (دايماً يظهر)                                       *@
+    @* ============================================================ *@
+    <div class="rh-insight @insightCss rh-animate rh-animate-d3">
+        <div class="rh-insight-icon">@insightIcon</div>
+        <div class="rh-insight-text">@insightText</div>
+    </div>
+
+    @* ============================================================ *@
+    @* 6. QUICK ACTIONS (5 أزرار)                                     *@
+    @* ============================================================ *@
+    <div>
+        <div class="rh-section-header">
+            <h2 class="rh-section-title">
+                <i class="bi bi-lightning-charge-fill rh-section-title-icon"></i>
+                @Loc.T("Quick_Actions_Title")
+            </h2>
+        </div>
+        <div class="rh-quick-grid">
+            <a asp-controller="ResidentWallet" asp-action="Index" class="rh-quick-card">
+                <span class="rh-quick-icon">💰</span>
+                <span class="rh-quick-label">@Loc.T("Quick_Action_Wallet")</span>
+            </a>
+            <a asp-controller="Invoice" asp-action="Download"
+               asp-route-month="@currentMonth" target="_blank" class="rh-quick-card">
+                <span class="rh-quick-icon">📄</span>
+                <span class="rh-quick-label">@Loc.T("Quick_Action_Invoice")</span>
+            </a>
+            <a asp-controller="ResidentPolls" asp-action="Index" class="rh-quick-card">
+                <span class="rh-quick-icon">🗳️</span>
+                <span class="rh-quick-label">@Loc.T("Quick_Action_Polls")</span>
+                @if (activePolls.Any())
+                {
+                    <span class="rh-quick-badge">@activePolls.Count</span>
+                }
+            </a>
+            <a asp-controller="ResidentMaintenance" asp-action="Index" class="rh-quick-card">
+                <span class="rh-quick-icon">🔧</span>
+                <span class="rh-quick-label">@Loc.T("Quick_Action_Maintenance")</span>
+            </a>
+            <a asp-controller="Cameras" asp-action="Live"
+               asp-route-buildingId="@building.Id"
+               class="rh-quick-card">
+                <span class="rh-quick-icon">📷</span>
+                <span class="rh-quick-label">@Loc.T("Quick_Action_Cameras")</span>
+            </a>
+        </div>
+    </div>
+
+    @* ============================================================ *@
+    @* 7. TIMELINE (آخر 5 حركات)                                     *@
+    @* ============================================================ *@
+    <div>
+        <div class="rh-section-header">
+            <h2 class="rh-section-title">
+                <i class="bi bi-clock-history rh-section-title-icon"></i>
+                @Loc.T("Recent_Transactions_Title")
+            </h2>
+            <a asp-controller="ResidentWallet" asp-action="Index" class="rh-link-more">
+                @Loc.T("View_All")
+                <i class="bi bi-chevron-left"></i>
+            </a>
+        </div>
+
+        @if (!timelineTx.Any())
+        {
+            <div class="rh-empty">
+                <div class="rh-empty-icon">🎉</div>
+                <h3 class="rh-empty-title">@Loc.T("Empty_All_Clear_Title")</h3>
+                <p class="rh-empty-desc">@Loc.T("Empty_All_Clear_Desc")</p>
+                <a asp-controller="ResidentWallet" asp-action="Index" class="rh-btn rh-btn-primary rh-btn-sm">
+                    <i class="bi bi-wallet2"></i>
+                    @Loc.T("Quick_Action_Wallet")
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="rh-timeline">
+                @{
+                    var currentMonthKey = DateTime.UtcNow.ToString("yyyy-MM");
+                    var prevMonthKey = DateTime.UtcNow.AddMonths(-1).ToString("yyyy-MM");
+
+                    var grouped = timelineTx
+                        .GroupBy(t => t.CreatedAt.Length >= 7 ? t.CreatedAt.Substring(0, 7) : "—")
+                        .OrderByDescending(g => g.Key);
+                }
+                @foreach (var group in grouped)
+                {
+                    var dateLabel = group.Key == currentMonthKey
+                        ? Loc.T("Timeline_This_Month")
+                        : (group.Key == prevMonthKey ? Loc.T("Timeline_Last_Month") : group.Key);
+
+                    <div class="rh-timeline-group">
+                        <div class="rh-timeline-date">
+                            <i class="bi bi-calendar2"></i>
+                            @dateLabel
+                        </div>
+                        <div class="rh-timeline-items">
+                            @foreach (var tx in group)
+                            {
+                                var label = tx.Type switch
+                                {
+                                    "deposit" => Loc.T("Payment") + " " + tx.Number,
+                                    "expense" => Loc.T("Share_Of_Expenses"),
+                                    "revenue" => Loc.T("Share_Of_Revenues"),
+                                    "monthly_fee_due" => Loc.T("Monthly_Fee_Due"),
+                                    "adjustment" => Loc.T("Adjustment"),
+                                    _ => tx.Note
+                                };
+                                var icon = tx.Type switch
+                                {
+                                    "deposit" => "💰",
+                                    "expense" => "💸",
+                                    "revenue" => "📈",
+                                    "monthly_fee_due" => "📅",
+                                    "adjustment" => "⚙️",
+                                    _ => "•"
+                                };
+                                var statusIcon = tx.Status switch
+                                {
+                                    "pending" => "⏳",
+                                    "cancelled" => "❌",
+                                    _ => "✅"
+                                };
+                                var isCredit = tx.Amount >= 0;
+                                var rowClass = isCredit ? "rh-timeline-credit" : "rh-timeline-debit";
+
+                                <div class="rh-timeline-item @rowClass">
+                                    <div class="rh-timeline-icon">@icon</div>
+                                    <div class="rh-timeline-info">
+                                        <div class="rh-timeline-label">@label</div>
+                                        <div class="rh-timeline-meta">
+                                            <span>@statusIcon</span>
+                                        </div>
+                                    </div>
+                                    <div class="rh-timeline-amount @(isCredit ? "text-success" : "text-danger")">
+                                        @(isCredit ? "+" : "")@tx.Amount.ToString("N0")
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    @* ============================================================ *@
+    @* 8. PENDING PAYMENTS                                           *@
+    @* ============================================================ *@
+    @if (hasPending)
+    {
+        <div>
+            <div class="rh-section-header">
+                <h2 class="rh-section-title">
+                    <i class="bi bi-hourglass-split rh-section-title-icon"></i>
+                    @Loc.T("Pending_Payments_Title")
+                    <span class="rh-section-count">@pendingDeposits.Count</span>
+                </h2>
+            </div>
+            <div class="rh-pending-list">
+                @foreach (var d in pendingDeposits)
+                {
+                    <div class="rh-pending-card">
+                        <div class="rh-pending-icon">⏳</div>
+                        <div class="rh-pending-info">
+                            <div class="rh-pending-title">
+                                @Loc.T("Payment") @d.Number
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(d.Note))
+                            {
+                                <div class="rh-pending-note">@d.Note</div>
+                            }
+                        </div>
+                        <div class="rh-pending-amount">
+                            @d.Amount.ToString("N0") @Loc.T("EGP")
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @* ============================================================ *@
+    @* 9. ACTIVE POLLS                                               *@
+    @* ============================================================ *@
+    @if (activePolls.Any())
+    {
+        <div>
+            <div class="rh-section-header">
+                <h2 class="rh-section-title">
+                    <i class="bi bi-bar-chart-fill rh-section-title-icon"></i>
+                    @Loc.T("Active_Polls_Title")
+                </h2>
+                <a asp-controller="ResidentPolls" asp-action="Index" class="rh-link-more">
+                    @Loc.T("View_All")
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </div>
+            <div class="rh-polls-list">
+                @foreach (var poll in activePolls)
+                {
+                    var totalVotes = PollsService.TotalVotes(poll);
+                    var hasVoted = PollsService.MyVote(poll, Model.Id) != null;
+                    var openApts = building.Apartments.Count(a => !a.Closed);
+
+                    <div class="rh-poll-card">
+                        <div class="rh-poll-header">
+                            <h3 class="rh-poll-question">@poll.Question</h3>
+                            @if (hasVoted)
+                            {
+                                <span class="rh-poll-voted">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    @Loc.T("Voted")
+                                </span>
+                            }
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(poll.Description))
+                        {
+                            <p class="rh-poll-desc">@poll.Description</p>
+                        }
+                        <div class="rh-poll-footer">
+                            <div class="rh-poll-meta">
+                                <i class="bi bi-people-fill"></i>
+                                @Loc.T("Total_Votes_N_N", totalVotes, openApts)
+                            </div>
+                            @if (!hasVoted)
+                            {
+                                <a asp-controller="ResidentPolls" asp-action="Index"
+                                   class="rh-btn rh-btn-primary rh-btn-sm">
+                                    <i class="bi bi-check2-circle"></i>
+                                    @Loc.T("Vote_Now")
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @* ============================================================ *@
+    @* 10. NOTIFICATIONS                                             *@
+    @* ============================================================ *@
+    @if (notifications.Any())
+    {
+        <div>
+            <div class="rh-section-header">
+                <h2 class="rh-section-title">
+                    <i class="bi bi-bell-fill rh-section-title-icon"></i>
+                    @Loc.T("Recent_Notifications_Title")
+                    @if (unreadCount > 0)
+                    {
+                        <span class="rh-section-count">@unreadCount</span>
+                    }
+                </h2>
+                <a asp-controller="Notifications" asp-action="Index" class="rh-link-more">
+                    @Loc.T("View_All")
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </div>
+            <div class="rh-notif-list">
+                @foreach (var n in notifications)
+                {
+                    <div class="rh-notif-card @(n.Read ? "" : "rh-notif-unread")">
+                        <div class="rh-notif-icon">@n.Icon</div>
+                        <div class="rh-notif-info">
+                            <div class="rh-notif-title">@n.Title</div>
+                            <div class="rh-notif-body">@n.Body</div>
+                        </div>
+                        @if (!n.Read)
+                        {
+                            <span class="rh-notif-dot"></span>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @* ============================================================ *@
+    @* 11. MAINTENANCE                                               *@
+    @* ============================================================ *@
+    @if (maintenance.Any())
+    {
+        <div>
+            <div class="rh-section-header">
+                <h2 class="rh-section-title">
+                    <i class="bi bi-tools rh-section-title-icon"></i>
+                    @Loc.T("Recent_Maintenance_Title")
+                </h2>
+                <a asp-controller="ResidentMaintenance" asp-action="Index" class="rh-link-more">
+                    @Loc.T("View_All")
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </div>
+            <div class="rh-maint-list">
+                @foreach (var m in maintenance)
+                {
+                    var statusText = m.Status switch
+                    {
+                        "open" => Loc.T("Status_Open"),
+                        "inprogress" => Loc.T("Status_In_Progress"),
+                        "done" => Loc.T("Status_Done"),
+                        _ => m.Status
+                    };
+                    var statusCss = m.Status switch
+                    {
+                        "open" => "rh-maint-open",
+                        "inprogress" => "rh-maint-progress",
+                        "done" => "rh-maint-done",
+                        _ => ""
+                    };
+
+                    <div class="rh-maint-card">
+                        <div class="rh-maint-icon">🔧</div>
+                        <div class="rh-maint-info">
+                            <div class="rh-maint-title">@m.Title</div>
+                            <div class="rh-maint-meta">
+                                <span><i class="bi bi-calendar3"></i> @m.Date</span>
+                                @if (!string.IsNullOrWhiteSpace(m.Vendor))
+                                {
+                                    <span><i class="bi bi-person"></i> @m.Vendor</span>
+                                }
+                            </div>
+                        </div>
+                        <span class="rh-maint-status @statusCss">@statusText</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/resident-home.css" asp-append-version="true" />
 }

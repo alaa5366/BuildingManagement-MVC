@@ -4705,4 +4705,195 @@ Cette opération peut prendre quelques secondes.</value>
 <data name="17_Permissions_For_A_Regular_Admin" xml:space="preserve">
   <value>17 permissions — pour un administrateur régulier</value>
 </data>
+ <data name="Resident_Dashboard_Title" xml:space="preserve">
+    <value>Tableau de bord du résident</value>
+  </data>
+
+  <data name="Welcome_Back_N" xml:space="preserve">
+    <value>Bon retour, {0}</value>
+  </data>
+
+  <data name="Status_Regular" xml:space="preserve">
+    <value>À jour</value>
+  </data>
+
+  <data name="Status_Debtor" xml:space="preserve">
+    <value>A des arriérés</value>
+  </data>
+
+  <data name="Status_Pending" xml:space="preserve">
+    <value>A des paiements en attente</value>
+  </data>
+
+  <data name="Quick_Actions_Title" xml:space="preserve">
+    <value>Actions rapides</value>
+  </data>
+
+  <data name="Quick_Action_Wallet" xml:space="preserve">
+    <value>Mon portefeuille</value>
+  </data>
+
+  <data name="Quick_Action_Invoice" xml:space="preserve">
+    <value>Factures</value>
+  </data>
+
+  <data name="Quick_Action_Polls" xml:space="preserve">
+    <value>Sondages</value>
+  </data>
+
+  <data name="Quick_Action_Maintenance" xml:space="preserve">
+    <value>Maintenance</value>
+  </data>
+
+  <data name="Quick_Action_Notifications" xml:space="preserve">
+    <value>Notifications</value>
+  </data>
+
+  <data name="Quick_Action_Cameras" xml:space="preserve">
+    <value>Caméras</value>
+  </data>
+
+  <data name="Financial_View_Statement" xml:space="preserve">
+    <value>Relevé de compte</value>
+  </data>
+
+  <data name="Financial_Download_Invoice" xml:space="preserve">
+    <value>Télécharger la facture</value>
+  </data>
+
+  <data name="Recent_Transactions_Title" xml:space="preserve">
+    <value>Transactions récentes</value>
+  </data>
+
+  <data name="Recent_Notifications_Title" xml:space="preserve">
+    <value>Notifications récentes</value>
+  </data>
+
+  <data name="Recent_Maintenance_Title" xml:space="preserve">
+    <value>Maintenance récente</value>
+  </data>
+
+  <data name="Pending_Payments_Title" xml:space="preserve">
+    <value>Paiements en attente</value>
+  </data>
+
+  <data name="Active_Polls_Title" xml:space="preserve">
+    <value>Sondages actifs</value>
+  </data>
+
+  <data name="Vote_Now" xml:space="preserve">
+    <value>Voter maintenant</value>
+  </data>
+
+  <data name="View_All" xml:space="preserve">
+    <value>Voir tout</value>
+  </data>
+
+  <data name="No_Transactions_Yet" xml:space="preserve">
+    <value>Aucune transaction pour le moment</value>
+  </data>
+  <data name="Greeting_Morning" xml:space="preserve">
+    <value>Bonjour</value>
+  </data>
+  <data name="Greeting_Afternoon" xml:space="preserve">
+    <value>Bon après-midi</value>
+  </data>
+  <data name="Greeting_Evening" xml:space="preserve">
+    <value>Bonsoir</value>
+  </data>
+
+  <!-- Action Center -->
+  <data name="Action_Center_Title" xml:space="preserve">
+    <value>À faire aujourd'hui</value>
+  </data>
+  <data name="N_Pending_Payments_Action" xml:space="preserve">
+    <value>{0} paiement(s) en attente</value>
+  </data>
+  <data name="Waiting_For_Admin_Confirmation" xml:space="preserve">
+    <value>En attente de confirmation de l'administrateur</value>
+  </data>
+  <data name="N_Unread_Notifications" xml:space="preserve">
+    <value>{0} notification(s) non lue(s)</value>
+  </data>
+  <data name="New_Updates_Waiting_For_You" xml:space="preserve">
+    <value>Nouvelles mises à jour vous attendent</value>
+  </data>
+  <data name="N_Active_Polls_Action" xml:space="preserve">
+    <value>{0} sondage(s) actif(s)</value>
+  </data>
+  <data name="Your_Vote_Matters" xml:space="preserve">
+    <value>Votre vote compte</value>
+  </data>
+
+  <!-- Stats -->
+  <data name="Stats_Paid" xml:space="preserve">
+    <value>Payé</value>
+  </data>
+  <data name="Stats_Expenses" xml:space="preserve">
+    <value>Dépenses</value>
+  </data>
+  <data name="Stats_Revenue" xml:space="preserve">
+    <value>Revenus</value>
+  </data>
+  <data name="Stats_Months" xml:space="preserve">
+    <value>Mois</value>
+  </data>
+
+  <!-- Hero -->
+  <data name="Last_Payment" xml:space="preserve">
+    <value>Dernier paiement</value>
+  </data>
+  <data name="Progress_Of_Expected" xml:space="preserve">
+    <value>Progression par rapport au prévu</value>
+  </data>
+
+  <!-- Insights -->
+  <data name="Insight_All_Good" xml:space="preserve">
+    <value>Tout est en ordre ! Votre compte est à jour ✅</value>
+  </data>
+  <data name="Insight_Pending_Payments" xml:space="preserve">
+    <value>Vous avez {0} paiement(s) en attente — en attente de l'administrateur</value>
+  </data>
+  <data name="Insight_Debtor" xml:space="preserve">
+    <value>Vous devez {0} EGP — essayez de régler bientôt</value>
+  </data>
+  <data name="Timeline_Today" xml:space="preserve">
+    <value>Aujourd'hui</value>
+  </data>
+  <data name="Timeline_Yesterday" xml:space="preserve">
+    <value>Hier</value>
+  </data>
+  <data name="Empty_All_Clear_Title" xml:space="preserve">
+    <value>Tout est en ordre !</value>
+  </data>
+  <data name="Empty_All_Clear_Desc" xml:space="preserve">
+    <value>Aucune nouvelle transaction, votre portefeuille est à jour</value>
+  </data>
+<data name="Stats_Paid_This_Month" xml:space="preserve">
+    <value>Total payé ce mois</value>
+</data>
+<data name="Hero_Fully_Paid_This_Month" xml:space="preserve">
+    <value>✅ Entièrement payé ce mois</value>
+</data>
+<data name="Action_Just_Now" xml:space="preserve">
+    <value>À l'instant</value>
+</data>
+<data name="Action_Yesterday" xml:space="preserve">
+    <value>Hier</value>
+</data>
+<data name="Action_Days_Ago" xml:space="preserve">
+    <value>Il y a {0} jours</value>
+</data>
+<data name="Timeline_This_Month" xml:space="preserve">
+    <value>Ce mois</value>
+</data>
+<data name="Timeline_Last_Month" xml:space="preserve">
+    <value>Le mois dernier</value>
+</data>
+<data name="Insight_Fully_Paid" xml:space="preserve">
+    <value>🎉 Vous avez tout payé ce mois — bravo !</value>
+</data>
+<data name="Hero_Remaining" xml:space="preserve">
+    <value>Restant :</value>
+</data>
 </root>
