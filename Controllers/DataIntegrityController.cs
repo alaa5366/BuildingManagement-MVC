@@ -35,11 +35,13 @@ public class DataIntegrityController : Controller
             var report = await _integrity.GetFullReportAsync();
             var buildings = await _integrity.CompareBuildingsAsync();
             var users = await _integrity.CompareUsersAsync();
+            var residents = await _integrity.CompareResidentsAsync();  
             var dvrs = await _integrity.CompareDvrsAsync();
             var cameras = await _integrity.CompareCamerasAsync();
 
             ViewBag.Buildings = buildings;
             ViewBag.Users = users;
+            ViewBag.Residents = residents;  
             ViewBag.Dvrs = dvrs;
             ViewBag.Cameras = cameras;
 

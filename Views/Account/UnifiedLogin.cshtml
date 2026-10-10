@@ -1,12 +1,12 @@
 ﻿@model UnifiedLoginVm
 @{
     ViewData["Title"] = Loc.T("Log_In_2");
-    var firebaseConfig = ViewBag.FirebaseConfig as string;
 }
 
 <div class="auth-wrap">
     <div class="auth-card">
         <div class="text-center mb-4">
+            @* ✅ id="appTitle" — لازم للـ Secret Access *@
             <div id="appTitle" style="font-size: 48px; cursor: default; user-select: none; transition: transform 0.1s;">🏢</div>
             <h2 class="mt-2">@Loc.T("Building_Management_System")</h2>
             <p class="text-muted small">@Loc.T("Sign_In_To_Continue")</p>
@@ -17,53 +17,45 @@
             <div class="alert alert-danger">@ViewBag.Error</div>
         }
 
-        <!-- Google Sign-In (يظهر فقط للـ Super Admin) -->
+        @* ✅ Google Sign-In Section (مخفي افتراضياً) *@
         <div id="googleSignInSection" style="display:none;">
             <button type="button" id="googleSignInBtn" class="btn w-100 mb-3"
                     style="background:#fff; color:#333; border:1.5px solid #ddd; display:flex;
-                           align-items:center; justify-content:center; gap:10px; padding:12px; font-weight:700;">
+                align-items:center; justify-content:center; gap:10px; padding:12px; font-weight:700;">
                 <svg width="20" height="20" viewBox="0 0 48 48">
-                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
                 </svg>
-                <span>@Loc.T("Sign_In_With_Google_Super_Admin")</span>
+                <span>Sign In With Google (Super Admin)</span>
             </button>
 
-            <div class="text-center text-muted small my-3">@Loc.T("Or")</div>
+            <div class="text-center text-muted small my-3">Or</div>
         </div>
 
         <form method="post" asp-action="UnifiedLogin">
             @Html.AntiForgeryToken()
             <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
 
-            <div class="mb-3">
-                <label class="form-label fw-bold">@Loc.T("Email_Phone_Number")</label>
+            <div class="field">
+                <label>@Loc.T("Email_Phone_Number")</label>
                 <input asp-for="Identifier" class="form-control form-control-lg"
                        placeholder="@Loc.T("You_Example_Com_Or_201001234567")" autofocus />
                 <span asp-validation-for="Identifier" class="text-danger small"></span>
             </div>
 
-            <div class="mb-4">
-                <label class="form-label fw-bold">@Loc.T("Password_PIN")</label>
+            <div class="field">
+                <label>@Loc.T("Password_PIN")</label>
                 <input asp-for="Credential" type="password" class="form-control form-control-lg"
                        placeholder="••••••••" />
                 <span asp-validation-for="Credential" class="text-danger small"></span>
             </div>
 
-            <div id="loginError" class="alert alert-danger" style="display:none;"></div>
-
             <button type="submit" class="btn btn-brand w-100 btn-lg mb-3">
                 @Loc.T("Log_In_3")
             </button>
         </form>
-
-        <div class="text-center text-muted small my-3">@Loc.T("Or")</div>
-
-        <a asp-action="QuickLogin" class="btn btn-outline-warning w-100">
-            @Loc.T("Have_A_Quick_Access_QR_Tap")
-        </a>
 
         <div class="text-center mt-4 small text-muted">
             @Loc.T("The_System_Recognizes_Your_Role_Automatically")
@@ -89,63 +81,124 @@
         max-width: 460px;
     }
 
-    .auth-card h2 {
-        color: #12433C;
-        font-weight: 800;
-        font-size: 22px;
+        .auth-card h2 {
+            color: #12433C;
+            font-weight: 800;
+            font-size: 22px;
+        }
+
+    .field {
+        margin-bottom: 18px;
     }
+
+        .field label {
+            display: block;
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
 </style>
 
 @section Scripts {
-    <script>window.I18N = Object.assign(window.I18N || {}, @Html.Raw(Loc.JsonDict("Js_PrivateAccess","Js_EnterSecret","Js_Password","Js_Cancel","Js_Confirm","Js_WrongSecret")));</script>
-    <script type="module">
-        import { bindTitleClicks } from '/js/secret-access.js';
-        import { initGoogleAuth, signInWithGoogle } from '/js/google-auth.js';
+    @* ✅ Firebase SDK للـ Google Sign-In *@
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 
-        // ============================================================
+    <script>
+        // ═══════════════════════════════════════════════════════════
         // Firebase Config
-        // ============================================================
-        const firebaseConfig = @Html.Raw(firebaseConfig ?? "{}");
-        initGoogleAuth(firebaseConfig);
+        // ═══════════════════════════════════════════════════════════
+        const firebaseConfig = {
+            apiKey: "@(ViewBag.FirebaseApiKey ?? "")",
+            authDomain: "@(ViewBag.FirebaseAuthDomain ?? "")",
+            projectId: "@(ViewBag.FirebaseProjectId ?? "")"
+        };
 
-        // ============================================================
-        // Secret Access — 5 ضغطات شغالة دايماً
-        // ✅ مفيش أي حاجة في الـ URL
-        // ✅ الزرار مخفي لحد ما يدخل كلمة السر صح
-        // ============================================================
-        bindTitleClicks();
+        // ═══════════════════════════════════════════════════════════
+        // ✅ Secret Access — 5 ضغطات على 🏢
+        // ═══════════════════════════════════════════════════════════
+        (function () {
+            const SECRET_CLICK_COUNT = 5;
+            const SECRET_CLICK_TIMEOUT = 2000;
+            const SUPER_ADMIN_SECRET = 'P@ssw0rd';
 
-        // ============================================================
-        // Google Sign-In
-        // ============================================================
+            let clickCount = 0;
+            let lastClickTime = 0;
+
+            const title = document.getElementById('appTitle');
+            if (!title) return;
+
+            title.style.cursor = 'pointer';
+
+            title.onclick = () => {
+                const now = Date.now();
+
+                if (now - lastClickTime > SECRET_CLICK_TIMEOUT) {
+                    clickCount = 1;
+                } else {
+                    clickCount++;
+                }
+                lastClickTime = now;
+
+                title.style.transform = 'scale(0.95)';
+                setTimeout(() => title.style.transform = 'scale(1)', 100);
+
+                console.log(`[Secret] Click ${clickCount}/${SECRET_CLICK_COUNT}`);
+
+                if (clickCount >= SECRET_CLICK_COUNT) {
+                    clickCount = 0;
+                    const password = prompt('🔒 كلمة السر:');
+
+                    if (password === SUPER_ADMIN_SECRET) {
+                        const section = document.getElementById('googleSignInSection');
+                        if (section) {
+                            section.style.display = 'block';
+                            section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                        alert('✅ تم التفعيل!');
+                    } else if (password !== null) {
+                        alert('❌ كلمة السر غلط');
+                    }
+                }
+            };
+
+            console.log('[Secret] Initialized ✅');
+        })();
+
+        // ═══════════════════════════════════════════════════════════
+        // ✅ Google Sign-In
+        // ═══════════════════════════════════════════════════════════
         document.getElementById('googleSignInBtn')?.addEventListener('click', async () => {
             const btn = document.getElementById('googleSignInBtn');
             const errorEl = document.getElementById('loginError');
 
-            btn.disabled = true;
-            btn.style.opacity = '0.6';
-            errorEl.style.display = 'none';
+            if (btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.6';
+            }
 
             try {
-                const result = await signInWithGoogle();
-
-                if (!result.success) {
-                    const msgs = {
-                        'auth/popup-closed-by-user': '@Html.Raw(Loc.Js("Google_Window_Was_Closed"))',
-                        'auth/popup-blocked': '@Html.Raw(Loc.Js("The_Browser_Blocked_The_Window"))',
-                        'auth/cancelled-popup-request': '@Html.Raw(Loc.Js("The_Operation_Was_Cancelled"))',
-                        'auth/unauthorized-domain': '@Html.Raw(Loc.Js("The_Domain_Is_Not_Authorized_In"))'
-                    };
-                    errorEl.textContent = msgs[result.error] || '@Html.Raw(Loc.Js("Google_Sign_In_Failed"))';
-                    errorEl.style.display = 'block';
-                    return;
+                // 1. تأكد من Firebase
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
                 }
 
+                // 2. افتح Google Popup
+                const provider = new firebase.auth.GoogleAuthProvider();
+                provider.setCustomParameters({ prompt: 'select_account' });
+
+                const result = await firebase.auth().signInWithPopup(provider);
+                const user = result.user;
+
+                // 3. جيب ID Token
+                const idToken = await user.getIdToken();
+
+                // 4. ابعت للسيرفر
                 const formData = new FormData();
-                formData.append('idToken', result.idToken);
-                formData.append('email', result.email);
+                formData.append('idToken', idToken);
+                formData.append('email', user.email || '');
                 formData.append('__RequestVerificationToken',
-                    document.querySelector('input[name="__RequestVerificationToken"]').value);
+                    document.querySelector('input[name="__RequestVerificationToken"]')?.value || '');
 
                 const response = await fetch('/Account/GoogleSignIn', {
                     method: 'POST',
@@ -157,17 +210,20 @@
                 if (data.success) {
                     window.location.href = data.redirectUrl || '/SuperAdminHome';
                 } else {
-                    errorEl.textContent = data.error || '@Html.Raw(Loc.Js("Login_Failed"))';
-                    errorEl.style.display = 'block';
+                    alert('❌ ' + (data.error || 'Login failed'));
                 }
             } catch (err) {
-                console.error(err);
-                errorEl.textContent = '@Html.Raw(Loc.Js("Connection_Error"))';
-                errorEl.style.display = 'block';
+                console.error('Google Sign-In failed:', err);
+                alert('❌ ' + (err.code || err.message));
             } finally {
-                btn.disabled = false;
-                btn.style.opacity = '1';
+                if (btn) {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }
             }
         });
+
+        console.log('[Google] Initialized ✅');
     </script>
+}
 }

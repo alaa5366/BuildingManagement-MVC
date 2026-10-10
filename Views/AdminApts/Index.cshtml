@@ -29,7 +29,6 @@
                     @foreach (var apt in apts)
                     {
                         <div class="apt-card-row">
-                            @* ===== Header: معلومات الشقة ===== *@
                             <div class="apt-info">
                                 <div class="apt-title">
                                     <i class="bi bi-house-door-fill text-primary"></i>
@@ -47,7 +46,6 @@
                                 <div class="apt-phone" dir="ltr">@apt.Phone</div>
                             </div>
 
-                            @* ===== Actions: 4 أزرار بنفس الحجم ===== *@
                             <div class="apt-actions">
                                 @* 1. QR سريع *@
                                 <button type="button" class="apt-action-btn btn-qr"
@@ -61,8 +59,7 @@
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="aptId" value="@apt.Id" />
                                     <input type="hidden" name="validityHours" value="24" />
-                                    <button type="submit" class="apt-action-btn btn-welcome"
-                                            title="@Loc.T("Welcome_Message_QR_For_Quick_Login")">
+                                    <button type="submit" class="apt-action-btn btn-welcome">
                                         <span class="icon">❤️</span>
                                         <span class="label">@Loc.T("Welcome_2")</span>
                                     </button>
@@ -74,7 +71,7 @@
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="aptId" value="@apt.Id" />
                                     <button type="submit" class="apt-action-btn btn-wallet"
-                                            title="@Loc.T("Wallet_2")">
+                                            onclick="return confirm('هل تريد الدخول على محفظة الساكن؟');">
                                         <span class="icon">💼</span>
                                         <span class="label">@Loc.T("Wallet_2")</span>
                                     </button>
@@ -99,9 +96,7 @@
     }
 </div>
 
-<!-- ============================================================ -->
-<!-- Modal QR سريع -->
-<!-- ============================================================ -->
+@* Modal QR سريع *@
 <div class="modal fade" id="quickQrModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -111,9 +106,7 @@
             </div>
             <div class="modal-body">
                 <div id="quickQrForm">
-                    <div class="alert alert-info small">
-                        @Loc.T("The_Quick_QR_Lets_The_Resident")
-                    </div>
+                    <div class="alert alert-info small">@Loc.T("The_Quick_QR_Lets_The_Resident")</div>
 
                     <div class="mb-3">
                         <label class="form-label fw-bold">@Loc.T("Validity_Period")</label>
@@ -133,14 +126,12 @@
                             <input type="radio" name="usageType" value="once" class="form-check-input" id="usageOnce" checked />
                             <label class="form-check-label" for="usageOnce">
                                 <strong>@Loc.T("One_Time_Only")</strong>
-                                <div class="text-muted small">@Loc.T("Most_Secure_The_Link_Expires_After")</div>
                             </label>
                         </div>
                         <div class="form-check mt-2">
                             <input type="radio" name="usageType" value="multiple" class="form-check-input" id="usageMultiple" />
                             <label class="form-check-label" for="usageMultiple">
                                 <strong>@Loc.T("Multiple_Until_Expiry")</strong>
-                                <div class="text-muted small">@Loc.T("Suitable_If_The_Resident_Will_Log")</div>
                             </label>
                         </div>
                     </div>
@@ -163,10 +154,6 @@
                             <button type="button" class="btn btn-sm btn-outline-primary" onclick="copyQuickUrl()">@Loc.T("Copy")</button>
                             <a id="quickQrOpenLink" href="" target="_blank" class="btn btn-sm btn-outline-success">@Loc.T("Open")</a>
                         </div>
-                    </div>
-                    <div class="text-muted small" id="quickQrInfo"></div>
-                    <div class="alert alert-warning small mt-3">
-                        @Loc.T("Send_This_Link_To_The_Resident")
                     </div>
                 </div>
             </div>
@@ -245,10 +232,6 @@
                     `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(data.url)}`;
                 document.getElementById('quickQrUrl').value = data.url;
                 document.getElementById('quickQrOpenLink').href = data.url;
-
-                const usageText = data.oneTime ? '@Html.Raw(Loc.Js("One_Time_Only"))' : `@Html.Raw(Loc.Js("Up_To")) ${data.maxUses} @Html.Raw(Loc.Js("Uses"))`;
-                document.getElementById('quickQrInfo').innerHTML =
-                    `⏱️ @Html.Raw(Loc.Js("Valid_For")) <strong>${data.expiresIn}</strong> @Html.Raw(Loc.Js("Minutes")) ${usageText}`;
             } catch (err) {
                 alert('❌ @Html.Raw(Loc.Js("Error")) ' + err.message);
             } finally {

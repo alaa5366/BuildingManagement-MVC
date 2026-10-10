@@ -58,6 +58,7 @@ public class DataIntegrityService
             ("BuildingAdmins",  async () => await db.BuildingAdmins.CountAsync()),
             ("Floors",          async () => await db.Floors.CountAsync()),
             ("Apartments",      async () => await db.Apartments.CountAsync()),
+            ("Residents",       async () => await db.Residents.CountAsync()),        // ✅ جديد
             ("FinancialCategories", async () => await db.FinancialCategories.CountAsync()),
             ("Expenses",        async () => await db.Expenses.CountAsync()),
             ("Revenues",        async () => await db.Revenues.CountAsync()),
@@ -74,7 +75,7 @@ public class DataIntegrityService
             ("Cameras",         async () => await db.Cameras.CountAsync()),
             ("Presence",        async () => await db.Presence.CountAsync()),
             ("QrTokens",        async () => await db.QrTokens.CountAsync()),
-            ("QrUsages",        async () => await db.QrUsages.CountAsync()),  
+            ("QrUsages",        async () => await db.QrUsages.CountAsync()),
             ("WalletAdjustments", async () => await db.WalletAdjustments.CountAsync()),
             ("SyncPendingChanges", async () => await db.SyncPendingChanges.CountAsync())
         };
@@ -262,7 +263,72 @@ public class DataIntegrityService
     }
 
     // ============================================================
-    // 5. مقارنة Dvrs
+    // 5. مقارنة Residents (Firestore users role=resident vs SQL Residents)
+    // ============================================================
+    public async Task<List<ResidentComparison>> CompareResidentsAsync()
+    {
+        var result = new List<ResidentComparison>();
+
+        // Firestore: users collection, role = "resident"
+        var fsSnapshot = await _fs.Collection("users")
+            .WhereEqualTo("role", "resident")
+            .GetSnapshotAsync();
+
+        var fsResidents = fsSnapshot.Documents
+            .Select(d => new
+            {
+                Uid = d.Id,
+                Email = d.ContainsField("email") ? d.GetValue<string>("email") : "",
+                Name = d.ContainsField("name") ? d.GetValue<string>("name") : "",
+                Phone = d.ContainsField("phone") ? d.GetValue<string>("phone") : ""
+            })
+            .ToDictionary(x => x.Uid, x => x);
+
+        // SQL: Residents table
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        var sqlResidents = await db.Residents
+            .Select(r => new { r.Uid, r.Name, r.Phone, r.BuildingId, r.ApartmentId })
+            .ToDictionaryAsync(x => x.Uid, x => x);
+
+        var allIds = fsResidents.Keys.Union(sqlResidents.Keys).Distinct();
+
+        foreach (var uid in allIds)
+        {
+            var comp = new ResidentComparison { Uid = uid };
+
+            if (fsResidents.TryGetValue(uid, out var fs))
+            {
+                comp.InFirestore = true;
+                comp.FirestoreName = fs.Name;
+                comp.FirestorePhone = fs.Phone;
+                comp.FirestoreEmail = fs.Email;
+            }
+
+            if (sqlResidents.TryGetValue(uid, out var sql))
+            {
+                comp.InSql = true;
+                comp.SqlName = sql.Name;
+                comp.SqlPhone = sql.Phone;
+                comp.BuildingId = sql.BuildingId;
+                comp.ApartmentId = sql.ApartmentId;
+            }
+
+            comp.Status = (comp.InFirestore, comp.InSql) switch
+            {
+                (true, true) => "✅",
+                (true, false) => "⚠️ FS",
+                (false, true) => "⚠️ SQL",
+                _ => "❌"
+            };
+
+            result.Add(comp);
+        }
+
+        return result.OrderBy(x => x.SqlName ?? x.FirestoreName).ToList();
+    }
+
+    // ============================================================
+    // 6. مقارنة Dvrs
     // ============================================================
     public async Task<List<DvrComparison>> CompareDvrsAsync()
     {
@@ -316,7 +382,7 @@ public class DataIntegrityService
     }
 
     // ============================================================
-    // 6. مقارنة Cameras
+    // 7. مقارنة Cameras
     // ============================================================
     public async Task<List<CameraComparison>> CompareCamerasAsync()
     {
@@ -428,6 +494,22 @@ public class UserComparison
     public string? SqlEmail { get; set; }
     public string? SqlRole { get; set; }
     public string? SqlName { get; set; }
+    public string Status { get; set; } = "";
+}
+
+// ✅ جديد: Resident Comparison
+public class ResidentComparison
+{
+    public string Uid { get; set; } = "";
+    public bool InFirestore { get; set; }
+    public bool InSql { get; set; }
+    public string? FirestoreName { get; set; }
+    public string? FirestorePhone { get; set; }
+    public string? FirestoreEmail { get; set; }
+    public string? SqlName { get; set; }
+    public string? SqlPhone { get; set; }
+    public string? BuildingId { get; set; }
+    public string? ApartmentId { get; set; }
     public string Status { get; set; } = "";
 }
 

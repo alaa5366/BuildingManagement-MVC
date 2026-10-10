@@ -3,11 +3,6 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace BuildingManagementMvc.Services;
 
-// بيراجع الجلسة (الكوكي) كل شوية بدل ما نثق فيها 7 أيام:
-//  - admin: لو اتعطّل/اتحذف/اتغيّر دوره  => الجلسة تبطل
-//  - admin: الصلاحيات (perm) بتتحدّث من Firestore من غير ما يعمل login تاني
-//  - superadmin: لو إيميله اتشال من Auth:SuperAdminEmails => الجلسة تبطل
-// النتيجة بتتخزّن دقيقتين عشان مانضغطش على Firestore.
 public class SessionRevalidator
 {
     private static readonly TimeSpan CacheFor = TimeSpan.FromMinutes(2);
@@ -23,25 +18,39 @@ public class SessionRevalidator
         _logger = logger;
     }
 
-    // Permissions = null يعني "ماتغيّرش الـ claims الحالية"
     public sealed record Result(bool Valid, List<string>? Permissions);
 
     public async Task<Result> ValidateAsync(ClaimsPrincipal user)
     {
         var role = user.FindFirst(ClaimTypes.Role)?.Value;
 
+        // ✅ جلسات Impersonation — دايماً Valid (التحقق بيتعمل عند الدخول)
         if (user.HasClaim("impersonated", "true"))
         {
             return new Result(true, null);
         }
 
+        // ✅ SuperAdmin — تحقق من الإيميل
         if (role == "superadmin")
         {
-            var ok = AuthService.IsSuperAdminEmail(user.FindFirst(ClaimTypes.Email)?.Value);
+            var ok = SqlAuthService.IsSuperAdminEmail(user.FindFirst(ClaimTypes.Email)?.Value);
             return new Result(ok, null);
         }
 
-        // جلسات impersonation (resident) و QR مالهاش مستند أدمن
+        // ✅ لو كان SuperAdmin (في حالة Impersonation Exit)
+        // بنتحقق من الإيميل + originalRole
+        var email = user.FindFirst(ClaimTypes.Email)?.Value;
+        if (SqlAuthService.IsSuperAdminEmail(email))
+        {
+            return new Result(true, null);
+        }
+
+        if (user.HasClaim("originalRole", "superadmin"))
+        {
+            return new Result(true, null);
+        }
+
+        // جلسات resident و QR مالهاش مستند أدمن
         if (role != "admin") return new Result(true, null);
 
         var uid = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -54,6 +63,15 @@ public class SessionRevalidator
         try
         {
             var doc = await _users.GetByUidAsync(uid);
+
+            // ✅ لو Uid ده SuperAdmin (حتى لو Role=admin)
+            if (doc != null && doc.Role == "superadmin")
+            {
+                var superResult = new Result(true, null);
+                _cache.Set(cacheKey, superResult, CacheFor);
+                return superResult;
+            }
+
             var valid = doc != null && doc.Role == "admin" && !doc.Disabled && doc.IsActive;
             var result = new Result(valid, valid ? doc!.Permissions ?? new List<string>() : null);
             _cache.Set(cacheKey, result, CacheFor);
@@ -61,7 +79,6 @@ public class SessionRevalidator
         }
         catch (Exception ex)
         {
-            // لو Firestore وقع مؤقتاً مانطرّدش كل الأدمنز — وماننسّخش الفشل في الكاش
             _logger.LogWarning(ex, "[SessionRevalidator] lookup failed for {Uid}; keeping session", uid);
             return new Result(true, null);
         }

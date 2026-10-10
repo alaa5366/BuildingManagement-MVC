@@ -11,7 +11,6 @@ namespace BuildingManagementMvc.Services;
 public class BuildingsService
 {
     private readonly FirestoreDb _db;
-    private readonly FirebaseAuthRestService _fbAuth;
     private readonly BuildingSqlStore? _sql;
     private readonly StorageSettingsService _storageSettings;
     private readonly IDbContextFactory<AppDbContext>? _sqlFactory;
@@ -20,7 +19,6 @@ public class BuildingsService
 
     public BuildingsService(
         FirestoreContext ctx,
-        FirebaseAuthRestService fbAuth,
         IConfiguration cfg,
         BuildingSqlStore? sql = null,
         StorageSettingsService? storageSettings = null,
@@ -28,7 +26,6 @@ public class BuildingsService
         ILogger<BuildingsService>? log = null)
     {
         _db = ctx.Db;
-        _fbAuth = fbAuth;
         _sql = sql;
         _storageSettings = storageSettings
             ?? throw new InvalidOperationException("StorageSettingsService مطلوب");
@@ -50,7 +47,6 @@ public class BuildingsService
         return await _storageSettings.GetModeAsync();
     }
 
-    // ✅ تسجيل تغيير في Change Log (للمزامنة العكسية)
     private async Task RecordChangeAsync(string entityId, string operation, object? payload = null)
     {
         if (_sqlFactory == null) return;
@@ -221,7 +217,6 @@ public class BuildingsService
                 await _sql.SaveFullAsync(building);
                 SqlMirrorHealth.RecordSuccess();
 
-                // ✅ سجّل التغيير لو الوضع Sql (عشان المزامنة العكسية)
                 if (mode == "Sql")
                     await RecordChangeAsync(building.Id, "Update", building);
             }
@@ -245,7 +240,7 @@ public class BuildingsService
     }
 
     // ============================================================
-    // ✅ إضافة أدوار وشقق
+    // ✅ إضافة أدوار وشقق (بدون Firebase Auth)
     // ============================================================
     public async Task<string> AddFloorAsync(string buildingId, string label, List<(string Phone, string Pin)> apartments)
     {
@@ -261,7 +256,6 @@ public class BuildingsService
             ? 1
             : building.Apartments.Max(a => a.Number) + 1;
 
-        var mode = await GetModeAsync();
         foreach (var (phoneRaw, pin) in apartments)
         {
             var phone = AuthHelpers.NormalizePhone(phoneRaw);
@@ -276,21 +270,6 @@ public class BuildingsService
                 Closed = false,
                 OpenDate = DateTime.UtcNow.ToString("o")
             });
-
-            // Firebase Auth اختياري في وضع Sql
-            if (mode != "Sql")
-            {
-                try
-                {
-                    var email = AuthHelpers.ResidentInternalEmail(building.Id, floorOrder, number);
-                    var password = AuthHelpers.ResidentPassword(building.Id, number, pin);
-                    await _fbAuth.CreateUserAsync(email, password);
-                }
-                catch (Exception ex)
-                {
-                    _log?.LogWarning(ex, "Firebase Auth create failed (mode=Sql?), skipping");
-                }
-            }
 
             number++;
         }
@@ -323,21 +302,6 @@ public class BuildingsService
             Closed = false,
             OpenDate = DateTime.UtcNow.ToString("o")
         });
-
-        var mode = await GetModeAsync();
-        if (mode != "Sql")
-        {
-            try
-            {
-                var email = AuthHelpers.ResidentInternalEmail(building.Id, floor.Order, nextNum);
-                var password = AuthHelpers.ResidentPassword(building.Id, nextNum, pin);
-                await _fbAuth.CreateUserAsync(email, password);
-            }
-            catch (Exception ex)
-            {
-                _log?.LogWarning(ex, "Firebase Auth create failed (mode=Sql?), skipping");
-            }
-        }
 
         await SaveFullAsync(building);
     }
@@ -378,9 +342,6 @@ public class BuildingsService
         var apt = building.Apartments.FirstOrDefault(a => a.Id == aptId)
             ?? throw new InvalidOperationException("apt-not-found");
 
-        var oldPhone = apt.Phone;
-        var oldPin = apt.Pin;
-
         apt.Owner = owner ?? "";
         apt.Label = label ?? "";
         apt.Phone = AuthHelpers.NormalizePhone(phone);
@@ -389,27 +350,6 @@ public class BuildingsService
         apt.Notes = notes ?? "";
         if (!string.IsNullOrWhiteSpace(email))
             apt.Email = email;
-
-        var mode = await GetModeAsync();
-        var floor = building.Floors.FirstOrDefault(f => f.Id == apt.FloorId);
-        if (mode != "Sql" && floor != null &&
-            (oldPin != pin || AuthHelpers.NormalizePhone(oldPhone) != apt.Phone))
-        {
-            try
-            {
-                var fbEmail = AuthHelpers.ResidentInternalEmail(building.Id, floor.Order, apt.Number);
-                var fbPassword = AuthHelpers.ResidentPassword(building.Id, apt.Number, pin);
-                var uid = await _fbAuth.GetUidByEmailAsync(fbEmail);
-                if (!string.IsNullOrEmpty(uid))
-                    await _fbAuth.UpdatePasswordAsync(uid, fbPassword);
-                else
-                    await _fbAuth.CreateUserAsync(fbEmail, fbPassword);
-            }
-            catch (Exception ex)
-            {
-                _log?.LogWarning(ex, "Firebase Auth update failed");
-            }
-        }
 
         await SaveFullAsync(building);
     }
@@ -433,7 +373,6 @@ public class BuildingsService
 
         try
         {
-            // اقرأ من Firestore مباشرة (مش من GetAllAsync) عشان مايتأثرش بالوضع
             var snap = await Col.GetSnapshotAsync();
             var buildings = snap.Documents.Select(d => d.ConvertTo<Building>()).ToList();
 

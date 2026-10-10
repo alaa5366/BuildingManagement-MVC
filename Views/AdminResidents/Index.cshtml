@@ -1,0 +1,271 @@
+﻿@model List<BuildingManagementMvc.Data.Entities.ResidentEntity>
+@{
+    ViewData["Title"] = Loc.T("Residents_Title");
+    var building = ViewBag.Building as Building;
+    var buildingId = ViewBag.BuildingId as string ?? "";
+    var search = ViewBag.Search as string ?? "";
+}
+
+<div class="container-fluid">
+
+    @* ═══════════════════════════════════════════════════════════ *@
+    @* Header                                                        *@
+    @* ═══════════════════════════════════════════════════════════ *@
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h3 class="mb-1">
+                <i class="bi bi-people-fill"></i>
+                @Loc.T("Residents_Title")
+            </h3>
+            <p class="text-muted mb-0">
+                @building?.Name — @building?.BuildingNumber
+                <span class="badge bg-secondary ms-2">@Model.Count</span>
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Create" asp-route-buildingId="@buildingId"
+               class="btn btn-success">
+                <i class="bi bi-person-plus-fill"></i>
+                @Loc.T("Add_Resident")
+            </a>
+            @if (User.IsInRole("superadmin"))
+            {
+                <a asp-action="Migrate" class="btn btn-outline-warning">
+                    <i class="bi bi-arrow-repeat"></i>
+                    @Loc.T("Migrate_From_Apartments")
+                </a>
+            }
+        </div>
+    </div>
+
+    @* ═══════════════════════════════════════════════════════════ *@
+    @* Alerts                                                        *@
+    @* ═══════════════════════════════════════════════════════════ *@
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle-fill"></i> @TempData["Message"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @* ═══════════════════════════════════════════════════════════ *@
+    @* Search                                                        *@
+    @* ═══════════════════════════════════════════════════════════ *@
+    <form method="get" class="mb-3">
+        <input type="hidden" name="buildingId" value="@buildingId" />
+        <div class="input-group">
+            <input type="text" name="search" value="@search"
+                   class="form-control"
+                   placeholder="@Loc.T("Search_By_Name_Or_Phone")" />
+            <button type="submit" class="btn btn-outline-secondary">
+                <i class="bi bi-search"></i>
+            </button>
+            @if (!string.IsNullOrWhiteSpace(search))
+            {
+                <a asp-action="Index" asp-route-buildingId="@buildingId"
+                   class="btn btn-outline-danger">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+            }
+        </div>
+    </form>
+
+    @* ═══════════════════════════════════════════════════════════ *@
+    @* Residents Table                                               *@
+    @* ═══════════════════════════════════════════════════════════ *@
+    @if (Model.Count == 0)
+    {
+        <div class="alert alert-info text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 48px;"></i>
+            <h5 class="mt-3">@Loc.T("No_Residents_Yet")</h5>
+            <p class="text-muted">@Loc.T("Add_First_Resident_Or_Migrate_From_Apartments")</p>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>@Loc.T("Name")</th>
+                            <th>@Loc.T("Phone")</th>
+                            <th>@Loc.T("Apartment")</th>
+                            <th>@Loc.T("Status")</th>
+                            <th>@Loc.T("Role")</th>
+                            <th>@Loc.T("Last_Login")</th>
+                            <th class="text-end">@Loc.T("Actions")</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Model.OrderBy(r => r.ApartmentId).ThenByDescending(r => r.IsPrimary))
+                        {
+                            var apt = building?.Apartments.FirstOrDefault(a => a.Id == r.ApartmentId);
+                            var aptNumber = apt?.Number ?? 0;
+
+                            <tr class="@(r.IsDisabled ? "opacity-50" : "")">
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="rounded-circle bg-primary bg-opacity-10 text-primary fw-bold d-flex align-items-center justify-content-center"
+                                             style="width: 36px; height: 36px;">
+                                            @(string.IsNullOrWhiteSpace(r.Name) ? "?" : r.Name.Trim()[0].ToString().ToUpper())
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold">@r.Name</div>
+                                            @if (r.IsPrimary)
+                                            {
+                                                <span class="badge bg-success" style="font-size: 9px;">
+                                                    @Loc.T("Primary")
+                                                </span>
+                                            }
+                                            @if (r.IsOwner)
+                                            {
+                                                <span class="badge bg-info" style="font-size: 9px;">
+                                                    @Loc.T("Owner")
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary" style="font-size: 9px;">
+                                                    @Loc.T("Tenant")
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td dir="ltr">
+                                    <div>@r.Phone</div>
+                                    @if (!string.IsNullOrWhiteSpace(r.Email))
+                                    {
+                                        <small class="text-muted">@r.Email</small>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">
+                                        @Loc.T("Apartment_N", aptNumber)
+                                    </span>
+                                    @if (!string.IsNullOrWhiteSpace(apt?.Label))
+                                    {
+                                        <small class="text-muted d-block">@apt.Label</small>
+                                    }
+                                </td>
+                                <td>
+                                    @if (r.IsDisabled)
+                                    {
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-x-circle"></i>
+                                            @Loc.T("Disabled")
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i>
+                                            @Loc.T("Active")
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (r.IsPrimary)
+                                    {
+                                        <span class="text-success">@Loc.T("Primary")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">@Loc.T("Secondary")</span>
+                                    }
+                                </td>
+                                <td class="text-muted small">
+                                    @if (r.LastLoginAt.HasValue)
+                                    {
+                                        @r.LastLoginAt.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                                    }
+                                    else
+                                    {
+                                        <span>—</span>
+                                    }
+                                </td>
+                                <td class="text-end text-nowrap">
+                                    <a asp-action="Details" asp-route-id="@r.Id"
+                                       class="btn btn-sm btn-outline-primary" title="@Loc.T("Details")">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a asp-action="Edit" asp-route-id="@r.Id"
+                                       class="btn btn-sm btn-outline-warning" title="@Loc.T("Edit")">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    @if (r.IsDisabled)
+                                    {
+                                        <form asp-action="Enable" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@r.Id" />
+                                            <button type="submit" class="btn btn-sm btn-outline-success"
+                                                    title="@Loc.T("Enable")">
+                                                <i class="bi bi-check-circle"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                onclick="disableResident('@r.Id', '@r.Name')"
+                                                title="@Loc.T("Disable")">
+                                            <i class="bi bi-slash-circle"></i>
+                                        </button>
+                                    }
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                            onclick="deleteResident('@r.Id', '@r.Name')"
+                                            title="@Loc.T("Delete")">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@* ═══════════════════════════════════════════════════════════ *@
+@* Forms المخفية للعمليات                                        *@
+@* ═══════════════════════════════════════════════════════════ *@
+<form id="disableForm" method="post" asp-action="Disable" style="display:none;">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" id="disableId" />
+    <input type="hidden" name="reason" id="disableReason" />
+</form>
+
+<form id="deleteForm" method="post" asp-action="Delete" style="display:none;">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" id="deleteId" />
+</form>
+
+@section Scripts {
+    <script>
+        function disableResident(id, name) {
+            const reason = prompt('@Loc.T("Disable_Reason_Prompt") ' + name, '');
+            if (reason === null) return;
+
+            document.getElementById('disableId').value = id;
+            document.getElementById('disableReason').value = reason || '';
+            document.getElementById('disableForm').submit();
+        }
+
+        function deleteResident(id, name) {
+            if (!confirm('@Loc.T("Delete_Resident_Confirm") ' + name + '؟')) return;
+
+            document.getElementById('deleteId').value = id;
+            document.getElementById('deleteForm').submit();
+        }
+    </script>
+}

@@ -5,7 +5,7 @@ using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Controllers;
 
-[Authorize(Roles = "superadmin")]
+[Authorize]   // ✅ بس Authenticated (مش Role محدد)
 public class BuildingsController : Controller
 {
     private readonly BuildingsService _service;
@@ -17,6 +17,10 @@ public class BuildingsController : Controller
         _qrPdf = qrPdf;
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // Index — SuperAdmin فقط
+    // ═══════════════════════════════════════════════════════════
+    [Authorize(Roles = "superadmin")]
     public async Task<IActionResult> Index(int page = 1, int pageSize = 50)
     {
         var allBuildings = await _service.GetAllAsync();
@@ -31,11 +35,16 @@ public class BuildingsController : Controller
         return View(paged);
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // Create — SuperAdmin فقط
+    // ═══════════════════════════════════════════════════════════
     [HttpGet]
+    [Authorize(Roles = "superadmin")]
     public IActionResult Create() => View();
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Roles = "superadmin")]
     public async Task<IActionResult> Create(
         string name,
         string? buildingNumber,
@@ -93,6 +102,10 @@ public class BuildingsController : Controller
         return RedirectToAction("Details", new { id });
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // Details — SuperAdmin + Admin
+    // ═══════════════════════════════════════════════════════════
+    [Authorize(Roles = "superadmin,admin")]
     public async Task<IActionResult> Details(string id)
     {
         var building = await _service.GetByIdAsync(id);
@@ -100,10 +113,11 @@ public class BuildingsController : Controller
         return View(building);
     }
 
-    // ============================================================
-    // ✅ جديد: صفحة QR Codes
-    // ============================================================
+    // ═══════════════════════════════════════════════════════════
+    // QrCodes — SuperAdmin فقط
+    // ═══════════════════════════════════════════════════════════
     [HttpGet]
+    [Authorize(Roles = "superadmin")]
     public async Task<IActionResult> QrCodes(string id)
     {
         var building = await _service.GetByIdAsync(id);
@@ -111,10 +125,11 @@ public class BuildingsController : Controller
         return View(building);
     }
 
-    // ============================================================
-    // ✅ جديد: تحميل PDF فيه كل الـ QRs
-    // ============================================================
+    // ═══════════════════════════════════════════════════════════
+    // QrCodesPdf — SuperAdmin فقط
+    // ═══════════════════════════════════════════════════════════
     [HttpGet]
+    [Authorize(Roles = "superadmin")]
     public async Task<IActionResult> QrCodesPdf(string id)
     {
         var building = await _service.GetByIdAsync(id);
@@ -127,16 +142,24 @@ public class BuildingsController : Controller
         return File(pdfBytes, "application/pdf", fileName);
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // Delete — SuperAdmin فقط
+    // ═══════════════════════════════════════════════════════════
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Roles = "superadmin")]
     public async Task<IActionResult> Delete(string id)
     {
         await _service.DeleteAsync(id);
         return RedirectToAction("Index");
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // AddFloor — SuperAdmin فقط
+    // ═══════════════════════════════════════════════════════════
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Roles = "superadmin")]
     public async Task<IActionResult> AddFloor(string buildingId, string label, string aptPhones, string aptPins)
     {
         var phones = (aptPhones ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -157,8 +180,12 @@ public class BuildingsController : Controller
         return RedirectToAction("Details", new { id = buildingId });
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // AddApartment — SuperAdmin فقط
+    // ═══════════════════════════════════════════════════════════
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Roles = "superadmin")]
     public async Task<IActionResult> AddApartment(string buildingId, string floorId, string phone, string pin)
     {
         if (string.IsNullOrWhiteSpace(phone) || string.IsNullOrWhiteSpace(pin) || pin.Length < 4)
@@ -171,12 +198,17 @@ public class BuildingsController : Controller
         TempData["Message"] = Loc.T("Apartment_Added_Successfully");
         return RedirectToAction("Details", new { id = buildingId });
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // GenerateQuickQr — SuperAdmin + Admin ✅ (المهم)
+    // ═══════════════════════════════════════════════════════════
+    [Authorize(Roles = "superadmin,admin")]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> GenerateQuickQr(
-    string buildingId, string aptId,
-    int validityMinutes, bool oneTime, int maxUses,
-    [FromServices] QrSecurityService qrSecurity)
+        string buildingId, string aptId,
+        int validityMinutes, bool oneTime, int maxUses,
+        [FromServices] QrSecurityService qrSecurity)
     {
         var building = await _service.GetByIdAsync(buildingId);
         if (building == null) return NotFound();
@@ -211,14 +243,15 @@ public class BuildingsController : Controller
             maxUses = options.MaxUses
         });
     }
-    // ============================================================
-    // إصلاح Firebase Auth Accounts (للطوارئ)
-    // ============================================================
+
+    // ═══════════════════════════════════════════════════════════
+    // FixFirebaseAccounts — SuperAdmin فقط
+    // ═══════════════════════════════════════════════════════════
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "superadmin")]
     public async Task<IActionResult> FixFirebaseAccounts(string id,
-        [FromServices] FirebaseAuthRestService fbAuth)
+        [FromServices] FirebaseAdminService fbAdmin)
     {
         var building = await _service.GetByIdAsync(id);
         if (building == null) return NotFound();
@@ -237,9 +270,9 @@ public class BuildingsController : Controller
 
             try
             {
-                var result = await fbAuth.CreateUserAsync(email, password);
+                var uid = await fbAdmin.CreateOrGetUserAsync(email, password);
 
-                if (result != null)
+                if (!string.IsNullOrEmpty(uid))
                 {
                     successCount++;
                     results.Add(new { apt = apt.Number, email, status = "✅ Created/Updated" });
@@ -260,14 +293,15 @@ public class BuildingsController : Controller
         TempData["Message"] = Loc.T("Fixed_N_Accounts_N_Failed", successCount, failCount);
         return RedirectToAction("Details", new { id });
     }
-    // ============================================================
-    // إعادة إنشاء حسابات Firebase Auth لكل الشقق
-    // ============================================================
+
+    // ═══════════════════════════════════════════════════════════
+    // RecreateFirebaseAccounts — SuperAdmin فقط
+    // ═══════════════════════════════════════════════════════════
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "superadmin")]
     public async Task<IActionResult> RecreateFirebaseAccounts(string id,
-        [FromServices] FirebaseAuthRestService fbAuth,
+        [FromServices] FirebaseAdminService fbAdmin,
         [FromServices] ILogger<BuildingsController> logger)
     {
         var building = await _service.GetByIdAsync(id);
@@ -285,35 +319,18 @@ public class BuildingsController : Controller
             var email = AuthHelpers.ResidentInternalEmail(building.Id, floor.Order, apt.Number);
             var password = AuthHelpers.ResidentPassword(building.Id, apt.Number, apt.Pin);
 
-            // 1. جرّب SignIn الأول — لو نجح، يبقى الحساب موجود
-            var signIn = await fbAuth.SignInWithPasswordAsync(email, password);
-            if (signIn.Success)
-            {
-                successCount++;
-                results.Add(Loc.T("Apartment_N_Already_Exists", apt.Number));
-                logger.LogInformation($"[Recreate] Apt {apt.Number}: OK (already exists)");
-                continue;
-            }
-
-            // 2. الحساب مش موجود أو كلمة السر غلط — اعمله جديد
             try
             {
-                var created = await fbAuth.CreateUserAsync(email, password);
-
-                // 3. بعد الإنشاء، جرّب SignIn للتأكد
-                var verify = await fbAuth.SignInWithPasswordAsync(email, password);
-
-                if (verify.Success)
+                var uid = await fbAdmin.CreateOrGetUserAsync(email, password);
+                if (!string.IsNullOrEmpty(uid))
                 {
                     successCount++;
                     results.Add(Loc.T("Apartment_N_Created", apt.Number));
-                    logger.LogInformation($"[Recreate] Apt {apt.Number}: Created + Verified");
                 }
                 else
                 {
                     failCount++;
-                    results.Add(Loc.T("Apartment_N_Created_But_Sign_In", apt.Number));
-                    logger.LogWarning($"[Recreate] Apt {apt.Number}: Created but SignIn failed");
+                    results.Add(Loc.T("Apartment_N_N_3", apt.Number, "Failed"));
                 }
             }
             catch (Exception ex)
@@ -329,9 +346,10 @@ public class BuildingsController : Controller
 
         return RedirectToAction("Details", new { id });
     }
-    // ============================================================
-    // مزامنة كلمات سر Firebase لكل الشقق
-    // ============================================================
+
+    // ═══════════════════════════════════════════════════════════
+    // SyncFirebasePasswords — SuperAdmin فقط
+    // ═══════════════════════════════════════════════════════════
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "superadmin")]
@@ -352,7 +370,6 @@ public class BuildingsController : Controller
             var email = AuthHelpers.ResidentInternalEmail(building.Id, floor.Order, apt.Number);
             var password = AuthHelpers.ResidentPassword(building.Id, apt.Number, apt.Pin);
 
-            // 1. جرّب تحديث كلمة السر
             var updated = await fbAdmin.UpdatePasswordAsync(email, password);
 
             if (updated)
@@ -361,7 +378,6 @@ public class BuildingsController : Controller
                 continue;
             }
 
-            // 2. لو مش موجود — اعمله
             var uid = await fbAdmin.CreateOrGetUserAsync(email, password);
             if (uid != null)
             {

@@ -1,0 +1,75 @@
+﻿@{
+    ViewData["Title"] = Loc.T("Migrate_Residents");
+    var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Models.Building> ?? new();
+    var totalResidents = (int)(ViewBag.TotalResidents ?? 0);
+}
+
+<div class="container" style="max-width: 800px;">
+
+    <div class="text-center mb-4">
+        <h2>🔄 @Loc.T("Migrate_Residents")</h2>
+        <p class="text-muted">@Loc.T("Migrate_From_Apartments_To_Residents_Table")</p>
+    </div>
+
+    <div class="alert alert-info">
+        <strong>ℹ️ @Loc.T("Info")</strong>
+        <ul class="mb-0 mt-2">
+            <li>@Loc.T("Migration_Copies_Residents_From_Apartments")</li>
+            <li>@Loc.T("Existing_Residents_Will_Be_Skipped")</li>
+            <li>@Loc.T("PIN_Will_Be_Hashed_With_BCrypt")</li>
+            <li>
+                @Loc.T("Total_Residents_Currently")
+                <strong>@totalResidents</strong>
+            </li>
+        </ul>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <form asp-action="RunMigration" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">@Loc.T("Building_Optional")</label>
+                    <select name="buildingId" class="form-select">
+                        <option value="">@Loc.T("All_Buildings")</option>
+                        @foreach (var b in buildings)
+                        {
+                            <option value="@b.Id">
+                                @b.Name (@b.BuildingNumber) — @b.Apartments.Count @Loc.T("Apartments")
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                @* ✅ الحقل المخفي بيضمن إرسال "false" لو الـ checkbox مش متحدد *@
+                <div class="form-check form-switch mb-3">
+                    <input type="hidden" name="dryRun" value="false" />
+                    <input type="checkbox" name="dryRun" value="true"
+                           class="form-check-input" id="dryRun" checked />
+                    <label class="form-check-label" for="dryRun">
+                        <strong>@Loc.T("Dry_Run_Test_Only")</strong>
+                        <div class="form-text">@Loc.T("Dry_Run_Hint")</div>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-warning btn-lg w-100"
+                        onclick="return confirm('@Loc.T("Confirm_Migration")')">
+                    <i class="bi bi-play-circle"></i>
+                    @Loc.T("Run_Migration")
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="alert alert-warning">
+        <strong>⚠️ @Loc.T("Warning")</strong>
+        @Loc.T("Migration_Is_One_Way_Make_Sure_You_Have_Backup")
+    </div>
+
+    <div class="text-center mt-4">
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-right"></i> @Loc.T("Back")
+        </a>
+    </div>
+</div>

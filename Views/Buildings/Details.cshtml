@@ -15,9 +15,10 @@
                   method="post" class="d-inline">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="buildingId" value="@Model.Id" />
-                <button type="submit" class="btn btn-warning btn-sm">
+                <button type="submit" class="btn btn-warning btn-sm"
+                        onclick="return confirm('هل تريد الدخول كـ Admin لهذه العمارة؟');">
                     <i class="bi bi-person-badge"></i>
-                    @Loc.T("Log_In_As_Resident") (Admin)
+                    دخول كـ Admin
                 </button>
             </form>
         }
@@ -28,27 +29,6 @@
               onsubmit="return confirm('@Loc.Js("Permanently_Delete_The_Building")');">
             @Html.AntiForgeryToken()
             <button class="btn btn-outline-danger btn-sm">@Loc.T("Delete_Building")</button>
-        </form>
-        <form method="post" asp-action="FixFirebaseAccounts" asp-route-id="@Model.Id"
-              onsubmit="return confirm('@Loc.Js("Fix_Firebase_Auth_Accounts_For_All")');">
-            @Html.AntiForgeryToken()
-            <button class="btn btn-outline-warning btn-sm" type="submit">
-                @Loc.T("Fix_Firebase_Accounts")
-            </button>
-        </form>
-        <form method="post" asp-action="RecreateFirebaseAccounts" asp-route-id="@Model.Id"
-              onsubmit="return confirm('@Loc.Js("Recreate_Firebase_Accounts_For_All_Apartments")');">
-            @Html.AntiForgeryToken()
-            <button class="btn btn-outline-warning btn-sm" type="submit">
-                @Loc.T("Recreate_Firebase_Accounts")
-            </button>
-        </form>
-        <form method="post" asp-action="SyncFirebasePasswords" asp-route-id="@Model.Id"
-              onsubmit="return confirm('@Loc.Js("Sync_Firebase_Passwords_For_All_Apartments")');">
-            @Html.AntiForgeryToken()
-            <button class="btn btn-outline-success btn-sm" type="submit">
-                @Loc.T("Sync_Firebase_Passwords")
-            </button>
         </form>
     </div>
 </div>
@@ -83,12 +63,14 @@
                             </div>
 
                             <div class="apt-actions">
+                                @* 1. QR سريع *@
                                 <button type="button" class="apt-action-btn btn-qr"
                                         onclick="openQuickQrModal('@apt.Id', '@apt.Number', '@floor.Label')">
                                     <span class="icon">⚡</span>
                                     <span class="label">@Loc.T("Quick_QR_2")</span>
                                 </button>
 
+                                @* 2. PDF فاتورة *@
                                 <a asp-controller="Invoice" asp-action="Download"
                                    asp-route-aptId="@apt.Id"
                                    asp-route-month="@currentMonth"
@@ -98,14 +80,29 @@
                                     <span class="label">@Loc.T("PDF_Invoice")</span>
                                 </a>
 
+                                @* 3. المحفظة (Impersonation) *@
                                 <form method="post" asp-controller="Impersonation"
                                       asp-action="EnterResidentWallet" class="d-inline">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="aptId" value="@apt.Id" />
-                                    <input type="hidden" name="buildingId" value="@Model.Id" />  @* ✅ جديد *@
-                                    <button type="submit" class="apt-action-btn btn-wallet">
+                                    <input type="hidden" name="buildingId" value="@Model.Id" />
+                                    <button type="submit" class="apt-action-btn btn-wallet"
+                                            onclick="return confirm('هل تريد الدخول على محفظة الساكن؟');">
                                         <span class="icon">💼</span>
                                         <span class="label">@Loc.T("Wallet_2")</span>
+                                    </button>
+                                </form>
+
+                                @* 4. دخول كـ ساكن *@
+                                <form method="post" asp-controller="Impersonation"
+                                      asp-action="EnterResidentHome" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="aptId" value="@apt.Id" />
+                                    <input type="hidden" name="buildingId" value="@Model.Id" />
+                                    <button type="submit" class="apt-action-btn btn-impersonate"
+                                            onclick="return confirm('هل تريد الدخول كـ Resident؟');">
+                                        <span class="icon">🚪</span>
+                                        <span class="label">دخول كـ ساكن</span>
                                     </button>
                                 </form>
                             </div>
@@ -151,7 +148,7 @@
     </form>
 </div>
 
-<!-- Modal QR سريع (نفس AdminApts) -->
+@* Modal QR سريع *@
 <div class="modal fade" id="quickQrModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -210,7 +207,6 @@
                             <a id="quickQrOpenLink" href="" target="_blank" class="btn btn-sm btn-outline-success">@Loc.T("Open")</a>
                         </div>
                     </div>
-                    <div class="text-muted small" id="quickQrInfo"></div>
                 </div>
             </div>
             <div class="modal-footer">

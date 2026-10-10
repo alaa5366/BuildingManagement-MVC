@@ -41,7 +41,7 @@ public class AppDbContext : DbContext
     public DbSet<SyncPendingChangeEntity> SyncPendingChanges => Set<SyncPendingChangeEntity>();
     public DbSet<DvrEntity> Dvrs => Set<DvrEntity>();
     public DbSet<CameraEntity> Cameras => Set<CameraEntity>();
-
+    public DbSet<ResidentEntity> Residents => Set<ResidentEntity>();
     protected override void ConfigureConventions(ModelConfigurationBuilder cb)
     {
         cb.Properties<decimal>().HavePrecision(18, 2);
@@ -327,6 +327,26 @@ public class AppDbContext : DbContext
             e.HasIndex(x => x.BuildingId);
             e.HasOne(x => x.Dvr).WithMany(d => d.Cameras)
                 .HasForeignKey(x => x.DvrId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+        // ═══════════════════════════════════════════════════════════
+        // ✅ Residents — جدول الساكنين الجديد
+        // ═══════════════════════════════════════════════════════════
+        mb.Entity<ResidentEntity>(e =>
+        {
+            e.ToTable("Residents");
+            e.HasKey(x => x.Id);
+
+            e.HasIndex(x => x.BuildingId);
+            e.HasIndex(x => x.ApartmentId);
+            e.HasIndex(x => x.Phone);
+            e.HasIndex(x => x.Uid).IsUnique();
+            e.HasIndex(x => new { x.BuildingId, x.Phone });
+
+            // Foreign Key للـ Apartment
+            e.HasOne(x => x.Apartment)
+                .WithMany()
+                .HasForeignKey(x => new { x.BuildingId, x.ApartmentId })
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

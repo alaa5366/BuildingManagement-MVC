@@ -1,0 +1,125 @@
+﻿@model BuildingManagementMvc.Models.MigrationResult
+@{
+    ViewData["Title"] = Loc.T("Migration_Result");
+    var dryRun = ViewBag.DryRun as bool? ?? false;
+    var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Models.Building> ?? new();
+    var totalResidents = (int)(ViewBag.TotalResidents ?? 0);
+}
+
+<div class="container">
+
+    <div class="text-center mb-4">
+        <h2>
+            @if (dryRun)
+            {
+                <span>🔍 @Loc.T("Dry_Run_Result")</span>
+            }
+            else
+            {
+                <span>✅ @Loc.T("Migration_Result")</span>
+            }
+        </h2>
+        <p class="text-muted">
+            @Loc.T("Total_Residents_Now") <strong>@totalResidents</strong>
+        </p>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <div class="text-muted small">@Loc.T("Buildings_Scanned")</div>
+                    <div class="fs-3 fw-bold text-primary">@Model.BuildingsScanned</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <div class="text-muted small">@Loc.T("Found")</div>
+                    <div class="fs-3 fw-bold text-info">@Model.EntriesFound</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <div class="text-muted small">@Loc.T("Migrated")</div>
+                    <div class="fs-3 fw-bold text-success">@Model.EntriesMigrated</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <div class="text-muted small">@Loc.T("Skipped")</div>
+                    <div class="fs-3 fw-bold text-warning">@Model.EntriesSkipped</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.EntriesFailed > 0)
+    {
+        <div class="alert alert-danger">
+            <strong>❌ @Loc.T("Failed") @Model.EntriesFailed</strong>
+        </div>
+    }
+
+    @if (Model.Errors.Count > 0)
+    {
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-danger text-white">
+                <strong>@Loc.T("Errors") (@Model.Errors.Count)</strong>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0 small">
+                    @foreach (var e in Model.Errors.Take(50))
+                    {
+                        <li>@e</li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
+
+    @if (Model.Details.Count > 0)
+    {
+        <div class="card shadow-sm mb-3">
+            <div class="card-header">
+                <strong>@Loc.T("Details") (@Model.Details.Count)</strong>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                <ul class="mb-0 small">
+                    @foreach (var d in Model.Details.Take(100))
+                    {
+                        <li>@d</li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
+
+    <div class="alert alert-info">
+        <strong>⏱️ @Loc.T("Duration")</strong>
+        @Model.Duration.TotalSeconds.ToString("0.00") @Loc.T("Seconds")
+    </div>
+
+    @if (dryRun)
+    {
+        <div class="alert alert-warning">
+            <strong>ℹ️ @Loc.T("Dry_Run_Note")</strong>
+            @Loc.T("No_Data_Was_Written_Run_Again_Without_Dry_Run")
+        </div>
+    }
+
+    <div class="d-flex gap-2 justify-content-center">
+        <a asp-action="Migrate" class="btn btn-warning">
+            <i class="bi bi-arrow-repeat"></i> @Loc.T("Run_Again")
+        </a>
+        <a asp-action="Index" class="btn btn-primary">
+            <i class="bi bi-people-fill"></i> @Loc.T("View_Residents")
+        </a>
+    </div>
+
+</div>

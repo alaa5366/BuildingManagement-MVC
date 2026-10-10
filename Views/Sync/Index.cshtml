@@ -1,6 +1,7 @@
 ﻿@{
     ViewData["Title"] = Loc.T("Database_Sync");
     var currentMode = ViewBag.CurrentMode as string ?? "Dual";
+    var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Models.Building> ?? new();
 }
 
 <div class="container">
@@ -21,7 +22,7 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     }
-
+</div>
     <div class="card mb-4 border-primary shadow-sm">
         <div class="card-header bg-primary text-white">
             <h5 class="mb-0">⚡ @Loc.T("Full_Sync_Everything")</h5>
@@ -149,25 +150,90 @@
             </form>
         </div>
 
-        @* ✅ كارت: تنظيف السجلات اليتيمة *@
+        @* ✅ كارت: ترحيل الساكنين من Apartments إلى Residents *@
         <div class="col-md-4">
-            <a asp-action="Cleanup" class="card h-100 text-decoration-none border-danger">
-                <div class="card-body d-flex flex-column">
-                    <h5>🧹 @Loc.T("Cleanup_Card_Title")</h5>
-                    <p class="text-muted small flex-grow-1">
-                        @Loc.T("Cleanup_Card_Desc")
-                        <br />
-                        <small class="text-muted">
-                            (qr-tokens, presence, dvrs, cameras)
-                        </small>
+            <form method="post"
+                  asp-controller="AdminResidents"
+                  asp-action="RunMigration"
+                  class="card h-100 border-warning border-2">
+                @Html.AntiForgeryToken()
+                <div class="card-body">
+                    <h5>👥 @Loc.T("Migrate_Residents_Title")</h5>
+                    <p class="text-muted small">
+                        @Loc.T("Migrate_Residents_Desc")
                     </p>
-                    <button class="btn btn-outline-danger w-100">
-                        @Loc.T("Cleanup_Card_Open")
+
+                    <select name="buildingId" class="form-select form-select-sm mb-2">
+                        <option value="">@Loc.T("All_Buildings")</option>
+                        @foreach (var b in buildings)
+                        {
+                            <option value="@b.Id">
+                                @b.Name (@b.BuildingNumber)
+                            </option>
+                        }
+                    </select>
+
+                    @* ✅ الحقل المخفي بيضمن إرسال "false" لو الـ checkbox مش متحدد *@
+                    <input type="hidden" name="dryRun" value="false" />
+                    <div class="form-check mb-2">
+                        <input type="checkbox" name="dryRun" value="true"
+                               class="form-check-input" id="residentsDryRun" />
+                        <label class="form-check-label small" for="residentsDryRun">
+                            @Loc.T("Dry_Run_Test_Only")
+                        </label>
+                    </div>
+
+                    <button class="btn btn-warning w-100"
+                            onclick="return confirm('@Loc.T("Confirm_Migration")')">
+                        ▶️ @Loc.T("Run")
                     </button>
                 </div>
-            </a>
+            </form>
         </div>
+
+    @* ✅ Phase 2: Migration PINs → BCrypt *@
+    <div class="col-md-4">
+        <form method="post" asp-action="MigratePins" class="card h-100 border-danger border-2">
+            @Html.AntiForgeryToken()
+            <div class="card-body">
+                <h5>🔐 @Loc.T("Migrate_Pins_Title")</h5>
+                <p class="text-muted small">
+                    @Loc.T("Migrate_Pins_Desc")
+                </p>
+
+                <input type="hidden" name="dryRun" value="false" />
+                <div class="form-check mb-2">
+                    <input type="checkbox" name="dryRun" value="true"
+                           class="form-check-input" id="pinsDryRun" checked />
+                    <label class="form-check-label small" for="pinsDryRun">
+                        @Loc.T("Dry_Run_Test_Only")
+                    </label>
+                </div>
+
+                <button class="btn btn-danger w-100"
+                        onclick="return confirm('@Loc.T("Confirm_Migration")')">
+                    ▶️ @Loc.T("Run")
+                </button>
+            </div>
+        </form>
     </div>
+
+        @* ✅ كارت: تنظيف السجلات اليتيمة *@
+        <a asp-action="Cleanup" class="card h-100 text-decoration-none border-danger">
+            <div class="card-body d-flex flex-column">
+                <h5>🧹 @Loc.T("Cleanup_Card_Title")</h5>
+                <p class="text-muted small flex-grow-1">
+                    @Loc.T("Cleanup_Card_Desc")
+                    <br />
+                    <small class="text-muted">
+                        (qr-tokens, presence, dvrs, cameras)
+                    </small>
+                </p>
+                <div class="btn btn-outline-danger w-100">
+                    @Loc.T("Cleanup_Card_Open")
+                </div>
+            </div>
+        </a>
 
     <div class="card mt-4">
         <div class="card-body">

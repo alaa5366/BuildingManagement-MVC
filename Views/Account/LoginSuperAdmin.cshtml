@@ -1,28 +1,87 @@
 @model SuperAdminLoginVm
-@{ ViewData["Title"] = Loc.T("Super_Admin_Login"); }
+@{
+    ViewData["Title"] = Loc.T("Super_Admin_Login");
+}
 
 <div class="auth-wrap">
     <div class="auth-card">
-        <a asp-action="LoginChoice" class="small">@Loc.T("Back")</a>
+        <a asp-action="LoginChoice" class="link-btn back-link">@Loc.T("Back")</a>
         <h2>@Loc.T("Super_Admin_Login")</h2>
         <p class="sub">@Loc.T("With_Email_And_Password")</p>
 
-        <form asp-action="LoginSuperAdmin" method="post">
-            <div class="mb-3">
-                <label class="form-label">@Loc.T("Email")</label>
-                <input asp-for="Email" class="form-control" autocomplete="username" />
-            </div>
-            <div class="mb-3">
-                <label class="form-label">@Loc.T("Password")</label>
-                <input asp-for="Password" class="form-control" autocomplete="current-password" />
-            </div>
+        @if (ViewBag.Error != null)
+        {
+            <div class="alert alert-danger">@ViewBag.Error</div>
+        }
 
-            @if (ViewBag.Error != null)
-            {
-                <div class="alert alert-danger py-2">@ViewBag.Error</div>
-            }
+        <form asp-action="LoginSuperAdmin" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="field">
+                <label>@Loc.T("Email")</label>
+                <input asp-for="Email" class="form-control" dir="ltr" autocomplete="username" />
+            </div>
+            <div class="field">
+                <label>@Loc.T("Password")</label>
+                <input asp-for="Password" type="password" class="form-control" autocomplete="current-password" />
+            </div>
 
             <button type="submit" class="btn btn-brand w-100">@Loc.T("Log_In")</button>
         </form>
     </div>
 </div>
+
+<style>
+    .auth-wrap {
+        display: flex;
+        justify-content: center;
+        padding: 40px 20px;
+    }
+
+    .auth-card {
+        background: white;
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        width: 100%;
+        max-width: 480px;
+    }
+
+        .auth-card h2 {
+            margin-bottom: 8px;
+            color: #12433C;
+            font-weight: 700;
+        }
+
+        .auth-card .sub {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 24px;
+        }
+
+    .field {
+        margin-bottom: 18px;
+    }
+
+        .field label {
+            display: block;
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+    .back-link {
+        display: inline-block;
+        margin-bottom: 16px;
+        color: #12433C;
+        text-decoration: none;
+        font-size: 13px;
+    }
+
+    .link-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+    }
+</style>

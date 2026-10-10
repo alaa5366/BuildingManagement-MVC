@@ -14,7 +14,6 @@ public class SettingsService
     private readonly IAuditLogger _audit;
     private readonly BuildingsService _buildings;
     private readonly UsersService _users;
-    private readonly FirebaseAuthRestService _firebaseAuth;
     private readonly FirebaseAdminService _fbAdmin;
     private readonly ILogger<SettingsService> _logger;
     private readonly BuildingSqlStore? _sqlStore;
@@ -24,20 +23,18 @@ public class SettingsService
     private const string GlobalDocId = "global";
 
     public SettingsService(
-    FirestoreContext ctx,
-    IAuditLogger audit,
-    BuildingsService buildings,
-    UsersService users,
-    FirebaseAuthRestService firebaseAuth,
-    FirebaseAdminService fbAdmin,
-    ILogger<SettingsService> logger,
-    BuildingSqlStore? sqlStore = null)
+        FirestoreContext ctx,
+        IAuditLogger audit,
+        BuildingsService buildings,
+        UsersService users,
+        FirebaseAdminService fbAdmin,
+        ILogger<SettingsService> logger,
+        BuildingSqlStore? sqlStore = null)
     {
         _db = ctx.Db;
         _audit = audit;
         _buildings = buildings;
         _users = users;
-        _firebaseAuth = firebaseAuth;
         _fbAdmin = fbAdmin;
         _logger = logger;
         _sqlStore = sqlStore;
@@ -457,57 +454,6 @@ public class SettingsService
 
             updates["pin"] = newPin;
             newPinValue = newPin;
-        }
-
-        if (phoneChangedByUser || pinChanged)
-        {
-            var derivedOldEmail = AuthHelpers.AdminEmailForPhone(buildingId, oldPhone);
-            var derivedNewEmail = phoneChangedByUser
-                ? AuthHelpers.AdminEmailForPhone(buildingId, newNormPhone)
-                : derivedOldEmail;
-
-            var newPassword = AuthHelpers.AdminPasswordForPhone(newNormPhone, newPinValue);
-
-            var oldUid = await _fbAdmin.GetUidByEmailAsync(derivedOldEmail);
-
-            if (string.IsNullOrEmpty(oldUid) && !string.IsNullOrWhiteSpace(user.Email))
-                oldUid = await _fbAdmin.GetUidByEmailAsync(user.Email);
-
-            if (string.IsNullOrEmpty(oldUid))
-            {
-                var newUid = await _fbAdmin.CreateOrGetUserAsync(derivedNewEmail, newPassword);
-                if (string.IsNullOrEmpty(newUid)) throw new InvalidOperationException("firebase-auth-create-failed (admin sdk)");
-                updates["email"] = derivedNewEmail;
-            }
-            else if (phoneChangedByUser)
-            {
-                var existingNewUid = await _fbAdmin.GetUidByEmailAsync(derivedNewEmail);
-
-                if (string.IsNullOrEmpty(existingNewUid))
-                {
-                    var created = await _fbAdmin.CreateOrGetUserAsync(derivedNewEmail, newPassword);
-                    if (string.IsNullOrEmpty(created)) throw new InvalidOperationException("firebase-auth-create-failed (admin sdk)");
-                }
-                else
-                {
-                    var upd = await _fbAdmin.UpdatePasswordAsync(derivedNewEmail, newPassword);
-                    if (!upd) throw new InvalidOperationException("firebase-auth-update-failed (admin sdk)");
-                }
-
-                if (oldUid != existingNewUid) await _fbAdmin.DeleteUserAsync(derivedOldEmail);
-                updates["email"] = derivedNewEmail;
-            }
-            else
-            {
-                var upd = await _fbAdmin.UpdatePasswordAsync(derivedOldEmail, newPassword);
-                if (!upd)
-                {
-                    var created = await _fbAdmin.CreateOrGetUserAsync(derivedOldEmail, newPassword);
-                    if (string.IsNullOrEmpty(created)) throw new InvalidOperationException("firebase-auth-update-failed (admin sdk)");
-                }
-
-                if (user.Email != derivedOldEmail) updates["email"] = derivedOldEmail;
-            }
         }
 
         if (updates.Count > 0)

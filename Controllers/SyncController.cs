@@ -48,6 +48,7 @@ public class SyncController : Controller
     public async Task<IActionResult> Index()
     {
         ViewBag.CurrentMode = await _storageSettings.GetModeAsync();
+        ViewBag.Buildings = await _buildings.GetAllAsync();  // ✅ جديد
         return View();
     }
 
@@ -222,6 +223,45 @@ public class SyncController : Controller
         catch (Exception ex)
         {
             TempData["Error"] = $"❌ خطأ: {ex.Message}";
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    // ============================================================
+    // ✅ Phase 2: Migration PINs → BCrypt
+    // ============================================================
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> MigratePins(bool dryRun = true)
+    {
+        try
+        {
+            var migrationService = HttpContext.RequestServices
+                .GetRequiredService<PinMigrationService>();
+
+            var result = await migrationService.MigrateAllAsync(dryRun);
+
+            if (result.Failed > 0)
+            {
+                TempData["Error"] = $"⚠️ Migration completed with {result.Failed} errors";
+            }
+            else if (dryRun)
+            {
+                TempData["Success"] =
+                    $"🔍 Dry Run: {result.WouldMigrate} PIN(s) would be migrated. " +
+                    $"({result.AlreadyHashed} already hashed, {result.Skipped} skipped)";
+            }
+            else
+            {
+                TempData["Success"] =
+                    $"✅ Migrated {result.Migrated} PIN(s) to BCrypt. " +
+                    $"({result.AlreadyHashed} already hashed)";
+            }
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = ex.Message;
         }
 
         return RedirectToAction(nameof(Index));

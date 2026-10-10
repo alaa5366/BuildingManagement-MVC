@@ -2524,8 +2524,7 @@
     <value>الاسم اللي هيظهر في الفواتير والإشعارات</value>
   </data>
   <data name="Apartment_Name_Optional" xml:space="preserve">
-    <value>🏠 اسم الشقة &lt;span class="badge bg-secondary" style="font-size: 10px;"&gt;اختياري&lt;/span&gt;</value>
-  </data>
+	<value>اسـم الشقة (اختياري)</value>  </data>
   <data name="Example_Alaa_S_Apartment" xml:space="preserve">
     <value>مثال: شقة علاء</value>
   </data>
@@ -4746,164 +4745,377 @@
     <value>👑 قالب Super (27)</value>
   </data>
   <!-- ==================== Updated 12→17 ==================== -->
- <data name="Full_17" xml:space="preserve">
+  <data name="Full_17" xml:space="preserve">
   <value>كامل (17)</value>
 </data>
-<data name="Full_Template_17" xml:space="preserve">
+  <data name="Full_Template_17" xml:space="preserve">
   <value>⚡ قالب كامل (17)</value>
 </data>
-<data name="17_Permissions_For_A_Regular_Admin" xml:space="preserve">
+  <data name="17_Permissions_For_A_Regular_Admin" xml:space="preserve">
   <value>17 صلاحية — للأدمن العادي</value>
 </data>
   <data name="Resident_Dashboard_Title" xml:space="preserve">
     <value>لوحة الساكن</value>
   </data>
-
   <data name="Welcome_Back_N" xml:space="preserve">
     <value>أهلاً بعودتك، {0}</value>
   </data>
-
   <data name="Status_Regular" xml:space="preserve">
     <value>منتظم</value>
   </data>
-
   <data name="Status_Debtor" xml:space="preserve">
     <value>عليه مستحقات</value>
   </data>
-
   <data name="Status_Pending" xml:space="preserve">
     <value>لديه دفعات معلقة</value>
   </data>
-
   <data name="Quick_Actions_Title" xml:space="preserve">
     <value>إجراءات سريعة</value>
   </data>
-
   <data name="Quick_Action_Wallet" xml:space="preserve">
     <value>محفظتي</value>
   </data>
-
   <data name="Quick_Action_Invoice" xml:space="preserve">
     <value>الفواتير</value>
   </data>
-
   <data name="Quick_Action_Polls" xml:space="preserve">
     <value>التصويتات</value>
   </data>
-
   <data name="Quick_Action_Maintenance" xml:space="preserve">
     <value>الصيانة</value>
   </data>
-
   <data name="Quick_Action_Notifications" xml:space="preserve">
     <value>الإشعارات</value>
   </data>
-
   <data name="Quick_Action_Cameras" xml:space="preserve">
     <value>الكاميرات</value>
   </data>
-
   <data name="Financial_View_Statement" xml:space="preserve">
     <value>كشف الحساب</value>
   </data>
-
   <data name="Financial_Download_Invoice" xml:space="preserve">
     <value>تحميل الفاتورة</value>
   </data>
-
   <data name="Recent_Transactions_Title" xml:space="preserve">
     <value>آخر الحركات</value>
   </data>
-
   <data name="Recent_Notifications_Title" xml:space="preserve">
     <value>آخر الإشعارات</value>
   </data>
-
   <data name="Recent_Maintenance_Title" xml:space="preserve">
     <value>آخر أعمال الصيانة</value>
   </data>
-
   <data name="Pending_Payments_Title" xml:space="preserve">
     <value>دفعات في انتظار التأكيد</value>
   </data>
-
   <data name="Active_Polls_Title" xml:space="preserve">
     <value>تصويتات نشطة</value>
   </data>
-
   <data name="Vote_Now" xml:space="preserve">
     <value>صوّت الآن</value>
   </data>
-
   <data name="View_All" xml:space="preserve">
     <value>عرض الكل</value>
   </data>
-
   <data name="No_Transactions_Yet" xml:space="preserve">
     <value>لا توجد حركات بعد</value>
   </data>
   <!-- Greeting -->
-<data name="Greeting_Morning" xml:space="preserve"><value>صباح الخير</value></data>
-<data name="Greeting_Afternoon" xml:space="preserve"><value>مساء الخير</value></data>
-<data name="Greeting_Evening" xml:space="preserve"><value>مساء الخير</value></data>
-
-<!-- Action Center -->
-<data name="Action_Center_Title" xml:space="preserve"><value>محتاج تعمله النهاردة</value></data>
-<data name="N_Pending_Payments_Action" xml:space="preserve"><value>{0} دفعة معلقة</value></data>
-<data name="Waiting_For_Admin_Confirmation" xml:space="preserve"><value>بانتظار تأكيد الأدمن</value></data>
-<data name="N_Unread_Notifications" xml:space="preserve"><value>{0} إشعار غير مقروء</value></data>
-<data name="New_Updates_Waiting_For_You" xml:space="preserve"><value>فيه تحديثات جديدة</value></data>
-<data name="N_Active_Polls_Action" xml:space="preserve"><value>{0} تصويت نشط</value></data>
-<data name="Your_Vote_Matters" xml:space="preserve"><value>صوتك مهم</value></data>
-
-<!-- Stats -->
-<data name="Stats_Paid" xml:space="preserve"><value>مدفوع</value></data>
-<data name="Stats_Expenses" xml:space="preserve"><value>مصاريف</value></data>
-<data name="Stats_Revenue" xml:space="preserve"><value>إيرادات</value></data>
-<data name="Stats_Months" xml:space="preserve"><value>أشهر</value></data>
-
-<!-- Hero -->
-<data name="Last_Payment" xml:space="preserve"><value>آخر دفعة</value></data>
-<data name="Progress_Of_Expected" xml:space="preserve"><value>التقدم من المتوقع</value></data>
-
-<!-- Insights -->
-<data name="Insight_All_Good" xml:space="preserve"><value>كل حاجة تمام! مستحقاتك محدّثة ✅</value></data>
-<data name="Insight_Pending_Payments" xml:space="preserve"><value>عندك {0} دفعة معلقة — بانتظار تأكيد الأدمن</value></data>
-<data name="Insight_Debtor" xml:space="preserve"><value>عليك مبلغ {0} ج.م — حاول تسدده في أقرب وقت</value></data>
-
-<!-- Timeline -->
-<data name="Timeline_Today" xml:space="preserve"><value>اليوم</value></data>
-<data name="Timeline_Yesterday" xml:space="preserve"><value>أمس</value></data>
-
-<!-- Empty -->
-<data name="Empty_All_Clear_Title" xml:space="preserve"><value>كل حاجة تمام!</value></data>
-<data name="Empty_All_Clear_Desc" xml:space="preserve"><value>مفيش حركات جديدة، ومحفظتك محدّثة</value>
+  <data name="Greeting_Morning" xml:space="preserve">
+    <value>صباح الخير</value>
+  </data>
+  <data name="Greeting_Afternoon" xml:space="preserve">
+    <value>مساء الخير</value>
+  </data>
+  <data name="Greeting_Evening" xml:space="preserve">
+    <value>مساء الخير</value>
+  </data>
+  <!-- Action Center -->
+  <data name="Action_Center_Title" xml:space="preserve">
+    <value>محتاج تعمله النهاردة</value>
+  </data>
+  <data name="N_Pending_Payments_Action" xml:space="preserve">
+    <value>{0} دفعة معلقة</value>
+  </data>
+  <data name="Waiting_For_Admin_Confirmation" xml:space="preserve">
+    <value>بانتظار تأكيد الأدمن</value>
+  </data>
+  <data name="N_Unread_Notifications" xml:space="preserve">
+    <value>{0} إشعار غير مقروء</value>
+  </data>
+  <data name="New_Updates_Waiting_For_You" xml:space="preserve">
+    <value>فيه تحديثات جديدة</value>
+  </data>
+  <data name="N_Active_Polls_Action" xml:space="preserve">
+    <value>{0} تصويت نشط</value>
+  </data>
+  <data name="Your_Vote_Matters" xml:space="preserve">
+    <value>صوتك مهم</value>
+  </data>
+  <!-- Stats -->
+  <data name="Stats_Paid" xml:space="preserve">
+    <value>مدفوع</value>
+  </data>
+  <data name="Stats_Expenses" xml:space="preserve">
+    <value>مصاريف</value>
+  </data>
+  <data name="Stats_Revenue" xml:space="preserve">
+    <value>إيرادات</value>
+  </data>
+  <data name="Stats_Months" xml:space="preserve">
+    <value>أشهر</value>
+  </data>
+  <!-- Hero -->
+  <data name="Last_Payment" xml:space="preserve">
+    <value>آخر دفعة</value>
+  </data>
+  <data name="Progress_Of_Expected" xml:space="preserve">
+    <value>التقدم من المتوقع</value>
+  </data>
+  <!-- Insights -->
+  <data name="Insight_All_Good" xml:space="preserve">
+    <value>كل حاجة تمام! مستحقاتك محدّثة ✅</value>
+  </data>
+  <data name="Insight_Pending_Payments" xml:space="preserve">
+    <value>عندك {0} دفعة معلقة — بانتظار تأكيد الأدمن</value>
+  </data>
+  <data name="Insight_Debtor" xml:space="preserve">
+    <value>عليك مبلغ {0} ج.م — حاول تسدده في أقرب وقت</value>
+  </data>
+  <!-- Timeline -->
+  <data name="Timeline_Today" xml:space="preserve">
+    <value>اليوم</value>
+  </data>
+  <data name="Timeline_Yesterday" xml:space="preserve">
+    <value>أمس</value>
+  </data>
+  <!-- Empty -->
+  <data name="Empty_All_Clear_Title" xml:space="preserve">
+    <value>كل حاجة تمام!</value>
+  </data>
+  <data name="Empty_All_Clear_Desc" xml:space="preserve">
+    <value>مفيش حركات جديدة، ومحفظتك محدّثة</value>
 </data>
-<data name="Stats_Paid_This_Month" xml:space="preserve">
+  <data name="Stats_Paid_This_Month" xml:space="preserve">
     <value>إجمالي مدفوعات الشهر</value>
 </data>
-<data name="Hero_Fully_Paid_This_Month" xml:space="preserve">
+  <data name="Hero_Fully_Paid_This_Month" xml:space="preserve">
     <value>✅ تم دفع الشهر ده بالكامل</value>
 </data>
-<data name="Action_Just_Now" xml:space="preserve">
+  <data name="Action_Just_Now" xml:space="preserve">
     <value>من لحظات</value>
 </data>
-<data name="Action_Yesterday" xml:space="preserve">
+  <data name="Action_Yesterday" xml:space="preserve">
     <value>من إمبارح</value>
 </data>
-<data name="Action_Days_Ago" xml:space="preserve">
+  <data name="Action_Days_Ago" xml:space="preserve">
     <value>من {0} أيام</value>
 </data>
-<data name="Timeline_This_Month" xml:space="preserve">
+  <data name="Timeline_This_Month" xml:space="preserve">
     <value>هذا الشهر</value>
 </data>
-<data name="Timeline_Last_Month" xml:space="preserve">
+  <data name="Timeline_Last_Month" xml:space="preserve">
     <value>الشهر الماضي</value>
 </data>
-<data name="Insight_Fully_Paid" xml:space="preserve">
+  <data name="Insight_Fully_Paid" xml:space="preserve">
     <value>🎉 دفعت الشهر ده بالكامل — أحسنت!</value>
 </data>
-<data name="Hero_Remaining" xml:space="preserve">
+  <data name="Hero_Remaining" xml:space="preserve">
     <value>متبقي:</value>
+</data>
+  <data name="Residents_Title">
+    <value>الساكنين</value>
+  </data>
+  <data name="Resident_Details">
+    <value>تفاصيل الساكن</value>
+  </data>
+  <data name="Resident_Created_Successfully">
+    <value>تم إضافة الساكن بنجاح</value>
+  </data>
+  <data name="Resident_Updated_Successfully">
+    <value>تم تحديث بيانات الساكن</value>
+  </data>
+  <data name="Resident_Disabled_Successfully">
+    <value>تم تعطيل الساكن</value>
+  </data>
+  <data name="Resident_Enabled_Successfully">
+    <value>تم تفعيل الساكن</value>
+  </data>
+  <data name="Resident_Deleted_Successfully">
+    <value>تم حذف الساكن</value>
+  </data>
+  <data name="No_Residents_Yet">
+    <value>لا يوجد ساكنين بعد</value>
+  </data>
+  <data name="Add_First_Resident_Or_Migrate_From_Apartments">
+    <value>أضف أول ساكن أو استخدم Migration من الشقق</value>
+  </data>
+  <data name="Primary">
+    <value>رئيسي</value>
+  </data>
+  <data name="Secondary">
+    <value>ثانوي</value>
+  </data>
+  <data name="Tenant">
+    <value>مستأجر</value>
+  </data>
+  <data name="Owner_Not_Tenant">
+    <value>مالك (مش مستأجر)</value>
+  </data>
+  <data name="Owner_Hint">
+    <value>لو المالك بيسكن في الشقة</value>
+  </data>
+  <data name="Primary_Resident">
+    <value>ساكن رئيسي</value>
+  </data>
+  <data name="Primary_Resident_Hint">
+    <value>لو في أكتر من ساكن، ده اللي بيستقبل الإشعارات</value>
+  </data>
+  <data name="Role_Status">
+    <value>الدور والحالة</value>
+  </data>
+  <data name="Personal_Info">
+    <value>البيانات الشخصية</value>
+  </data>
+  <data name="Email_Optional">
+    <value>الإيميل (اختياري)</value>
+  </data>
+  <data name="Search_By_Name_Or_Phone">
+    <value>بحث بالاسم أو الموبايل</value>
+  </data>
+  <data name="Choose_Building_For_Residents">
+    <value>اختر العمارة</value>
+  </data>
+  <data name="Choose_Building_To_Manage_Residents">
+    <value>اختر العمارة لإدارة الساكنين</value>
+  </data>
+  <data name="Migrate_Residents">
+    <value>ترحيل الساكنين</value>
+  </data>
+  <data name="Migrate_From_Apartments">
+    <value>ترحيل من الشقق</value>
+  </data>
+  <data name="Migrate_From_Apartments_To_Residents_Table">
+    <value>ترحيل الساكنين من جدول الشقق إلى جدول الساكنين</value>
+  </data>
+  <data name="Migration_Copies_Residents_From_Apartments">
+    <value>يتم نسخ الساكنين من Apartments إلى Residents</value>
+  </data>
+  <data name="Existing_Residents_Will_Be_Skipped">
+    <value>الساكنين الموجودين بالفعل هيتخطّوا</value>
+  </data>
+  <data name="PIN_Will_Be_Hashed_With_BCrypt">
+    <value>الـ PIN هيتشفّر بـ BCrypt</value>
+  </data>
+  <data name="Total_Residents_Currently">
+    <value>إجمالي الساكنين حالياً:</value>
+  </data>
+  <data name="Total_Residents_Now">
+    <value>إجمالي الساكنين الآن:</value>
+  </data>
+  <data name="Dry_Run_Test_Only">
+    <value>تجربة فقط (Dry Run)</value>
+  </data>
+  <data name="Dry_Run_Hint">
+    <value>لن يتم حفظ أي بيانات</value>
+  </data>
+  <data name="Dry_Run_Note">
+    <value>ملاحظة</value>
+  </data>
+  <data name="No_Data_Was_Written_Run_Again_Without_Dry_Run">
+    <value>لم يتم حفظ أي بيانات — شغّل Migration بدون Dry Run</value>
+  </data>
+  <data name="Run_Migration">
+    <value>تشغيل Migration</value>
+  </data>
+  <data name="Run_Again">
+    <value>إعادة التشغيل</value>
+  </data>
+  <data name="View_Residents">
+    <value>عرض الساكنين</value>
+  </data>
+  <data name="Confirm_Migration">
+    <value>هل تريد تشغيل Migration؟</value>
+  </data>
+  <data name="Migration_Is_One_Way_Make_Sure_You_Have_Backup">
+    <value>Migration عملية نهائية — تأكد من وجود Backup</value>
+  </data>
+  <data name="Buildings_Scanned">
+    <value>عمارات مفحوصة</value>
+  </data>
+  <data name="Found">
+    <value>موجود</value>
+  </data>
+  <data name="Building_Optional">
+    <value>العمارة (اختياري)</value>
+  </data>
+  <data name="Disable_Reason_Prompt">
+    <value>سبب التعطيل:</value>
+  </data>
+  <data name="Delete_Resident_Confirm">
+    <value>حذف الساكن</value>
+  </data>
+  <data name="Enable">
+    <value>تفعيل</value>
+  </data>
+  <data name="Migrate_Residents_Title" xml:space="preserve">
+    <value>ترحيل الساكنين (SQL)</value>
+</data>
+  <data name="Migrate_Residents_Desc" xml:space="preserve">
+    <value>نسخ الساكنين من Apartments إلى Residents</value>
+</data>
+  <data name="Residents_Comparison" xml:space="preserve">
+    <value>مقارنة الساكنين</value>
+</data>
+  <data name="No_Residents_In_Database" xml:space="preserve">
+    <value>لا يوجد ساكنين في قاعدة البيانات</value>
+</data>
+  <data name="Building_Required" xml:space="preserve">
+    <value>يجب اختيار العمارة</value>
+  </data>
+  <data name="Phone_Required" xml:space="preserve">
+    <value>رقم الموبايل مطلوب</value>
+  </data>
+  <data name="PIN_Required" xml:space="preserve">
+    <value>PIN مطلوب</value>
+  </data>
+  <data name="You_Are_Not_In_This_Building" xml:space="preserve">
+    <value>أنت لست في هذه العمارة</value>
+  </data>
+  <data name="PIN_Not_Set_Contact_Admin" xml:space="preserve">
+    <value>PIN غير مضبوط — كلم الأدمن</value>
+  </data>
+  <data name="This_Account_Is_Inactive" xml:space="preserve">
+    <value>الحساب غير نشط</value>
+  </data>
+  <data name="Migrate_Pins_Title" xml:space="preserve">
+    <value>تحويل PINs → BCrypt</value>
+</data>
+  <data name="Migrate_Pins_Desc" xml:space="preserve">
+    <value>تحويل PINs الـ Admin و SuperAdmin من Plain إلى BCrypt (آمن)</value>
+</data>
+<data name="Choose_Building_First" xml:space="preserve">
+    <value>اختر العمارة أولاً</value>
+</data>
+<data name="Choose_Floor_First" xml:space="preserve">
+    <value>اختر الدور أولاً</value>
+</data>
+<data name="Loading" xml:space="preserve">
+    <value>جاري التحميل...</value>
+</data>
+<data name="No_Floors" xml:space="preserve">
+    <value>لا توجد أدوار</value>
+</data>
+<data name="No_Apartments" xml:space="preserve">
+    <value>لا توجد شقق</value>
+</data>
+<data name="Floor_Required" xml:space="preserve">
+    <value>يجب اختيار الدور</value>
+</data>
+<data name="Floor_Not_Found" xml:space="preserve">
+    <value>الدور غير موجود</value>
+</data>
+<data name="Apartment_Required" xml:space="preserve">
+    <value>يجب اختيار الشقة</value>
 </data>
 </root>

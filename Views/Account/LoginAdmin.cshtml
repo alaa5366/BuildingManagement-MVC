@@ -1,13 +1,7 @@
 @model AdminLoginVm
 @{
     ViewData["Title"] = Loc.T("Admin_Login");
-    var buildings = (List<Building>)ViewBag.Buildings;
-
-    // ✅ QR data
-    var qrBuildingId = ViewBag.QrBuildingId as string;
-    var qrBuildingName = ViewBag.QrBuildingName as string;
-    var qrBuildingNumber = ViewBag.QrBuildingNumber as string;
-    var hasQr = !string.IsNullOrEmpty(qrBuildingId);
+    var buildings = ViewBag.Buildings as List<Building> ?? new();
 }
 
 <div class="auth-wrap">
@@ -15,20 +9,6 @@
         <a asp-action="LoginChoice" class="link-btn back-link">@Loc.T("Back")</a>
         <h2>@Loc.T("Admin_Login")</h2>
         <p class="sub">@Loc.T("Choose_The_Building_And_Enter_Your")</p>
-
-        @if (hasQr)
-        {
-            <div class="alert alert-success">
-                <strong>@Loc.T("Building_Detected_Automatically")</strong>
-                <div class="small mt-2">
-                    <div>🏢 <strong>@qrBuildingName</strong></div>
-                    <div>@qrBuildingNumber</div>
-                </div>
-                <div class="small mt-2 text-muted">
-                    @Loc.T("Just_Enter_Your_WhatsApp_Number_And")
-                </div>
-            </div>
-        }
 
         @if (ViewBag.Error != null)
         {
@@ -44,9 +24,7 @@
                     <option value="">@Loc.T("Select")</option>
                     @foreach (var b in buildings)
                     {
-                        <option value="@b.Id" selected="@(hasQr && b.Id == qrBuildingId)">
-                            @b.BuildingNumber — @b.Name
-                        </option>
+                        <option value="@b.Id">@b.BuildingNumber — @b.Name</option>
                     }
                 </select>
             </div>
@@ -54,7 +32,7 @@
             <div class="field">
                 <label>@Loc.T("WhatsApp_Number")</label>
                 <input name="Phone" type="tel" class="form-control"
-                       placeholder="+201001234567" required autofocus="@hasQr" />
+                       placeholder="+201001234567" required dir="ltr" />
             </div>
 
             <div class="field">
@@ -104,7 +82,6 @@
             font-weight: 600;
             font-size: 13px;
             margin-bottom: 6px;
-            color: #333;
         }
 
     .back-link {

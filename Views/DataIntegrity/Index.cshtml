@@ -3,6 +3,7 @@
     ViewData["Title"] = Loc.T("Data_Integrity_Title");
     var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Services.BuildingComparison> ?? new();
     var users = ViewBag.Users as List<BuildingManagementMvc.Services.UserComparison> ?? new();
+    var residents = ViewBag.Residents as List<BuildingManagementMvc.Services.ResidentComparison> ?? new();
     var dvrs = ViewBag.Dvrs as List<BuildingManagementMvc.Services.DvrComparison> ?? new();
     var cameras = ViewBag.Cameras as List<BuildingManagementMvc.Services.CameraComparison> ?? new();
 }
@@ -309,7 +310,76 @@
     </div>
 
     @* ============================================================ *@
-    @* 5. مقارنة Dvrs                                              *@
+    @* 5. مقارنة Residents (جديد)                                  *@
+    @* ============================================================ *@
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-purple text-white" style="background-color: #8E6BB2 !important;">
+            <strong>
+                <i class="bi bi-person-badge"></i>
+                @Loc.T("Residents_Comparison") (@residents.Count)
+            </strong>
+        </div>
+        <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+            @if (residents.Count == 0)
+            {
+                <div class="alert alert-info m-3 mb-0">
+                    <i class="bi bi-info-circle"></i>
+                    @Loc.T("No_Residents_In_Database")
+                </div>
+            }
+            else
+            {
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>UID</th>
+                            <th>Firestore</th>
+                            <th>SQL</th>
+                            <th class="text-center">@Loc.T("Status")</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in residents)
+                        {
+                            <tr>
+                                <td><code class="small">@r.Uid</code></td>
+                                <td>
+                                    @if (r.InFirestore)
+                                    {
+                                        <span class="badge bg-warning">Resident</span>
+                                        <small class="text-muted">@r.FirestoreName</small>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (r.InSql)
+                                    {
+                                        <span class="text-success fw-bold">@r.SqlName</span>
+                                        <small class="text-muted d-block" dir="ltr">@r.SqlPhone</small>
+                                        @if (!string.IsNullOrEmpty(r.ApartmentId))
+                                        {
+                                            <small class="badge bg-secondary">Apt</small>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td class="text-center">@r.Status</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+
+    @* ============================================================ *@
+    @* 6. مقارنة Dvrs                                              *@
     @* ============================================================ *@
     <div class="card shadow-sm mb-4">
         <div class="card-header bg-dark text-white">
@@ -373,7 +443,7 @@
     </div>
 
     @* ============================================================ *@
-    @* 6. مقارنة Cameras                                           *@
+    @* 7. مقارنة Cameras                                           *@
     @* ============================================================ *@
     <div class="card shadow-sm mb-4">
         <div class="card-header bg-danger text-white">

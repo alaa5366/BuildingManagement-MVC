@@ -1,6 +1,5 @@
 using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
-using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -12,91 +11,84 @@ namespace BuildingManagementMvc.Controllers;
 [AllowAnonymous]
 public class AccountController : Controller
 {
-    private readonly AuthService _auth;
+    private readonly SqlAuthService _sqlAuth;
     private readonly BuildingsService _buildings;
-    private readonly UsersService _users;   
-
-
-
+    private readonly ResidentsService _residents;   
+    private readonly UsersService _users;
     private readonly LoginThrottle _throttle;
+    private readonly ILogger<AccountController> _log;
     private string? ClientIp => HttpContext.Connection.RemoteIpAddress?.ToString();
     private static string LockedMsg => Loc.T("Too_Many_Failed_Login_Attempts_Try");
 
-    public AccountController(AuthService auth, BuildingsService buildings, UsersService users,
-        LoginThrottle throttle)
+    public AccountController(
+        SqlAuthService sqlAuth,
+        BuildingsService buildings,
+        UsersService users,
+        ResidentsService residents,
+        LoginThrottle throttle,
+        ILogger<AccountController> log)
     {
-        _auth = auth;
+        _sqlAuth = sqlAuth;
         _buildings = buildings;
         _users = users;
+        _residents = residents;
         _throttle = throttle;
+        _log = log;
     }
 
     public IActionResult LoginChoice() => RedirectToAction("UnifiedLogin");
 
-    // ============================================================
-    // Super Admin Login
-    // ============================================================
+    // ═══════════════════════════════════════════════════════════
+    // 1. Resident Login
+    // ═══════════════════════════════════════════════════════════
     [HttpGet]
-    public IActionResult LoginSuperAdmin() => View(new SuperAdminLoginVm());
+    public async Task<IActionResult> LoginResident()
+    {
+        ViewBag.Buildings = await _buildings.GetAllAsync();
+        return View(new ResidentLoginVm());
+    }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> LoginSuperAdmin(SuperAdminLoginVm vm)
+    public async Task<IActionResult> LoginResident(ResidentLoginVm vm)
     {
-        if (!ModelState.IsValid) return View(vm);
-
-        var throttleKey = "sa:" + vm.Email;
-        if (_throttle.IsLocked(throttleKey, ClientIp))
+        if (!ModelState.IsValid)
         {
-            ViewBag.Error = LockedMsg;
+            ViewBag.Buildings = await _buildings.GetAllAsync();
             return View(vm);
         }
 
-        var res = await _auth.SignInSuperAdminAsync(vm.Email, vm.Password);
+        var throttleKey = $"res:{vm.BuildingId}:{vm.Whatsapp}";
+        if (_throttle.IsLocked(throttleKey, ClientIp))
+        {
+            ViewBag.Error = LockedMsg;
+            ViewBag.Buildings = await _buildings.GetAllAsync();
+            return View(vm);
+        }
+
+        var res = await _sqlAuth.SignInResidentAsync(
+            vm.BuildingId, vm.FloorId, vm.AptId, vm.Whatsapp, vm.Pin);
+
         if (!res.Success)
         {
             _throttle.RegisterFailure(throttleKey, ClientIp);
             ViewBag.Error = MapError(res.Error, res.Reason);
+            ViewBag.Buildings = await _buildings.GetAllAsync();
             return View(vm);
         }
 
         _throttle.Reset(throttleKey);
         await SignInCookieAsync(res);
-        return RedirectToAction("Index", "SuperAdminHome");
+        return RedirectToAction("Index", "ResidentHome");
     }
 
-    // ============================================================
-    // Admin Login — يدعم QR (مشفّر)
-    // ============================================================
+    // ═══════════════════════════════════════════════════════════
+    // 2. Admin Login
+    // ═══════════════════════════════════════════════════════════
     [HttpGet]
-    public async Task<IActionResult> LoginAdmin(string? bld, string? sig,
-        [FromServices] QrSecurityService qrSecurity)
+    public async Task<IActionResult> LoginAdmin()
     {
         ViewBag.Buildings = await _buildings.GetAllAsync();
-
-        if (!string.IsNullOrEmpty(bld))
-        {
-            // ✅ التحقق من التوقيع
-            if (!string.IsNullOrEmpty(sig))
-            {
-                var path = "/Account/LoginAdmin";
-                var query = $"bld={bld}";
-                if (!qrSecurity.VerifyStableQr(path, query, sig))
-                {
-                    ViewBag.Error = Loc.T("This_Link_Has_Been_Modified_Or");
-                    return View(new AdminLoginVm());
-                }
-            }
-
-            var building = await _buildings.GetByIdAsync(bld);
-            if (building != null)
-            {
-                ViewBag.QrBuildingId = building.Id;
-                ViewBag.QrBuildingName = building.Name;
-                ViewBag.QrBuildingNumber = building.BuildingNumber;
-            }
-        }
-
         return View(new AdminLoginVm());
     }
 
@@ -118,7 +110,8 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        var res = await _auth.SignInAdminAsync(vm.BuildingId, vm.Phone, vm.Pin);
+        var res = await _sqlAuth.SignInAdminAsync(vm.BuildingId, vm.Phone, vm.Pin);
+
         if (!res.Success)
         {
             _throttle.RegisterFailure(throttleKey, ClientIp);
@@ -132,111 +125,119 @@ public class AccountController : Controller
         return RedirectToAction("Index", "AdminHome");
     }
 
-    // ============================================================
-    // Resident Login — يدعم QR (مشفّر)
-    // ============================================================
+    // ═══════════════════════════════════════════════════════════
+    // 3. SuperAdmin Login
+    // ═══════════════════════════════════════════════════════════
     [HttpGet]
-    public async Task<IActionResult> LoginResident(string? apt, string? sig,
-        [FromServices] QrSecurityService qrSecurity)
-    {
-        ViewBag.Buildings = await _buildings.GetAllAsync();
-
-        if (!string.IsNullOrEmpty(apt) && apt.Contains('_'))
-        {
-            // ✅ التحقق من التوقيع
-            if (!string.IsNullOrEmpty(sig))
-            {
-                var path = "/Account/LoginResident";
-                var query = $"apt={apt}";
-                if (!qrSecurity.VerifyStableQr(path, query, sig))
-                {
-                    ViewBag.Error = Loc.T("This_Link_Has_Been_Modified_Or");
-                    return View(new ResidentLoginVm());
-                }
-            }
-
-            var parts = apt.Split('_', 2);
-            var buildingId = parts[0];
-            var aptId = parts[1];
-
-            var building = await _buildings.GetByIdAsync(buildingId);
-            if (building != null)
-            {
-                var aptEntity = building.Apartments.FirstOrDefault(a => a.Id == aptId);
-                if (aptEntity != null)
-                {
-                    var floor = building.Floors.FirstOrDefault(f => f.Id == aptEntity.FloorId);
-
-                    ViewBag.QrBuildingId = building.Id;
-                    ViewBag.QrBuildingName = building.Name;
-                    ViewBag.QrFloorOrder = floor?.Order ?? 0;
-                    ViewBag.QrFloorLabel = floor?.Label ?? "";
-                    ViewBag.QrAptNumber = aptEntity.Number;
-                    ViewBag.QrAptLabel = aptEntity.Label;
-                }
-            }
-        }
-
-        return View(new ResidentLoginVm());
-    }
+    public IActionResult LoginSuperAdmin() => View(new SuperAdminLoginVm());
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> LoginResident(ResidentLoginVm vm)
+    public async Task<IActionResult> LoginSuperAdmin(SuperAdminLoginVm vm)
     {
-        if (!ModelState.IsValid)
-        {
-            ViewBag.Buildings = await _buildings.GetAllAsync();
-            return View(vm);
-        }
+        if (!ModelState.IsValid) return View(vm);
 
-        var throttleKey = $"res:{vm.BuildingId}:{vm.FloorOrder}:{vm.AptNumber}";
+        var throttleKey = "sa:" + vm.Email;
         if (_throttle.IsLocked(throttleKey, ClientIp))
         {
             ViewBag.Error = LockedMsg;
-            ViewBag.Buildings = await _buildings.GetAllAsync();
             return View(vm);
         }
 
-        var res = await _auth.SignInResidentAsync(vm.BuildingId, vm.FloorOrder, vm.AptNumber, vm.Whatsapp, vm.Pin);
+        var res = await _sqlAuth.SignInSuperAdminAsync(vm.Email, vm.Password);
+
         if (!res.Success)
         {
             _throttle.RegisterFailure(throttleKey, ClientIp);
             ViewBag.Error = MapError(res.Error, res.Reason);
-            ViewBag.Buildings = await _buildings.GetAllAsync();
             return View(vm);
         }
 
         _throttle.Reset(throttleKey);
         await SignInCookieAsync(res);
-        return RedirectToAction("Index", "ResidentHome");
+        return RedirectToAction("Index", "SuperAdminHome");
     }
 
-    // ============================================================
-    // الدخول الموحد
-    // ============================================================
+    // ═══════════════════════════════════════════════════════════
+    // 4. Google Sign-In (لـ Super Admin فقط)
+    // ═══════════════════════════════════════════════════════════
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> GoogleSignIn(
+        string idToken,
+        string? email,
+        [FromServices] FirebaseAdminService fbAdmin,
+        [FromServices] ILogger<AccountController> logger)
+    {
+        try
+        {
+            var throttleKey = "google:" + (ClientIp ?? "unknown");
+            if (_throttle.IsLocked(throttleKey, ClientIp))
+                return Json(new { success = false, error = LockedMsg });
+
+            var verified = await fbAdmin.VerifyIdTokenAsync(idToken);
+
+            if (verified == null)
+            {
+                _throttle.RegisterFailure(throttleKey, ClientIp);
+                return Json(new { success = false, error = "Invalid ID Token" });
+            }
+
+            if (!verified.EmailVerified)
+            {
+                _throttle.RegisterFailure(throttleKey, ClientIp);
+                return Json(new { success = false, error = "Email not verified" });
+            }
+
+            if (!SqlAuthService.IsSuperAdminEmail(verified.Email))
+            {
+                _throttle.RegisterFailure(throttleKey, ClientIp);
+                return Json(new
+                {
+                    success = false,
+                    error = Loc.T("This_Email_Is_Not_Authorized_For")
+                });
+            }
+
+            var result = AuthResult.Ok(
+                uid: verified.Uid,
+                role: "superadmin",
+                email: verified.Email,
+                name: verified.Email.Split('@')[0],
+                buildingIds: new List<string>());
+
+            await SignInCookieAsync(result);
+
+            _log.LogInformation("[GoogleSignIn] SuperAdmin logged in: {Email}", verified.Email);
+
+            return Json(new { success = true, redirectUrl = "/SuperAdminHome" });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "GoogleSignIn failed");
+            return Json(new { success = false, error = Loc.T("Login_Error_2") });
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 5. Unified Login
+    // ═══════════════════════════════════════════════════════════
     [HttpGet]
-    public IActionResult UnifiedLogin([FromServices] IConfiguration config, string? returnUrl = null)
+    public IActionResult UnifiedLogin(
+        [FromServices] IConfiguration config,
+        string? returnUrl = null)
     {
         ViewBag.ReturnUrl = returnUrl;
-
-        // ✅ Firebase Config للـ JS
-        var firebaseConfig = new
-        {
-            apiKey = config["Firebase:WebApiKey"],
-            authDomain = $"{config["Firebase:ProjectId"]}.firebaseapp.com",
-            projectId = config["Firebase:ProjectId"]
-        };
-
-        ViewBag.FirebaseConfig = System.Text.Json.JsonSerializer.Serialize(firebaseConfig);
+        ViewBag.FirebaseApiKey = config["Firebase:WebApiKey"] ?? "";
+        ViewBag.FirebaseProjectId = config["Firebase:ProjectId"] ?? "";
+        ViewBag.FirebaseAuthDomain = $"{config["Firebase:ProjectId"]}.firebaseapp.com";
 
         return View(new UnifiedLoginVm());
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> UnifiedLogin(UnifiedLoginVm vm,
-        [FromServices] UnifiedAuthService unifiedAuth)
+    public async Task<IActionResult> UnifiedLogin(UnifiedLoginVm vm)
     {
         if (!ModelState.IsValid) return View(vm);
 
@@ -250,7 +251,7 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        var contexts = await unifiedAuth.FindAllContextsAsync(identifier, credential);
+        var contexts = await _sqlAuth.FindAllContextsAsync(identifier, credential);
 
         if (contexts.Count == 0)
         {
@@ -261,10 +262,9 @@ public class AccountController : Controller
 
         _throttle.Reset(throttleKey);
 
-        // ✅ لو سياق واحد → دخول مباشر
         if (contexts.Count == 1)
         {
-            var res = await unifiedAuth.SignInFromContextAsync(contexts[0]);
+            var res = await _sqlAuth.SignInFromContextAsync(contexts[0]);
             if (!res.Success)
             {
                 ViewBag.Error = MapError(res.Error, res.Reason);
@@ -275,21 +275,19 @@ public class AccountController : Controller
             return RedirectBasedOnRole(res.Role!);
         }
 
-        // ✅ لو أكتر من سياق → صفحة الاختيار
         var fullName = contexts.FirstOrDefault(c => !string.IsNullOrEmpty(c.Name))?.Name ?? identifier;
-        var token = unifiedAuth.StoreContexts(contexts, fullName);
+        var token = StoreContextsInSession(contexts, fullName);
 
         return RedirectToAction("ChooseContext", new { token });
     }
 
-    // ============================================================
-    // صفحة اختيار السياق
-    // ============================================================
+    // ═══════════════════════════════════════════════════════════
+    // 6. ChooseContext
+    // ═══════════════════════════════════════════════════════════
     [HttpGet]
-    public IActionResult ChooseContext(string token,
-        [FromServices] UnifiedAuthService unifiedAuth)
+    public IActionResult ChooseContext(string token)
     {
-        var (contexts, fullName) = unifiedAuth.GetStoredContexts(token);
+        var (contexts, fullName) = GetContextsFromSession(token);
 
         if (contexts == null)
         {
@@ -304,15 +302,14 @@ public class AccountController : Controller
             SessionToken = token
         };
 
-        return View(vm);
+        return View("LoginChoice", vm);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ChooseContext(string sessionToken, string contextId,
-        [FromServices] UnifiedAuthService unifiedAuth)
+    public async Task<IActionResult> ChooseContext(string sessionToken, string contextId)
     {
-        var (contexts, _) = unifiedAuth.GetStoredContexts(sessionToken);
+        var (contexts, _) = GetContextsFromSession(sessionToken);
 
         if (contexts == null)
         {
@@ -327,128 +324,21 @@ public class AccountController : Controller
             return RedirectToAction("ChooseContext", new { token = sessionToken });
         }
 
-        var res = await unifiedAuth.SignInFromContextAsync(selected);
+        var res = await _sqlAuth.SignInFromContextAsync(selected);
         if (!res.Success)
         {
             TempData["Error"] = MapError(res.Error, res.Reason);
             return RedirectToAction("ChooseContext", new { token = sessionToken });
         }
 
-        unifiedAuth.RemoveStoredContexts(sessionToken);
+        HttpContext.Session.Remove("ctx_" + sessionToken);
         await SignInCookieAsync(res);
         return RedirectBasedOnRole(res.Role!);
     }
 
-    // ============================================================
-    // Helper
-    // ============================================================
-    private IActionResult RedirectBasedOnRole(string role) => role switch
-    {
-        "superadmin" => RedirectToAction("Index", "SuperAdminHome"),
-        "admin" => RedirectToAction("Index", "AdminHome"),
-        "resident" => RedirectToAction("Index", "ResidentHome"),
-        _ => RedirectToAction("UnifiedLogin")
-    };
-
-    // ============================================================
-    // Quick Login (QR السريع)
-    // ============================================================
-    [HttpGet]
-    public async Task<IActionResult> QuickLogin(string token,
-        [FromServices] QrSecurityService qrSecurity)
-    {
-        if (string.IsNullOrEmpty(token))
-            return RedirectToAction("LoginChoice");
-
-        var validation = await qrSecurity.ValidateQuickToken(token);
-        if (!validation.IsSuccess)
-        {
-            ViewBag.Error = validation.Error;
-            return View("QuickLoginError");
-        }
-
-        var payload = validation.Data!;
-
-        var building = await _buildings.GetByIdAsync(payload.BuildingId);
-        if (building == null)
-        {
-            ViewBag.Error = Loc.T("The_Building_Does_Not_Exist");
-            return View("QuickLoginError");
-        }
-
-        var apt = building.Apartments.FirstOrDefault(a => a.Id == payload.AptId);
-        if (apt == null)
-        {
-            ViewBag.Error = Loc.T("The_Apartment_Does_Not_Exist");
-            return View("QuickLoginError");
-        }
-
-        // ✅ دخول مباشر
-        var res = await _auth.SignInResidentAsync(
-            payload.BuildingId,
-            payload.FloorOrder,
-            payload.AptNumber,
-            apt.Phone,
-            apt.Pin
-        );
-
-        if (!res.Success)
-        {
-            ViewBag.Error = MapError(res.Error, res.Reason);
-            return View("QuickLoginError");
-        }
-
-        await qrSecurity.MarkQuickTokenUsed(payload.TokenId);
-        await SignInCookieAsync(res);
-        return RedirectToAction("Index", "ResidentHome");
-    }
-    // ============================================================
-    // Google Sign-In (للـ Super Admin فقط)
-    // ============================================================
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> GoogleSignIn(string idToken, string? email,
-        [FromServices] FirebaseAdminService fbAdmin,
-        [FromServices] ILogger<AccountController> logger)
-    {
-        try
-        {
-            var throttleKey = "google:" + (ClientIp ?? "unknown");
-            if (_throttle.IsLocked(throttleKey, ClientIp))
-                return Json(new { success = false, error = LockedMsg });
-
-            // ✅ الإيميل لازم ييجي من الـ ID Token بعد التحقق منه من Firebase،
-            // مش من الـ request (الـ email اللي في الـ form بنتجاهله).
-            var verified = await fbAdmin.VerifyIdTokenAsync(idToken);
-
-            if (verified == null || !verified.EmailVerified || !AuthService.IsSuperAdminEmail(verified.Email))
-            {
-                _throttle.RegisterFailure(throttleKey, ClientIp);
-                return Json(new { success = false, error = Loc.T("This_Email_Is_Not_Authorized_For") });
-            }
-
-            var result = AuthResult.Ok(
-                uid: verified.Uid,
-                role: "superadmin",
-                email: verified.Email,
-                name: verified.Email.Split('@')[0],
-                buildingIds: new List<string>()
-            );
-
-            await SignInCookieAsync(result);
-
-            return Json(new { success = true, redirectUrl = "/SuperAdminHome" });
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "GoogleSignIn failed");
-            return Json(new { success = false, error = Loc.T("Login_Error_2") });
-        }
-    }
-
-    // ============================================================
-    // Logout
-    // ============================================================
+    // ═══════════════════════════════════════════════════════════
+    // 7. Logout
+    // ═══════════════════════════════════════════════════════════
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
@@ -457,15 +347,61 @@ public class AccountController : Controller
         return RedirectToAction("LoginChoice");
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // Helpers
+    // ═══════════════════════════════════════════════════════════
+    private string StoreContextsInSession(List<UserContext> contexts, string fullName)
+    {
+        var token = Guid.NewGuid().ToString("N");
+        var data = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            Contexts = contexts,
+            FullName = fullName
+        });
+        HttpContext.Session.SetString("ctx_" + token, data);
+        return token;
+    }
+
+    private (List<UserContext>?, string?) GetContextsFromSession(string token)
+    {
+        var json = HttpContext.Session.GetString("ctx_" + token);
+        if (string.IsNullOrEmpty(json)) return (null, null);
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            var contextsJson = root.GetProperty("Contexts").GetRawText();
+            var contexts = System.Text.Json.JsonSerializer.Deserialize<List<UserContext>>(contextsJson);
+
+            var fullName = root.TryGetProperty("FullName", out var fn) ? fn.GetString() : null;
+
+            return (contexts, fullName);
+        }
+        catch
+        {
+            return (null, null);
+        }
+    }
+
+    private IActionResult RedirectBasedOnRole(string role) => role switch
+    {
+        "superadmin" => RedirectToAction("Index", "SuperAdminHome"),
+        "admin" => RedirectToAction("Index", "AdminHome"),
+        "resident" => RedirectToAction("Index", "ResidentHome"),
+        _ => RedirectToAction("UnifiedLogin")
+    };
+
     private async Task SignInCookieAsync(AuthResult res)
     {
         var claims = new List<Claim>
-    {
-        new(ClaimTypes.NameIdentifier, res.Uid!),
-        new(ClaimTypes.Name, res.Name ?? ""),
-        new(ClaimTypes.Email, res.Email ?? ""),
-        new(ClaimTypes.Role, res.Role!),
-    };
+        {
+            new(ClaimTypes.NameIdentifier, res.Uid!),
+            new(ClaimTypes.Name, res.Name ?? ""),
+            new(ClaimTypes.Email, res.Email ?? ""),
+            new(ClaimTypes.Role, res.Role!),
+        };
 
         foreach (var bId in res.BuildingIds)
             claims.Add(new Claim("buildingId", bId));
@@ -473,7 +409,6 @@ public class AccountController : Controller
         if (res.ApartmentId != null) claims.Add(new Claim("apartmentId", res.ApartmentId));
         if (res.ApartmentNumber != null) claims.Add(new Claim("apartmentNumber", res.ApartmentNumber.Value.ToString()));
 
-        // ✅ المرحلة 15 — إضافة الصلاحيات في الـ Claims
         if (res.Role == "superadmin")
         {
             foreach (var p in BuildingManagementMvc.Models.AdminPermissions.SuperAdminAll)
@@ -495,21 +430,160 @@ public class AccountController : Controller
         }
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
+        await HttpContext.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            new ClaimsPrincipal(identity));
     }
 
     private static string MapError(string? error, string? reason = null) => error switch
     {
         "building-not-found" => Loc.T("The_Building_Does_Not_Exist"),
+        "building-required" => Loc.T("Building_Required"),
+        "floor-required" => Loc.T("Floor_Required"),
+        "floor-not-found" => Loc.T("Floor_Not_Found"),
+        "apartment-required" => Loc.T("Apartment_Required"),
+        "phone-required" => Loc.T("Phone_Required"),
+        "pin-required" => Loc.T("PIN_Required"),
+        "apartment-not-found" => Loc.T("The_Apartment_Does_Not_Exist"),
         "no-admin" => Loc.T("No_Admin_Has_Been_Registered_Yet"),
         "wrong-credentials" => Loc.T("Incorrect_Phone_Number_Or_PIN"),
         "wrong-wa" => Loc.T("The_WhatsApp_Number_Does_Not_Match"),
         "wrong-pin" => Loc.T("Incorrect_PIN"),
-        "apt-not-found" => Loc.T("The_Apartment_Does_Not_Exist"),
+        "not-in-building" => Loc.T("You_Are_Not_In_This_Building"),
         "not-superadmin" => Loc.T("This_Email_Is_Not_Authorized_For_2"),
+        "pin-not-set" => Loc.T("PIN_Not_Set_Contact_Admin"),
         "account-disabled" => Loc.T("This_Account_Is_Disabled") + (string.IsNullOrWhiteSpace(reason) ? "" : Loc.T("Reason_N", reason)),
-        "EMAIL_NOT_FOUND" or "INVALID_PASSWORD" or "INVALID_LOGIN_CREDENTIALS" => Loc.T("Invalid_Login_Details_2"),
+        "account-inactive" => Loc.T("This_Account_Is_Inactive"),
         null => Loc.T("An_Unexpected_Error_Occurred"),
         _ => Loc.T("Could_Not_Log_In_2") + error
     };
+
+    // ═══════════════════════════════════════════════════════════
+    // AJAX: Get Floors / Apartments
+    // ═══════════════════════════════════════════════════════════
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetFloors(string buildingId)
+    {
+        if (string.IsNullOrWhiteSpace(buildingId))
+            return Json(new List<object>());
+
+        var building = await _buildings.GetByIdAsync(buildingId);
+        if (building == null)
+            return Json(new List<object>());
+
+        var floors = building.Floors
+            .OrderBy(f => f.Order)
+            .Select(f => new
+            {
+                id = f.Id,
+                order = f.Order,
+                label = $"{f.Label} (رقم {f.Order})"
+            })
+            .ToList();
+
+        return Json(floors);
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetApartments(string buildingId, string floorId)
+    {
+        if (string.IsNullOrWhiteSpace(buildingId) || string.IsNullOrWhiteSpace(floorId))
+            return Json(new List<object>());
+
+        var building = await _buildings.GetByIdAsync(buildingId);
+        if (building == null)
+            return Json(new List<object>());
+
+        var apts = building.Apartments
+            .Where(a => a.FloorId == floorId && !a.Closed)
+            .OrderBy(a => a.Number)
+            .Select(a => new
+            {
+                id = a.Id,
+                number = a.Number,
+                label = $"شقة {a.Number}" + (string.IsNullOrWhiteSpace(a.Label) ? "" : $" — {a.Label}")
+            })
+            .ToList();
+
+        return Json(apts);
+    }
+    // ═══════════════════════════════════════════════════════════
+    // Quick Login (QR السريع)
+    // ═══════════════════════════════════════════════════════════
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<IActionResult> QuickLogin(
+        string token,
+        [FromServices] QrSecurityService qrSecurity)
+    {
+        if (string.IsNullOrEmpty(token))
+            return RedirectToAction("LoginChoice");
+
+        // 1. تحقق من الـ Token
+        var validation = await qrSecurity.ValidateQuickToken(token);
+        if (!validation.IsSuccess)
+        {
+            ViewBag.Error = validation.Error;
+            return View("QuickLoginError");
+        }
+
+        var payload = validation.Data!;
+
+        // 2. جيب الـ Building
+        var building = await _buildings.GetByIdAsync(payload.BuildingId);
+        if (building == null)
+        {
+            ViewBag.Error = Loc.T("The_Building_Does_Not_Exist");
+            return View("QuickLoginError");
+        }
+
+        // 3. جيب الشقة
+        var apt = building.Apartments.FirstOrDefault(a => a.Id == payload.AptId);
+        if (apt == null)
+        {
+            ViewBag.Error = Loc.T("The_Apartment_Does_Not_Exist");
+            return View("QuickLoginError");
+        }
+
+        // 4. جيب الساكن من الـ Residents table
+        var residents = await _residents.GetByApartmentAsync(payload.BuildingId, payload.AptId);
+        var resident = residents.FirstOrDefault(r => r.IsPrimary && !r.IsDisabled)
+                    ?? residents.FirstOrDefault(r => !r.IsDisabled);
+
+        if (resident == null)
+        {
+            ViewBag.Error = Loc.T("The_Apartment_Does_Not_Exist");
+            return View("QuickLoginError");
+        }
+
+        // 5. Sign In Cookie
+        var result = AuthResult.Ok(
+            uid: resident.Uid,
+            role: "resident",
+            email: resident.Email ?? "",
+            name: string.IsNullOrWhiteSpace(resident.Name)
+                ? $"ساكن شقة {apt.Number}" : resident.Name,
+            buildingIds: new List<string> { building.Id },
+            aptId: resident.ApartmentId,
+            aptNumber: apt.Number);
+
+        await SignInCookieAsync(result);
+
+        // 6. Mark Token as used
+        try
+        {
+            await qrSecurity.MarkQuickTokenUsed(payload.TokenId);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "[QuickLogin] Failed to mark token as used");
+        }
+
+        _log.LogInformation("[QuickLogin] Resident logged in: {Name} (apt {Apt})",
+            resident.Name, apt.Number);
+
+        return RedirectToAction("Index", "ResidentHome");
+    }
 }

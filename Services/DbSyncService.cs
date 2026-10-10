@@ -13,20 +13,17 @@ public class DbSyncService
 {
     private readonly UsersService _users;
     private readonly BuildingsService _buildings;
-    private readonly FirebaseAuthRestService _fbAuth;
     private readonly FirebaseAdminService _fbAdmin;
     private readonly IAuditLogger _audit;
 
     public DbSyncService(
         UsersService users,
         BuildingsService buildings,
-        FirebaseAuthRestService fbAuth,
         FirebaseAdminService fbAdmin,
         IAuditLogger audit)
     {
         _users = users;
         _buildings = buildings;
-        _fbAuth = fbAuth;
         _fbAdmin = fbAdmin;
         _audit = audit;
     }
@@ -177,7 +174,7 @@ public class DbSyncService
         var result = new SyncResult();
 
         var buildings = await _buildings.GetAllAsync();
-        result.TotalChecked = buildings.Sum(b => b.Apartments.Count + 1); // +1 for admin
+        result.TotalChecked = buildings.Sum(b => b.Apartments.Count + 1);
 
         foreach (var building in buildings)
         {

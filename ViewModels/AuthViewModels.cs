@@ -28,11 +28,11 @@ public class ResidentLoginVm
     [Required]
     public string BuildingId { get; set; } = "";
 
-    [Required, Range(0, 200)]
-    public int FloorOrder { get; set; }
+    [Required]
+    public string FloorId { get; set; } = "";
 
-    [Required, Range(1, 999)]
-    public int AptNumber { get; set; }
+    [Required]
+    public string AptId { get; set; } = "";
 
     [Required]
     public string Whatsapp { get; set; } = "";

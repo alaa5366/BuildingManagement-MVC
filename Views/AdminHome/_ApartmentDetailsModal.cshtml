@@ -108,11 +108,13 @@
                 </table>
             </div>
         }
+
         @* ===== Quick Actions ===== *@
         <div class="details-section">
             <h6 class="details-section-title">@Loc.T("Quick_Actions")</h6>
             <div class="quick-actions-grid">
 
+                @* 1. PDF Invoice *@
                 <a asp-controller="Invoice" asp-action="Download"
                    asp-route-aptId="@Model.AptId"
                    asp-route-month="@Model.CurrentMonth"
@@ -122,43 +124,61 @@
                     <span>@Loc.T("PDF_Invoice")</span>
                 </a>
 
+                @* 2. Edit Apartment *@
                 <a asp-controller="AdminApts" asp-action="Edit" asp-route-aptId="@Model.AptId"
                    class="qa-btn qa-edit">
                     <span class="qa-icon">✏️</span>
                     <span>@Loc.T("Edit_Apartment")</span>
                 </a>
 
-               <button type="button" class="qa-btn qa-wallet"
-                onclick="enterResidentWallet('@Model.AptId')">
-                <span class="qa-icon">💼</span>
-                <span>@Loc.T("Wallet_2")</span>
-                </button>
+                @* 3. Wallet (Impersonation) *@
+                <form method="post" asp-controller="Impersonation"
+                      asp-action="EnterResidentWallet" class="qa-form">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="aptId" value="@Model.AptId" />
+                    <input type="hidden" name="buildingId" value="@Model.BuildingId" />
+                    <button type="submit" class="qa-btn qa-wallet"
+                            onclick="return confirm('هل تريد الدخول على محفظة الساكن؟');">
+                        <span class="qa-icon">💼</span>
+                        <span>@Loc.T("Wallet_2")</span>
+                    </button>
+                </form>
 
+                @* 4. Welcome Message *@
                 <button type="button" class="qa-btn qa-welcome"
                         onclick="sendWelcomeFromDetails('@Model.AptId')">
                     <span class="qa-icon">💌</span>
                     <span>@Loc.T("Welcome_Message")</span>
                 </button>
 
+                @* 5. Quick QR — ✅ مفتوح مباشرة *@
                 <button type="button" class="qa-btn qa-qr"
-                        onclick="quickQrFromDetails('@Model.AptId')">
+                        onclick="openQuickQrFromDetails('@Model.AptId', '@Model.AptNumber', '@Model.FloorLabel')">
                     <span class="qa-icon">⚡</span>
                     <span>@Loc.T("Quick_QR_4")</span>
                 </button>
 
-                <button type="button" class="qa-btn qa-impersonate"
-                        onclick="impersonateResident('@Model.AptId')">
-                    <span class="qa-icon">🚪</span>
-                    <span>@Loc.T("Log_In_As_Resident")</span>
-                </button>
+                @* 6. Enter as Resident (Impersonation) *@
+                <form method="post" asp-controller="Impersonation"
+                      asp-action="EnterResidentHome" class="qa-form">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="aptId" value="@Model.AptId" />
+                    <input type="hidden" name="buildingId" value="@Model.BuildingId" />
+                    <button type="submit" class="qa-btn qa-impersonate"
+                            onclick="return confirm('هل تريد الدخول كـ Resident؟');">
+                        <span class="qa-icon">🚪</span>
+                        <span>@Loc.T("Log_In_As_Resident")</span>
+                    </button>
+                </form>
 
             </div>
         </div>
 
     </div>
+
     @* ===== Status Actions ===== *@
 
-    @* ✅ Disabled ======= *@
+    @* Disabled ======= *@
     @if (Model.IsDisabled)
     {
         <div class="details-section">
@@ -166,7 +186,7 @@
             <div class="alert alert-warning small mb-3">
                 @if (!string.IsNullOrWhiteSpace(Model.DisabledReason))
                 {
-                    <strong>@Loc.T("Reason")</strong> 
+                    <strong>@Loc.T("Reason")</strong>
                     @Model.DisabledReason
                     <br />
                 }
@@ -180,7 +200,7 @@
     }
     else
     {
-        @* ✅ Closed ======= *@
+        @* Closed ======= *@
         if (Model.IsClosed)
         {
             <div class="details-section">
@@ -215,3 +235,4 @@
             </div>
         }
     }
+</div>

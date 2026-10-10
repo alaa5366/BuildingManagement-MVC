@@ -1,0 +1,30 @@
+﻿@using System.Security.Claims
+@{
+    var isImpersonating = User.HasClaim("impersonated", "true");
+    var impersonatedBy = User.FindFirst("impersonatedBy")?.Value ?? "SuperAdmin";
+}
+
+@if (isImpersonating)
+{
+    <div class="impersonation-banner" style="background: linear-gradient(90deg, #A0432A 0%, #C5563A 100%); color: #fff; padding: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+        <div class="container-fluid d-flex justify-content-between align-items-center px-3">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-person-badge" style="font-size: 20px;"></i>
+                <div>
+                    <strong>🔴 أنت في وضع Impersonation</strong>
+                    <div class="small" style="opacity: 0.9;">
+                        تتصفح باسم: <strong>@User.FindFirst(ClaimTypes.Name)?.Value</strong>
+                        — المدير الأصلي: <strong>@impersonatedBy</strong>
+                    </div>
+                </div>
+            </div>
+            <form asp-controller="Impersonation" asp-action="Exit" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-light btn-sm fw-bold">
+                    <i class="bi bi-box-arrow-left"></i>
+                    رجوع لحسابي
+                </button>
+            </form>
+        </div>
+    </div>
+}

@@ -4,13 +4,10 @@ using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Services;
 
-// =====================================================================
-//  ImpersonationService — Nested Cookie Stack
-//  ✅ بيدعم طبقات متعددة: SuperAdmin → Admin → Resident → ...
-// =====================================================================
 public class ImpersonationService
 {
     private const string BackupCookieName = "bm_admin_backup_stack";
+    private const string ItemsKey = "impersonation_stack";
     private const int MaxStackDepth = 5;
 
     private readonly IAuditLogger _audit;
@@ -30,18 +27,29 @@ public class ImpersonationService
     }
 
     // ============================================================
-    // 1. قراءة الـ Stack كامل
+    // 1. قراءة الـ Stack (من Items أو Cookie)
     // ============================================================
     public List<AdminBackupData> ReadBackupStack(HttpContext ctx)
     {
+        // ✅ الأول: من Items (نفس الطلب)
+        if (ctx.Items.TryGetValue(ItemsKey, out var cached) && cached is List<AdminBackupData> cachedStack)
+        {
+            return new List<AdminBackupData>(cachedStack);
+        }
+
+        // ✅ الثاني: من Request Cookie
         if (!ctx.Request.Cookies.TryGetValue(BackupCookieName, out var json))
             return new List<AdminBackupData>();
 
         try
         {
             var decrypted = _protector.Unprotect(json);
-            var stack = JsonSerializer.Deserialize<List<AdminBackupData>>(decrypted);
-            return stack ?? new List<AdminBackupData>();
+            var stack = JsonSerializer.Deserialize<List<AdminBackupData>>(decrypted)
+                ?? new List<AdminBackupData>();
+
+            // ✅ خزّن في Items
+            ctx.Items[ItemsKey] = stack;
+            return new List<AdminBackupData>(stack);
         }
         catch (Exception ex)
         {
@@ -51,7 +59,7 @@ public class ImpersonationService
     }
 
     // ============================================================
-    // 2. Push (إضافة طبقة جديدة)
+    // 2. Push
     // ============================================================
     public void PushBackup(HttpContext ctx, AdminBackupData data)
     {
@@ -72,7 +80,7 @@ public class ImpersonationService
     }
 
     // ============================================================
-    // 3. Pop (إزالة آخر طبقة)
+    // 3. Pop
     // ============================================================
     public AdminBackupData? PopBackup(HttpContext ctx)
     {
@@ -91,7 +99,7 @@ public class ImpersonationService
     }
 
     // ============================================================
-    // 4. Peek (قراءة آخر طبقة بدون إزالة)
+    // 4. Peek
     // ============================================================
     public AdminBackupData? PeekBackup(HttpContext ctx)
     {
@@ -100,7 +108,7 @@ public class ImpersonationService
     }
 
     // ============================================================
-    // 5. حالة الـ Impersonation
+    // 5. IsImpersonating
     // ============================================================
     public bool IsImpersonating(HttpContext ctx)
     {
@@ -110,10 +118,13 @@ public class ImpersonationService
     public int StackDepth(HttpContext ctx) => ReadBackupStack(ctx).Count;
 
     // ============================================================
-    // 6. حفظ الـ Stack في الـ Cookie
+    // 6. SaveStack (في Items + Response Cookie)
     // ============================================================
     private void SaveStack(HttpContext ctx, List<AdminBackupData> stack)
     {
+        // ✅ احفظ في Items للطلبات الجاية في نفس الطلب
+        ctx.Items[ItemsKey] = new List<AdminBackupData>(stack);
+
         if (stack.Count == 0)
         {
             ctx.Response.Cookies.Delete(BackupCookieName);
@@ -134,15 +145,16 @@ public class ImpersonationService
     }
 
     // ============================================================
-    // 7. مسح الـ Stack كامل
+    // 7. ClearStack
     // ============================================================
     public void ClearStack(HttpContext ctx)
     {
+        ctx.Items.Remove(ItemsKey);
         ctx.Response.Cookies.Delete(BackupCookieName);
     }
 
     // ============================================================
-    // 8. Audit Log — دخول
+    // 8. Audit Logs
     // ============================================================
     public async Task LogEnterAsync(Building building, Apartment apt, string adminUid, string adminName)
     {
@@ -156,9 +168,6 @@ public class ImpersonationService
             severity: "critical");
     }
 
-    // ============================================================
-    // 9. Audit Log — خروج
-    // ============================================================
     public async Task LogExitAsync(string buildingId, string adminUid, string adminName)
     {
         await _audit.LogAsync(
@@ -170,9 +179,6 @@ public class ImpersonationService
             severity: "warning");
     }
 
-    // ============================================================
-    // 10. Audit Log — SuperAdmin يدخل كأدمن
-    // ============================================================
     public async Task LogEnterBuildingAdminAsync(Building building, string superAdminUid, string superAdminName)
     {
         await _audit.LogAsync(
@@ -190,9 +196,6 @@ public class ImpersonationService
     }
 }
 
-// ============================================================
-// AdminBackupData — بيانات الطبقة
-// ============================================================
 public class AdminBackupData
 {
     public string Uid { get; set; } = "";

@@ -1,0 +1,40 @@
+﻿@model List<BuildingManagementMvc.Models.Building>
+@{
+    ViewData["Title"] = Loc.T("Choose_Building");
+}
+
+<div class="container-fluid">
+    <div class="text-center mb-5">
+        <h2>@Loc.T("Choose_Building_For_Residents")</h2>
+        <p class="text-muted">@Loc.T("Choose_Building_To_Manage_Residents")</p>
+    </div>
+
+    @if (Model.Count == 0)
+    {
+        <div class="alert alert-info text-center">
+            <i class="bi bi-info-circle"></i>
+            @Loc.T("No_Buildings_Create_First")
+        </div>
+    }
+    else
+    {
+        <div class="row g-3 justify-content-center">
+            @foreach (var b in Model)
+            {
+                <div class="col-md-4 col-lg-3">
+                    <a asp-action="Index" asp-route-buildingId="@b.Id"
+                       class="card shadow-sm text-decoration-none h-100">
+                        <div class="card-body text-center">
+                            <div style="font-size: 48px;">🏢</div>
+                            <h5 class="card-title mt-2">@b.Name</h5>
+                            <p class="text-muted mb-2">@b.BuildingNumber</p>
+                            <span class="badge bg-secondary">
+                                @b.Apartments.Count @Loc.T("Apartments")
+                            </span>
+                        </div>
+                    </a>
+                </div>
+            }
+        </div>
+    }
+</div>

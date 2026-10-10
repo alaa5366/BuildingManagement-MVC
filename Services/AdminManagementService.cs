@@ -10,8 +10,7 @@ public class AdminManagementService
 {
     private readonly FirestoreDb _db;
     private readonly UsersService _users;
-    private readonly FirebaseAuthRestService _fbAuth;
-    private readonly FirebaseAdminService _fbAdmin;   // ✅ جديد
+    private readonly FirebaseAdminService _fbAdmin;
     private readonly IAuditLogger _audit;
     private readonly IDbContextFactory<AppDbContext>? _sqlFactory;
     private readonly ILogger<AdminManagementService> _log;
@@ -20,15 +19,13 @@ public class AdminManagementService
     public AdminManagementService(
         FirestoreContext ctx,
         UsersService users,
-        FirebaseAuthRestService fbAuth,
-        FirebaseAdminService fbAdmin,                  // ✅ جديد
+        FirebaseAdminService fbAdmin,
         IAuditLogger audit,
         IDbContextFactory<AppDbContext>? sqlFactory = null,
         ILogger<AdminManagementService>? log = null)
     {
         _db = ctx.Db;
         _users = users;
-        _fbAuth = fbAuth;
         _fbAdmin = fbAdmin;
         _audit = audit;
         _sqlFactory = sqlFactory;
@@ -58,18 +55,13 @@ public class AdminManagementService
     {
         var normalizedPhone = AuthHelpers.NormalizePhone(phone);
         var email = AuthHelpers.AdminEmailForPhone(buildingId, normalizedPhone);
-        var password = AuthHelpers.AdminPasswordForPhone(normalizedPhone, pin);
 
-        // 1. Firebase Auth
-        var authResult = await _fbAuth.CreateUserAsync(email, password);
-        if (!authResult.Success || string.IsNullOrEmpty(authResult.Uid))
-            throw new InvalidOperationException(Loc.T("Failed_To_Create_The_Firebase_Auth") + (authResult.Error ?? "unknown"));
-
-        var uid = authResult.Uid;
+        // ✅ Uid جديد (بدل Firebase Auth)
+        var uid = Guid.NewGuid().ToString("N");
 
         try
         {
-            // 2. Firestore
+            // 1. Firestore (Users)
             await _users.SetAsync(uid, new Dictionary<string, object>
             {
                 ["email"] = email,
@@ -86,6 +78,60 @@ public class AdminManagementService
                 ["createdBy"] = createdBy
             });
 
+            // 2. SQL (Users + BuildingAdmins)
+            if (_sqlFactory != null)
+            {
+                try
+                {
+                    await using var db = await _sqlFactory.CreateDbContextAsync();
+
+                    // Users
+                    var userEntity = new Data.Entities.UserEntity
+                    {
+                        Uid = uid,
+                        Email = email,
+                        Name = name,
+                        Phone = normalizedPhone,
+                        Whatsapp = normalizedPhone,
+                        Pin = pin,
+                        Role = "admin",
+                        IsActive = true,
+                        IsDisabled = false,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = createdBy
+                    };
+                    db.Users.Add(userEntity);
+
+                    // BuildingAdmins
+                    db.BuildingAdmins.Add(new Data.Entities.BuildingAdminEntity
+                    {
+                        BuildingId = buildingId,
+                        AdminUid = uid
+                    });
+
+                    // Permissions
+                    if (permissions != null)
+                    {
+                        foreach (var p in permissions)
+                        {
+                            db.UserPermissions.Add(new Data.Entities.UserPermissionEntity
+                            {
+                                Uid = uid,
+                                Permission = p
+                            });
+                        }
+                    }
+
+                    await db.SaveChangesAsync();
+
+                    _log.LogInformation("[AdminManagement] Created admin in SQL: {Uid}", uid);
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning(ex, "SQL insert failed for admin {Uid}", uid);
+                }
+            }
+
             // 3. Audit
             await _audit.LogAsync(
                 action: "admin.create",
@@ -99,9 +145,6 @@ public class AdminManagementService
         }
         catch
         {
-            // Rollback: نحذف حساب Firebase Auth
-            try { await _fbAdmin.DeleteUserAsync(email); } catch { }
-
             await _audit.LogAsync(
                 action: "admin.create.failed",
                 buildingId: buildingId,
@@ -150,7 +193,6 @@ public class AdminManagementService
         var admin = await _users.GetByUidAsync(uid)
             ?? throw new InvalidOperationException(Loc.T("The_Admin_Does_Not_Exist"));
 
-        // 1. Firestore
         await _users.SetAsync(uid, new Dictionary<string, object>
         {
             ["pin"] = newPin,
@@ -158,21 +200,9 @@ public class AdminManagementService
             ["updatedBy"] = updatedBy
         });
 
-        // 2. Firebase Auth — بنستخدم Admin SDK (أقوى)
-        var buildingId = admin.BuildingIds.FirstOrDefault() ?? "";
-        var email = AuthHelpers.AdminEmailForPhone(buildingId, admin.Phone);
-        var password = AuthHelpers.AdminPasswordForPhone(admin.Phone, newPin);
-
-        var updated = await _fbAdmin.UpdatePasswordAsync(email, password);
-        if (!updated)
-        {
-            // لو الحساب مش موجود، اعمله
-            await _fbAdmin.CreateOrGetUserAsync(email, password);
-        }
-
         await _audit.LogAsync(
             action: "admin.change_pin",
-            buildingId: buildingId,
+            buildingId: admin.BuildingIds.FirstOrDefault(),
             userId: updatedBy,
             userRole: "superadmin",
             metadata: new { adminUid = uid },
@@ -227,7 +257,7 @@ public class AdminManagementService
     }
 
     // ============================================================
-    // ✅ حذف نهائي (Hard Delete) — Firestore + Firebase Auth + SQL
+    // حذف نهائي
     // ============================================================
     public async Task DeleteAsync(string uid, string deletedBy)
     {
@@ -238,9 +268,6 @@ public class AdminManagementService
         var email = admin.Email ?? "";
         var phone = admin.Phone ?? "";
 
-        // ============================================================
-        // 1. حذف من SQL (BuildingAdmins + UserPermissions + Users)
-        // ============================================================
         if (_sqlFactory != null)
         {
             try
@@ -273,28 +300,6 @@ public class AdminManagementService
             }
         }
 
-        // ============================================================
-        // 2. حذف من Firebase Auth — باستخدام Admin SDK (بالإيميل)
-        // ============================================================
-        if (!string.IsNullOrEmpty(email))
-        {
-            try
-            {
-                var deleted = await _fbAdmin.DeleteUserAsync(email);
-                if (deleted)
-                    _log.LogInformation("✅ Hard delete from Firebase Auth: {Email}", email);
-                else
-                    _log.LogWarning("⚠️ Firebase Auth user not found: {Email}", email);
-            }
-            catch (Exception ex)
-            {
-                _log.LogWarning(ex, "⚠️ Firebase Auth delete failed: {Email}", email);
-            }
-        }
-
-        // ============================================================
-        // 3. حذف من Firestore (users/{uid})
-        // ============================================================
         try
         {
             await _db.Collection(Collection).Document(uid).DeleteAsync();
@@ -305,21 +310,12 @@ public class AdminManagementService
             _log.LogWarning(ex, "⚠️ Firestore delete failed: {Uid}", uid);
         }
 
-        // ============================================================
-        // 4. Audit Log
-        // ============================================================
         await _audit.LogAsync(
             action: "admin.delete",
             buildingId: buildingId,
             userId: deletedBy,
             userRole: "superadmin",
-            metadata: new
-            {
-                adminUid = uid,
-                phone = phone,
-                email = email,
-                hardDelete = true
-            },
+            metadata: new { adminUid = uid, phone, email, hardDelete = true },
             severity: "critical");
     }
 

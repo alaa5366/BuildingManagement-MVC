@@ -1,41 +1,14 @@
 @model ResidentLoginVm
 @{
     ViewData["Title"] = Loc.T("Resident_Login");
-    var buildings = (List<Building>)ViewBag.Buildings;
-
-    // ✅ QR data
-    var qrBuildingId = ViewBag.QrBuildingId as string;
-    var qrBuildingName = ViewBag.QrBuildingName as string;
-    var qrFloorOrder = ViewBag.QrFloorOrder as int?;
-    var qrFloorLabel = ViewBag.QrFloorLabel as string;
-    var qrAptNumber = ViewBag.QrAptNumber as int?;
-    var qrAptLabel = ViewBag.QrAptLabel as string;
-    var hasQr = !string.IsNullOrEmpty(qrBuildingId);
+    var buildings = ViewBag.Buildings as List<Building> ?? new();
 }
 
 <div class="auth-wrap">
     <div class="auth-card">
         <a asp-action="LoginChoice" class="link-btn back-link">@Loc.T("Back")</a>
         <h2>@Loc.T("Resident_Login")</h2>
-        <p class="sub">@Loc.T("Choose_The_Building_Floor_And_Apartment")</p>
-
-        @if (hasQr)
-        {
-            <div class="alert alert-success">
-                <strong>@Loc.T("Your_Apartment_Was_Detected_Automatically")</strong>
-                <div class="small mt-2">
-                    <div>🏢 <strong>@qrBuildingName</strong></div>
-                    <div>🏠 <strong>@Loc.T("N_Apartment_N", qrFloorLabel, qrAptNumber)</strong></div>
-                    @if (!string.IsNullOrEmpty(qrAptLabel))
-                    {
-                        <div class="text-muted">@qrAptLabel</div>
-                    }
-                </div>
-                <div class="small mt-2 text-muted">
-                    @Loc.T("Just_Enter_Your_WhatsApp_Number_And")
-                </div>
-            </div>
-        }
+        <p class="sub">@Loc.T("Choose_The_Building_And_Enter_Your")</p>
 
         @if (ViewBag.Error != null)
         {
@@ -45,52 +18,56 @@
         <form method="post" asp-action="LoginResident">
             @Html.AntiForgeryToken()
 
+            @* ═══════════════════════════════════════════════════════ *@
+            @* Building                                                    *@
+            @* ═══════════════════════════════════════════════════════ *@
             <div class="field">
                 <label>@Loc.T("Building")</label>
                 <select name="BuildingId" id="bldSelect" class="form-select" required>
-                    <option value="">@Loc.T("Select")</option>
+                    <option value="">— @Loc.T("Select") —</option>
                     @foreach (var b in buildings)
                     {
-                        <option value="@b.Id"
-                                data-qr="@(hasQr && b.Id == qrBuildingId ? "true" : "false")"
-                                selected="@(hasQr && b.Id == qrBuildingId)">
-                            @b.BuildingNumber — @b.Name
-                        </option>
+                        <option value="@b.Id">@b.BuildingNumber — @b.Name</option>
                     }
                 </select>
             </div>
 
+            @* ═══════════════════════════════════════════════════════ *@
+            @* Floor (AJAX)                                                *@
+            @* ═══════════════════════════════════════════════════════ *@
             <div class="field">
                 <label>@Loc.T("Floor_Number")</label>
-                <input name="FloorOrder" id="floorInput" type="number" class="form-control"
-                       value="@(hasQr ? qrFloorOrder : null)"
-                       readonly="@(hasQr)" required />
-                @if (hasQr)
-                {
-                    <div class="form-text">✅ @qrFloorLabel</div>
-                }
+                <select name="FloorId" id="floorSelect" class="form-select" required disabled>
+                    <option value="">— @Loc.T("Choose_Building_First") —</option>
+                </select>
             </div>
 
+            @* ═══════════════════════════════════════════════════════ *@
+            @* Apartment (AJAX)                                            *@
+            @* ═══════════════════════════════════════════════════════ *@
             <div class="field">
                 <label>@Loc.T("Apartment_Number")</label>
-                <input name="AptNumber" id="aptInput" type="number" class="form-control"
-                       value="@(hasQr ? qrAptNumber : null)"
-                       readonly="@(hasQr)" required />
-                @if (hasQr && !string.IsNullOrEmpty(qrAptLabel))
-                {
-                    <div class="form-text">✅ @qrAptLabel</div>
-                }
+                <select name="AptId" id="aptSelect" class="form-select" required disabled>
+                    <option value="">— @Loc.T("Choose_Floor_First") —</option>
+                </select>
             </div>
 
+            @* ═══════════════════════════════════════════════════════ *@
+            @* WhatsApp                                                    *@
+            @* ═══════════════════════════════════════════════════════ *@
             <div class="field">
                 <label>@Loc.T("WhatsApp_Number")</label>
-                <input name="Whatsapp" id="waInput" type="tel" class="form-control"
-                       placeholder="+201001234567" required autofocus="@hasQr" />
+                <input name="Whatsapp" type="tel" class="form-control"
+                       placeholder="+201001234567" required dir="ltr" />
             </div>
 
+            @* ═══════════════════════════════════════════════════════ *@
+            @* PIN                                                         *@
+            @* ═══════════════════════════════════════════════════════ *@
             <div class="field">
                 <label>PIN</label>
-                <input name="Pin" type="password" class="form-control" required maxlength="4" />
+                <input name="Pin" type="password" class="form-control"
+                       required maxlength="4" inputmode="numeric" />
             </div>
 
             <button type="submit" class="btn btn-brand w-100">@Loc.T("Log_In")</button>
@@ -135,7 +112,6 @@
             font-weight: 600;
             font-size: 13px;
             margin-bottom: 6px;
-            color: #333;
         }
 
     .back-link {
@@ -153,3 +129,94 @@
         padding: 0;
     }
 </style>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const bldSelect = document.getElementById('bldSelect');
+            const floorSelect = document.getElementById('floorSelect');
+            const aptSelect = document.getElementById('aptSelect');
+
+            // ═══════════════════════════════════════════════════════
+            // Building change → جيب الأدوار
+            // ═══════════════════════════════════════════════════════
+            bldSelect.addEventListener('change', async function() {
+                const bldId = this.value;
+
+                // Reset
+                floorSelect.innerHTML = '<option value="">— @Html.Raw(Loc.Js("Choose_Floor_First")) —</option>';
+                aptSelect.innerHTML = '<option value="">— @Html.Raw(Loc.Js("Choose_Floor_First")) —</option>';
+                floorSelect.disabled = true;
+                aptSelect.disabled = true;
+
+                if (!bldId) {
+                    floorSelect.innerHTML = '<option value="">— @Html.Raw(Loc.Js("Choose_Building_First")) —</option>';
+                    return;
+                }
+
+                floorSelect.innerHTML = '<option value="">@Html.Raw(Loc.Js("Loading"))</option>';
+
+                try {
+                    const res = await fetch(`/Account/GetFloors?buildingId=${encodeURIComponent(bldId)}`);
+                    const floors = await res.json();
+
+                    if (floors.length === 0) {
+                        floorSelect.innerHTML = '<option value="">— @Html.Raw(Loc.Js("No_Floors")) —</option>';
+                        return;
+                    }
+
+                    floorSelect.innerHTML = '<option value="">— @Html.Raw(Loc.Js("Select")) —</option>';
+                    floors.forEach(f => {
+                        const opt = document.createElement('option');
+                        opt.value = f.id;
+                        opt.textContent = f.label;
+                        floorSelect.appendChild(opt);
+                    });
+
+                    floorSelect.disabled = false;
+                } catch (err) {
+                    console.error(err);
+                    floorSelect.innerHTML = '<option value="">— Error —</option>';
+                }
+            });
+
+            // ═══════════════════════════════════════════════════════
+            // Floor change → جيب الشقق
+            // ═══════════════════════════════════════════════════════
+            floorSelect.addEventListener('change', async function() {
+                const bldId = bldSelect.value;
+                const floorId = this.value;
+
+                aptSelect.innerHTML = '<option value="">— @Html.Raw(Loc.Js("Choose_Floor_First")) —</option>';
+                aptSelect.disabled = true;
+
+                if (!bldId || !floorId) return;
+
+                aptSelect.innerHTML = '<option value="">@Html.Raw(Loc.Js("Loading"))</option>';
+
+                try {
+                    const res = await fetch(`/Account/GetApartments?buildingId=${encodeURIComponent(bldId)}&floorId=${encodeURIComponent(floorId)}`);
+                    const apts = await res.json();
+
+                    if (apts.length === 0) {
+                        aptSelect.innerHTML = '<option value="">— @Html.Raw(Loc.Js("No_Apartments")) —</option>';
+                        return;
+                    }
+
+                    aptSelect.innerHTML = '<option value="">— @Html.Raw(Loc.Js("Select")) —</option>';
+                    apts.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = a.id;
+                        opt.textContent = a.label;
+                        aptSelect.appendChild(opt);
+                    });
+
+                    aptSelect.disabled = false;
+                } catch (err) {
+                    console.error(err);
+                    aptSelect.innerHTML = '<option value="">— Error —</option>';
+                }
+            });
+        });
+    </script>
+}

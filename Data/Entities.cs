@@ -485,3 +485,59 @@ public class CameraEntity
 
     public DvrEntity? Dvr { get; set; }
 }
+// =====================================================================
+//  ResidentEntity — جدول الساكنين الجديد
+//  بيفصل الساكن عن الشقة (Apartment) عشان يدعم:
+//    - ساكنين متعددين في نفس الشقة
+//    - ساكن واحد في أكتر من شقة
+//    - Auth مستقل (مش Firebase)
+// =====================================================================
+
+public class ResidentEntity
+{
+    // ═══════════════════════════════════════════════════════════
+    // 🔑 المفاتيح
+    // ═══════════════════════════════════════════════════════════
+    public string Id { get; set; } = "";              // GUID
+    public string Uid { get; set; } = "";              // UID داخلي (زي Firebase Auth)
+    public string BuildingId { get; set; } = "";
+    public string ApartmentId { get; set; } = "";
+
+    // ═══════════════════════════════════════════════════════════
+    // 👤 بيانات شخصية
+    // ═══════════════════════════════════════════════════════════
+    public string Name { get; set; } = "";
+    public string Phone { get; set; } = "";             // موبايل
+    public string Whatsapp { get; set; } = "";
+    public string Email { get; set; } = "";             // اختياري
+    public string PhotoUrl { get; set; } = "";
+
+    // ═══════════════════════════════════════════════════════════
+    // 🔐 Auth (BCrypt)
+    // ═══════════════════════════════════════════════════════════
+    public string PinHash { get; set; } = "";           // BCrypt hash للـ PIN (4 أرقام)
+    public string? PasswordHash { get; set; }            // (اختياري — للمستقبل)
+
+    // ═══════════════════════════════════════════════════════════
+    // 📊 حالة
+    // ═══════════════════════════════════════════════════════════
+    public bool IsActive { get; set; } = true;
+    public bool IsDisabled { get; set; }
+    public string DisabledReason { get; set; } = "";
+    public bool IsOwner { get; set; } = true;            // مالك ولا مستأجر
+    public bool IsPrimary { get; set; } = true;          // الساكن الرئيسي للشقة
+
+    // ═══════════════════════════════════════════════════════════
+    // 📅 تواريخ
+    // ═══════════════════════════════════════════════════════════
+    public DateTime? LastLoginAt { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public string? CreatedBy { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    public string? UpdatedBy { get; set; }
+
+    // ═══════════════════════════════════════════════════════════
+    // 🔗 Navigation (لو محتاج)
+    // ═══════════════════════════════════════════════════════════
+    public ApartmentEntity? Apartment { get; set; }
+}

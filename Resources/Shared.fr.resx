@@ -2504,7 +2504,7 @@
     <value>Le nom affiché sur les factures et les notifications</value>
   </data>
   <data name="Apartment_Name_Optional" xml:space="preserve">
-    <value>🏠 Nom de l'appartement &lt;span class="badge bg-secondary" style="font-size: 10px;"&gt;facultatif&lt;/span&gt;</value>
+    <value>Nom de l'appartement (facultatif)</value>
   </data>
   <data name="Example_Alaa_S_Apartment" xml:space="preserve">
     <value>Exemple : Appartement d'Alaa</value>
@@ -4699,96 +4699,75 @@ Cette opération peut prendre quelques secondes.</value>
   <data name="Full_17" xml:space="preserve">
   <value>Complet (17)</value>
 </data>
-<data name="Full_Template_17" xml:space="preserve">
+  <data name="Full_Template_17" xml:space="preserve">
   <value>⚡ Modèle complet (17)</value>
 </data>
-<data name="17_Permissions_For_A_Regular_Admin" xml:space="preserve">
+  <data name="17_Permissions_For_A_Regular_Admin" xml:space="preserve">
   <value>17 permissions — pour un administrateur régulier</value>
 </data>
- <data name="Resident_Dashboard_Title" xml:space="preserve">
+  <data name="Resident_Dashboard_Title" xml:space="preserve">
     <value>Tableau de bord du résident</value>
   </data>
-
   <data name="Welcome_Back_N" xml:space="preserve">
     <value>Bon retour, {0}</value>
   </data>
-
   <data name="Status_Regular" xml:space="preserve">
     <value>À jour</value>
   </data>
-
   <data name="Status_Debtor" xml:space="preserve">
     <value>A des arriérés</value>
   </data>
-
   <data name="Status_Pending" xml:space="preserve">
     <value>A des paiements en attente</value>
   </data>
-
   <data name="Quick_Actions_Title" xml:space="preserve">
     <value>Actions rapides</value>
   </data>
-
   <data name="Quick_Action_Wallet" xml:space="preserve">
     <value>Mon portefeuille</value>
   </data>
-
   <data name="Quick_Action_Invoice" xml:space="preserve">
     <value>Factures</value>
   </data>
-
   <data name="Quick_Action_Polls" xml:space="preserve">
     <value>Sondages</value>
   </data>
-
   <data name="Quick_Action_Maintenance" xml:space="preserve">
     <value>Maintenance</value>
   </data>
-
   <data name="Quick_Action_Notifications" xml:space="preserve">
     <value>Notifications</value>
   </data>
-
   <data name="Quick_Action_Cameras" xml:space="preserve">
     <value>Caméras</value>
   </data>
-
   <data name="Financial_View_Statement" xml:space="preserve">
     <value>Relevé de compte</value>
   </data>
-
   <data name="Financial_Download_Invoice" xml:space="preserve">
     <value>Télécharger la facture</value>
   </data>
-
   <data name="Recent_Transactions_Title" xml:space="preserve">
     <value>Transactions récentes</value>
   </data>
-
   <data name="Recent_Notifications_Title" xml:space="preserve">
     <value>Notifications récentes</value>
   </data>
-
   <data name="Recent_Maintenance_Title" xml:space="preserve">
     <value>Maintenance récente</value>
   </data>
-
   <data name="Pending_Payments_Title" xml:space="preserve">
     <value>Paiements en attente</value>
   </data>
-
   <data name="Active_Polls_Title" xml:space="preserve">
     <value>Sondages actifs</value>
   </data>
-
   <data name="Vote_Now" xml:space="preserve">
     <value>Voter maintenant</value>
   </data>
-
   <data name="View_All" xml:space="preserve">
     <value>Voir tout</value>
   </data>
-
   <data name="No_Transactions_Yet" xml:space="preserve">
     <value>Aucune transaction pour le moment</value>
   </data>
@@ -4801,7 +4780,6 @@ Cette opération peut prendre quelques secondes.</value>
   <data name="Greeting_Evening" xml:space="preserve">
     <value>Bonsoir</value>
   </data>
-
   <!-- Action Center -->
   <data name="Action_Center_Title" xml:space="preserve">
     <value>À faire aujourd'hui</value>
@@ -4824,7 +4802,6 @@ Cette opération peut prendre quelques secondes.</value>
   <data name="Your_Vote_Matters" xml:space="preserve">
     <value>Votre vote compte</value>
   </data>
-
   <!-- Stats -->
   <data name="Stats_Paid" xml:space="preserve">
     <value>Payé</value>
@@ -4838,7 +4815,6 @@ Cette opération peut prendre quelques secondes.</value>
   <data name="Stats_Months" xml:space="preserve">
     <value>Mois</value>
   </data>
-
   <!-- Hero -->
   <data name="Last_Payment" xml:space="preserve">
     <value>Dernier paiement</value>
@@ -4846,7 +4822,6 @@ Cette opération peut prendre quelques secondes.</value>
   <data name="Progress_Of_Expected" xml:space="preserve">
     <value>Progression par rapport au prévu</value>
   </data>
-
   <!-- Insights -->
   <data name="Insight_All_Good" xml:space="preserve">
     <value>Tout est en ordre ! Votre compte est à jour ✅</value>
@@ -4869,31 +4844,226 @@ Cette opération peut prendre quelques secondes.</value>
   <data name="Empty_All_Clear_Desc" xml:space="preserve">
     <value>Aucune nouvelle transaction, votre portefeuille est à jour</value>
   </data>
-<data name="Stats_Paid_This_Month" xml:space="preserve">
+  <data name="Stats_Paid_This_Month" xml:space="preserve">
     <value>Total payé ce mois</value>
 </data>
-<data name="Hero_Fully_Paid_This_Month" xml:space="preserve">
+  <data name="Hero_Fully_Paid_This_Month" xml:space="preserve">
     <value>✅ Entièrement payé ce mois</value>
 </data>
-<data name="Action_Just_Now" xml:space="preserve">
+  <data name="Action_Just_Now" xml:space="preserve">
     <value>À l'instant</value>
 </data>
-<data name="Action_Yesterday" xml:space="preserve">
+  <data name="Action_Yesterday" xml:space="preserve">
     <value>Hier</value>
 </data>
-<data name="Action_Days_Ago" xml:space="preserve">
+  <data name="Action_Days_Ago" xml:space="preserve">
     <value>Il y a {0} jours</value>
 </data>
-<data name="Timeline_This_Month" xml:space="preserve">
+  <data name="Timeline_This_Month" xml:space="preserve">
     <value>Ce mois</value>
 </data>
-<data name="Timeline_Last_Month" xml:space="preserve">
+  <data name="Timeline_Last_Month" xml:space="preserve">
     <value>Le mois dernier</value>
 </data>
-<data name="Insight_Fully_Paid" xml:space="preserve">
+  <data name="Insight_Fully_Paid" xml:space="preserve">
     <value>🎉 Vous avez tout payé ce mois — bravo !</value>
 </data>
-<data name="Hero_Remaining" xml:space="preserve">
+  <data name="Hero_Remaining" xml:space="preserve">
     <value>Restant :</value>
+</data>
+  <data name="Residents_Title" xml:space="preserve">
+    <value>Résidents</value>
+  </data>
+  <data name="Resident_Details" xml:space="preserve">
+    <value>Détails du résident</value>
+  </data>
+  <data name="Resident_Created_Successfully" xml:space="preserve">
+    <value>Résident créé avec succès</value>
+  </data>
+  <data name="Resident_Updated_Successfully" xml:space="preserve">
+    <value>Résident mis à jour avec succès</value>
+  </data>
+  <data name="Resident_Disabled_Successfully" xml:space="preserve">
+    <value>Résident désactivé</value>
+  </data>
+  <data name="Resident_Enabled_Successfully" xml:space="preserve">
+    <value>Résident activé</value>
+  </data>
+  <data name="Resident_Deleted_Successfully" xml:space="preserve">
+    <value>Résident supprimé</value>
+  </data>
+  <data name="No_Residents_Yet" xml:space="preserve">
+    <value>Aucun résident pour le moment</value>
+  </data>
+  <data name="Add_First_Resident_Or_Migrate_From_Apartments" xml:space="preserve">
+    <value>Ajoutez le premier résident ou migrez depuis les appartements</value>
+  </data>
+  <data name="Primary" xml:space="preserve">
+    <value>Principal</value>
+  </data>
+  <data name="Secondary" xml:space="preserve">
+    <value>Secondaire</value>
+  </data>
+  <data name="Tenant" xml:space="preserve">
+    <value>Locataire</value>
+  </data>
+  <data name="Owner_Not_Tenant" xml:space="preserve">
+    <value>Propriétaire (pas locataire)</value>
+  </data>
+  <data name="Owner_Hint" xml:space="preserve">
+    <value>Si le propriétaire habite l'appartement</value>
+  </data>
+  <data name="Primary_Resident" xml:space="preserve">
+    <value>Résident principal</value>
+  </data>
+  <data name="Primary_Resident_Hint" xml:space="preserve">
+    <value>S'il y a plusieurs résidents, celui-ci reçoit les notifications</value>
+  </data>
+  <data name="Role_Status" xml:space="preserve">
+    <value>Rôle et statut</value>
+  </data>
+  <data name="Personal_Info" xml:space="preserve">
+    <value>Informations personnelles</value>
+  </data>
+  <data name="Email_Optional" xml:space="preserve">
+    <value>E-mail (facultatif)</value>
+  </data>
+  <data name="Search_By_Name_Or_Phone" xml:space="preserve">
+    <value>Rechercher par nom ou téléphone</value>
+  </data>
+  <data name="Choose_Building_For_Residents" xml:space="preserve">
+    <value>Choisir un bâtiment</value>
+  </data>
+  <data name="Choose_Building_To_Manage_Residents" xml:space="preserve">
+    <value>Choisissez un bâtiment pour gérer les résidents</value>
+  </data>
+  <data name="Migrate_Residents" xml:space="preserve">
+    <value>Migrer les résidents</value>
+  </data>
+  <data name="Migrate_From_Apartments" xml:space="preserve">
+    <value>Migrer depuis les appartements</value>
+  </data>
+  <data name="Migrate_From_Apartments_To_Residents_Table" xml:space="preserve">
+    <value>Migrer les résidents de la table Apartments vers la table Residents</value>
+  </data>
+  <data name="Migration_Copies_Residents_From_Apartments" xml:space="preserve">
+    <value>Copie les résidents de Apartments vers Residents</value>
+  </data>
+  <data name="Existing_Residents_Will_Be_Skipped" xml:space="preserve">
+    <value>Les résidents existants seront ignorés</value>
+  </data>
+  <data name="PIN_Will_Be_Hashed_With_BCrypt" xml:space="preserve">
+    <value>Le PIN sera haché avec BCrypt</value>
+  </data>
+  <data name="Total_Residents_Currently" xml:space="preserve">
+    <value>Total des résidents actuellement :</value>
+  </data>
+  <data name="Total_Residents_Now" xml:space="preserve">
+    <value>Total des résidents maintenant :</value>
+  </data>
+  <data name="Dry_Run_Test_Only" xml:space="preserve">
+    <value>Essai à blanc (Dry Run)</value>
+  </data>
+  <data name="Dry_Run_Hint" xml:space="preserve">
+    <value>Aucune donnée ne sera enregistrée</value>
+  </data>
+  <data name="Dry_Run_Note" xml:space="preserve">
+    <value>Note</value>
+  </data>
+  <data name="No_Data_Was_Written_Run_Again_Without_Dry_Run" xml:space="preserve">
+    <value>Aucune donnée n'a été écrite — relancez sans Dry Run</value>
+  </data>
+  <data name="Run_Migration" xml:space="preserve">
+    <value>Lancer la migration</value>
+  </data>
+  <data name="Run_Again" xml:space="preserve">
+    <value>Relancer</value>
+  </data>
+  <data name="View_Residents" xml:space="preserve">
+    <value>Voir les résidents</value>
+  </data>
+  <data name="Confirm_Migration" xml:space="preserve">
+    <value>Lancer la migration ?</value>
+  </data>
+  <data name="Migration_Is_One_Way_Make_Sure_You_Have_Backup" xml:space="preserve">
+    <value>La migration est irréversible — assurez-vous d'avoir une sauvegarde</value>
+  </data>
+  <data name="Buildings_Scanned" xml:space="preserve">
+    <value>Bâtiments analysés</value>
+  </data>
+  <data name="Found" xml:space="preserve">
+    <value>Trouvés</value>
+  </data>
+  <data name="Building_Optional" xml:space="preserve">
+    <value>Bâtiment (facultatif)</value>
+  </data>
+  <data name="Disable_Reason_Prompt" xml:space="preserve">
+    <value>Raison de la désactivation :</value>
+  </data>
+  <data name="Delete_Resident_Confirm" xml:space="preserve">
+    <value>Supprimer le résident</value>
+  </data>
+  <data name="Enable" xml:space="preserve">
+    <value>Activer</value>
+  </data>
+  <data name="Migrate_Residents_Title" xml:space="preserve">
+    <value>Migrer les résidents (SQL)</value>
+</data>
+  <data name="Migrate_Residents_Desc" xml:space="preserve">
+    <value>Copier les résidents de Apartments vers Residents</value>
+</data>
+  <data name="Residents_Comparison" xml:space="preserve">
+    <value>Comparaison des résidents</value>
+</data>
+  <data name="No_Residents_In_Database" xml:space="preserve">
+    <value>Aucun résident dans la base de données</value>
+</data>
+  <data name="Building_Required" xml:space="preserve">
+    <value>Bâtiment requis</value>
+  </data>
+  <data name="Phone_Required" xml:space="preserve">
+    <value>Téléphone requis</value>
+  </data>
+  <data name="PIN_Required" xml:space="preserve">
+    <value>PIN requis</value>
+  </data>
+  <data name="You_Are_Not_In_This_Building" xml:space="preserve">
+    <value>Vous n'êtes pas dans ce bâtiment</value>
+  </data>
+  <data name="PIN_Not_Set_Contact_Admin" xml:space="preserve">
+    <value>PIN non défini — contactez l'admin</value>
+  </data>
+  <data name="This_Account_Is_Inactive" xml:space="preserve">
+    <value>Ce compte est inactif</value>
+  </data>
+  <data name="Migrate_Pins_Title" xml:space="preserve">
+    <value>Migrer les PINs → BCrypt</value>
+</data>
+  <data name="Migrate_Pins_Desc" xml:space="preserve">
+    <value>Migrer les PINs Admin et SuperAdmin de Plain à BCrypt (sécurisé)</value>
+</data>
+<data name="Choose_Building_First" xml:space="preserve">
+    <value>Choisir d'abord le bâtiment</value>
+</data>
+<data name="Choose_Floor_First" xml:space="preserve">
+    <value>Choisir d'abord l'étage</value>
+</data>
+<data name="Loading" xml:space="preserve">
+    <value>Chargement...</value>
+</data>
+<data name="No_Floors" xml:space="preserve">
+    <value>Aucun étage</value>
+</data>
+<data name="No_Apartments" xml:space="preserve">
+    <value>Aucun appartement</value>
+</data>
+<data name="Floor_Required" xml:space="preserve">
+    <value>L'étage est requis</value>
+</data>
+<data name="Floor_Not_Found" xml:space="preserve">
+    <value>Étage introuvable</value>
+</data>
+<data name="Apartment_Required" xml:space="preserve">
+    <value>L'appartement est requis</value>
 </data>
 </root>

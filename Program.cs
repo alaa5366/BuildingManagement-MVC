@@ -89,8 +89,7 @@ else
 
 builder.Services.AddSingleton<BuildingsService>();
 builder.Services.AddSingleton<UsersService>();
-builder.Services.AddHttpClient<FirebaseAuthRestService>();
-builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<SqlAuthService>();     // ← جديد
 builder.Services.AddSingleton<WalletService>();
 builder.Services.AddSingleton<ExpensesService>();
 builder.Services.AddSingleton<RevenuesService>();
@@ -104,7 +103,6 @@ builder.Services.AddSingleton<CloudinaryService>();
 builder.Services.AddSingleton<ExcelTemplateService>();
 builder.Services.AddSingleton<ExcelImportService>();
 builder.Services.AddSingleton<FirebaseAdminService>();
-builder.Services.AddScoped<UnifiedAuthService>();
 builder.Services.AddSingleton<QrSecurityService>();
 builder.Services.AddSingleton<QrAuthService>();
 builder.Services.AddSingleton<LoginThrottle>();
@@ -151,6 +149,13 @@ builder.Services.AddHttpClient<MediaMtxService>();
 builder.Services.AddSingleton<AuditLogSyncService>();
 
 builder.Services.AddDistributedMemoryCache();
+
+builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
+builder.Services.AddSingleton<ResidentSqlStore>();
+builder.Services.AddSingleton<ResidentsService>();
+builder.Services.AddScoped<PinMigrationService>();
+
+
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
@@ -280,8 +285,6 @@ var app = builder.Build();
 // ============================================================
 // ✅ إصلاح أمني #2: التحقق من الأسرار المطلوبة
 // ============================================================
-// ملاحظة: ConfigSecrets.Require يرفض null / فارغ / CHANGE_ME
-// أسماء المفاتيح هنا يجب أن تطابق ما هو موجود في user-secrets
 
 // --- تشخيص مؤقت (احذف هذا القسم بعد التأكد من عمل كل شيء) ---
 if (app.Environment.IsDevelopment())
@@ -292,7 +295,6 @@ if (app.Environment.IsDevelopment())
         foreach (var source in root.Providers)
             Console.WriteLine($"  - {source}");
     }
-    // Note: _key and _pth may be the same value if using a JSON file for the service account
     var _pidfire = app.Configuration["Firebase:ProjectId"];
     var _keyfire = app.Configuration["Firebase:WebApiKey"];
     var _pthfire = app.Configuration["Firebase:ServiceAccountJsonPath"];
@@ -327,12 +329,11 @@ ConfigSecrets.Require(app.Configuration, "Firebase:WebApiKey");
 // ✅ إصلاح أمني #3: فصل مفتاح Excel عن مفتاح QR
 ConfigSecrets.Require(app.Configuration, "Excel:SecretKey");
 ConfigSecrets.Require(app.Configuration, "Qr:SecretKey");
-// (أزلنا fallback الذي كان يسمح باستخدام Excel:SecretKey مكان Qr:SecretKey)
-
-// مفتاح التشفير (إذا كان AesEncryptionService يقرأه من الإعدادات)
 ConfigSecrets.Require(app.Configuration, "Encryption:SecretKey");
 
-AuthService.ConfigureSuperAdmins(ConfigSecrets.Require(app.Configuration, "Auth:SuperAdminEmails"));
+// ✅ تحميل الـ SuperAdminEmails في SqlAuthService
+var superAdminEmails = ConfigSecrets.Require(app.Configuration, "Auth:SuperAdminEmails");
+SqlAuthService.ConfigureSuperAdmins(superAdminEmails);
 
 
 // ============================================================

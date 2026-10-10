@@ -123,7 +123,7 @@
             </a>
         </div>
 
-        @* الكاميرات — للأدمنز اللي عندهم الصلاحية *@
+        @* الكاميرات *@
         @if (User.HasClaim("perm", "cameras.view") || User.HasClaim("perm", "dvrs.manage"))
         {
             <div class="col-md-3 col-6">
@@ -137,6 +137,76 @@
         }
     </div>
 
+</div>
+
+@* ✅ Quick QR Modal *@
+<div class="modal fade" id="quickQrModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning bg-opacity-25">
+                <h5 class="modal-title">@Html.Raw(Loc.T("Quick_QR_5"))</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="quickQrForm">
+                    <div class="alert alert-info small">@Loc.T("The_Quick_QR_Lets_The_Resident")</div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">@Loc.T("Validity_Period")</label>
+                        <select id="validitySelect" class="form-select">
+                            <option value="5">@Loc.T("5_Minutes")</option>
+                            <option value="15">@Loc.T("15_Minutes")</option>
+                            <option value="60" selected>@Loc.T("1_Hour")</option>
+                            <option value="360">@Loc.T("6_Hours")</option>
+                            <option value="1440">@Loc.T("1_Day")</option>
+                            <option value="10080">@Loc.T("1_Week")</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">@Loc.T("Usage_Type")</label>
+                        <div class="form-check">
+                            <input type="radio" name="usageTypeQr" value="once" class="form-check-input" id="usageOnceQr" checked />
+                            <label class="form-check-label" for="usageOnceQr">
+                                <strong>@Loc.T("One_Time_Only")</strong>
+                            </label>
+                        </div>
+                        <div class="form-check mt-2">
+                            <input type="radio" name="usageTypeQr" value="multiple" class="form-check-input" id="usageMultipleQr" />
+                            <label class="form-check-label" for="usageMultipleQr">
+                                <strong>@Loc.T("Multiple_Until_Expiry")</strong>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="maxUsesFieldQr" style="display:none">
+                        <label class="form-label">@Loc.T("Maximum_Uses")</label>
+                        <input type="number" id="maxUsesInputQr" class="form-control" value="5" min="1" max="100" />
+                    </div>
+                </div>
+
+                <div id="quickQrResult" style="display:none">
+                    <div class="alert alert-success text-center">@Loc.T("Quick_QR_Generated_Successfully")</div>
+                    <div class="text-center mb-3">
+                        <img id="quickQrImage" src="" alt="QR" class="img-fluid border rounded p-2" style="max-width:280px" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">@Loc.T("Quick_Link")</label>
+                        <div class="input-group">
+                            <input type="text" id="quickQrUrl" class="form-control form-control-sm" readonly />
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="copyQuickUrl()">@Loc.T("Copy")</button>
+                            <a id="quickQrOpenLink" href="" target="_blank" class="btn btn-sm btn-outline-success">@Loc.T("Open")</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="generateBtnQr" class="btn btn-warning" onclick="generateQuickQrFromDetails()">@Loc.T("Generate_QR")</button>
+                <button type="button" id="newQrBtn" class="btn btn-outline-warning" style="display:none" onclick="resetQuickQrForm()">@Loc.T("Generate_New")</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@Loc.T("Close")</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
@@ -154,7 +224,117 @@
                             "Js_ConfirmDisableApt",
                             "Js_PromptEnableApt",
                             "Js_ConfirmEnableApt"
-                    )));
+            )));
     </script>
     <script src="~/js/apartment-details.js" asp-append-version="true"></script>
+
+    <script>
+        (function () {
+            // ═══════════════════════════════════════════════════════════
+            // ✅ Quick QR from Details
+            // ═══════════════════════════════════════════════════════════
+            var currentAptIdForQr = '';
+            var currentBuildingIdForQr = '@Model.Building.Id';
+
+            window.openQuickQrFromDetails = function (aptId, aptNum, floorLabel) {
+                currentAptIdForQr = aptId;
+                resetQuickQrForm();
+
+                // ✅ اقفل الـ Details Modal
+                var detailsModalEl = document.getElementById('apartmentDetailsModal');
+                if (detailsModalEl) {
+                    var detailsModal = bootstrap.Modal.getInstance(detailsModalEl);
+                    if (detailsModal) detailsModal.hide();
+                }
+
+                // ✅ افتح الـ QR Modal بعد 300ms
+                setTimeout(function () {
+                    var qrModalEl = document.getElementById('quickQrModal');
+                    if (qrModalEl) {
+                        new bootstrap.Modal(qrModalEl).show();
+                    }
+                }, 300);
+            };
+
+            window.resetQuickQrForm = function () {
+                document.getElementById('quickQrForm').style.display = 'block';
+                document.getElementById('quickQrResult').style.display = 'none';
+                document.getElementById('generateBtnQr').style.display = 'inline-block';
+                document.getElementById('newQrBtn').style.display = 'none';
+                document.getElementById('validitySelect').value = '60';
+                document.getElementById('usageOnceQr').checked = true;
+                document.getElementById('maxUsesFieldQr').style.display = 'none';
+                document.getElementById('maxUsesInputQr').value = '5';
+            };
+
+            document.querySelectorAll('input[name="usageTypeQr"]').forEach(function (r) {
+                r.addEventListener('change', function () {
+                    var maxField = document.getElementById('maxUsesFieldQr');
+                    if (maxField) {
+                        maxField.style.display =
+                            (r.value === 'multiple' && r.checked) ? 'block' : 'none';
+                    }
+                });
+            });
+
+            window.generateQuickQrFromDetails = async function () {
+                var validity = parseInt(document.getElementById('validitySelect').value);
+                var usageType = document.querySelector('input[name="usageTypeQr"]:checked').value;
+                var maxUses = usageType === 'once' ? 1 : parseInt(document.getElementById('maxUsesInputQr').value);
+
+                var btn = document.getElementById('generateBtnQr');
+                btn.disabled = true;
+                btn.textContent = '⏳ @Html.Raw(Loc.Js("Generating"))';
+
+                try {
+                    var formData = new FormData();
+                    formData.append('buildingId', currentBuildingIdForQr);
+                    formData.append('aptId', currentAptIdForQr);
+                    formData.append('validityMinutes', validity);
+                    formData.append('oneTime', usageType === 'once' ? 'true' : 'false');
+                    formData.append('maxUses', maxUses);
+                    formData.append('__RequestVerificationToken',
+                        document.querySelector('input[name="__RequestVerificationToken"]').value);
+
+                    var res = await fetch('/Buildings/GenerateQuickQr', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!res.ok) {
+                        throw new Error('HTTP ' + res.status);
+                    }
+
+                    var data = await res.json();
+                    if (!data.success) {
+                        alert('❌ ' + (data.error || 'Error'));
+                        return;
+                    }
+
+                    document.getElementById('quickQrForm').style.display = 'none';
+                    document.getElementById('quickQrResult').style.display = 'block';
+                    document.getElementById('generateBtnQr').style.display = 'none';
+                    document.getElementById('newQrBtn').style.display = 'inline-block';
+
+                    document.getElementById('quickQrImage').src =
+                        'https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=' + encodeURIComponent(data.url);
+                    document.getElementById('quickQrUrl').value = data.url;
+                    document.getElementById('quickQrOpenLink').href = data.url;
+                } catch (err) {
+                    alert('❌ @Html.Raw(Loc.Js("Error")) ' + err.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = '⚡ @Html.Raw(Loc.Js("Generate_QR_2"))';
+                }
+            };
+
+            window.copyQuickUrl = function () {
+                var input = document.getElementById('quickQrUrl');
+                input.select();
+                input.setSelectionRange(0, 99999);
+                document.execCommand('copy');
+                alert('✅ @Html.Raw(Loc.Js("Link_Copied"))');
+            };
+        })();
+    </script>
 }

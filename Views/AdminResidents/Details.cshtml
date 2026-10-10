@@ -1,0 +1,115 @@
+﻿@model BuildingManagementMvc.Data.Entities.ResidentEntity
+@{
+    ViewData["Title"] = Loc.T("Resident_Details");
+    var building = ViewBag.Building as Building;
+    var apt = ViewBag.Apartment as Apartment;
+}
+
+<div class="container" style="max-width: 900px;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">👤 @Loc.T("Resident_Details")</h2>
+            <p class="text-muted mb-0">@building?.Name</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> @Loc.T("Edit")
+            </a>
+            <a asp-action="Index" asp-route-buildingId="@Model.BuildingId"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-right"></i> @Loc.T("Back")
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="text-muted small">@Loc.T("Name")</div>
+                    <div class="fw-bold fs-5">@Model.Name</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">@Loc.T("Phone")</div>
+                    <div class="fw-bold" dir="ltr">@Model.Phone</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">@Loc.T("Apartment")</div>
+                    <div class="fw-bold">
+                        @Loc.T("Apartment_N", apt?.Number ?? 0)
+                        @if (!string.IsNullOrWhiteSpace(apt?.Label))
+                        {
+                            <span> — @apt.Label</span>
+                        }
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">@Loc.T("WhatsApp")</div>
+                    <div class="fw-bold" dir="ltr">@(string.IsNullOrWhiteSpace(Model.Whatsapp) ? "—" : Model.Whatsapp)</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">@Loc.T("Email")</div>
+                    <div class="fw-bold" dir="ltr">@(string.IsNullOrWhiteSpace(Model.Email) ? "—" : Model.Email)</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">@Loc.T("Status")</div>
+                    <div>
+                        @if (Model.IsDisabled)
+                        {
+                            <span class="badge bg-danger">@Loc.T("Disabled")</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-success">@Loc.T("Active")</span>
+                        }
+                        @if (Model.IsPrimary)
+                        {
+                            <span class="badge bg-primary">@Loc.T("Primary")</span>
+                        }
+                        @if (Model.IsOwner)
+                        {
+                            <span class="badge bg-info">@Loc.T("Owner")</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">@Loc.T("Tenant")</span>
+                        }
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">@Loc.T("Last_Login")</div>
+                    <div class="fw-bold">
+                        @(Model.LastLoginAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "—")
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">@Loc.T("Created_At")</div>
+                    <div class="fw-bold">@Model.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (User.IsInRole("superadmin"))
+    {
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-secondary text-white">
+                <strong>🆔 @Loc.T("Technical_Info")</strong>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="text-muted small">Resident ID</div>
+                        <code>@Model.Id</code>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-muted small">UID</div>
+                        <code>@Model.Uid</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+</div>

@@ -18,7 +18,6 @@ public class BackupController : Controller
 {
     private readonly BuildingsService _buildings;
     private readonly UsersService _users;
-    private readonly FirebaseAuthRestService _fbAuth;
     private readonly ExcelTemplateService _template;
     private readonly ExcelImportService _import;
     private readonly BackupService _backup;
@@ -29,7 +28,6 @@ public class BackupController : Controller
     public BackupController(
         BuildingsService buildings,
         UsersService users,
-        FirebaseAuthRestService fbAuth,
         ExcelTemplateService template,
         ExcelImportService import,
         BackupService backup,
@@ -39,7 +37,6 @@ public class BackupController : Controller
     {
         _buildings = buildings;
         _users = users;
-        _fbAuth = fbAuth;
         _template = template;
         _import = import;
         _backup = backup;
@@ -51,9 +48,9 @@ public class BackupController : Controller
     private string CurrentUserId =>
         User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
 
-    // ============================================================
-    // Index — الصفحة الموحّدة بـ Tabs
-    // ============================================================
+    // ═══════════════════════════════════════════════════════════
+    // Index
+    // ═══════════════════════════════════════════════════════════
     [HttpGet]
     public async Task<IActionResult> Index(string? tab = "overview")
     {
@@ -70,7 +67,6 @@ public class BackupController : Controller
         ViewBag.History = history;
         ViewBag.ActiveTab = tab;
 
-        // إجماليات
         ViewBag.TotalCollections = stats.Count;
         ViewBag.TotalDocuments = stats.Sum(s => s.DocCount);
         ViewBag.TotalBuildings = buildings.Count;
@@ -82,9 +78,9 @@ public class BackupController : Controller
         return View();
     }
 
-    // ============================================================
-    // Backup كامل — إنشاء ZIP
-    // ============================================================
+    // ═══════════════════════════════════════════════════════════
+    // Backup ZIP
+    // ═══════════════════════════════════════════════════════════
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(List<string> collections)
@@ -109,9 +105,9 @@ public class BackupController : Controller
         }
     }
 
-    // ============================================================
+    // ═══════════════════════════════════════════════════════════
     // Restore
-    // ============================================================
+    // ═══════════════════════════════════════════════════════════
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(100 * 1024 * 1024)]
@@ -174,9 +170,9 @@ public class BackupController : Controller
         }
     }
 
-    // ============================================================
-    // Scheduled — حفظ الإعدادات + تشغيل يدوي + تحميل + حذف
-    // ============================================================
+    // ═══════════════════════════════════════════════════════════
+    // Scheduled
+    // ═══════════════════════════════════════════════════════════
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveScheduledSettings(ScheduledBackupSettings model)
@@ -237,9 +233,9 @@ public class BackupController : Controller
         return RedirectToAction(nameof(Index), new { tab = "scheduled" });
     }
 
-    // ============================================================
-    // Excel Import/Export
-    // ============================================================
+    // ═══════════════════════════════════════════════════════════
+    // Excel
+    // ═══════════════════════════════════════════════════════════
     [HttpGet]
     public IActionResult DownloadTemplate()
     {
@@ -333,7 +329,6 @@ public class BackupController : Controller
 
         try
         {
-            // ✅ توليد Building Number تلقائياً لو فاضي
             if (string.IsNullOrWhiteSpace(data.BuildingNumber))
             {
                 data.BuildingNumber = await importService.GenerateBuildingNumberAsync();
@@ -351,7 +346,6 @@ public class BackupController : Controller
                 return RedirectToAction(nameof(Index), new { tab = "import" });
             }
 
-            // ✅ ترتيب الشقق + توليد Apt Number
             var floorsGrouped = data.Apartments
                 .GroupBy(a => new { a.FloorLabel, a.FloorOrder })
                 .OrderBy(g => g.Key.FloorOrder)
@@ -396,17 +390,6 @@ public class BackupController : Controller
                         Disabled = aptData.IsDisabled,
                         DisabledReason = aptData.IsDisabled ? aptData.ClosedReason : ""
                     });
-
-                    try
-                    {
-                        var email = AuthHelpers.ResidentInternalEmail(buildingId, group.Key.FloorOrder, finalAptNumber);
-                        var password = AuthHelpers.ResidentPassword(buildingId, finalAptNumber, aptData.Pin);
-                        await _fbAuth.CreateUserAsync(email, password);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, $"[Backup] Failed to create auth for apt {finalAptNumber}");
-                    }
                 }
             }
 
@@ -424,9 +407,9 @@ public class BackupController : Controller
         }
     }
 
-    // ============================================================
+    // ═══════════════════════════════════════════════════════════
     // Export
-    // ============================================================
+    // ═══════════════════════════════════════════════════════════
     [HttpGet]
     public async Task<IActionResult> ExportJson(string id)
     {
