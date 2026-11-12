@@ -1,64 +1,81 @@
+using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
-using Google.Cloud.Firestore;
+using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
 
-// ترجمة حرفية لـ js/features/qr-token-store.js (تخزين توكنات QR في Firestore)
 public class QrTokenStoreService
 {
-    private readonly FirestoreDb _db;
-    public QrTokenStoreService(FirestoreContext ctx) => _db = ctx.Db;
+    private readonly IDbContextFactory<AppDbContext> _sqlFactory;
+    private readonly ILogger<QrTokenStoreService> _log;
 
-    private CollectionReference Col => _db.Collection("qr-tokens");
+    public QrTokenStoreService(IDbContextFactory<AppDbContext> sqlFactory, ILogger<QrTokenStoreService> log)
+    {
+        _sqlFactory = sqlFactory;
+        _log = log;
+    }
 
     public async Task<bool> SaveTokenAsync(AccessTokenPayload payload)
     {
         try
         {
-            var token = new QrToken
+            await using var db = await _sqlFactory.CreateDbContextAsync();
+
+            db.QrTokens.Add(new QrTokenEntity
             {
                 Uid = payload.Uid,
-                Bld = payload.Bld,
-                Apt = payload.Apt,
-                Exp = payload.Exp,
-                Use = payload.Use,
-                Ts = payload.Ts,
-                By = payload.By,
-                Used = false,
-                CreatedAt = DateTime.UtcNow.ToString("o")
-            };
-            await Col.Document(payload.Uid).SetAsync(token);
+                BuildingId = payload.Bld,
+                ApartmentId = payload.Apt,
+                ExpiresAt = DateTimeOffset.FromUnixTimeMilliseconds(payload.Exp).UtcDateTime,
+                UseType = payload.Use,
+                IssuedAt = DateTimeOffset.FromUnixTimeMilliseconds(payload.Ts).UtcDateTime,
+                CreatedBy = payload.By,
+                IsUsed = false,
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await db.SaveChangesAsync();
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            _log.LogWarning(ex, "SaveTokenAsync failed");
             return false;
         }
     }
 
-    // التحقق من التوكن وتسجيل الاستخدام (بدون بصمة جهاز — نسخة السيرفر أبسط من الأصل)
     public async Task<(bool Allowed, string? Reason, string? Bld, string? Apt)> CheckAndUseTokenAsync(string uid)
     {
-        var docRef = Col.Document(uid);
-        var snap = await docRef.GetSnapshotAsync();
-        if (!snap.Exists) return (false, "not-found", null, null);
-
-        var data = snap.ConvertTo<QrToken>();
-
-        if (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() > data.Exp)
-            return (false, "expired", null, null);
-
-        if (data.Use == "single" && data.Used)
-            return (false, "already-used", null, null);
-
-        await docRef.SetAsync(new Dictionary<string, object>
+        try
         {
-            ["used"] = true,
-            ["usedAt"] = DateTime.UtcNow.ToString("o")
-        }, SetOptions.MergeAll);
+            await using var db = await _sqlFactory.CreateDbContextAsync();
+            var token = await db.QrTokens.FirstOrDefaultAsync(t => t.Uid == uid);
 
-        return (true, null, data.Bld, data.Apt);
+            if (token == null) return (false, "not-found", null, null);
+
+            if (DateTime.UtcNow > token.ExpiresAt)
+                return (false, "expired", null, null);
+
+            if (token.UseType == "single" && token.IsUsed)
+                return (false, "already-used", null, null);
+
+            token.IsUsed = true;
+            token.UsedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+
+            return (true, null, token.BuildingId, token.ApartmentId);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "CheckAndUseTokenAsync failed");
+            return (false, "error", null, null);
+        }
     }
 
-    public async Task DeleteTokenAsync(string uid) => await Col.Document(uid).DeleteAsync();
+    public async Task DeleteTokenAsync(string uid)
+    {
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        await db.QrTokens.Where(t => t.Uid == uid).ExecuteDeleteAsync();
+    }
 }

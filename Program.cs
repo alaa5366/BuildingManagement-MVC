@@ -12,15 +12,13 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.DataProtection; // ✅ لحفظ المفاتيح
 
 QuestPDF.Settings.License = LicenseType.Community;
 QuestPDF.Settings.UseEnvironmentFonts = false;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ============================================================
-// ✅ إصلاح أمني #1: قراءة User Secrets في بيئة التطوير     
-// ============================================================
 if (builder.Environment.IsDevelopment())
 {
     builder.Configuration.AddUserSecrets<Program>(optional: true);
@@ -59,37 +57,29 @@ builder.Services.AddControllersWithViews(options =>
             new BuildingManagementMvc.Services.LocStringLocalizer();
     });
 
-builder.Services.AddSingleton<FirestoreContext>();
-builder.Services.AddSingleton<StorageSettingsService>();
+// ============================================================
+// ✅ SQL Server فقط
+// ============================================================
+var sqlConn = builder.Configuration.GetConnectionString("Default");
+if (string.IsNullOrWhiteSpace(sqlConn))
+    throw new InvalidOperationException("ConnectionStrings:Default مطلوب.");
 
-var storageProvider = builder.Configuration["Storage:Provider"] ?? "Firestore";
-if (!storageProvider.Equals("Firestore", StringComparison.OrdinalIgnoreCase))
-{
-    var sqlConn = builder.Configuration.GetConnectionString("Default");
-    if (string.IsNullOrWhiteSpace(sqlConn))
-        throw new InvalidOperationException("Storage:Provider=" + storageProvider + " لكن ConnectionStrings:Default ناقص.");
+builder.Services.AddDbContextFactory<AppDbContext>(o =>
+    o.UseSqlServer(sqlConn, sqlOptions =>
+        sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
 
-    builder.Services.AddDbContextFactory<AppDbContext>(o => o.UseSqlServer(sqlConn));
-    builder.Services.AddSingleton<BuildingSqlStore>();
-    builder.Services.AddSingleton<UserSqlStore>();
-    builder.Services.AddSingleton<ReverseSyncService>();
-    builder.Services.AddHostedService<HealthMonitorService>();
+Console.WriteLine("[Storage] Provider = Sql");
 
-    Console.WriteLine($"[Storage] Provider = {storageProvider}, SQL Mirror = Enabled + Health Monitor");
-}
-else
-{
-    var sqlConn = builder.Configuration.GetConnectionString("Default");
-    if (!string.IsNullOrWhiteSpace(sqlConn))
-    {
-        builder.Services.AddDbContextFactory<AppDbContext>(o => o.UseSqlServer(sqlConn));
-    }
-    Console.WriteLine("[Storage] Provider = Firestore");
-}
+// ============================================================
+// Services
+// ============================================================
+builder.Services.AddSingleton<BuildingSqlStore>();
+builder.Services.AddSingleton<UserSqlStore>();
+builder.Services.AddSingleton<ResidentSqlStore>();
 
 builder.Services.AddSingleton<BuildingsService>();
 builder.Services.AddSingleton<UsersService>();
-builder.Services.AddScoped<SqlAuthService>();     // ← جديد
+builder.Services.AddScoped<SqlAuthService>();
 builder.Services.AddSingleton<WalletService>();
 builder.Services.AddSingleton<ExpensesService>();
 builder.Services.AddSingleton<RevenuesService>();
@@ -102,7 +92,6 @@ builder.Services.AddSingleton<TransactionParser>();
 builder.Services.AddSingleton<CloudinaryService>();
 builder.Services.AddSingleton<ExcelTemplateService>();
 builder.Services.AddSingleton<ExcelImportService>();
-builder.Services.AddSingleton<FirebaseAdminService>();
 builder.Services.AddSingleton<QrSecurityService>();
 builder.Services.AddSingleton<QrAuthService>();
 builder.Services.AddSingleton<LoginThrottle>();
@@ -125,10 +114,6 @@ builder.Services.AddScoped<BackupService>();
 builder.Services.AddScoped<ScheduledBackupService>();
 builder.Services.AddHostedService<BackupScheduler>();
 
-builder.Services.AddScoped<MigrationService>();
-builder.Services.AddScoped<DbMaintenanceService>();
-builder.Services.AddScoped<DbSyncService>();
-
 builder.Services.AddScoped<AuditLogQueryService>();
 builder.Services.AddScoped<CategoriesService>();
 
@@ -136,25 +121,15 @@ builder.Services.AddSingleton<IAuditLogger, AuditLogger>();
 builder.Services.AddSingleton<AuditLogger>();
 builder.Services.AddScoped<AdminManagementService>();
 
-builder.Services.AddSingleton<UserSqlStore>();
-
-builder.Services.AddScoped<DataIntegrityService>();
-builder.Services.AddScoped<OneTimeFullSyncService>();
-builder.Services.AddScoped<OrphanedCleanupService>();
-
-
 builder.Services.AddSingleton<IEncryptionService, AesEncryptionService>();
 builder.Services.AddSingleton<DvrService>();
 builder.Services.AddHttpClient<MediaMtxService>();
-builder.Services.AddSingleton<AuditLogSyncService>();
 
 builder.Services.AddDistributedMemoryCache();
 
 builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
-builder.Services.AddSingleton<ResidentSqlStore>();
 builder.Services.AddSingleton<ResidentsService>();
 builder.Services.AddScoped<PinMigrationService>();
-
 
 builder.Services.AddSession(options =>
 {
@@ -168,6 +143,9 @@ builder.Services.AddSession(options =>
 builder.Services.AddMemoryCache();
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 
+// ============================================================
+// ✅ إعدادات اللغة
+// ============================================================
 builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
     var supportedCultures = new[]
@@ -183,14 +161,19 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
     options.SupportedUICultures = supportedCultures;
 
     options.RequestCultureProviders.Clear();
+
     options.RequestCultureProviders.Add(new CookieRequestCultureProvider
     {
         CookieName = CookieRequestCultureProvider.DefaultCookieName
     });
+
     options.RequestCultureProviders.Add(new QueryStringRequestCultureProvider());
     options.RequestCultureProviders.Add(new AcceptLanguageHeaderRequestCultureProvider());
 });
 
+// ============================================================
+// ✅ Authentication (بدون Google)
+// ============================================================
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -268,25 +251,26 @@ builder.Services.AddAntiforgery(options =>
     options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
+// ✅ Forwarded Headers
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
+                             | ForwardedHeaders.XForwardedProto
+                             | ForwardedHeaders.XForwardedHost;
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
 });
 
+// ✅ حماية المفاتيح (عشان السيرفر ميعملش Logout عشوائي)
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "keys")))
+    .SetApplicationName("BuildingManagement");
 
-// ============================================================
-// بناء التطبيق — نقطة التحول
-// ============================================================
 var app = builder.Build();
 
-
 // ============================================================
-// ✅ إصلاح أمني #2: التحقق من الأسرار المطلوبة
+// التحقق من الأسرار
 // ============================================================
-
-// --- تشخيص مؤقت (احذف هذا القسم بعد التأكد من عمل كل شيء) ---
 if (app.Environment.IsDevelopment())
 {
     Console.WriteLine("=== Configuration Sources ===");
@@ -295,9 +279,6 @@ if (app.Environment.IsDevelopment())
         foreach (var source in root.Providers)
             Console.WriteLine($"  - {source}");
     }
-    var _pidfire = app.Configuration["Firebase:ProjectId"];
-    var _keyfire = app.Configuration["Firebase:WebApiKey"];
-    var _pthfire = app.Configuration["Firebase:ServiceAccountJsonPath"];
     var _pidclo = app.Configuration["Cloudinary:CloudName"];
     var _keycol = app.Configuration["Cloudinary:ApiKey"];
     var _pthcol = app.Configuration["Cloudinary:ApiSecret"];
@@ -305,10 +286,6 @@ if (app.Environment.IsDevelopment())
     var _qr = app.Configuration["Qr:SecretKey"];
     var _enc = app.Configuration["Encryption:SecretKey"];
     var _adm = app.Configuration["Auth:SuperAdminEmails"];
-    Console.WriteLine("==============================");
-    Console.WriteLine($"  Firebase:ProjectId              = {_pidfire ?? "NULL"}");
-    Console.WriteLine($"  Firebase:WebApiKey              = {(_keyfire != null ? $"loaded ({_keyfire.Length} chars)" : "NULL")}");
-    Console.WriteLine($"  Firebase:ServiceAccountJsonPath = {(_pthfire != null ? $"loaded ({_pthfire.Length} chars)" : "NULL")}");
     Console.WriteLine("==============================");
     Console.WriteLine($"  Cloudinary:CloudName            = {_pidclo ?? "NULL"}");
     Console.WriteLine($"  Cloudinary:ApiKey               = {(_keycol != null ? $"loaded ({_keycol.Length} chars)" : "NULL")}");
@@ -321,23 +298,19 @@ if (app.Environment.IsDevelopment())
     Console.WriteLine($"  Auth:SuperAdminEmails           = {(_adm != null ? "loaded" : "NULL")}");
     Console.WriteLine("==============================");
 }
-// --- نهاية التشخيص المؤقت ---
 
-ConfigSecrets.Require(app.Configuration, "Firebase:ProjectId");
-ConfigSecrets.Require(app.Configuration, "Firebase:WebApiKey");
-
-// ✅ إصلاح أمني #3: فصل مفتاح Excel عن مفتاح QR
+ConfigSecrets.Require(app.Configuration, "Cloudinary:CloudName");
+ConfigSecrets.Require(app.Configuration, "Cloudinary:ApiKey");
+ConfigSecrets.Require(app.Configuration, "Cloudinary:ApiSecret");
 ConfigSecrets.Require(app.Configuration, "Excel:SecretKey");
 ConfigSecrets.Require(app.Configuration, "Qr:SecretKey");
 ConfigSecrets.Require(app.Configuration, "Encryption:SecretKey");
 
-// ✅ تحميل الـ SuperAdminEmails في SqlAuthService
 var superAdminEmails = ConfigSecrets.Require(app.Configuration, "Auth:SuperAdminEmails");
 SqlAuthService.ConfigureSuperAdmins(superAdminEmails);
 
-
 // ============================================================
-// بقية الـ Middleware
+// Middleware
 // ============================================================
 app.UseForwardedHeaders();
 

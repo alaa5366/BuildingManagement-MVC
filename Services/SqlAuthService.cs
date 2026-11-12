@@ -2,7 +2,6 @@
 //  SqlAuthService — تسجيل دخول من SQL Server مباشرة
 // =====================================================================
 using BuildingManagementMvc.Data;
-using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -129,7 +128,7 @@ public class SqlAuthService
     // 2. Admin Login
     // ═══════════════════════════════════════════════════════════
     public async Task<AuthResult> SignInAdminAsync(
-        string buildingId, string phone, string pin)
+     string buildingId, string phone, string pin)
     {
         if (string.IsNullOrWhiteSpace(buildingId))
             return AuthResult.Fail("building-required");
@@ -178,12 +177,39 @@ public class SqlAuthService
         if (!admin.IsActive)
             return AuthResult.Fail("account-inactive");
 
-        // ✅ تحقق من الـ PIN
+        // ✅ تحقق من الـ PIN بطريقة ذكية
         if (string.IsNullOrWhiteSpace(admin.Pin))
             return AuthResult.Fail("pin-not-set");
 
-        // دعم الاتنين: Plain + BCrypt
-        var pinValid = admin.Pin == pin || _hasher.VerifyPin(pin, admin.Pin);
+        bool pinValid = false;
+
+        // 1. هل الباسورد نص صريح؟
+        if (admin.Pin == pin)
+        {
+            pinValid = true;
+        }
+        // 2. هل الباسورد مشفر؟
+        else if (admin.Pin.StartsWith("$2a$"))
+        {
+            try
+            {
+                pinValid = BCrypt.Net.BCrypt.Verify(pin, admin.Pin);
+            }
+            catch
+            {
+                try
+                {
+                    var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<object>();
+                    var result = hasher.VerifyHashedPassword(new object(), admin.Pin, pin);
+                    pinValid = result != Microsoft.AspNetCore.Identity.PasswordVerificationResult.Failed;
+                }
+                catch
+                {
+                    pinValid = false;
+                }
+            }
+        }
+
         if (!pinValid)
         {
             _log.LogWarning(
@@ -203,7 +229,6 @@ public class SqlAuthService
             name: admin.Name,
             buildingIds: admin.BuildingAdmins.Select(ba => ba.BuildingId).ToList());
     }
-
     // ═══════════════════════════════════════════════════════════
     // 3. Super Admin Login
     // ═══════════════════════════════════════════════════════════
@@ -250,7 +275,7 @@ public class SqlAuthService
     // 4. Unified Login — يجرّب كل الاحتمالات
     // ═══════════════════════════════════════════════════════════
     public async Task<List<UserContext>> FindAllContextsAsync(
-        string identifier, string credential)
+    string identifier, string credential)
     {
         var contexts = new List<UserContext>();
 
@@ -282,8 +307,11 @@ public class SqlAuthService
         var phone = AuthHelpers.NormalizePhone(identifier);
         if (string.IsNullOrEmpty(phone)) return contexts;
 
-        // فحص الأدمن
         await using var db = await _sqlFactory.CreateDbContextAsync();
+
+        // ==========================================
+        // 1. فحص الأدمن (Admins)
+        // ==========================================
         var admins = await db.Users
             .Include(u => u.BuildingAdmins)
             .Where(u => u.Role == "admin" && u.Phone == phone)
@@ -293,8 +321,39 @@ public class SqlAuthService
         {
             if (admin.IsDisabled) continue;
 
-            var pinValid = admin.Pin == credential || _hasher.VerifyPin(credential, admin.Pin);
-            if (!pinValid) continue;
+            // ✅ التحقق الذكي من الباسورد
+            bool pinValid = false;
+
+            if (!string.IsNullOrWhiteSpace(admin.Pin))
+            {
+                // 1. هل الباسورد المكتوب يطابق النص الصريح؟
+                if (admin.Pin == credential)
+                {
+                    pinValid = true;
+                }
+                // 2. هل الباسورد مشفر؟ جرب فك التشفير باستخدام المكتبتين
+                else if (admin.Pin.StartsWith("$2a$"))
+                {
+                    try
+                    {
+                        // جرب المكتبة الأولى
+                        pinValid = BCrypt.Net.BCrypt.Verify(credential, admin.Pin);
+                    }
+                    catch
+                    {
+                        try
+                        {
+                            // جرب مكتبة ASP.NET Identity كاحتياط
+                            var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<object>();
+                            var result = hasher.VerifyHashedPassword(new object(), admin.Pin, credential);
+                            pinValid = result != Microsoft.AspNetCore.Identity.PasswordVerificationResult.Failed;
+                        }
+                        catch { pinValid = false; }
+                    }
+                }
+            }
+
+            if (!pinValid) continue; // لو الباسورد غلط، انتقل للسجل التالي
 
             foreach (var ba in admin.BuildingAdmins)
             {
@@ -318,7 +377,9 @@ public class SqlAuthService
             }
         }
 
-        // فحص السكان
+        // ==========================================
+        // 2. فحص السكان (Residents)
+        // ==========================================
         var buildings = await _buildings.GetAllAsync();
         foreach (var building in buildings)
         {
@@ -329,11 +390,21 @@ public class SqlAuthService
                 if (r.Phone != phone) continue;
                 if (r.IsDisabled || !r.IsActive) continue;
 
-                var pinValid = _hasher.VerifyPin(credential, r.PinHash);
-                if (!pinValid) continue;
+                // ✅ التعديل هنا: دعم النص الصريح والمشفر
+                var pinValid = false;
+                if (!string.IsNullOrWhiteSpace(r.PinHash))
+                {
+                    pinValid = r.PinHash == credential || _hasher.VerifyPin(credential, r.PinHash);
+                }
 
+                // ✅ إذا لم يتم العثور على الشقة، قد يكون ApartmentId فارغاً
                 var apt = building.Apartments.FirstOrDefault(a => a.Id == r.ApartmentId);
+
+                // إذا لم توجد شقة، يمكنك إما تخطي السجل أو عرضه بدون رقم شقة
+                // هنا سنتخطى السجل لأن شاشة الاختيار تحتاج لرقم شقة
                 if (apt == null) continue;
+
+                if (!pinValid) continue;
 
                 contexts.Add(new UserContext
                 {
@@ -341,7 +412,7 @@ public class SqlAuthService
                     Type = "resident",
                     Icon = "🏠",
                     Title = Loc.T("Resident_2"),
-                    Subtitle = $"{building.Name} — {apt.Number}",
+                    Subtitle = $"{building.Name} — شقة {apt.Number}",
                     BuildingId = building.Id,
                     BuildingName = building.Name,
                     BuildingNumber = building.BuildingNumber,

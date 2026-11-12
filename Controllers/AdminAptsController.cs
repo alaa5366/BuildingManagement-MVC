@@ -1,15 +1,18 @@
 ﻿using BuildingManagementMvc.Attributes;
+using BuildingManagementMvc.Models;
+using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using BuildingManagementMvc.Services;
+using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
 
 [Authorize(Roles = "admin")]
-[AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageResidents)]
+[AdminPermission(AdminPermissions.ManageResidents)]
 public class AdminAptsController : Controller
 {
     private readonly BuildingsService _buildings;
+    private readonly ResidentsService _residents;
     private readonly QrSecurityService _qrSecurity;
     private readonly QrGeneratorService _qrGen;
     private readonly WhatsAppTemplateService _waTemplates;
@@ -19,6 +22,7 @@ public class AdminAptsController : Controller
 
     public AdminAptsController(
         BuildingsService buildings,
+        ResidentsService residents,
         QrSecurityService qrSecurity,
         QrGeneratorService qrGen,
         WhatsAppTemplateService waTemplates,
@@ -27,6 +31,7 @@ public class AdminAptsController : Controller
         IAuditLogger auditLogger)
     {
         _buildings = buildings;
+        _residents = residents;
         _qrSecurity = qrSecurity;
         _qrGen = qrGen;
         _waTemplates = waTemplates;
@@ -38,10 +43,10 @@ public class AdminAptsController : Controller
     private string BuildingId => User.FindFirst("buildingId")!.Value;
 
     private string CurrentUserId =>
-        User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
+        User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
 
     // ============================================================
-    // عرض الشقق
+    // 1. Index
     // ============================================================
     public async Task<IActionResult> Index()
     {
@@ -51,7 +56,7 @@ public class AdminAptsController : Controller
     }
 
     // ============================================================
-    // توليد QR سريع
+    // 2. GenerateQuickQr
     // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -93,7 +98,7 @@ public class AdminAptsController : Controller
     }
 
     // ============================================================
-    // رسالة ترحيب + QR
+    // 3. GenerateWelcome
     // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -149,7 +154,7 @@ public class AdminAptsController : Controller
     }
 
     // ============================================================
-    // ✅ فتح شقة مغلقة
+    // 4. OpenApartment
     // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -167,34 +172,25 @@ public class AdminAptsController : Controller
             return RedirectToAction("Index", "AdminHome");
         }
 
-        // 1. افتح الشقة
         apt.Closed = false;
         apt.OpenDate = DateTime.UtcNow.ToString("o");
         apt.CloseDate = null;
 
-        // 2. إعادة حساب التوزيع للشهر الحالي
         var currentMonth = WalletService.CurrentMonthKey();
         _wallet.RecalculateDistribution(building, currentMonth);
         _wallet.RecalculateRevenueDistribution(building, currentMonth);
 
-        // 3. إشعار للساكن
         _notify.NotifyResidentApartmentReopened(building, apt, null);
 
-        // 4. حفظ
         await _buildings.SaveFullAsync(building);
 
-        // 5. Audit — في auditLogs collection ✅
         await _auditLogger.LogAsync(
             action: "apartment.opened",
             buildingId: building.Id,
             apartmentId: apt.Id,
             userId: CurrentUserId,
             userRole: "admin",
-            metadata: new
-            {
-                aptNumber = apt.Number,
-                aptOwner = apt.Owner
-            },
+            metadata: new { aptNumber = apt.Number, aptOwner = apt.Owner },
             severity: "warning");
 
         TempData["Message"] = Loc.T("Apartment_N_Was_Opened_The_Resident", apt.Number);
@@ -202,7 +198,7 @@ public class AdminAptsController : Controller
     }
 
     // ============================================================
-    // ✅ إغلاق شقة
+    // 5. CloseApartment
     // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -220,11 +216,9 @@ public class AdminAptsController : Controller
             return RedirectToAction("Index", "AdminHome");
         }
 
-        // 1. أغلق الشقة
         apt.Closed = true;
         apt.CloseDate = DateTime.UtcNow.ToString("o");
 
-        // 2. سجّل السبب في الـ Notes
         if (!string.IsNullOrWhiteSpace(reason))
         {
             apt.Notes = string.IsNullOrWhiteSpace(apt.Notes)
@@ -232,30 +226,21 @@ public class AdminAptsController : Controller
                 : $"{apt.Notes}\n{reason}";
         }
 
-        // 3. إعادة حساب التوزيع
         var currentMonth = WalletService.CurrentMonthKey();
         _wallet.RecalculateDistribution(building, currentMonth);
         _wallet.RecalculateRevenueDistribution(building, currentMonth);
 
-        // 4. إشعار للساكن
         _notify.NotifyResidentApartmentClosed(building, apt, reason);
 
-        // 5. حفظ
         await _buildings.SaveFullAsync(building);
 
-        // 6. Audit — في auditLogs collection ✅
         await _auditLogger.LogAsync(
             action: "apartment.closed",
             buildingId: building.Id,
             apartmentId: apt.Id,
             userId: CurrentUserId,
             userRole: "admin",
-            metadata: new
-            {
-                aptNumber = apt.Number,
-                aptOwner = apt.Owner,
-                reason = reason ?? ""
-            },
+            metadata: new { aptNumber = apt.Number, aptOwner = apt.Owner, reason = reason ?? "" },
             severity: "warning");
 
         TempData["Message"] = Loc.T("Apartment_N_Was_Closed", apt.Number);
@@ -263,7 +248,7 @@ public class AdminAptsController : Controller
     }
 
     // ============================================================
-    // ✅ تعطيل شقة (الساكن مش هيقدر يدخل)
+    // 6. DisableApartment
     // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -281,29 +266,20 @@ public class AdminAptsController : Controller
             return RedirectToAction("Index", "AdminHome");
         }
 
-        // 1. عطّل الشقة
         apt.Disabled = true;
         apt.DisabledReason = reason ?? "";
 
-        // 2. إشعار للساكن
         _notify.NotifyResidentApartmentDisabled(building, apt, reason);
 
-        // 3. حفظ
         await _buildings.SaveFullAsync(building);
 
-        // 4. Audit
         await _auditLogger.LogAsync(
             action: "apartment.disabled",
             buildingId: building.Id,
             apartmentId: apt.Id,
             userId: CurrentUserId,
             userRole: "admin",
-            metadata: new
-            {
-                aptNumber = apt.Number,
-                aptOwner = apt.Owner,
-                reason = reason ?? ""
-            },
+            metadata: new { aptNumber = apt.Number, aptOwner = apt.Owner, reason = reason ?? "" },
             severity: "warning");
 
         TempData["Message"] = Loc.T("Apartment_N_Was_Disabled", apt.Number);
@@ -311,7 +287,7 @@ public class AdminAptsController : Controller
     }
 
     // ============================================================
-    // ✅ تفعيل شقة
+    // 7. EnableApartment
     // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -329,29 +305,20 @@ public class AdminAptsController : Controller
             return RedirectToAction("Index", "AdminHome");
         }
 
-        // 1. فعّل الشقة
         apt.Disabled = false;
         apt.DisabledReason = "";
 
-        // 2. إشعار للساكن
         _notify.NotifyResidentApartmentEnabled(building, apt, reason);
 
-        // 3. حفظ
         await _buildings.SaveFullAsync(building);
 
-        // 4. Audit
         await _auditLogger.LogAsync(
             action: "apartment.enabled",
             buildingId: building.Id,
             apartmentId: apt.Id,
             userId: CurrentUserId,
             userRole: "admin",
-            metadata: new
-            {
-                aptNumber = apt.Number,
-                aptOwner = apt.Owner,
-                reason = reason ?? ""
-            },
+            metadata: new { aptNumber = apt.Number, aptOwner = apt.Owner, reason = reason ?? "" },
             severity: "info");
 
         TempData["Message"] = Loc.T("Apartment_N_Was_Enabled", apt.Number);
@@ -359,7 +326,7 @@ public class AdminAptsController : Controller
     }
 
     // ============================================================
-    // ✅ صفحة تعديل الشقة (GET)
+    // 8. ✅ صفحة تعديل الشقة (GET) — هذه هي الدالة المفقودة
     // ============================================================
     [HttpGet]
     public async Task<IActionResult> Edit(string aptId)
@@ -379,7 +346,7 @@ public class AdminAptsController : Controller
     }
 
     // ============================================================
-    // ✅ صفحة تعديل الشقة (POST)
+    // 9. صفحة تعديل الشقة (POST)
     // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -399,7 +366,6 @@ public class AdminAptsController : Controller
         var apt = building.Apartments.FirstOrDefault(a => a.Id == aptId);
         if (apt == null) return NotFound();
 
-        // ✅ تحقق
         if (string.IsNullOrWhiteSpace(owner))
         {
             TempData["Error"] = Loc.T("All_Fields_Are_Required");
@@ -414,23 +380,22 @@ public class AdminAptsController : Controller
 
         try
         {
+            // 1. تحديث جدول الشقق
             await _buildings.UpdateApartmentAsync(
                 BuildingId, aptId,
                 owner, label ?? "", phone ?? "", pin,
                 monthlyFee, notes ?? "", email);
 
-            // ✅ Audit
+            // 2. ✅ تحديث جدول السكان باستخدام الدالة المركزية
+            await _residents.UpdateResidentPinAsync(BuildingId, aptId, pin);
+
             await _auditLogger.LogAsync(
                 action: "apartment.updated",
                 buildingId: building.Id,
                 apartmentId: aptId,
                 userId: CurrentUserId,
                 userRole: "admin",
-                metadata: new
-                {
-                    aptNumber = apt.Number,
-                    aptOwner = owner
-                },
+                metadata: new { aptNumber = apt.Number, aptOwner = owner },
                 severity: "info");
 
             TempData["Message"] = Loc.T("Updated");

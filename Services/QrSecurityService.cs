@@ -1,27 +1,31 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Google.Cloud.Firestore;
+using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Data.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
 
 public class QrSecurityService
 {
-    private readonly FirestoreDb _db;
+    private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly string _secretKey;
     private readonly ILogger<QrSecurityService> _logger;
 
-    public QrSecurityService(FirestoreContext ctx, IConfiguration config, ILogger<QrSecurityService> logger)
+    public QrSecurityService(
+        IDbContextFactory<AppDbContext> sqlFactory,
+        IConfiguration config,
+        ILogger<QrSecurityService> logger)
     {
-        _db = ctx.Db;
+        _sqlFactory = sqlFactory;
         _secretKey = ConfigSecrets.Require(config, "Qr:SecretKey", "Excel:SecretKey");
         _logger = logger;
     }
 
     // ============================================================
-    // 1. تشفير QR الثابت (Stable QR)
+    // Stable QR
     // ============================================================
-    // بنوقّع على (path + query) عشان يبقى ثابت مهما كان ترتيب الـ parameters
     public string SignStableQr(string path, string query)
     {
         var data = $"{path}?{query}";
@@ -40,7 +44,7 @@ public class QrSecurityService
     }
 
     // ============================================================
-    // 2. QR السريع (Quick QR)
+    // Quick QR
     // ============================================================
     public string GenerateQuickToken(QuickQrOptions options)
     {
@@ -56,11 +60,9 @@ public class QrSecurityService
             TokenId = Guid.NewGuid().ToString("N")
         };
 
-        // 1. تشفير الـ payload
         var json = JsonSerializer.Serialize(payload);
         var encrypted = EncryptAes(json);
 
-        // 2. توقيع للتحقق
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(_secretKey));
         var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(encrypted));
         var signature = Convert.ToHexString(hash).ToLower()[..16];
@@ -70,7 +72,6 @@ public class QrSecurityService
 
     public async Task<QuickTokenValidation> ValidateQuickToken(string token, string? deviceFingerprint = null)
     {
-        // 1. تحليل الـ token
         var parts = token.Split('.');
         if (parts.Length != 2)
             return QuickTokenValidation.Fail(Loc.T("Invalid_Token"));
@@ -78,14 +79,12 @@ public class QrSecurityService
         var encrypted = parts[0];
         var signature = parts[1];
 
-        // 2. التحقق من التوقيع
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(_secretKey));
         var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(encrypted));
         var expectedSig = Convert.ToHexString(hash).ToLower()[..16];
         if (signature != expectedSig)
             return QuickTokenValidation.Fail(Loc.T("The_Token_Has_Been_Tampered_With"));
 
-        // 3. فك التشفير
         QuickTokenPayload payload;
         try
         {
@@ -97,17 +96,16 @@ public class QrSecurityService
             return QuickTokenValidation.Fail(Loc.T("Corrupted_Token"));
         }
 
-        // 4. التحقق من الصلاحية
         if (DateTime.UtcNow > DateTime.Parse(payload.ExpiresAt))
             return QuickTokenValidation.Fail(Loc.T("The_QR_Has_Expired"));
 
-        // 5. التحقق من الاستخدام
-        var usageDoc = await _db.Collection("qr_usage").Document(payload.TokenId).GetSnapshotAsync();
+        // ✅ استخدام SQL بدل Firestore
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        var usage = await db.QrUsages.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.TokenId == payload.TokenId);
 
-        if (usageDoc.Exists)
+        if (usage != null)
         {
-            var usage = usageDoc.ConvertTo<QrUsage>();
-
             if (payload.OneTime && usage.UseCount >= 1)
                 return QuickTokenValidation.Fail(Loc.T("This_QR_Has_Already_Been_Used"));
 
@@ -125,24 +123,35 @@ public class QrSecurityService
 
     public async Task MarkQuickTokenUsed(string tokenId, string? deviceFingerprint = null)
     {
-        var docRef = _db.Collection("qr_usage").Document(tokenId);
-        var doc = await docRef.GetSnapshotAsync();
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        var usage = await db.QrUsages.FirstOrDefaultAsync(x => x.TokenId == tokenId);
 
-        var usage = doc.Exists
-            ? doc.ConvertTo<QrUsage>()
-            : new QrUsage { TokenId = tokenId, FirstUsedAt = DateTime.UtcNow.ToString("o") };
+        if (usage == null)
+        {
+            db.QrUsages.Add(new QrUsageEntity
+            {
+                Id = tokenId,
+                TokenId = tokenId,
+                UseCount = 1,
+                FirstUsedAt = DateTime.UtcNow.ToString("o"),
+                LastUsedAt = DateTime.UtcNow.ToString("o"),
+                DeviceFingerprint = deviceFingerprint,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+        else
+        {
+            usage.UseCount++;
+            usage.LastUsedAt = DateTime.UtcNow.ToString("o");
+            if (!string.IsNullOrEmpty(deviceFingerprint))
+                usage.DeviceFingerprint = deviceFingerprint;
+        }
 
-        usage.UseCount++;
-        usage.LastUsedAt = DateTime.UtcNow.ToString("o");
-
-        if (!string.IsNullOrEmpty(deviceFingerprint))
-            usage.DeviceFingerprint = deviceFingerprint;
-
-        await docRef.SetAsync(usage);
+        await db.SaveChangesAsync();
     }
 
     // ============================================================
-    // AES Encryption
+    // AES
     // ============================================================
     private string EncryptAes(string plainText)
     {
@@ -154,10 +163,7 @@ public class QrSecurityService
         var plainBytes = Encoding.UTF8.GetBytes(plainText);
         var cipherBytes = encryptor.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
 
-        return Convert.ToBase64String(cipherBytes)
-            .Replace("+", "-")
-            .Replace("/", "_")
-            .Replace("=", "");
+        return Convert.ToBase64String(cipherBytes).Replace("+", "-").Replace("/", "_").Replace("=", "");
     }
 
     private string DecryptAes(string cipherText)
@@ -181,9 +187,7 @@ public class QrSecurityService
     }
 }
 
-// ============================================================
 // Models
-// ============================================================
 public class QuickQrOptions
 {
     public string BuildingId { get; set; } = "";
@@ -195,27 +199,25 @@ public class QuickQrOptions
     public bool OneTime { get; set; } = true;
 }
 
-[FirestoreData]
 public class QuickTokenPayload
 {
-    [FirestoreProperty("buildingId")] public string BuildingId { get; set; } = "";
-    [FirestoreProperty("aptId")] public string AptId { get; set; } = "";
-    [FirestoreProperty("aptNumber")] public int AptNumber { get; set; }
-    [FirestoreProperty("floorOrder")] public int FloorOrder { get; set; }
-    [FirestoreProperty("expiresAt")] public string ExpiresAt { get; set; } = "";
-    [FirestoreProperty("maxUses")] public int MaxUses { get; set; }
-    [FirestoreProperty("oneTime")] public bool OneTime { get; set; }
-    [FirestoreProperty("tokenId")] public string TokenId { get; set; } = "";
+    public string BuildingId { get; set; } = "";
+    public string AptId { get; set; } = "";
+    public int AptNumber { get; set; }
+    public int FloorOrder { get; set; }
+    public string ExpiresAt { get; set; } = "";
+    public int MaxUses { get; set; }
+    public bool OneTime { get; set; }
+    public string TokenId { get; set; } = "";
 }
 
-[FirestoreData]
 public class QrUsage
 {
-    [FirestoreProperty("tokenId")] public string TokenId { get; set; } = "";
-    [FirestoreProperty("useCount")] public int UseCount { get; set; }
-    [FirestoreProperty("firstUsedAt")] public string FirstUsedAt { get; set; } = "";
-    [FirestoreProperty("lastUsedAt")] public string LastUsedAt { get; set; } = "";
-    [FirestoreProperty("deviceFingerprint")] public string? DeviceFingerprint { get; set; }
+    public string TokenId { get; set; } = "";
+    public int UseCount { get; set; }
+    public string FirstUsedAt { get; set; } = "";
+    public string LastUsedAt { get; set; } = "";
+    public string? DeviceFingerprint { get; set; }
 }
 
 public class QuickTokenValidation

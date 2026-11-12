@@ -5,7 +5,7 @@ using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Controllers;
 
-[Authorize]   // ✅ بس Authenticated (مش Role محدد)
+[Authorize]
 public class BuildingsController : Controller
 {
     private readonly BuildingsService _service;
@@ -200,7 +200,7 @@ public class BuildingsController : Controller
     }
 
     // ═══════════════════════════════════════════════════════════
-    // GenerateQuickQr — SuperAdmin + Admin ✅ (المهم)
+    // GenerateQuickQr — SuperAdmin + Admin ✅
     // ═══════════════════════════════════════════════════════════
     [Authorize(Roles = "superadmin,admin")]
     [HttpPost]
@@ -242,154 +242,5 @@ public class BuildingsController : Controller
             oneTime,
             maxUses = options.MaxUses
         });
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // FixFirebaseAccounts — SuperAdmin فقط
-    // ═══════════════════════════════════════════════════════════
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    [Authorize(Roles = "superadmin")]
-    public async Task<IActionResult> FixFirebaseAccounts(string id,
-        [FromServices] FirebaseAdminService fbAdmin)
-    {
-        var building = await _service.GetByIdAsync(id);
-        if (building == null) return NotFound();
-
-        var results = new List<object>();
-        var successCount = 0;
-        var failCount = 0;
-
-        foreach (var apt in building.Apartments)
-        {
-            var floor = building.Floors.FirstOrDefault(f => f.Id == apt.FloorId);
-            if (floor == null) continue;
-
-            var email = AuthHelpers.ResidentInternalEmail(building.Id, floor.Order, apt.Number);
-            var password = AuthHelpers.ResidentPassword(building.Id, apt.Number, apt.Pin);
-
-            try
-            {
-                var uid = await fbAdmin.CreateOrGetUserAsync(email, password);
-
-                if (!string.IsNullOrEmpty(uid))
-                {
-                    successCount++;
-                    results.Add(new { apt = apt.Number, email, status = "✅ Created/Updated" });
-                }
-                else
-                {
-                    failCount++;
-                    results.Add(new { apt = apt.Number, email, status = "❌ Failed" });
-                }
-            }
-            catch (Exception ex)
-            {
-                failCount++;
-                results.Add(new { apt = apt.Number, email, status = $"❌ {ex.Message}" });
-            }
-        }
-
-        TempData["Message"] = Loc.T("Fixed_N_Accounts_N_Failed", successCount, failCount);
-        return RedirectToAction("Details", new { id });
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // RecreateFirebaseAccounts — SuperAdmin فقط
-    // ═══════════════════════════════════════════════════════════
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    [Authorize(Roles = "superadmin")]
-    public async Task<IActionResult> RecreateFirebaseAccounts(string id,
-        [FromServices] FirebaseAdminService fbAdmin,
-        [FromServices] ILogger<BuildingsController> logger)
-    {
-        var building = await _service.GetByIdAsync(id);
-        if (building == null) return NotFound();
-
-        var successCount = 0;
-        var failCount = 0;
-        var results = new List<string>();
-
-        foreach (var apt in building.Apartments)
-        {
-            var floor = building.Floors.FirstOrDefault(f => f.Id == apt.FloorId);
-            if (floor == null) continue;
-
-            var email = AuthHelpers.ResidentInternalEmail(building.Id, floor.Order, apt.Number);
-            var password = AuthHelpers.ResidentPassword(building.Id, apt.Number, apt.Pin);
-
-            try
-            {
-                var uid = await fbAdmin.CreateOrGetUserAsync(email, password);
-                if (!string.IsNullOrEmpty(uid))
-                {
-                    successCount++;
-                    results.Add(Loc.T("Apartment_N_Created", apt.Number));
-                }
-                else
-                {
-                    failCount++;
-                    results.Add(Loc.T("Apartment_N_N_3", apt.Number, "Failed"));
-                }
-            }
-            catch (Exception ex)
-            {
-                failCount++;
-                results.Add(Loc.T("Apartment_N_N_3", apt.Number, ex.Message));
-                logger.LogError(ex, $"[Recreate] Apt {apt.Number}: Failed");
-            }
-        }
-
-        TempData["Message"] = Loc.T("N_Succeeded_N_Failed", successCount, failCount);
-        TempData["Details"] = string.Join(" | ", results);
-
-        return RedirectToAction("Details", new { id });
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // SyncFirebasePasswords — SuperAdmin فقط
-    // ═══════════════════════════════════════════════════════════
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    [Authorize(Roles = "superadmin")]
-    public async Task<IActionResult> SyncFirebasePasswords(string id,
-        [FromServices] FirebaseAdminService fbAdmin)
-    {
-        var building = await _service.GetByIdAsync(id);
-        if (building == null) return NotFound();
-
-        var success = 0;
-        var fail = 0;
-
-        foreach (var apt in building.Apartments)
-        {
-            var floor = building.Floors.FirstOrDefault(f => f.Id == apt.FloorId);
-            if (floor == null) continue;
-
-            var email = AuthHelpers.ResidentInternalEmail(building.Id, floor.Order, apt.Number);
-            var password = AuthHelpers.ResidentPassword(building.Id, apt.Number, apt.Pin);
-
-            var updated = await fbAdmin.UpdatePasswordAsync(email, password);
-
-            if (updated)
-            {
-                success++;
-                continue;
-            }
-
-            var uid = await fbAdmin.CreateOrGetUserAsync(email, password);
-            if (uid != null)
-            {
-                success++;
-            }
-            else
-            {
-                fail++;
-            }
-        }
-
-        TempData["Message"] = Loc.T("N_Succeeded_N_Failed", success, fail);
-        return RedirectToAction("Details", new { id });
     }
 }

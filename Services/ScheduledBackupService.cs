@@ -1,58 +1,90 @@
-﻿using BuildingManagementMvc.Models;
-using Google.Cloud.Firestore;
+﻿using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
 
 public class ScheduledBackupService
 {
-    private readonly FirestoreDb _db;
+    private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly BackupService _backup;
     private readonly IAuditLogger _audit;
     private readonly ILogger<ScheduledBackupService> _logger;
 
-    private const string SettingsCollection = "system_settings";
-    private const string HistoryCollection = "backup_history";
-    private const string SettingsDocId = "scheduled_backup";
+    private const string SettingsId = "default";
 
     public static string GetBackupsFolder(IWebHostEnvironment env)
     {
-        var path = Path.Combine(env.ContentRootPath, "Backups");
+        var projectRoot = string.IsNullOrEmpty(env.WebRootPath)
+            ? env.ContentRootPath
+            : Path.GetFullPath(Path.Combine(env.WebRootPath, ".."));
+
+        var path = Path.Combine(projectRoot, "Backups");
+
         if (!Directory.Exists(path))
             Directory.CreateDirectory(path);
+
         return path;
     }
 
     public ScheduledBackupService(
-        FirestoreContext ctx,
+        IDbContextFactory<AppDbContext> sqlFactory,
         BackupService backup,
         IAuditLogger audit,
         ILogger<ScheduledBackupService> logger)
     {
-        _db = ctx.Db;
+        _sqlFactory = sqlFactory;
         _backup = backup;
         _audit = audit;
         _logger = logger;
     }
 
-    // ============================================================
-    // 1. الإعدادات
-    // ============================================================
     public async Task<ScheduledBackupSettings> GetSettingsAsync()
     {
-        var doc = await _db.Collection(SettingsCollection).Document(SettingsDocId).GetSnapshotAsync();
-        if (!doc.Exists)
-            return new ScheduledBackupSettings();
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        var entity = await db.ScheduledBackupSettings.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == SettingsId);
 
-        return doc.ConvertTo<ScheduledBackupSettings>();
+        if (entity == null) return new ScheduledBackupSettings();
+
+        return new ScheduledBackupSettings
+        {
+            Id = entity.Id,
+            Enabled = entity.Enabled,
+            Frequency = entity.Frequency,
+            Hour = entity.Hour,
+            DayOfWeek = entity.DayOfWeek,
+            DayOfMonth = entity.DayOfMonth,
+            Collections = System.Text.Json.JsonSerializer.Deserialize<List<string>>(entity.CollectionsJson) ?? new(),
+            MaxBackupsToKeep = entity.MaxBackupsToKeep,
+            LastRunAt = entity.LastRunAt?.ToString("o"),
+            LastRunStatus = entity.LastRunStatus,
+            UpdatedAt = entity.UpdatedAt?.ToString("o"),
+            UpdatedBy = entity.UpdatedBy
+        };
     }
 
     public async Task SaveSettingsAsync(ScheduledBackupSettings settings, string userId)
     {
-        settings.UpdatedAt = DateTime.UtcNow.ToString("o");
-        settings.UpdatedBy = userId;
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        var entity = await db.ScheduledBackupSettings.FirstOrDefaultAsync(x => x.Id == SettingsId);
+        if (entity == null)
+        {
+            entity = new Data.Entities.ScheduledBackupSettingsEntity { Id = SettingsId };
+            db.ScheduledBackupSettings.Add(entity);
+        }
 
-        await _db.Collection(SettingsCollection).Document(SettingsDocId)
-            .SetAsync(settings, SetOptions.Overwrite);
+        entity.Enabled = settings.Enabled;
+        entity.Frequency = settings.Frequency ?? "daily";
+        entity.Hour = settings.Hour;
+        entity.DayOfWeek = settings.DayOfWeek;
+        entity.DayOfMonth = settings.DayOfMonth;
+        entity.CollectionsJson = System.Text.Json.JsonSerializer.Serialize(settings.Collections ?? new());
+        entity.MaxBackupsToKeep = settings.MaxBackupsToKeep;
+        entity.UpdatedAt = DateTime.UtcNow;
+        entity.UpdatedBy = userId;
+
+        await db.SaveChangesAsync();
 
         await _audit.LogAsync(
             action: "backup.settings_update",
@@ -63,26 +95,15 @@ public class ScheduledBackupService
                 enabled = settings.Enabled,
                 frequency = settings.Frequency,
                 hour = settings.Hour,
-                collections = settings.Collections,
-                maxBackupsToKeep = settings.MaxBackupsToKeep
+                collections = settings.Collections
             },
             severity: "warning");
     }
 
-    private async Task SaveSettingsInternalAsync(ScheduledBackupSettings settings)
-    {
-        await _db.Collection(SettingsCollection).Document(SettingsDocId)
-            .SetAsync(settings, SetOptions.Overwrite);
-    }
-
-    // ============================================================
-    // 2. هل حان الوقت؟
-    // ============================================================
     public async Task<bool> ShouldRunAsync()
     {
         var settings = await GetSettingsAsync();
         if (!settings.Enabled) return false;
-
         if (string.IsNullOrEmpty(settings.LastRunAt)) return true;
         if (!DateTime.TryParse(settings.LastRunAt, out var lastRun)) return true;
 
@@ -114,9 +135,6 @@ public class ScheduledBackupService
         }
     }
 
-    // ============================================================
-    // 3. تنفيذ النسخة المجدولة
-    // ============================================================
     public async Task RunScheduledBackupAsync(IWebHostEnvironment env, bool forceRun = false)
     {
         var settings = await GetSettingsAsync();
@@ -134,17 +152,22 @@ public class ScheduledBackupService
             var fullPath = Path.Combine(folder, fileName);
             await File.WriteAllBytesAsync(fullPath, bytes);
 
-            await _db.Collection(HistoryCollection).AddAsync(new BackupHistoryEntry
+            await using (var db = await _sqlFactory.CreateDbContextAsync())
             {
-                FileName = fileName,
-                FileSize = bytes.Length,
-                Collections = result.Collections,
-                TotalDocuments = result.TotalDocuments,
-                CreatedAt = Google.Cloud.Firestore.Timestamp.FromDateTime(DateTime.UtcNow),
-                DurationSeconds = result.Duration.TotalSeconds,
-                Status = "success",
-                Source = "scheduled"
-            });
+                db.BackupHistory.Add(new Data.Entities.BackupHistoryEntity
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    FileName = fileName,
+                    FileSize = bytes.Length,
+                    CollectionsJson = System.Text.Json.JsonSerializer.Serialize(result.Collections),
+                    TotalDocuments = result.TotalDocuments,
+                    CreatedAt = DateTime.UtcNow,
+                    DurationSeconds = result.Duration.TotalSeconds,
+                    Status = "success",
+                    Source = "scheduled"
+                });
+                await db.SaveChangesAsync();
+            }
 
             settings.LastRunAt = DateTime.UtcNow.ToString("o");
             settings.LastRunStatus = "success";
@@ -158,7 +181,7 @@ public class ScheduledBackupService
                 action: "backup.scheduled_run",
                 userId: "system-scheduler",
                 userRole: "system",
-                metadata: new { fileName, fileSize = bytes.Length, totalDocuments = result.TotalDocuments },
+                metadata: new { fileName, fileSize = bytes.Length },
                 severity: "info");
         }
         catch (Exception ex)
@@ -169,15 +192,6 @@ public class ScheduledBackupService
             settings.LastRunStatus = "failed";
             await SaveSettingsInternalAsync(settings);
 
-            await _db.Collection(HistoryCollection).AddAsync(new BackupHistoryEntry
-            {
-                FileName = "(failed)",
-                CreatedAt = Google.Cloud.Firestore.Timestamp.FromDateTime(DateTime.UtcNow),
-                Status = "failed",
-                Source = "scheduled",
-                ErrorMessage = ex.Message
-            });
-
             await _audit.LogAsync(
                 action: "backup.scheduled_failed",
                 userId: "system-scheduler",
@@ -187,48 +201,44 @@ public class ScheduledBackupService
         }
     }
 
-    // ============================================================
-    // 4. History
-    // ============================================================
-    public async Task<List<BackupHistoryEntry>> GetHistoryAsync(IWebHostEnvironment env, int limit = 50)
+    private async Task SaveSettingsInternalAsync(ScheduledBackupSettings settings)
     {
-        try
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        var entity = await db.ScheduledBackupSettings.FirstOrDefaultAsync(x => x.Id == SettingsId);
+        if (entity != null)
         {
-            var snapshot = await _db.Collection(HistoryCollection)
-                .OrderByDescending("createdAt")
-                .Limit(limit)
-                .GetSnapshotAsync();
-
-            var list = new List<BackupHistoryEntry>();
-            var folder = GetBackupsFolder(env);
-
-            foreach (var doc in snapshot.Documents)
-            {
-                var entry = doc.ConvertTo<BackupHistoryEntry>();
-                entry.Id = doc.Id;
-
-                // ✅ تحديد هل الملف موجود فعلاً
-                if (!string.IsNullOrEmpty(entry.FileName) && entry.FileName.EndsWith(".zip"))
-                {
-                    var path = Path.Combine(folder, entry.FileName);
-                    entry.FileExists = File.Exists(path);
-                }
-
-                list.Add(entry);
-            }
-
-            return list;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "[BackupHistory] Get failed");
-            return new List<BackupHistoryEntry>();
+            entity.LastRunAt = string.IsNullOrEmpty(settings.LastRunAt) ? null : DateTime.Parse(settings.LastRunAt);
+            entity.LastRunStatus = settings.LastRunStatus;
+            await db.SaveChangesAsync();
         }
     }
 
-    // ============================================================
-    // 5. Rotation
-    // ============================================================
+    public async Task<List<BackupHistoryEntry>> GetHistoryAsync(IWebHostEnvironment env, int limit = 50)
+    {
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        var list = await db.BackupHistory.AsNoTracking()
+            .OrderByDescending(h => h.CreatedAt)
+            .Take(limit)
+            .ToListAsync();
+
+        var folder = GetBackupsFolder(env);
+
+        return list.Select(e => new BackupHistoryEntry
+        {
+            Id = e.Id,
+            FileName = e.FileName,
+            FileSize = e.FileSize,
+            Collections = System.Text.Json.JsonSerializer.Deserialize<List<string>>(e.CollectionsJson) ?? new(),
+            TotalDocuments = e.TotalDocuments,
+            CreatedAt = e.CreatedAt,
+            DurationSeconds = e.DurationSeconds,
+            Status = e.Status,
+            Source = e.Source,
+            ErrorMessage = e.ErrorMessage,
+            FileExists = File.Exists(Path.Combine(folder, e.FileName))
+        }).ToList();
+    }
+
     private async Task RotateBackupsAsync(IWebHostEnvironment env, int keep)
     {
         var folder = GetBackupsFolder(env);
@@ -241,23 +251,13 @@ public class ScheduledBackupService
 
         foreach (var file in files.Skip(keep))
         {
-            try
-            {
-                file.Delete();
-                _logger.LogInformation($"[ScheduledBackup] Deleted old: {file.Name}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, $"[ScheduledBackup] Failed to delete: {file.Name}");
-            }
+            try { file.Delete(); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to delete {File}", file.Name); }
         }
 
         await Task.CompletedTask;
     }
 
-    // ============================================================
-    // 6. عمليات يدوية
-    // ============================================================
     public Task<string?> GetBackupFilePathAsync(IWebHostEnvironment env, string fileName)
     {
         if (string.IsNullOrEmpty(fileName) || fileName.Contains("..") ||
@@ -272,42 +272,24 @@ public class ScheduledBackupService
     {
         try
         {
-            // 1. امسح الملف الفعلي لو موجود
             var path = await GetBackupFilePathAsync(env, fileName);
-            var fileDeleted = false;
-            if (path != null && File.Exists(path))
-            {
-                File.Delete(path);
-                fileDeleted = true;
-            }
+            if (path != null && File.Exists(path)) File.Delete(path);
 
-            // 2. امسح السجل من Firestore
-            var historyRef = _db.Collection(HistoryCollection);
-            var historySnapshot = await historyRef.WhereEqualTo("fileName", fileName).GetSnapshotAsync();
+            await using var db = await _sqlFactory.CreateDbContextAsync();
+            await db.BackupHistory.Where(h => h.FileName == fileName).ExecuteDeleteAsync();
 
-            foreach (var doc in historySnapshot.Documents)
-            {
-                await doc.Reference.DeleteAsync();
-            }
-
-            // 3. سجل في Audit Log
             await _audit.LogAsync(
                 action: "backup.scheduled_delete",
                 userId: userId,
                 userRole: "superadmin",
-                metadata: new
-                {
-                    fileName,
-                    fileDeleted,
-                    historyDeleted = historySnapshot.Documents.Count
-                },
+                metadata: new { fileName },
                 severity: "warning");
 
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"[ScheduledBackup] DeleteBackup failed: {fileName}");
+            _logger.LogError(ex, "DeleteBackup failed: {FileName}", fileName);
             return false;
         }
     }

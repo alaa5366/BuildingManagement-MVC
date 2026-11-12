@@ -1,6 +1,10 @@
 @using Microsoft.AspNetCore.Localization
 @{
     var currentCulture = Context.Features.Get<IRequestCultureFeature>()?.RequestCulture?.UICulture?.Name ?? "ar";
+    
+    // ✅ نأخد أول حرفين بس (عشان لو جاي en-US أو en-GB)
+    if (currentCulture.Length > 2) currentCulture = currentCulture.Substring(0, 2);
+
     var isRtl = currentCulture == "ar";
     var dir = isRtl ? "rtl" : "ltr";
 

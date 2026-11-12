@@ -57,7 +57,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">
-                            @Loc.T("Apartment_Name_Optional")
+                            @Html.Raw(Loc.T("Apartment_Name_Optional"))
                         </label>
                         <input name="label" value="@Model.Label" maxlength="60"
                                class="form-control form-control-lg" />
@@ -69,7 +69,7 @@
                         <input name="phone" value="@Model.Phone" required
                                dir="ltr" class="form-control form-control-lg" />
                         <div class="form-text text-warning small">
-                            @Loc.T("Changing_It_Automatically_Updates_The_Firebase")
+                            @Loc.T("Changing_It_Automatically_Updates_The_Database")
                         </div>
                     </div>
                     <div class="col-md-6">

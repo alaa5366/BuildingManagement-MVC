@@ -3278,6 +3278,24 @@ namespace BuildingManagementMvc.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to ✅ Payment cancelled successfully.
+        /// </summary>
+        internal static string Deposit_Cancelled_Successfully {
+            get {
+                return ResourceManager.GetString("Deposit_Cancelled_Successfully", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to ✅ Payment confirmed successfully.
+        /// </summary>
+        internal static string Deposit_Confirmed_Successfully {
+            get {
+                return ResourceManager.GetString("Deposit_Confirmed_Successfully", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to + Deposits this month.
         /// </summary>
         internal static string Deposits_This_Month {
@@ -9402,15 +9420,6 @@ namespace BuildingManagementMvc.Resources {
         internal static string Select_The_Building_To_Manage_Its {
             get {
                 return ResourceManager.GetString("Select_The_Building_To_Manage_Its", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to selected.
-        /// </summary>
-        internal static string Selected {
-            get {
-                return ResourceManager.GetString("Selected", resourceCulture);
             }
         }
         

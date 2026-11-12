@@ -63,10 +63,6 @@ public class SettingsController : Controller
     public async Task<IActionResult> Global()
     {
         var settings = await _settings.GetGlobalAsync();
-
-        settings.FirebaseProjectId = HttpContext.RequestServices
-            .GetService<IConfiguration>()?["Firebase:ProjectId"] ?? "";
-
         return View(settings);
     }
 

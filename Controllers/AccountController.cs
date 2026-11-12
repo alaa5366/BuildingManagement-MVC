@@ -13,7 +13,7 @@ public class AccountController : Controller
 {
     private readonly SqlAuthService _sqlAuth;
     private readonly BuildingsService _buildings;
-    private readonly ResidentsService _residents;   
+    private readonly ResidentsService _residents;
     private readonly UsersService _users;
     private readonly LoginThrottle _throttle;
     private readonly ILogger<AccountController> _log;
@@ -26,14 +26,14 @@ public class AccountController : Controller
         UsersService users,
         ResidentsService residents,
         LoginThrottle throttle,
-        ILogger<AccountController> log)
+        ILogger<AccountController> logger)
     {
         _sqlAuth = sqlAuth;
         _buildings = buildings;
         _users = users;
         _residents = residents;
         _throttle = throttle;
-        _log = log;
+        _log = logger;
     }
 
     public IActionResult LoginChoice() => RedirectToAction("UnifiedLogin");
@@ -159,79 +159,12 @@ public class AccountController : Controller
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 4. Google Sign-In (لـ Super Admin فقط)
-    // ═══════════════════════════════════════════════════════════
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> GoogleSignIn(
-        string idToken,
-        string? email,
-        [FromServices] FirebaseAdminService fbAdmin,
-        [FromServices] ILogger<AccountController> logger)
-    {
-        try
-        {
-            var throttleKey = "google:" + (ClientIp ?? "unknown");
-            if (_throttle.IsLocked(throttleKey, ClientIp))
-                return Json(new { success = false, error = LockedMsg });
-
-            var verified = await fbAdmin.VerifyIdTokenAsync(idToken);
-
-            if (verified == null)
-            {
-                _throttle.RegisterFailure(throttleKey, ClientIp);
-                return Json(new { success = false, error = "Invalid ID Token" });
-            }
-
-            if (!verified.EmailVerified)
-            {
-                _throttle.RegisterFailure(throttleKey, ClientIp);
-                return Json(new { success = false, error = "Email not verified" });
-            }
-
-            if (!SqlAuthService.IsSuperAdminEmail(verified.Email))
-            {
-                _throttle.RegisterFailure(throttleKey, ClientIp);
-                return Json(new
-                {
-                    success = false,
-                    error = Loc.T("This_Email_Is_Not_Authorized_For")
-                });
-            }
-
-            var result = AuthResult.Ok(
-                uid: verified.Uid,
-                role: "superadmin",
-                email: verified.Email,
-                name: verified.Email.Split('@')[0],
-                buildingIds: new List<string>());
-
-            await SignInCookieAsync(result);
-
-            _log.LogInformation("[GoogleSignIn] SuperAdmin logged in: {Email}", verified.Email);
-
-            return Json(new { success = true, redirectUrl = "/SuperAdminHome" });
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "GoogleSignIn failed");
-            return Json(new { success = false, error = Loc.T("Login_Error_2") });
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // 5. Unified Login
+    // 4. Unified Login
     // ═══════════════════════════════════════════════════════════
     [HttpGet]
-    public IActionResult UnifiedLogin(
-        [FromServices] IConfiguration config,
-        string? returnUrl = null)
+    public IActionResult UnifiedLogin(string? returnUrl = null)
     {
         ViewBag.ReturnUrl = returnUrl;
-        ViewBag.FirebaseApiKey = config["Firebase:WebApiKey"] ?? "";
-        ViewBag.FirebaseProjectId = config["Firebase:ProjectId"] ?? "";
-        ViewBag.FirebaseAuthDomain = $"{config["Firebase:ProjectId"]}.firebaseapp.com";
-
         return View(new UnifiedLoginVm());
     }
 
@@ -275,14 +208,18 @@ public class AccountController : Controller
             return RedirectBasedOnRole(res.Role!);
         }
 
-        var fullName = contexts.FirstOrDefault(c => !string.IsNullOrEmpty(c.Name))?.Name ?? identifier;
+        // ✅ تحسين رسالة الترحيب
+        var fullName = contexts.Count > 1
+            ? $"حسابات مرتبطة بالرقم ({identifier})"
+            : (contexts.FirstOrDefault()?.Name ?? identifier);
+
         var token = StoreContextsInSession(contexts, fullName);
 
         return RedirectToAction("ChooseContext", new { token });
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 6. ChooseContext
+    // 5. ChooseContext
     // ═══════════════════════════════════════════════════════════
     [HttpGet]
     public IActionResult ChooseContext(string token)
@@ -337,7 +274,7 @@ public class AccountController : Controller
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 7. Logout
+    // 6. Logout
     // ═══════════════════════════════════════════════════════════
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -509,6 +446,7 @@ public class AccountController : Controller
 
         return Json(apts);
     }
+
     // ═══════════════════════════════════════════════════════════
     // Quick Login (QR السريع)
     // ═══════════════════════════════════════════════════════════

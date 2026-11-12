@@ -1,16 +1,19 @@
-﻿using Google.Cloud.Firestore;
+﻿using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Data.Entities;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
 namespace BuildingManagementMvc.Services;
 
 public class AuditLogger : IAuditLogger
 {
-    private readonly FirestoreDb _db;
-    private const string Collection = "auditLogs";
+    private readonly IDbContextFactory<AppDbContext> _sqlFactory;
+    private readonly ILogger<AuditLogger> _log;
 
-    public AuditLogger(FirestoreContext ctx)
+    public AuditLogger(IDbContextFactory<AppDbContext> sqlFactory, ILogger<AuditLogger> log)
     {
-        _db = ctx.Db;
+        _sqlFactory = sqlFactory;
+        _log = log;
     }
 
     public async Task LogAsync(
@@ -24,26 +27,39 @@ public class AuditLogger : IAuditLogger
     {
         try
         {
-            var entry = new AuditEntryDoc
-            {
-                Action = action,
-                BuildingId = buildingId,
-                ApartmentId = apartmentId,
-                UserId = userId,
-                UserRole = userRole,
-                Severity = severity,
-                CreatedAt = Google.Cloud.Firestore.Timestamp.FromDateTime(DateTime.UtcNow),
-                Metadata = metadata == null
-                    ? null
-                    : JsonConvert.DeserializeObject<Dictionary<string, object>>(
-                        JsonConvert.SerializeObject(metadata))
-            };
+            await using var db = await _sqlFactory.CreateDbContextAsync();
 
-            await _db.Collection(Collection).AddAsync(entry);
+            string? effectiveBuildingId = buildingId;
+            if (!string.IsNullOrWhiteSpace(buildingId))
+            {
+                var exists = await db.Buildings.AnyAsync(b => b.Id == buildingId);
+                if (!exists) effectiveBuildingId = null;
+            }
+
+            var metadataJson = metadata == null
+                ? null
+                : JsonConvert.SerializeObject(metadata);
+
+            db.AuditLog.Add(new AuditLogEntity
+            {
+                BuildingId = effectiveBuildingId,
+                Ts = DateTime.UtcNow,
+                Action = Cut(action, 100),
+                Label = Cut(action, 300),
+                Actor = Cut(userId ?? "", 200),
+                ActorRole = Cut(userRole ?? "", 20),
+                Details = metadataJson ?? "",
+                MonthKey = DateTime.UtcNow.ToString("yyyy-MM"),
+                SourceId = null,
+                BuildingNumber = null,
+                AptNumber = null
+            });
+
+            await db.SaveChangesAsync();
         }
-        catch
+        catch (Exception ex)
         {
-            // فشل السجل مايوقفش العملية الأساسية
+            _log.LogWarning(ex, "AuditLogger failed for {Action}", action);
         }
     }
 
@@ -57,94 +73,48 @@ public class AuditLogger : IAuditLogger
         string? severity = null,
         int limit = 100)
     {
-        var list = new List<AuditEntryDoc>();
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        var query = db.AuditLog.AsNoTracking().AsQueryable();
 
-        try
-        {
-            var snapshot = await _db.Collection(Collection).GetSnapshotAsync();
+        if (!string.IsNullOrWhiteSpace(buildingId))
+            query = query.Where(x => x.BuildingId == buildingId);
 
-            foreach (var doc in snapshot.Documents)
-            {
-                try
-                {
-                    var data = doc.ToDictionary();
+        if (!string.IsNullOrWhiteSpace(action))
+            query = query.Where(x => x.Action == action);
 
-                    var entry = new AuditEntryDoc
-                    {
-                        Id = doc.Id,
-                        Action = GetString(data, "action"),
-                        BuildingId = GetStringOrNull(data, "buildingId"),
-                        ApartmentId = GetStringOrNull(data, "apartmentId"),
-                        UserId = GetStringOrNull(data, "userId"),
-                        UserRole = GetStringOrNull(data, "userRole"),
-                        Severity = GetString(data, "severity", "info"),
-                        Details = GetStringOrNull(data, "details"),
-                        CreatedAt = GetTimestamp(data, "createdAt"),
-                        Timestamp = GetTimestamp(data, "timestamp"),
-                        Metadata = GetMetadata(data)
-                    };
+        if (!string.IsNullOrWhiteSpace(userId))
+            query = query.Where(x => x.Actor == userId);
 
-                    // الفلاتر
-                    if (!string.IsNullOrWhiteSpace(buildingId) && entry.BuildingId != buildingId) continue;
-                    if (!string.IsNullOrWhiteSpace(apartmentId) && entry.ApartmentId != apartmentId) continue;
-                    if (!string.IsNullOrWhiteSpace(userId) && entry.UserId != userId) continue;
-                    if (!string.IsNullOrWhiteSpace(action) && entry.Action != action) continue;
-                    if (!string.IsNullOrWhiteSpace(severity) && entry.Severity != severity) continue;
-                    if (from.HasValue && entry.EffectiveDate < from.Value) continue;
-                    if (to.HasValue && entry.EffectiveDate > to.Value) continue;
+        if (from.HasValue)
+            query = query.Where(x => x.Ts >= from.Value);
 
-                    list.Add(entry);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[AuditLogger.Query] Doc {doc.Id} failed: {ex.Message}");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[AuditLogger.Query] ERROR: {ex.Message}");
-        }
+        if (to.HasValue)
+            query = query.Where(x => x.Ts <= to.Value);
 
-        return list
-            .OrderByDescending(e => e.EffectiveDate)
+        var entries = await query
+            .OrderByDescending(x => x.Ts)
             .Take(limit)
-            .ToList();
+            .ToListAsync();
+
+        return entries.Select(ToDoc).ToList();
     }
 
-    // ============================================================
-    // Helpers
-    // ============================================================
-    private static string GetString(Dictionary<string, object> data, string key, string defaultVal = "")
+    private static AuditEntryDoc ToDoc(AuditLogEntity e) => new()
     {
-        if (data.TryGetValue(key, out var v) && v != null)
-            return v.ToString() ?? defaultVal;
-        return defaultVal;
-    }
+        Id = e.SourceId ?? e.AuditId.ToString(),
+        Action = e.Action,
+        BuildingId = e.BuildingId,
+        ApartmentId = e.AptNumber?.ToString(),
+        UserId = e.Actor,
+        UserRole = e.ActorRole,
+        Severity = "info",
+        Details = e.Details,
+        CreatedAt = DateTime.SpecifyKind(e.Ts, DateTimeKind.Utc)
+    };
 
-    private static string? GetStringOrNull(Dictionary<string, object> data, string key)
+    private static string Cut(string? s, int max)
     {
-        if (data.TryGetValue(key, out var v) && v != null)
-            return v.ToString();
-        return null;
-    }
-
-    private static Google.Cloud.Firestore.Timestamp? GetTimestamp(
-        Dictionary<string, object> data, string key)
-    {
-        if (!data.TryGetValue(key, out var v) || v == null) return null;
-        if (v is Google.Cloud.Firestore.Timestamp ts) return ts;
-        if (v is string s && DateTime.TryParse(s, out var dt))
-            return Google.Cloud.Firestore.Timestamp.FromDateTime(dt.ToUniversalTime());
-        return null;
-    }
-
-    private static Dictionary<string, object>? GetMetadata(Dictionary<string, object> data)
-    {
-        if (!data.TryGetValue("metadata", out var v) || v == null) return null;
-        if (v is Dictionary<string, object> dict) return dict;
-        if (v is IReadOnlyDictionary<string, object> ro)
-            return new Dictionary<string, object>(ro);
-        return null;
+        s ??= "";
+        return s.Length <= max ? s : s[..max];
     }
 }

@@ -5042,28 +5042,63 @@ Cette opération peut prendre quelques secondes.</value>
   <data name="Migrate_Pins_Desc" xml:space="preserve">
     <value>Migrer les PINs Admin et SuperAdmin de Plain à BCrypt (sécurisé)</value>
 </data>
-<data name="Choose_Building_First" xml:space="preserve">
+  <data name="Choose_Building_First" xml:space="preserve">
     <value>Choisir d'abord le bâtiment</value>
 </data>
-<data name="Choose_Floor_First" xml:space="preserve">
+  <data name="Choose_Floor_First" xml:space="preserve">
     <value>Choisir d'abord l'étage</value>
 </data>
-<data name="Loading" xml:space="preserve">
+  <data name="Loading" xml:space="preserve">
     <value>Chargement...</value>
 </data>
-<data name="No_Floors" xml:space="preserve">
+  <data name="No_Floors" xml:space="preserve">
     <value>Aucun étage</value>
 </data>
-<data name="No_Apartments" xml:space="preserve">
+  <data name="No_Apartments" xml:space="preserve">
     <value>Aucun appartement</value>
 </data>
-<data name="Floor_Required" xml:space="preserve">
+  <data name="Floor_Required" xml:space="preserve">
     <value>L'étage est requis</value>
 </data>
-<data name="Floor_Not_Found" xml:space="preserve">
+  <data name="Floor_Not_Found" xml:space="preserve">
     <value>Étage introuvable</value>
 </data>
-<data name="Apartment_Required" xml:space="preserve">
+  <data name="Apartment_Required" xml:space="preserve">
     <value>L'appartement est requis</value>
 </data>
+  <!-- ===== Resident Home (Dashboard) Missing Translations ===== -->
+  <data name="Status_Open" xml:space="preserve">
+    <value>Ouvert</value>
+  </data>
+  <data name="Status_In_Progress" xml:space="preserve">
+    <value>En cours</value>
+  </data>
+  <data name="Status_Done" xml:space="preserve">
+    <value>Terminé</value>
+  </data>
+  <data name="Search" xml:space="preserve">
+    <value>Rechercher</value>
+  </data>
+  <data name="Nav_Cameras" xml:space="preserve">
+    <value>Caméras</value>
+  </data>
+  <data name="Nav_DVRs" xml:space="preserve">
+    <value>Enregistreurs DVR</value>
+  </data>
+  <data name="Phone" xml:space="preserve">
+    <value>Téléphone</value>
+  </data>
+  <data name="Technical_Info" xml:space="preserve">
+    <value>Informations techniques</value>
+  </data>
+  <data name="Logo_URL" xml:space="preserve">
+    <value>URL du logo</value>
+  </data>
+  <data name="Floor_Label" xml:space="preserve">
+    <value>Nom de l'étage</value>
+  </data>
+  <data name="Floor_Order" xml:space="preserve">
+    <value>Ordre de l'étage</value>
+  </data>
+  <data name="Changing_It_Automatically_Updates_The_Database" xml:space="preserve"><value>⚠️ Le modifier met à jour automatiquement la base de données</value></data>
 </root>

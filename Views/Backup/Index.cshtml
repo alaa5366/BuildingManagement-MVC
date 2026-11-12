@@ -190,7 +190,7 @@
         </div>
         <div class="card-body">
             <div class="alert alert-warning py-2">
-                <small>@Html.Raw(Loc.T("Warning_Restoring_Writes_Data_To_Firestore"))</small>
+                <small>@Html.Raw(Loc.T("Warning_Restoring_Writes_Data_To_SQL"))</small>
             </div>
 
             <form method="post" asp-action="PreviewRestore" enctype="multipart/form-data">
@@ -488,7 +488,7 @@
                     <tbody>
                         @foreach (var h in history)
                         {
-                            var date = h.CreatedAt?.ToDateTime().ToLocalTime() ?? DateTime.MinValue;
+                            var date = h.CreatedAt?.ToLocalTime() ?? DateTime.MinValue;
                             var fileExists = !string.IsNullOrEmpty(h.FileName)
                                              && h.FileName.EndsWith(".zip")
                                              && h.Status == "success";

@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>BuildingManagementMvc</RootNamespace>
     <UserSecretsId>01de7570-ddd8-472d-b817-9e0f695e5024</UserSecretsId>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,7 +14,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.Cloud.Firestore" Version="3.9.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.10">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -24,8 +24,7 @@
     <PackageReference Include="Tesseract" Version="5.2.0" />
     <PackageReference Include="CloudinaryDotNet" Version="1.26.2" />
     <PackageReference Include="ClosedXML" Version="0.104.1" />
-    <PackageReference Include="FirebaseAdmin" Version="3.1.0" />
-	<PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
+    <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -42,50 +41,33 @@
     </Content>
   </ItemGroup>
 
+  <!-- ✅ Localization Resources -->
   <ItemGroup>
-    <None Update="firebase-service-account.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    <EmbeddedResource Update="Resources\Shared.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Shared.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Resources\Shared.ar.resx">
+      <Generator></Generator>
+      <WithCulture>true</WithCulture>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Resources\Shared.en.resx">
+      <Generator></Generator>
+      <WithCulture>true</WithCulture>
+    </EmbeddedResource>
   </ItemGroup>
 
-<!-- ✅ Localization Resources -->
-<ItemGroup>
-  <EmbeddedResource Update="Resources\Shared.resx">
-    <Generator>ResXFileCodeGenerator</Generator>
-    <LastGenOutput>Shared.Designer.cs</LastGenOutput>
-  </EmbeddedResource>
-  <EmbeddedResource Update="Resources\Shared.ar.resx">
-    <Generator></Generator>
-    <WithCulture>true</WithCulture>
-  </EmbeddedResource>
-  <EmbeddedResource Update="Resources\Shared.en.resx">
-    <Generator></Generator>
-    <WithCulture>true</WithCulture>
-  </EmbeddedResource>
-</ItemGroup>
-<ItemGroup>
-  <None Remove="C:\Users\alaa5\.nuget\packages\tesseract\5.2.0\build\\..\x64\leptonica-1.82.0.dll" />
-</ItemGroup>
-<ItemGroup>
-  <None Remove="C:\Users\alaa5\.nuget\packages\tesseract\5.2.0\build\\..\x64\tesseract50.dll" />
-</ItemGroup>
-<ItemGroup>
-  <None Remove="C:\Users\alaa5\.nuget\packages\tesseract\5.2.0\build\\..\x86\leptonica-1.82.0.dll" />
-</ItemGroup>
-<ItemGroup>
-  <None Remove="C:\Users\alaa5\.nuget\packages\tesseract\5.2.0\build\\..\x86\tesseract50.dll" />
-</ItemGroup>
-<ItemGroup>
-  <None Remove="C:\Users\alaa5\.nuget\packages\tesseract\5.2.0\build\\..\x64\leptonica-1.82.0.dll" />
-</ItemGroup>
-<ItemGroup>
-  <None Remove="C:\Users\alaa5\.nuget\packages\tesseract\5.2.0\build\\..\x64\tesseract50.dll" />
-</ItemGroup>
-<ItemGroup>
-  <None Remove="C:\Users\alaa5\.nuget\packages\tesseract\5.2.0\build\\..\x86\leptonica-1.82.0.dll" />
-</ItemGroup>
-<ItemGroup>
-  <None Remove="C:\Users\alaa5\.nuget\packages\tesseract\5.2.0\build\\..\x86\tesseract50.dll" />
-</ItemGroup>
+  <ItemGroup>
+    <None Remove="C:\Users\alaa5\.nuget\packages\tesseract\5.2.0\build\\..\x64\leptonica-1.82.0.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="C:\Users\alaa5\.nuget\packages\tesseract\5.2.0\build\\..\x64\tesseract50.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="C:\Users\alaa5\.nuget\packages\tesseract\5.2.0\build\\..\x86\leptonica-1.82.0.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="C:\Users\alaa5\.nuget\packages\tesseract\5.2.0\build\\..\x86\tesseract50.dll" />
+  </ItemGroup>
 
 </Project>

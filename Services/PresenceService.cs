@@ -1,30 +1,23 @@
-﻿using BuildingManagementMvc.Models;
-using Google.Cloud.Firestore;
+﻿using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Data.Entities;
+using BuildingManagementMvc.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
 
-// ✅ Phase 24 — Presence Service (متوافق مع نسخة JS)
 public class PresenceService
 {
-    private readonly FirestoreDb _db;
+    private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly ILogger<PresenceService> _logger;
 
-    private const string Collection = "presence";
-
-    // ⏱️ نعتبر المستخدم "Online" لو آخر ظهور أقل من 2 دقيقة
     public static readonly TimeSpan OnlineThreshold = TimeSpan.FromMinutes(2);
 
-    public PresenceService(FirestoreContext ctx, ILogger<PresenceService> logger)
+    public PresenceService(IDbContextFactory<AppDbContext> sqlFactory, ILogger<PresenceService> logger)
     {
-        _db = ctx.Db;
+        _sqlFactory = sqlFactory;
         _logger = logger;
     }
 
-    private CollectionReference Col => _db.Collection(Collection);
-
-    // ============================================================
-    // Helper: نبني الـ Document ID بنفس صيغة JS
-    // ============================================================
     public static string BuildDocId(string uid, string aptId, string buildingId)
     {
         return !string.IsNullOrEmpty(buildingId) && !string.IsNullOrEmpty(aptId)
@@ -32,9 +25,6 @@ public class PresenceService
             : uid;
     }
 
-    // ============================================================
-    // 1. Heartbeat — يسجّل إن المستخدم نشط الآن
-    // ============================================================
     public async Task HeartbeatAsync(string uid, string aptId, string buildingId)
     {
         if (string.IsNullOrEmpty(uid)) return;
@@ -43,55 +33,42 @@ public class PresenceService
 
         try
         {
-            var now = DateTime.UtcNow;
-            var doc = new Dictionary<string, object>
+            await using var db = await _sqlFactory.CreateDbContextAsync();
+            var existing = await db.Presence.FirstOrDefaultAsync(p => p.Uid == docId);
+
+            if (existing == null)
             {
-                ["aptId"] = aptId ?? "",
-                ["buildingId"] = buildingId ?? "",
-                ["lastSeen"] = now.ToString("o"),
-                ["ts"] = new DateTimeOffset(now).ToUnixTimeMilliseconds()
-            };
+                db.Presence.Add(new PresenceEntity
+                {
+                    Uid = docId,
+                    ApartmentId = string.IsNullOrWhiteSpace(aptId) ? null : aptId,
+                    BuildingId = string.IsNullOrWhiteSpace(buildingId) ? null : buildingId,
+                    LastSeen = DateTime.UtcNow
+                });
+            }
+            else
+            {
+                existing.LastSeen = DateTime.UtcNow;
+                existing.BuildingId = buildingId ?? existing.BuildingId;
+                existing.ApartmentId = aptId ?? existing.ApartmentId;
+            }
 
-            await Col.Document(docId).SetAsync(doc, SetOptions.MergeAll);
-
-            _logger.LogInformation(
-                "[Presence] Heartbeat OK: docId={DocId}, uid={Uid}",
-                docId, uid);
+            await db.SaveChangesAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "[Presence] Heartbeat failed for docId={DocId}", docId);
+            _logger.LogWarning(ex, "[Presence] Heartbeat failed for {DocId}", docId);
         }
     }
 
-    // ============================================================
-    // 2. Get online count per building
-    // ============================================================
     public async Task<int> GetOnlineCountAsync(string buildingId)
     {
         try
         {
             var cutoff = DateTime.UtcNow.Subtract(OnlineThreshold);
-
-            var snap = await Col
-                .WhereEqualTo("buildingId", buildingId)
-                .GetSnapshotAsync();
-
-            int count = 0;
-            foreach (var doc in snap.Documents)
-            {
-                var data = doc.ToDictionary();
-                if (data.TryGetValue("ts", out var tsRaw) && tsRaw != null)
-                {
-                    if (long.TryParse(tsRaw.ToString(), out var ts))
-                    {
-                        var lastSeen = DateTimeOffset.FromUnixTimeMilliseconds(ts).UtcDateTime;
-                        if (lastSeen >= cutoff) count++;
-                    }
-                }
-            }
-
-            return count;
+            await using var db = await _sqlFactory.CreateDbContextAsync();
+            return await db.Presence
+                .CountAsync(p => p.BuildingId == buildingId && p.LastSeen >= cutoff);
         }
         catch (Exception ex)
         {
@@ -100,32 +77,30 @@ public class PresenceService
         }
     }
 
-    // ============================================================
-    // 3. Get all presences for a building (map aptId → Presence)
-    // ============================================================
     public async Task<Dictionary<string, Presence>> GetByBuildingAsync(string buildingId)
     {
         var result = new Dictionary<string, Presence>();
 
         try
         {
-            var snap = await Col
-                .WhereEqualTo("buildingId", buildingId)
-                .GetSnapshotAsync();
+            await using var db = await _sqlFactory.CreateDbContextAsync();
+            var list = await db.Presence.AsNoTracking()
+                .Where(p => p.BuildingId == buildingId)
+                .ToListAsync();
 
-            foreach (var doc in snap.Documents)
+            foreach (var p in list)
             {
-                try
+                var aptId = p.ApartmentId ?? "";
+                if (string.IsNullOrEmpty(aptId)) continue;
+
+                result[aptId] = new Presence
                 {
-                    var p = doc.ConvertTo<Presence>();
-                    p.Uid = doc.Id;
-                    if (!string.IsNullOrEmpty(p.AptId))
-                        result[p.AptId] = p;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "[Presence] ConvertTo failed for doc {Id}", doc.Id);
-                }
+                    Uid = p.Uid,
+                    AptId = aptId,
+                    BuildingId = p.BuildingId ?? "",
+                    LastSeen = p.LastSeen.ToString("o"),
+                    Ts = new DateTimeOffset(p.LastSeen, TimeSpan.Zero).ToUnixTimeMilliseconds()
+                };
             }
         }
         catch (Exception ex)
@@ -136,9 +111,6 @@ public class PresenceService
         return result;
     }
 
-    // ============================================================
-    // 4. Helper: هل المستخدم أونلاين؟
-    // ============================================================
     public static bool IsOnline(Presence? p)
     {
         if (p == null || p.Ts <= 0) return false;
@@ -146,7 +118,6 @@ public class PresenceService
         return DateTime.UtcNow - lastSeen <= OnlineThreshold;
     }
 
-    // آخر ظهور خلال آخر 24 ساعة (بالرقم — مش بمقارنة نص مترجم)
     public static bool IsRecent(Presence? p)
     {
         if (p == null || p.Ts <= 0) return false;
@@ -154,13 +125,9 @@ public class PresenceService
         return DateTime.UtcNow - lastSeen < TimeSpan.FromHours(24);
     }
 
-    // ============================================================
-    // 5. Helper: وصف "منذ آخر ظهور"
-    // ============================================================
     public static string TimeAgo(Presence? p)
     {
         if (p == null || p.Ts <= 0) return Loc.T("Never_Logged_In");
-
         var lastSeen = DateTimeOffset.FromUnixTimeMilliseconds(p.Ts).UtcDateTime;
         var diff = DateTime.UtcNow - lastSeen;
 
@@ -171,35 +138,20 @@ public class PresenceService
         return lastSeen.ToString("yyyy-MM-dd");
     }
 
-    // ============================================================
-    // 6. Clear old presences (maintenance)
-    // ============================================================
     public async Task<int> ClearOldAsync(int olderThanDays = 30)
     {
-        int deleted = 0;
         try
         {
             var cutoff = DateTime.UtcNow.AddDays(-olderThanDays);
-            var cutoffMs = new DateTimeOffset(cutoff).ToUnixTimeMilliseconds();
-
-            var snap = await Col.GetSnapshotAsync();
-            foreach (var doc in snap.Documents)
-            {
-                var data = doc.ToDictionary();
-                if (data.TryGetValue("ts", out var tsRaw) && tsRaw != null)
-                {
-                    if (long.TryParse(tsRaw.ToString(), out var ts) && ts < cutoffMs)
-                    {
-                        await doc.Reference.DeleteAsync();
-                        deleted++;
-                    }
-                }
-            }
+            await using var db = await _sqlFactory.CreateDbContextAsync();
+            return await db.Presence
+                .Where(p => p.LastSeen < cutoff)
+                .ExecuteDeleteAsync();
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "[Presence] ClearOld failed");
+            return 0;
         }
-        return deleted;
     }
 }

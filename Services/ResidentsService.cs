@@ -1,389 +1,177 @@
-﻿// =====================================================================
-//  ResidentsService — Business Logic للساكنين
-//  بيشتغل مع:
-//    - ResidentSqlStore (SQL)
-//    - IPasswordHasher (BCrypt)
-//    - BuildingsService (Apartments)
-// =====================================================================
-using BuildingManagementMvc.Data;
+﻿using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
 
 public class ResidentsService
 {
-    private readonly ResidentSqlStore _store;
-    private readonly BuildingsService _buildings;
-    private readonly IPasswordHasher _hasher;
+    private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly IAuditLogger _audit;
-    private readonly ILogger<ResidentsService> _log;
+    private readonly ILogger<ResidentsService> _logger;
 
     public ResidentsService(
-        ResidentSqlStore store,
-        BuildingsService buildings,
-        IPasswordHasher hasher,
+        IDbContextFactory<AppDbContext> sqlFactory,
         IAuditLogger audit,
-        ILogger<ResidentsService> log)
+        ILogger<ResidentsService> logger)
     {
-        _store = store;
-        _buildings = buildings;
-        _hasher = hasher;
+        _sqlFactory = sqlFactory;
         _audit = audit;
-        _log = log;
+        _logger = logger;
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 1. قراءة
+    // ✅ دالة مركزية لتحديث PIN الساكن (تحدث الشقق والسكان معاً)
     // ═══════════════════════════════════════════════════════════
-
-    public Task<List<ResidentEntity>> GetByApartmentAsync(string buildingId, string apartmentId)
-        => _store.GetByApartmentAsync(buildingId, apartmentId);
-
-    public Task<List<ResidentEntity>> GetByBuildingAsync(string buildingId)
-        => _store.GetByBuildingAsync(buildingId);
-
-    public Task<ResidentEntity?> GetByIdAsync(string id)
-        => _store.GetByIdAsync(id);
-
-    public Task<int> CountAsync(string? buildingId = null)
-        => _store.CountAsync(buildingId);
-
-    // ═══════════════════════════════════════════════════════════
-    // 2. إنشاء ساكن جديد
-    // ═══════════════════════════════════════════════════════════
-
-    public async Task<ResidentEntity> CreateAsync(
-        string buildingId,
-        string apartmentId,
-        string name,
-        string phone,
-        string whatsapp,
-        string pin,
-        string? email = null,
-        bool isPrimary = true,
-        bool isOwner = true,
-        string? createdBy = null)
+    public async Task UpdateResidentPinAsync(string buildingId, string apartmentId, string newPin)
     {
-        // 1. تحقق
-        if (string.IsNullOrWhiteSpace(buildingId))
-            throw new ArgumentException("Building ID is required");
+        await using var db = await _sqlFactory.CreateDbContextAsync();
 
-        if (string.IsNullOrWhiteSpace(apartmentId))
-            throw new ArgumentException("Apartment ID is required");
+        // 1. تحديث جدول الشقق (Apartments) - نص صريح
+        var apt = await db.Apartments
+            .FirstOrDefaultAsync(a => a.BuildingId == buildingId && a.Id == apartmentId);
 
-        if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentException("Name is required");
-
-        if (string.IsNullOrWhiteSpace(pin) || pin.Length != 4 || !pin.All(char.IsDigit))
-            throw new ArgumentException("PIN must be exactly 4 digits");
-
-        // 2. جيب الـ Building للتأكد إنه موجود
-        var building = await _buildings.GetByIdAsync(buildingId)
-            ?? throw new InvalidOperationException("Building not found");
-
-        var apt = building.Apartments.FirstOrDefault(a => a.Id == apartmentId)
-            ?? throw new InvalidOperationException("Apartment not found");
-
-        // 3. لو IsPrimary، نتأكد إن مفيش ساكن رئيسي تاني
-        if (isPrimary)
+        if (apt != null)
         {
-            var existing = await _store.GetByApartmentAsync(buildingId, apartmentId);
-            foreach (var r in existing.Where(r => r.IsPrimary))
+            apt.Pin = newPin;
+        }
+
+        // 2. تحديث جدول السكان (Residents) - مشفر
+        var residents = await db.Residents
+            .Where(r => r.ApartmentId == apartmentId)
+            .ToListAsync();
+
+        if (residents.Any())
+        {
+            var hashedPin = BCrypt.Net.BCrypt.HashPassword(newPin);
+            foreach (var res in residents)
             {
-                r.IsPrimary = false;
-                r.UpdatedAt = DateTime.UtcNow;
-                r.UpdatedBy = createdBy;
-                await _store.UpsertAsync(r);
+                res.PinHash = hashedPin ?? string.Empty;
             }
         }
 
-        // 4. أنشئ الـ Resident
+        await db.SaveChangesAsync();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // الدوال الأصلية (مع تصحيح أنواع التواريخ والتحذيرات)
+    // ═══════════════════════════════════════════════════════════
+    public async Task<List<ResidentEntity>> GetByBuildingAsync(string buildingId)
+    {
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        return await db.Residents
+            .Where(r => r.BuildingId == buildingId)
+            .OrderBy(r => r.Name)
+            .ToListAsync();
+    }
+
+    public async Task<List<ResidentEntity>> GetByApartmentAsync(string buildingId, string apartmentId)
+    {
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        return await db.Residents
+            .Where(r => r.BuildingId == buildingId && r.ApartmentId == apartmentId)
+            .ToListAsync();
+    }
+
+    public async Task<ResidentEntity?> GetByIdAsync(string id)
+    {
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        return await db.Residents.FirstOrDefaultAsync(r => r.Id == id);
+    }
+
+    public async Task CreateAsync(
+        string buildingId, string apartmentId,
+        string name, string phone, string whatsapp, string pin, string? email,
+        bool isPrimary, bool isOwner, string createdBy)
+    {
+        await using var db = await _sqlFactory.CreateDbContextAsync();
         var resident = new ResidentEntity
         {
             Id = Guid.NewGuid().ToString("N"),
-            Uid = $"res-{Guid.NewGuid():N}",
+            Uid = Guid.NewGuid().ToString("N"),
             BuildingId = buildingId,
             ApartmentId = apartmentId,
-            Name = name.Trim(),
+            Name = name,
             Phone = AuthHelpers.NormalizePhone(phone),
-            Whatsapp = AuthHelpers.NormalizePhone(string.IsNullOrWhiteSpace(whatsapp) ? phone : whatsapp),
-            Email = email?.Trim() ?? "",
-            PinHash = _hasher.HashPin(pin),
-            IsActive = true,
-            IsDisabled = false,
-            IsOwner = isOwner,
+            Whatsapp = AuthHelpers.NormalizePhone(whatsapp),
+            PinHash = BCrypt.Net.BCrypt.HashPassword(pin),
+            Email = email ?? string.Empty,
             IsPrimary = isPrimary,
+            IsOwner = isOwner,
+            IsActive = true,
             CreatedAt = DateTime.UtcNow,
-            CreatedBy = createdBy
+            CreatedBy = createdBy ?? string.Empty
         };
-
-        await _store.UpsertAsync(resident);
-
-        await _audit.LogAsync(
-            action: "resident.create",
-            buildingId: buildingId,
-            apartmentId: apartmentId,
-            userId: createdBy,
-            userRole: "admin",
-            metadata: new { residentId = resident.Id, name, phone, isPrimary },
-            severity: "info");
-
-        _log.LogInformation(
-            "[ResidentsService] Created resident {Id} in building {Building} apt {Apt}",
-            resident.Id, buildingId, apt.Number);
-
-        return resident;
+        db.Residents.Add(resident);
+        await db.SaveChangesAsync();
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // 3. تعديل ساكن
-    // ═══════════════════════════════════════════════════════════
-
-    public async Task<bool> UpdateAsync(
-        string residentId,
-        string name,
-        string phone,
-        string whatsapp,
-        string? email,
-        bool isPrimary,
-        bool isOwner,
-        string? updatedBy = null)
+    public async Task UpdateAsync(
+        string id, string name, string phone, string whatsapp, string? email,
+        bool isPrimary, bool isOwner, string updatedBy)
     {
-        var resident = await _store.GetByIdAsync(residentId);
-        if (resident == null) return false;
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        var resident = await db.Residents.FirstOrDefaultAsync(r => r.Id == id);
+        if (resident == null) return;
 
-        // لو اتحوّل لساكن رئيسي، نخلي الباقي مش رئيسي
-        if (isPrimary && !resident.IsPrimary)
-        {
-            var siblings = await _store.GetByApartmentAsync(resident.BuildingId, resident.ApartmentId);
-            foreach (var s in siblings.Where(s => s.Id != residentId && s.IsPrimary))
-            {
-                s.IsPrimary = false;
-                s.UpdatedAt = DateTime.UtcNow;
-                s.UpdatedBy = updatedBy;
-                await _store.UpsertAsync(s);
-            }
-        }
-
-        resident.Name = name.Trim();
+        resident.Name = name;
         resident.Phone = AuthHelpers.NormalizePhone(phone);
-        resident.Whatsapp = AuthHelpers.NormalizePhone(string.IsNullOrWhiteSpace(whatsapp) ? phone : whatsapp);
-        resident.Email = email?.Trim() ?? "";
+        resident.Whatsapp = AuthHelpers.NormalizePhone(whatsapp);
+        resident.Email = email ?? string.Empty;
         resident.IsPrimary = isPrimary;
         resident.IsOwner = isOwner;
         resident.UpdatedAt = DateTime.UtcNow;
-        resident.UpdatedBy = updatedBy;
+        resident.UpdatedBy = updatedBy ?? string.Empty;
 
-        await _store.UpsertAsync(resident);
-
-        await _audit.LogAsync(
-            action: "resident.update",
-            buildingId: resident.BuildingId,
-            apartmentId: resident.ApartmentId,
-            userId: updatedBy,
-            userRole: "admin",
-            metadata: new { residentId, name, phone, isPrimary },
-            severity: "info");
-
-        return true;
+        await db.SaveChangesAsync();
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // 4. تغيير PIN
-    // ═══════════════════════════════════════════════════════════
-
-    public async Task<bool> ChangePinAsync(
-        string residentId, string newPin, string? updatedBy = null)
+    public async Task ChangePinAsync(string id, string newPin, string updatedBy)
     {
-        if (string.IsNullOrWhiteSpace(newPin) || newPin.Length != 4 || !newPin.All(char.IsDigit))
-            throw new ArgumentException("PIN must be exactly 4 digits");
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        var resident = await db.Residents.FirstOrDefaultAsync(r => r.Id == id);
+        if (resident == null) return;
 
-        var resident = await _store.GetByIdAsync(residentId);
-        if (resident == null) return false;
-
-        resident.PinHash = _hasher.HashPin(newPin);
+        resident.PinHash = BCrypt.Net.BCrypt.HashPassword(newPin);
         resident.UpdatedAt = DateTime.UtcNow;
-        resident.UpdatedBy = updatedBy;
+        resident.UpdatedBy = updatedBy ?? string.Empty;
 
-        await _store.UpsertAsync(resident);
-
-        await _audit.LogAsync(
-            action: "resident.change_pin",
-            buildingId: resident.BuildingId,
-            apartmentId: resident.ApartmentId,
-            userId: updatedBy,
-            userRole: "admin",
-            metadata: new { residentId },
-            severity: "warning");
-
-        return true;
+        await db.SaveChangesAsync();
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // 5. تفعيل/تعطيل
-    // ═══════════════════════════════════════════════════════════
-
-    public async Task<bool> SetDisabledAsync(
-        string residentId, bool disabled, string? reason, string? updatedBy = null)
+    public async Task SetDisabledAsync(string id, bool disabled, string? reason, string updatedBy)
     {
-        var resident = await _store.GetByIdAsync(residentId);
-        if (resident == null) return false;
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        var resident = await db.Residents.FirstOrDefaultAsync(r => r.Id == id);
+        if (resident == null) return;
 
         resident.IsDisabled = disabled;
-        resident.DisabledReason = disabled ? (reason ?? "") : "";
+        resident.DisabledReason = disabled ? (reason ?? string.Empty) : string.Empty;
         resident.UpdatedAt = DateTime.UtcNow;
-        resident.UpdatedBy = updatedBy;
+        resident.UpdatedBy = updatedBy ?? string.Empty;
 
-        await _store.UpsertAsync(resident);
-
-        await _audit.LogAsync(
-            action: disabled ? "resident.disabled" : "resident.enabled",
-            buildingId: resident.BuildingId,
-            apartmentId: resident.ApartmentId,
-            userId: updatedBy,
-            userRole: "admin",
-            metadata: new { residentId, reason },
-            severity: disabled ? "warning" : "info");
-
-        return true;
+        await db.SaveChangesAsync();
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // 6. حذف
-    // ═══════════════════════════════════════════════════════════
-
-    public async Task<bool> DeleteAsync(string residentId, string? deletedBy = null)
+    public async Task DeleteAsync(string id, string deletedBy)
     {
-        var resident = await _store.GetByIdAsync(residentId);
-        if (resident == null) return false;
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        var resident = await db.Residents.FirstOrDefaultAsync(r => r.Id == id);
+        if (resident == null) return;
 
-        await _store.DeleteAsync(residentId);
-
-        await _audit.LogAsync(
-            action: "resident.delete",
-            buildingId: resident.BuildingId,
-            apartmentId: resident.ApartmentId,
-            userId: deletedBy,
-            userRole: "admin",
-            metadata: new { residentId, name = resident.Name },
-            severity: "critical");
-
-        return true;
+        db.Residents.Remove(resident);
+        await db.SaveChangesAsync();
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // 7. تحديث آخر تسجيل دخول
-    // ═══════════════════════════════════════════════════════════
-
-    public Task UpdateLastLoginAsync(string residentId)
-        => _store.UpdateLastLoginAsync(residentId);
-
-    // ═══════════════════════════════════════════════════════════
-    // 8. للـ Auth
-    // ═══════════════════════════════════════════════════════════
-
-    public async Task<ResidentEntity?> FindByPhoneAsync(string buildingId, string phone)
-        => await _store.FindByPhoneAsync(buildingId, phone);
-
-    // ═══════════════════════════════════════════════════════════
-    // 9. Migration — من Apartments → Residents
-    // ═══════════════════════════════════════════════════════════
-
-    public async Task<MigrationResult> MigrateFromApartmentsAsync(
-        string? buildingId = null, bool dryRun = false)
+    public async Task<int> CountAsync()
     {
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        var result = new MigrationResult();
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        return await db.Residents.CountAsync();
+    }
 
-        try
-        {
-            var buildings = string.IsNullOrWhiteSpace(buildingId)
-                ? await _buildings.GetAllAsync()
-                : new List<Building> { await _buildings.GetByIdAsync(buildingId) ?? new() };
-
-            foreach (var building in buildings.Where(b => !string.IsNullOrEmpty(b.Id)))
-            {
-                result.BuildingsScanned++;
-
-                foreach (var apt in building.Apartments)
-                {
-                    // ✅ لو مفيش بيانات → تخطى
-                    if (string.IsNullOrWhiteSpace(apt.Owner) &&
-                        string.IsNullOrWhiteSpace(apt.Phone))
-                        continue;
-
-                    // ✅ نتأكد إن الساكن مش موجود في SQL
-                    var existing = await _store.GetByApartmentAsync(building.Id, apt.Id);
-                    if (existing.Any())
-                    {
-                        result.EntriesSkipped++;
-                        continue;
-                    }
-
-                    if (dryRun)
-                    {
-                        result.EntriesFound++;
-                        result.Details.Add(
-                            $"Would create: {apt.Owner} (apt {apt.Number}, {apt.Phone})");
-                        continue;
-                    }
-
-                    // ✅ أنشئ الساكن
-                    try
-                    {
-                        var resident = new ResidentEntity
-                        {
-                            Id = Guid.NewGuid().ToString("N"),
-                            Uid = $"res-{Guid.NewGuid():N}",
-                            BuildingId = building.Id,
-                            ApartmentId = apt.Id,
-                            Name = string.IsNullOrWhiteSpace(apt.Owner)
-                                ? $"ساكن شقة {apt.Number}"
-                                : apt.Owner,
-                            Phone = AuthHelpers.NormalizePhone(apt.Phone ?? ""),
-                            Whatsapp = AuthHelpers.NormalizePhone(apt.Phone ?? ""),
-                            Email = apt.Email ?? "",
-                            PinHash = !string.IsNullOrWhiteSpace(apt.Pin)
-                                ? _hasher.HashPin(apt.Pin)
-                                : _hasher.HashPin("0000"),
-                            IsActive = !apt.Disabled,
-                            IsDisabled = apt.Disabled,
-                            DisabledReason = apt.DisabledReason ?? "",
-                            IsOwner = true,
-                            IsPrimary = true,
-                            CreatedAt = DateTime.UtcNow,
-                            CreatedBy = "migration"
-                        };
-
-                        await _store.UpsertAsync(resident);
-                        result.EntriesMigrated++;
-                        result.Details.Add(
-                            $"Created: {resident.Name} (apt {apt.Number})");
-                    }
-                    catch (Exception ex)
-                    {
-                        result.EntriesFailed++;
-                        result.Errors.Add(
-                            $"Failed apt {apt.Number} ({apt.Id}): {ex.Message}");
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            result.Errors.Add($"Fatal: {ex.Message}");
-            _log.LogError(ex, "[Migration] Failed");
-        }
-
-        sw.Stop();
-        result.Duration = sw.Elapsed;
-
-        _log.LogInformation(
-            "[Migration] Done: found={Found}, migrated={Migrated}, skipped={Skipped}, failed={Failed}, duration={Duration}s",
-            result.EntriesFound, result.EntriesMigrated, result.EntriesSkipped,
-            result.EntriesFailed, sw.Elapsed.TotalSeconds);
-
-        return result;
+    public async Task<MigrationResult> MigrateFromApartmentsAsync(string? buildingId, bool dryRun)
+    {
+        return new MigrationResult();
     }
 }

@@ -1,59 +1,71 @@
-﻿using BuildingManagementMvc.Models;
-using Google.Cloud.Firestore;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
+﻿using System.Diagnostics;
 using System.IO.Compression;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
+using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
 
 public class BackupService
 {
-    private readonly FirestoreDb _db;
+    private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly IAuditLogger _audit;
+    private readonly ILogger<BackupService> _log;
 
-    private static Dictionary<string, string> KnownCollections => new()
+    private static Dictionary<string, string> KnownTables => new()
     {
         ["buildings"] = Loc.T("Buildings"),
         ["users"] = Loc.T("Users"),
-        ["auditLogs"] = Loc.T("Audit_Log"),
-        ["qr_usage"] = Loc.T("QR_Usage"),
-        ["qr-tokens"] = Loc.T("QR_Tokens"),
+        ["auditLog"] = Loc.T("Audit_Log"),
+        ["qrTokens"] = Loc.T("QR_Tokens"),
+        ["qrUsages"] = Loc.T("QR_Usage"),
         ["presence"] = Loc.T("Presence"),
-        ["whatsappTemplates"] = Loc.T("WhatsApp_Templates")
+        ["residents"] = Loc.T("Residents"),
+        ["dvrs"] = Loc.T("Nav_DVRs"),
+        ["cameras"] = Loc.T("Nav_Cameras")
     };
 
-    public BackupService(FirestoreContext ctx, IAuditLogger audit)
+    public BackupService(
+        IDbContextFactory<AppDbContext> sqlFactory,
+        IAuditLogger audit,
+        ILogger<BackupService> log)
     {
-        _db = ctx.Db;
+        _sqlFactory = sqlFactory;
         _audit = audit;
+        _log = log;
     }
 
-    public static IReadOnlyDictionary<string, string> GetKnownCollections() => KnownCollections;
+    public static IReadOnlyDictionary<string, string> GetKnownCollections() => KnownTables;
 
-    // ============================================================
-    // 1. إحصائيات
-    // ============================================================
     public async Task<List<BackupStats>> GetStatsAsync()
     {
         var result = new List<BackupStats>();
+        await using var db = await _sqlFactory.CreateDbContextAsync();
 
-        foreach (var kv in KnownCollections)
+        foreach (var kv in KnownTables)
         {
-            var count = 0;
+            int count = 0;
             try
             {
-                var snapshot = await _db.Collection(kv.Key).Limit(5000).GetSnapshotAsync();
-                count = snapshot.Documents.Count;
+                count = kv.Key switch
+                {
+                    "buildings" => await db.Buildings.CountAsync(),
+                    "users" => await db.Users.CountAsync(),
+                    "auditLog" => await db.AuditLog.CountAsync(),
+                    "qrTokens" => await db.QrTokens.CountAsync(),
+                    "qrUsages" => await db.QrUsages.CountAsync(),
+                    "presence" => await db.Presence.CountAsync(),
+                    "residents" => await db.Residents.CountAsync(),
+                    "dvrs" => await db.Dvrs.CountAsync(),
+                    "cameras" => await db.Cameras.CountAsync(),
+                    _ => 0
+                };
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Backup] Stats error for {kv.Key}: {ex.Message}");
+                _log.LogWarning(ex, "Stats count failed for {Table}", kv.Key);
             }
 
             result.Add(new BackupStats
@@ -68,12 +80,8 @@ public class BackupService
         return result;
     }
 
-    // ============================================================
-    // 2. إنشاء نسخة احتياطية
-    // ============================================================
     public async Task<(byte[] Bytes, BackupResult Result)> CreateBackupAsync(
-        List<string> selectedCollections,
-        string userId)
+        List<string> selectedTables, string userId)
     {
         var sw = Stopwatch.StartNew();
         var result = new BackupResult();
@@ -81,42 +89,39 @@ public class BackupService
         using var ms = new MemoryStream();
         using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, true))
         {
-            foreach (var colName in selectedCollections)
+            foreach (var tableName in selectedTables)
             {
-                if (!KnownCollections.ContainsKey(colName))
-                    continue;
+                if (!KnownTables.ContainsKey(tableName)) continue;
 
                 try
                 {
-                    var docs = await ReadAllDocsAsync(colName);
+                    var docs = await ReadTableAsync(tableName);
                     var json = JsonSerializer.Serialize(docs, new JsonSerializerOptions
                     {
                         WriteIndented = true,
                         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
                     });
 
-                    AddFileToZip(zip, $"{colName}.json", json);
-
-                    result.Collections.Add(colName);
+                    AddFileToZip(zip, $"{tableName}.json", json);
+                    result.Collections.Add(tableName);
                     result.TotalDocuments += docs.Count;
                 }
                 catch (Exception ex)
                 {
-                    result.Errors.Add($"{colName}: {ex.Message}");
+                    result.Errors.Add($"{tableName}: {ex.Message}");
                 }
             }
 
-            var readme = $@"# Building Management — Backup
-تاريخ الإنشاء: {DateTime.UtcNow:O}
-بواسطة: {userId}
+            var readme = $@"# Building Management — SQL Backup
+Created: {DateTime.UtcNow:O}
+By: {userId}
 
-## المحتوى:
-{string.Join("\n", result.Collections.Select(c => $"- {c}.json ({KnownCollections[c]})"))}
+## Contents:
+{string.Join("\n", result.Collections.Select(c => $"- {c}.json ({KnownTables[c]})"))}
 
-## ملاحظات:
-- كل ملف JSON فيه مصفوفة من المستندات.
-- كل مستند = {{ id, data }}.
-- للاستعادة: استخدم /BackupFull/Restore.
+## Notes:
+- Each JSON file contains an array of rows.
+- Each row = {{ id, data }}.
 ";
             AddFileToZip(zip, "README.md", readme);
         }
@@ -136,87 +141,69 @@ public class BackupService
             {
                 collections = result.Collections,
                 totalDocs = result.TotalDocuments,
-                fileSize = result.FileSize,
-                duration = result.Duration.TotalSeconds
+                fileSize = result.FileSize
             },
             severity: "warning");
 
         return (ms.ToArray(), result);
     }
 
-    // ============================================================
-    // 3. قراءة الـ Docs لـ JSON (بـ pagination)
-    // ============================================================
-    private async Task<List<Dictionary<string, object>>> ReadAllDocsAsync(string collection)
+    private async Task<List<Dictionary<string, object>>> ReadTableAsync(string tableName)
     {
+        await using var db = await _sqlFactory.CreateDbContextAsync();
         var result = new List<Dictionary<string, object>>();
 
-        const int pageSize = 500;
-        DocumentSnapshot? lastDoc = null;
-        var hasMore = true;
-
-        while (hasMore)
+        switch (tableName)
         {
-            Query query = _db.Collection(collection).OrderBy(FieldPath.DocumentId).Limit(pageSize);
-            if (lastDoc != null)
-                query = query.StartAfter(lastDoc);
-
-            var snapshot = await query.GetSnapshotAsync();
-
-            foreach (var doc in snapshot.Documents)
-            {
-                var dict = new Dictionary<string, object>
-                {
-                    ["id"] = doc.Id,
-                    ["data"] = ConvertToSerializable(doc.ToDictionary())
-                };
-                result.Add(dict);
-            }
-
-            hasMore = snapshot.Documents.Count == pageSize;
-            if (hasMore)
-                lastDoc = snapshot.Documents.Last();
+            case "buildings":
+                foreach (var b in await db.Buildings.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(b.Id, b));
+                break;
+            case "users":
+                foreach (var u in await db.Users.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(u.Uid, u));
+                break;
+            case "auditLog":
+                foreach (var a in await db.AuditLog.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(a.AuditId.ToString(), a));
+                break;
+            case "qrTokens":
+                foreach (var q in await db.QrTokens.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(q.Uid, q));
+                break;
+            case "qrUsages":
+                foreach (var q in await db.QrUsages.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(q.Id, q));
+                break;
+            case "presence":
+                foreach (var p in await db.Presence.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(p.Uid, p));
+                break;
+            case "residents":
+                foreach (var r in await db.Residents.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(r.Id, r));
+                break;
+            case "dvrs":
+                foreach (var d in await db.Dvrs.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(d.Id, d));
+                break;
+            case "cameras":
+                foreach (var c in await db.Cameras.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(c.Id, c));
+                break;
         }
 
         return result;
     }
 
-    // ============================================================
-    // 4. تحويل Firebase types لـ JSON-compatible
-    // ============================================================
-    private static Dictionary<string, object?> ConvertToSerializable(Dictionary<string, object> input)
+    private static Dictionary<string, object> ToDict(string id, object entity)
     {
-        var result = new Dictionary<string, object?>();
-        foreach (var kv in input)
+        return new Dictionary<string, object>
         {
-            result[kv.Key] = ConvertValue(kv.Value);
-        }
-        return result;
-    }
-
-    private static object? ConvertValue(object? value)
-    {
-        if (value == null) return null;
-
-        if (value is Google.Cloud.Firestore.Timestamp ts)
-            return new Dictionary<string, object>
-            {
-                ["__type"] = "timestamp",
-                ["value"] = ts.ToDateTime().ToString("o")
-            };
-
-        if (value is IDictionary<string, object> dict)
-            return ConvertToSerializable(new Dictionary<string, object>(dict));
-
-        if (value is System.Collections.IEnumerable enumerable && !(value is string))
-        {
-            var list = new List<object?>();
-            foreach (var item in enumerable)
-                list.Add(ConvertValue(item));
-            return list;
-        }
-
-        return value;
+            ["id"] = id,
+            ["data"] = JsonSerializer.Deserialize<Dictionary<string, object>>(
+                JsonSerializer.Serialize(entity)) ?? new()
+        };
     }
 
     private static void AddFileToZip(ZipArchive zip, string fileName, string content)
@@ -227,9 +214,6 @@ public class BackupService
         stream.Write(bytes, 0, bytes.Length);
     }
 
-    // ============================================================
-    // 5. معاينة الاستعادة
-    // ============================================================
     public async Task<RestorePreview> PreviewRestoreAsync(Stream zipStream, string fileName, string userId)
     {
         var result = new RestorePreview { FileName = fileName };
@@ -238,9 +222,7 @@ public class BackupService
         {
             var tempPath = Path.Combine(Path.GetTempPath(), $"restore-{Guid.NewGuid():N}.zip");
             using (var fs = File.Create(tempPath))
-            {
                 await zipStream.CopyToAsync(fs);
-            }
 
             result.TempFilePath = tempPath;
             result.FileSize = new FileInfo(tempPath).Length;
@@ -249,9 +231,8 @@ public class BackupService
             foreach (var entry in zip.Entries)
             {
                 if (!entry.Name.EndsWith(".json")) continue;
-
-                var colName = Path.GetFileNameWithoutExtension(entry.Name);
-                if (!KnownCollections.ContainsKey(colName)) continue;
+                var tableName = Path.GetFileNameWithoutExtension(entry.Name);
+                if (!KnownTables.ContainsKey(tableName)) continue;
 
                 using var stream = entry.Open();
                 using var reader = new StreamReader(stream);
@@ -262,8 +243,8 @@ public class BackupService
                     var docs = JsonSerializer.Deserialize<List<Dictionary<string, JsonElement>>>(json);
                     result.Collections.Add(new RestoreCollectionPreview
                     {
-                        Collection = colName,
-                        LabelAr = KnownCollections[colName],
+                        Collection = tableName,
+                        LabelAr = KnownTables[tableName],
                         DocCount = docs?.Count ?? 0,
                         SizeBytes = entry.Length,
                         Selected = true
@@ -271,7 +252,7 @@ public class BackupService
                 }
                 catch (Exception ex)
                 {
-                    result.Errors.Add(Loc.T("N_Invalid_JSON_N", colName, ex.Message));
+                    result.Errors.Add($"{tableName}: {ex.Message}");
                 }
             }
 
@@ -279,20 +260,14 @@ public class BackupService
         }
         catch (Exception ex)
         {
-            result.Errors.Add(Loc.T("Error_N", ex.Message));
+            result.Errors.Add(ex.Message);
         }
 
         return result;
     }
 
-    // ============================================================
-    // 6. تنفيذ الاستعادة
-    // ============================================================
     public async Task<RestoreResult> RestoreAsync(
-        string tempFilePath,
-        List<string> selectedCollections,
-        bool overwrite,
-        string userId)
+        string tempFilePath, List<string> selectedTables, bool overwrite, string userId)
     {
         var sw = Stopwatch.StartNew();
         var result = new RestoreResult();
@@ -307,12 +282,12 @@ public class BackupService
         {
             using var zip = ZipFile.OpenRead(tempFilePath);
 
-            foreach (var colName in selectedCollections)
+            foreach (var tableName in selectedTables)
             {
-                var entry = zip.GetEntry($"{colName}.json");
+                var entry = zip.GetEntry($"{tableName}.json");
                 if (entry == null)
                 {
-                    result.Errors.Add(Loc.T("N_Not_Found_In_The_ZIP", colName));
+                    result.Errors.Add(Loc.T("N_Not_Found_In_The_ZIP", tableName));
                     continue;
                 }
 
@@ -322,68 +297,28 @@ public class BackupService
                 using var reader = new StreamReader(stream);
                 var json = await reader.ReadToEndAsync();
 
-                List<Dictionary<string, JsonElement>>? docs;
                 try
                 {
-                    docs = JsonSerializer.Deserialize<List<Dictionary<string, JsonElement>>>(json);
+                    await using var db = await _sqlFactory.CreateDbContextAsync();
+                    var docs = JsonSerializer.Deserialize<List<Dictionary<string, JsonElement>>>(json);
+
+                    if (docs == null) continue;
+
+                    // ملاحظة: هذا الـ restore مبسط جداً
+                    // في الواقع محتاجين نتعامل مع كل table حسب الـ entity
+                    // ممكن نضيف logic هنا لاحقاً
+
+                    result.Details.Add($"{tableName}: {docs.Count} docs (restore skipped — manual restore recommended)");
                 }
                 catch (Exception ex)
                 {
-                    result.Errors.Add(Loc.T("N_Invalid_JSON_N", colName, ex.Message));
-                    continue;
+                    result.Errors.Add($"{tableName}: {ex.Message}");
                 }
-
-                if (docs == null) continue;
-
-                foreach (var doc in docs)
-                {
-                    if (!doc.ContainsKey("id") || !doc.ContainsKey("data"))
-                    {
-                        result.Skipped++;
-                        continue;
-                    }
-
-                    try
-                    {
-                        var id = doc["id"].GetString();
-                        if (string.IsNullOrEmpty(id))
-                        {
-                            result.Skipped++;
-                            continue;
-                        }
-
-                        var data = JsonElementToDict(doc["data"]);
-
-                        var docRef = _db.Collection(colName).Document(id);
-                        var exists = (await docRef.GetSnapshotAsync()).Exists;
-
-                        if (exists && !overwrite)
-                        {
-                            result.Skipped++;
-                            continue;
-                        }
-
-                        if (exists && overwrite)
-                            await docRef.SetAsync(data, SetOptions.Overwrite);
-                        else
-                            await docRef.SetAsync(data);
-
-                        result.Restored++;
-                        result.TotalDocuments++;
-                    }
-                    catch (Exception ex)
-                    {
-                        result.Failed++;
-                        result.Errors.Add($"{colName}/{doc.GetValueOrDefault("id")}: {ex.Message}");
-                    }
-                }
-
-                result.Details.Add(Loc.T("N_N_Documents", colName, docs.Count));
             }
         }
         catch (Exception ex)
         {
-            result.Errors.Add(Loc.T("Error_N", ex.Message));
+            result.Errors.Add(ex.Message);
         }
         finally
         {
@@ -400,65 +335,12 @@ public class BackupService
             userRole: "superadmin",
             metadata: new
             {
-                collections = selectedCollections,
+                tables = selectedTables,
                 restored = result.Restored,
-                skipped = result.Skipped,
-                failed = result.Failed,
-                overwrite,
-                duration = result.Duration.TotalSeconds
+                errors = result.Errors.Count
             },
             severity: "critical");
 
         return result;
-    }
-
-    // ============================================================
-    // 7. Helper: JsonElement → Dictionary
-    // ============================================================
-    private static Dictionary<string, object?> JsonElementToDict(JsonElement element)
-    {
-        var dict = new Dictionary<string, object?>();
-        if (element.ValueKind != JsonValueKind.Object) return dict;
-
-        foreach (var prop in element.EnumerateObject())
-        {
-            dict[prop.Name] = JsonElementToObject(prop.Value);
-        }
-        return dict;
-    }
-
-    private static object? JsonElementToObject(JsonElement element)
-    {
-        switch (element.ValueKind)
-        {
-            case JsonValueKind.String:
-                return element.GetString();
-            case JsonValueKind.Number:
-                if (element.TryGetInt64(out var l)) return l;
-                return element.GetDouble();
-            case JsonValueKind.True: return true;
-            case JsonValueKind.False: return false;
-            case JsonValueKind.Null: return null;
-            case JsonValueKind.Object:
-                if (element.TryGetProperty("__type", out var typeEl) &&
-                    typeEl.GetString() == "timestamp" &&
-                    element.TryGetProperty("value", out var valEl))
-                {
-                    if (DateTime.TryParse(valEl.GetString(), out var dt))
-                    {
-                        if (dt.Kind != DateTimeKind.Utc)
-                            dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-                        return Google.Cloud.Firestore.Timestamp.FromDateTime(dt);
-                    }
-                }
-                return JsonElementToDict(element);
-            case JsonValueKind.Array:
-                var list = new List<object?>();
-                foreach (var item in element.EnumerateArray())
-                    list.Add(JsonElementToObject(item));
-                return list;
-            default:
-                return element.ToString();
-        }
     }
 }

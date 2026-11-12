@@ -708,10 +708,6 @@ namespace BuildingManagementMvc.Migrations
                     b.Property<bool>("EnableWhatsApp")
                         .HasColumnType("bit");
 
-                    b.Property<string>("FirebaseProjectId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("MaxPinAttempts")
                         .HasColumnType("int");
 
@@ -1051,6 +1047,99 @@ namespace BuildingManagementMvc.Migrations
                     b.HasIndex("TokenId");
 
                     b.ToTable("QrUsages", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.ResidentEntity", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ApartmentId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("BuildingId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2(0)");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DisabledReason")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDisabled")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsOwner")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("datetime2(0)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PasswordHash")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("PhotoUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PinHash")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Uid")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2(0)");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Whatsapp")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApartmentId");
+
+                    b.HasIndex("BuildingId");
+
+                    b.HasIndex("Phone");
+
+                    b.HasIndex("Uid")
+                        .IsUnique();
+
+                    b.HasIndex("BuildingId", "ApartmentId");
+
+                    b.HasIndex("BuildingId", "Phone");
+
+                    b.ToTable("Residents", (string)null);
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.RevenueEntity", b =>
@@ -1532,6 +1621,17 @@ namespace BuildingManagementMvc.Migrations
                         .WithMany()
                         .HasForeignKey("BuildingId", "ApartmentId")
                         .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Apartment");
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.ResidentEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.ApartmentEntity", "Apartment")
+                        .WithMany()
+                        .HasForeignKey("BuildingId", "ApartmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Apartment");

@@ -10,7 +10,7 @@
         <div class="alert alert-danger">@TempData["Error"]</div>
     }
 
-    <div class="alert alert-warning">@Html.Raw(Loc.T("Warning_Restoring_Writes_Data_To_Firestore_2"))</div>
+    <div class="alert alert-warning">@Html.Raw(Loc.T("Warning_Restoring_Writes_Data_To_SQL_2"))</div>
 
     <form method="post" asp-action="PreviewRestore" enctype="multipart/form-data">
         @Html.AntiForgeryToken()

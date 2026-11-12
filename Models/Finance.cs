@@ -1,121 +1,92 @@
-using Google.Cloud.Firestore;
-
 namespace BuildingManagementMvc.Models;
 
-// ترجمة حرفية لشكل بيانات الشهر (building.months[monthKey]) في Firestore
-// وكل العناصر اللي جواه: مصروفات، إيرادات، دفعات، توزيعات.
-
-[FirestoreData]
+// بيانات الشهر (building.months[monthKey])
 public class MonthData
 {
-    [FirestoreProperty("collections")]
     public Dictionary<string, object> Collections { get; set; } = new();
-
-    [FirestoreProperty("expenses")]
     public List<Expense> Expenses { get; set; } = new();
-
-    [FirestoreProperty("deposits")]
     public List<Deposit> Deposits { get; set; } = new();
-
-    [FirestoreProperty("revenues")]
     public List<Revenue> Revenues { get; set; } = new();
-
-    [FirestoreProperty("distribution")]
     public Dictionary<string, double> Distribution { get; set; } = new();
-
-    [FirestoreProperty("revenueDistribution")]
     public Dictionary<string, double> RevenueDistribution { get; set; } = new();
-
-    // ✅ جديد: الرصيد المُرحّل من الشهر السابق (لكل شقة)
-    [FirestoreProperty("carryOver")]
     public Dictionary<string, double> CarryOver { get; set; } = new();
 }
 
-[FirestoreData]
 public class Expense
 {
-    [FirestoreProperty("id")] public string Id { get; set; } = "";
-    [FirestoreProperty("categoryId")] public string CategoryId { get; set; } = "";
-    [FirestoreProperty("note")] public string Note { get; set; } = "";
-    [FirestoreProperty("amount")] public double Amount { get; set; }
-    [FirestoreProperty("date")] public string Date { get; set; } = "";
-    [FirestoreProperty("receipt")] public string? Receipt { get; set; }
+    public string Id { get; set; } = "";
+    public string CategoryId { get; set; } = "";
+    public string Note { get; set; } = "";
+    public double Amount { get; set; }
+    public string Date { get; set; } = "";
+    public string? Receipt { get; set; }
 }
 
-[FirestoreData]
 public class Revenue
 {
-    [FirestoreProperty("id")] public string Id { get; set; } = "";
-    [FirestoreProperty("categoryId")] public string CategoryId { get; set; } = "";
-    [FirestoreProperty("note")] public string Note { get; set; } = "";
-    [FirestoreProperty("amount")] public double Amount { get; set; }
-    [FirestoreProperty("date")] public string Date { get; set; } = "";
+    public string Id { get; set; } = "";
+    public string CategoryId { get; set; } = "";
+    public string Note { get; set; } = "";
+    public double Amount { get; set; }
+    public string Date { get; set; } = "";
 }
 
-// حالة الدفعة: pending | confirmed | cancelled
-[FirestoreData]
 public class Deposit
 {
-    [FirestoreProperty("id")] public string Id { get; set; } = "";
-    [FirestoreProperty("number")] public string Number { get; set; } = "";
-    [FirestoreProperty("aptId")] public string AptId { get; set; } = "";
-    [FirestoreProperty("amount")] public double Amount { get; set; }
-    [FirestoreProperty("note")] public string Note { get; set; } = "";
-    [FirestoreProperty("status")] public string Status { get; set; } = "pending";
-    [FirestoreProperty("receipt")] public ReceiptData? Receipt { get; set; }
-    [FirestoreProperty("createdAt")] public string CreatedAt { get; set; } = "";
-    [FirestoreProperty("createdBy")] public string CreatedBy { get; set; } = "";
-    [FirestoreProperty("confirmedAt")] public string? ConfirmedAt { get; set; }
-    [FirestoreProperty("confirmedBy")] public string? ConfirmedBy { get; set; }
-    [FirestoreProperty("cancelledAt")] public string? CancelledAt { get; set; }
-    [FirestoreProperty("cancelledBy")] public string? CancelledBy { get; set; }
-    [FirestoreProperty("cancelledReason")] public string? CancelledReason { get; set; }
-
-    // ✅ Phase 21: تتبع تعديلات الأدمن على الدفعة المعلقة
-    [FirestoreProperty("updatedAt")] public string? UpdatedAt { get; set; }
-    [FirestoreProperty("updatedBy")] public string? UpdatedBy { get; set; }
-    [FirestoreProperty("updateReason")] public string? UpdateReason { get; set; }
-    [FirestoreProperty("editHistory")] public List<DepositEditEntry>? EditHistory { get; set; }
+    public string Id { get; set; } = "";
+    public string Number { get; set; } = "";
+    public string AptId { get; set; } = "";
+    public double Amount { get; set; }
+    public string Note { get; set; } = "";
+    public string Status { get; set; } = "pending";
+    public ReceiptData? Receipt { get; set; }
+    public string CreatedAt { get; set; } = "";
+    public string CreatedBy { get; set; } = "";
+    public string? ConfirmedAt { get; set; }
+    public string? ConfirmedBy { get; set; }
+    public string? CancelledAt { get; set; }
+    public string? CancelledBy { get; set; }
+    public string? CancelledReason { get; set; }
+    public string? UpdatedAt { get; set; }
+    public string? UpdatedBy { get; set; }
+    public string? UpdateReason { get; set; }
+    public List<DepositEditEntry>? EditHistory { get; set; }
 }
 
-// ✅ Phase 21: سجل تعديل واحد على دفعة
-[FirestoreData]
 public class DepositEditEntry
 {
-    [FirestoreProperty("ts")] public string Ts { get; set; } = "";
-    [FirestoreProperty("by")] public string By { get; set; } = "";
-    [FirestoreProperty("reason")] public string Reason { get; set; } = "";
-    [FirestoreProperty("oldAmount")] public double OldAmount { get; set; }
-    [FirestoreProperty("newAmount")] public double NewAmount { get; set; }
-    [FirestoreProperty("oldNote")] public string OldNote { get; set; } = "";
-    [FirestoreProperty("newNote")] public string NewNote { get; set; } = "";
+    public string Ts { get; set; } = "";
+    public string By { get; set; } = "";
+    public string Reason { get; set; } = "";
+    public double OldAmount { get; set; }
+    public double NewAmount { get; set; }
+    public string OldNote { get; set; } = "";
+    public string NewNote { get; set; } = "";
 }
 
-[FirestoreData]
 public class WalletAdjustment
 {
-    [FirestoreProperty("id")] public string Id { get; set; } = "";
-    [FirestoreProperty("aptId")] public string AptId { get; set; } = "";
-    [FirestoreProperty("amount")] public double Amount { get; set; }
-    [FirestoreProperty("reason")] public string Reason { get; set; } = "";
-    [FirestoreProperty("monthKey")] public string MonthKey { get; set; } = "";
-    [FirestoreProperty("createdAt")] public string CreatedAt { get; set; } = "";
-    [FirestoreProperty("createdBy")] public string CreatedBy { get; set; } = "";
+    public string Id { get; set; } = "";
+    public string AptId { get; set; } = "";
+    public double Amount { get; set; }
+    public string Reason { get; set; } = "";
+    public string MonthKey { get; set; } = "";
+    public string CreatedAt { get; set; } = "";
+    public string CreatedBy { get; set; } = "";
 }
 
-[FirestoreData]
 public class AuditLogEntry
 {
-    [FirestoreProperty("id")] public string Id { get; set; } = "";
-    [FirestoreProperty("ts")] public string Ts { get; set; } = "";
-    [FirestoreProperty("action")] public string Action { get; set; } = "";
-    [FirestoreProperty("label")] public string Label { get; set; } = "";
-    [FirestoreProperty("actor")] public string Actor { get; set; } = "";
-    [FirestoreProperty("actorRole")] public string ActorRole { get; set; } = "";
-    [FirestoreProperty("details")] public string Details { get; set; } = "";
-    [FirestoreProperty("month")] public string Month { get; set; } = "";
-    [FirestoreProperty("buildingNumber")] public string? BuildingNumber { get; set; }
-    [FirestoreProperty("aptNumber")] public int? AptNumber { get; set; }
+    public string Id { get; set; } = "";
+    public string Ts { get; set; } = "";
+    public string Action { get; set; } = "";
+    public string Label { get; set; } = "";
+    public string Actor { get; set; } = "";
+    public string ActorRole { get; set; } = "";
+    public string Details { get; set; } = "";
+    public string Month { get; set; } = "";
+    public string? BuildingNumber { get; set; }
+    public int? AptNumber { get; set; }
 }
 
 public class WalletTransactionVm
@@ -130,13 +101,13 @@ public class WalletTransactionVm
     public string? ReceiptUrl { get; set; }
     public bool HasReceipt => !string.IsNullOrWhiteSpace(ReceiptUrl);
 }
-[FirestoreData]
+
 public class ReceiptData
 {
-    [FirestoreProperty("url")] public string Url { get; set; } = "";
-    [FirestoreProperty("path")] public string Path { get; set; } = "";
-    [FirestoreProperty("fileName")] public string FileName { get; set; } = "";
-    [FirestoreProperty("fileSize")] public long FileSize { get; set; }
-    [FirestoreProperty("fileType")] public string FileType { get; set; } = "";
-    [FirestoreProperty("success")] public bool Success { get; set; }
+    public string Url { get; set; } = "";
+    public string Path { get; set; } = "";
+    public string FileName { get; set; } = "";
+    public long FileSize { get; set; }
+    public string FileType { get; set; } = "";
+    public bool Success { get; set; }
 }

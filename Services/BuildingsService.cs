@@ -1,72 +1,21 @@
 using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
-using Google.Cloud.Firestore;
-using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace BuildingManagementMvc.Services;
 
 public class BuildingsService
 {
-    private readonly FirestoreDb _db;
-    private readonly BuildingSqlStore? _sql;
-    private readonly StorageSettingsService _storageSettings;
-    private readonly IDbContextFactory<AppDbContext>? _sqlFactory;
-    private readonly bool _useSqlFromConfig;
+    private readonly BuildingSqlStore _sql;
     private readonly ILogger<BuildingsService>? _log;
 
     public BuildingsService(
-        FirestoreContext ctx,
-        IConfiguration cfg,
-        BuildingSqlStore? sql = null,
-        StorageSettingsService? storageSettings = null,
-        IDbContextFactory<AppDbContext>? sqlFactory = null,
+        BuildingSqlStore sql,
         ILogger<BuildingsService>? log = null)
     {
-        _db = ctx.Db;
         _sql = sql;
-        _storageSettings = storageSettings
-            ?? throw new InvalidOperationException("StorageSettingsService مطلوب");
-        _sqlFactory = sqlFactory;
-        _useSqlFromConfig = string.Equals(
-            cfg["Storage:Provider"], "Sql", StringComparison.OrdinalIgnoreCase);
         _log = log;
-
-        if (_useSqlFromConfig && _sql == null)
-            throw new InvalidOperationException("Storage:Provider=Sql لكن BuildingSqlStore مش متسجّل.");
-    }
-
-    private CollectionReference Col => _db.Collection("buildings");
-
-    private async Task<string> GetModeAsync()
-    {
-        if (_storageSettings == null)
-            return _useSqlFromConfig ? "Sql" : "Firestore";
-        return await _storageSettings.GetModeAsync();
-    }
-
-    private async Task RecordChangeAsync(string entityId, string operation, object? payload = null)
-    {
-        if (_sqlFactory == null) return;
-        try
-        {
-            await using var db = await _sqlFactory.CreateDbContextAsync();
-            db.SyncPendingChanges.Add(new SyncPendingChangeEntity
-            {
-                EntityType = "Building",
-                EntityId = entityId,
-                Operation = operation,
-                Payload = payload == null ? null : JsonSerializer.Serialize(payload),
-                CreatedAt = DateTime.UtcNow
-            });
-            await db.SaveChangesAsync();
-        }
-        catch (Exception ex)
-        {
-            _log?.LogWarning(ex, "Failed to record change for {Id}", entityId);
-        }
     }
 
     // ============================================================
@@ -74,39 +23,17 @@ public class BuildingsService
     // ============================================================
     public async Task<List<Building>> GetAllAsync()
     {
-        var mode = await GetModeAsync();
-
-        if (mode == "Sql" && _sql != null)
-        {
-            var sqlList = await _sql.GetAllAsync();
-            foreach (var b in sqlList) NormalizeOrder(b);
-            return sqlList;
-        }
-
-        var snap = await Col.OrderBy("buildingNumber").GetSnapshotAsync();
-        var buildings = snap.Documents.Select(d => d.ConvertTo<Building>()).ToList();
-        foreach (var b in buildings) NormalizeOrder(b);
-        return buildings;
+        var list = await _sql.GetAllAsync();
+        foreach (var b in list) NormalizeOrder(b);
+        return list;
     }
 
     public async Task<Building?> GetByIdAsync(string id)
     {
         if (string.IsNullOrWhiteSpace(id)) return null;
 
-        var mode = await GetModeAsync();
-
-        if (mode == "Sql" && _sql != null)
-        {
-            var sqlBuilding = await _sql.GetByIdAsync(id);
-            if (sqlBuilding != null) NormalizeOrder(sqlBuilding);
-            return sqlBuilding;
-        }
-
-        var doc = await Col.Document(id).GetSnapshotAsync();
-        if (!doc.Exists) return null;
-
-        var building = doc.ConvertTo<Building>();
-        NormalizeOrder(building);
+        var building = await _sql.GetByIdAsync(id);
+        if (building != null) NormalizeOrder(building);
         return building;
     }
 
@@ -119,8 +46,6 @@ public class BuildingsService
         bool addDefaultExpenseCategories = true,
         bool addDefaultRevenueCategories = true)
     {
-        var mode = await GetModeAsync();
-
         string nextNumber;
         if (!string.IsNullOrWhiteSpace(buildingNumber))
         {
@@ -144,6 +69,7 @@ public class BuildingsService
 
         var building = new Building
         {
+            Id = Guid.NewGuid().ToString("N"),
             BuildingNumber = nextNumber,
             Name = name,
             AdminPin = adminPin,
@@ -155,92 +81,22 @@ public class BuildingsService
             CreatedAt = DateTime.UtcNow.ToString("o")
         };
 
-        if (mode == "Sql" && _sql != null)
-        {
-            building.Id = Guid.NewGuid().ToString("N");
-            await _sql.SaveFullAsync(building);
-            await RecordChangeAsync(building.Id, "Insert", building);
-            return (building.Id, nextNumber);
-        }
-
-        var docRef = await Col.AddAsync(building);
-        building.Id = docRef.Id;
-
-        if (mode == "Dual" && _sql != null)
-        {
-            try { await _sql.SaveFullAsync(building); }
-            catch (Exception ex)
-            {
-                SqlMirrorHealth.RecordFailure($"Create {building.Id}", ex);
-                _log?.LogError(ex, "SQL mirror failed for Create {Id}", building.Id);
-            }
-        }
-
+        await _sql.SaveFullAsync(building);
         return (building.Id, nextNumber);
     }
 
     public async Task DeleteAsync(string id)
     {
-        var mode = await GetModeAsync();
-
-        if (mode == "Firestore" || mode == "Dual")
-            await Col.Document(id).DeleteAsync();
-
-        if ((mode == "Sql" || mode == "Dual") && _sql != null)
-        {
-            try
-            {
-                await _sql.DeleteAsync(id);
-                if (mode == "Sql")
-                    await RecordChangeAsync(id, "Delete");
-            }
-            catch (Exception ex)
-            {
-                SqlMirrorHealth.RecordFailure($"Delete {id}", ex);
-                _log?.LogError(ex, "SQL Delete failed for {Id}", id);
-                if (mode == "Sql") throw;
-            }
-        }
+        await _sql.DeleteAsync(id);
     }
 
     public async Task SaveFullAsync(Building building)
     {
-        var mode = await GetModeAsync();
-
-        if (mode == "Firestore" || mode == "Dual")
-            await Col.Document(building.Id).SetAsync(building, SetOptions.Overwrite);
-
-        if ((mode == "Sql" || mode == "Dual") && _sql != null)
-        {
-            try
-            {
-                await _sql.SaveFullAsync(building);
-                SqlMirrorHealth.RecordSuccess();
-
-                if (mode == "Sql")
-                    await RecordChangeAsync(building.Id, "Update", building);
-            }
-            catch (Exception ex)
-            {
-                SqlMirrorHealth.RecordFailure($"SaveFull {building.Id}", ex);
-                _log?.LogError(ex, "SQL SaveFull failed for {Id}", building.Id);
-                if (mode == "Sql") throw;
-            }
-        }
-    }
-
-    public async Task UpdateAsync(string id, Dictionary<string, object> partialData)
-    {
-        var mode = await GetModeAsync();
-        if (mode == "Sql")
-            throw new NotSupportedException("UpdateAsync غير مدعوم في وضع SQL.");
-
-        partialData["dataVersion"] = "3.2";
-        await Col.Document(id).SetAsync(partialData, SetOptions.MergeAll);
+        await _sql.SaveFullAsync(building);
     }
 
     // ============================================================
-    // ✅ إضافة أدوار وشقق (بدون Firebase Auth)
+    // ✅ إضافة أدوار وشقق
     // ============================================================
     public async Task<string> AddFloorAsync(string buildingId, string label, List<(string Phone, string Pin)> apartments)
     {
@@ -352,52 +208,5 @@ public class BuildingsService
             apt.Email = email;
 
         await SaveFullAsync(building);
-    }
-
-    // ============================================================
-    // ✅ خصائص StorageSyncController + المزامنة
-    // ============================================================
-    public string StorageProvider => _useSqlFromConfig ? "Sql" : "Firestore";
-    public bool SqlMirrorEnabled => _sql != null;
-
-    public async Task<SyncReport> SyncAllToSqlAsync()
-    {
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        var report = new SyncReport();
-
-        if (_sql == null)
-        {
-            report.Errors.Add("BuildingSqlStore مش مسجّل.");
-            return report;
-        }
-
-        try
-        {
-            var snap = await Col.GetSnapshotAsync();
-            var buildings = snap.Documents.Select(d => d.ConvertTo<Building>()).ToList();
-
-            foreach (var b in buildings)
-            {
-                try
-                {
-                    NormalizeOrder(b);
-                    await _sql.SaveFullAsync(b);
-                    report.Buildings++;
-                }
-                catch (Exception ex)
-                {
-                    report.Errors.Add($"عمارة {b.Id}: {ex.Message}");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            report.Errors.Add($"خطأ عام: {ex.Message}");
-        }
-
-        sw.Stop();
-        report.Elapsed = sw.Elapsed;
-        SqlMirrorHealth.RecordSuccess();
-        return report;
     }
 }

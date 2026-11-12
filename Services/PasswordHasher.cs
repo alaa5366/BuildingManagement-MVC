@@ -3,7 +3,6 @@
 //  بيستخدم BCrypt.Net-Next للـ Hashing
 // =====================================================================
 using BCrypt.Net;
-using FirebaseAdmin.Auth.Hash;
 
 namespace BuildingManagementMvc.Services;
 
@@ -17,10 +16,6 @@ public interface IPasswordHasher
 
 public class BcryptPasswordHasher : IPasswordHasher
 {
-    // ⚙️ BCrypt Work Factor
-    // 10 = سريع نسبياً (~100ms)
-    // 12 = متوسط (~400ms)
-    // 14 = بطيء جداً (~1.5s) — للبنوك
     private const int WorkFactor = 12;
 
     public string Hash(string password)
@@ -46,14 +41,11 @@ public class BcryptPasswordHasher : IPasswordHasher
         }
     }
 
-    // للـ PIN، بنستخدم نفس BCrypt بس بـ Work Factor أقل (أسرع)
     public string HashPin(string pin)
     {
         if (string.IsNullOrWhiteSpace(pin))
             throw new ArgumentException("PIN cannot be empty", nameof(pin));
 
-        // PIN = 4 أرقام = 10000 possible values
-        // Work Factor 10 يكفي وبيبقى أسرع
         return BCrypt.Net.BCrypt.HashPassword(pin, 10);
     }
 

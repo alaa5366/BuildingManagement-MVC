@@ -386,7 +386,6 @@ public class GlobalSettingsEntity
     public string WhatsappPhoneId { get; set; } = "";
     public string CloudinaryCloudName { get; set; } = "";
     public string CloudinaryApiKey { get; set; } = "";
-    public string FirebaseProjectId { get; set; } = "";
     public bool EnablePolls { get; set; } = true;
     public bool EnableMaintenance { get; set; } = true;
     public bool EnableOcr { get; set; } = true;
