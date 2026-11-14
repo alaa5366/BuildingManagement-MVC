@@ -2,7 +2,9 @@ using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BuildingManagementMvc.Controllers;
-
+// ============================================================
+//  HomeController	الصفحة الرئيسية (Redirect → LoginChoice)
+// ============================================================
 public class HomeController : Controller
 {
     public IActionResult Index()

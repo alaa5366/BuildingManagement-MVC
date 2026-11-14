@@ -5,8 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
-
-// نفس شاشة js/views/admin/admin-polls.js
+// ============================================================
+//  PollsController	إدارة التصويتات
+// ============================================================
 [Authorize(Roles = "admin")]
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManagePolls)]
 public class PollsController : Controller

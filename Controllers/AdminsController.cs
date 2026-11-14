@@ -7,7 +7,9 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Controllers;
-
+// ============================================================
+//  AdminsController	إدارة الأدمنز (SuperAdmin فقط)
+// ============================================================
 [Authorize(Roles = "superadmin")]
 [HasPermission(AdminPermissions.ManageAdmins)]
 public class AdminsController : Controller
@@ -26,7 +28,7 @@ public class AdminsController : Controller
 
     public async Task<IActionResult> Index(string? buildingId, int page = 1, int pageSize = 50)
     {
-        ViewBag.Buildings = await _buildings.GetAllAsync();
+        ViewBag.Buildings = await _buildings.GetSummariesAsync();
 
         var allAdmins = await _admins.GetAdminsAsync(buildingId);
         var paged = BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.AppUserDoc>
@@ -45,7 +47,7 @@ public class AdminsController : Controller
     [HttpGet]
     public async Task<IActionResult> Create()
     {
-        ViewBag.Buildings = await _buildings.GetAllAsync();
+        ViewBag.Buildings = await _buildings.GetSummariesAsync();
         ViewBag.AllPermissions = AdminPermissions.All;
         return View();
     }
@@ -59,7 +61,7 @@ public class AdminsController : Controller
             string.IsNullOrWhiteSpace(buildingId) || string.IsNullOrWhiteSpace(pin))
         {
             TempData["Error"] = Loc.T("All_Fields_Are_Required");
-            ViewBag.Buildings = await _buildings.GetAllAsync();
+            ViewBag.Buildings = await _buildings.GetSummariesAsync();
             ViewBag.AllPermissions = AdminPermissions.All;
             return View();
         }
@@ -73,7 +75,7 @@ public class AdminsController : Controller
         catch (System.Exception ex)
         {
             TempData["Error"] = Loc.T("Creation_Failed") + ex.Message;
-            ViewBag.Buildings = await _buildings.GetAllAsync();
+            ViewBag.Buildings = await _buildings.GetSummariesAsync();
             ViewBag.AllPermissions = AdminPermissions.All;
             return View();
         }
@@ -85,7 +87,7 @@ public class AdminsController : Controller
         var admin = await _admins.GetAdminAsync(id);
         if (admin == null) return NotFound();
 
-        ViewBag.Buildings = await _buildings.GetAllAsync();
+        ViewBag.Buildings = await _buildings.GetSummariesAsync();
         ViewBag.AllPermissions = AdminPermissions.All;
         return View(admin);
     }
@@ -105,7 +107,7 @@ public class AdminsController : Controller
         {
             TempData["Error"] = Loc.T("Update_Failed") + ex.Message;
             var admin = await _admins.GetAdminAsync(id);
-            ViewBag.Buildings = await _buildings.GetAllAsync();
+            ViewBag.Buildings = await _buildings.GetSummariesAsync();
             ViewBag.AllPermissions = AdminPermissions.All;
             return View(admin);
         }

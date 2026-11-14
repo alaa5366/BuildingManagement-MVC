@@ -50,6 +50,7 @@ python fix_resx_format.py --apply
 
 # 3) Fix a single file
 python fix_resx_format.py --files Resources/Shared.ar.resx --apply
+python fix_resx_format.py --files Resources/Shared.en.resx --apply
 
 # 4) Fix every .resx file recursively under a folder
 python fix_resx_format.py --dir Resources --apply --recursive

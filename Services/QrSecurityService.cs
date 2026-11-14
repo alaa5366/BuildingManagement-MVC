@@ -8,14 +8,39 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// خدمة توليد والتحقق من Quick QR Tokens (v2 — AES-GCM).
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>أنواع التوكنات:</b>
+/// </para>
+/// <list type="bullet">
+///   <item><b>Stable QR:</b> HMAC-SHA256 لتوقيع روابط ثابتة (زي QR الباب).</item>
+///   <item><b>Quick QR (v2):</b> AES-GCM (تشفير + توثيق) لتوكنات الدخول السريع.</item>
+/// </list>
+/// <para>
+/// <b>⚠️ الأمان:</b> التوكنات القديمة (v1) بطلت. لازم تولّد توكنات جديدة بعد الترقية.
+/// </para>
+/// </remarks>
+/// <seealso cref="QuickQrOptions"/>
+/// <seealso cref="QuickTokenPayload"/>
 public class QrSecurityService
 {
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly string _secretKey;
-    // مفتاح تشفير/توثيق مشتق (منفصل عن مفتاح التوقيع الثابت) — v2
     private readonly byte[] _quickKey;
     private readonly ILogger<QrSecurityService> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="QrSecurityService"/> class.
+    /// </summary>
+    /// <param name="sqlFactory">Factory لفتح DbContext (لاستخدام QrUsages).</param>
+    /// <param name="config">الـ Configuration (يقرأ منه <c>Qr:SecretKey</c>).</param>
+    /// <param name="logger">الـ logger.</param>
+    /// <exception cref="InvalidOperationException">
+    /// لو <c>Qr:SecretKey</c> مش موجود في الـ configuration.
+    /// </exception>
     public QrSecurityService(
         IDbContextFactory<AppDbContext> sqlFactory,
         IConfiguration config,
@@ -29,9 +54,12 @@ public class QrSecurityService
         _logger = logger;
     }
 
-    // ============================================================
-    // Stable QR
-    // ============================================================
+    /// <summary>
+    /// يوقّع رابط Stable QR بـ HMAC-SHA256.
+    /// </summary>
+    /// <param name="path">مسار الرابط (مثال: <c>/Account/Qr</c>).</param>
+    /// <param name="query">الـ query string (مثال: <c>b=1&amp;a=2</c>).</param>
+    /// <returns>توقيع hex بأول 16 حرف.</returns>
     public string SignStableQr(string path, string query)
     {
         var data = $"{path}?{query}";
@@ -40,6 +68,13 @@ public class QrSecurityService
         return Convert.ToHexString(hash).ToLower()[..16];
     }
 
+    /// <summary>
+    /// يتحقق من صحة توقيع Stable QR.
+    /// </summary>
+    /// <param name="path">مسار الرابط.</param>
+    /// <param name="query">الـ query string.</param>
+    /// <param name="sig">التوقيع المستلم.</param>
+    /// <returns><c>true</c> لو التوقيع مطابق.</returns>
     public bool VerifyStableQr(string path, string query, string sig)
     {
         if (string.IsNullOrEmpty(sig)) return false;
@@ -49,9 +84,11 @@ public class QrSecurityService
             Encoding.UTF8.GetBytes(sig));
     }
 
-    // ============================================================
-    // Quick QR
-    // ============================================================
+    /// <summary>
+    /// يولد Quick QR Token (v2).
+    /// </summary>
+    /// <param name="options">خيارات التوكن (الصلاحية، الاستخدام، إلخ).</param>
+    /// <returns>التوكن جاهز للاستخدام (يبدأ بـ <c>v2.</c>).</returns>
     public string GenerateQuickToken(QuickQrOptions options)
     {
         var payload = new QuickTokenPayload
@@ -67,11 +104,22 @@ public class QrSecurityService
             Purpose = options.Purpose
         };
 
-        // v2: AES-GCM (تشفير + توثيق في خطوة واحدة) بمفتاح مشتق ومعاه nonce عشوائي
         var json = JsonSerializer.Serialize(payload);
         return "v2." + SealQuick(json);
     }
 
+    /// <summary>
+    /// يتحقق من صحة Quick QR Token (بدون استهلاكه).
+    /// </summary>
+    /// <param name="token">التوكن (يبدأ بـ <c>v2.</c>).</param>
+    /// <param name="deviceFingerprint">بصمة الجهاز (اختياري).</param>
+    /// <returns>نتيجة التحقق مع الـ payload لو صحيح.</returns>
+    /// <remarks>
+    /// <para>
+    /// <b>⚠️ ملاحظة:</b> الدالة دي ما بتستهلكش التوكن. استخدم
+    /// <see cref="TryConsumeQuickTokenAsync"/> عشان تستهلكه atomic.
+    /// </para>
+    /// </remarks>
     public async Task<QuickTokenValidation> ValidateQuickToken(string token, string? deviceFingerprint = null)
     {
         if (string.IsNullOrEmpty(token) || !token.StartsWith("v2.", StringComparison.Ordinal))
@@ -92,7 +140,6 @@ public class QrSecurityService
             return QuickTokenValidation.Fail(Loc.T("Corrupted_Token"));
         }
 
-        // وقت الانتهاء محفوظ UTC بصيغة "o" — نقراه RoundtripKind عشان توقيت السيرفر مايأثرش
         if (!DateTime.TryParse(payload.ExpiresAt, CultureInfo.InvariantCulture,
                 DateTimeStyles.RoundtripKind, out var expiresAt))
             return QuickTokenValidation.Fail(Loc.T("Corrupted_Token"));
@@ -100,7 +147,6 @@ public class QrSecurityService
         if (DateTime.UtcNow > expiresAt.ToUniversalTime())
             return QuickTokenValidation.Fail(Loc.T("The_QR_Has_Expired"));
 
-        // ✅ استخدام SQL بدل Firestore
         await using var db = await _sqlFactory.CreateDbContextAsync();
         var usage = await db.QrUsages.AsNoTracking()
             .FirstOrDefaultAsync(x => x.TokenId == payload.TokenId);
@@ -122,39 +168,20 @@ public class QrSecurityService
         return QuickTokenValidation.Ok(payload);
     }
 
-    public async Task MarkQuickTokenUsed(string tokenId, string? deviceFingerprint = null)
-    {
-        await using var db = await _sqlFactory.CreateDbContextAsync();
-        var usage = await db.QrUsages.FirstOrDefaultAsync(x => x.TokenId == tokenId);
-
-        if (usage == null)
-        {
-            db.QrUsages.Add(new QrUsageEntity
-            {
-                Id = tokenId,
-                TokenId = tokenId,
-                UseCount = 1,
-                FirstUsedAt = DateTime.UtcNow.ToString("o"),
-                LastUsedAt = DateTime.UtcNow.ToString("o"),
-                DeviceFingerprint = deviceFingerprint,
-                CreatedAt = DateTime.UtcNow
-            });
-        }
-        else
-        {
-            usage.UseCount++;
-            usage.LastUsedAt = DateTime.UtcNow.ToString("o");
-            if (!string.IsNullOrEmpty(deviceFingerprint))
-                usage.DeviceFingerprint = deviceFingerprint;
-        }
-
-        await db.SaveChangesAsync();
-    }
-
-    // ============================================================
-    // استهلاك atomic: UPDATE ... WHERE UseCount < الحد الأقصى
-    // (يمنع إن توكن "مرة واحدة" يتستخدم مرتين لو طلبين وصلوا مع بعض)
-    // ============================================================
+    /// <summary>
+    /// يستهلك Quick QR Token بطريقة atomic (يمنع double-use).
+    /// </summary>
+    /// <param name="p">الـ payload الخاص بالتوكن.</param>
+    /// <param name="deviceFingerprint">بصمة الجهاز (اختياري).</param>
+    /// <returns>
+    /// <c>true</c> لو الاستهلاك نجح؛ <c>false</c> لو التوكن وصل الحد الأقصى.
+    /// </returns>
+    /// <remarks>
+    /// <para>
+    /// <b>⚠️ الأمان:</b> الدالة دي بتستخدم <c>UPDATE ... WHERE UseCount &lt; limit</c>
+    /// عشان تمنع race condition لما طلبين يوصلوا في نفس اللحظة.
+    /// </para>
+    /// </remarks>
     public async Task<bool> TryConsumeQuickTokenAsync(QuickTokenPayload p, string? deviceFingerprint = null)
     {
         var limit = p.OneTime ? 1 : (p.MaxUses > 0 ? p.MaxUses : int.MaxValue);
@@ -169,10 +196,8 @@ public class QrSecurityService
                 .SetProperty(x => x.LastUsedAt, now));
         if (updated == 1) return true;
 
-        // موجود وواصل للحد الأقصى
         if (await db.QrUsages.AnyAsync(x => x.TokenId == p.TokenId)) return false;
 
-        // أول استخدام: لو طلب تاني سبقنا بالـ insert (نفس الـ PK) نرجع نجرب الـ UPDATE مرة
         try
         {
             db.QrUsages.Add(new QrUsageEntity
@@ -200,9 +225,11 @@ public class QrSecurityService
         }
     }
 
-    // ============================================================
-    // AES-GCM  (nonce[12] | tag[16] | ciphertext) → base64url
-    // ============================================================
+    /// <summary>
+    /// يشفّر النص بـ AES-GCM (nonce عشوائي لكل مرة).
+    /// </summary>
+    /// <param name="plainText">النص العادي.</param>
+    /// <returns>نص مشفّر بصيغة base64url.</returns>
     private string SealQuick(string plainText)
     {
         var plain = Encoding.UTF8.GetBytes(plainText);
@@ -221,6 +248,14 @@ public class QrSecurityService
         return Convert.ToBase64String(all).Replace("+", "-").Replace("/", "_").TrimEnd('=');
     }
 
+    /// <summary>
+    /// يفك تشفير النص المشفّر (بيرمي لو التوكن معدّل).
+    /// </summary>
+    /// <param name="token">النص المشفّر (بدون prefix <c>v2.</c>).</param>
+    /// <returns>النص العادي.</returns>
+    /// <exception cref="CryptographicException">
+    /// لو النص معدّل أو المفتاح مختلف.
+    /// </exception>
     private string OpenQuick(string token)
     {
         var padded = token.Replace("-", "+").Replace("_", "/");
@@ -239,40 +274,105 @@ public class QrSecurityService
         var plain = new byte[cipher.Length];
 
         using var gcm = new AesGcm(_quickKey, 16);
-        gcm.Decrypt(nonce, cipher, tag, plain);   // بيرمي CryptographicException لو اتعدّل
+        gcm.Decrypt(nonce, cipher, tag, plain);
 
         return Encoding.UTF8.GetString(plain);
     }
 }
 
-// Models
+/// <summary>
+/// خيارات توليد Quick QR Token.
+/// </summary>
 public class QuickQrOptions
 {
+    /// <summary>معرّف العمارة.</summary>
     public string BuildingId { get; set; } = "";
+
+    /// <summary>معرّف الشقة.</summary>
     public string AptId { get; set; } = "";
+
+    /// <summary>رقم الشقة (للعرض).</summary>
     public int AptNumber { get; set; }
+
+    /// <summary>ترتيب الدور (للعرض).</summary>
     public int FloorOrder { get; set; }
+
+    /// <summary>مدة صلاحية التوكن. الافتراضي: 5 دقائق.</summary>
     public TimeSpan Validity { get; set; } = TimeSpan.FromMinutes(5);
+
+    /// <summary>أقصى عدد استخدامات. الافتراضي: 1.</summary>
     public int MaxUses { get; set; } = 1;
+
+    /// <summary>لو <c>true</c>، التوكن يبقى مرة واحدة فقط.</summary>
     public bool OneTime { get; set; } = true;
 
-    // "login" (دخول سريع) أو "setpin" (رابط تعيين PIN) — التوكنين مش بيتبدلوا ببعض
+    /// <summary>
+    /// الهدف من التوكن: <c>"login"</c> للدخول السريع، <c>"setpin"</c> لتعيين PIN.
+    /// </summary>
     public string Purpose { get; set; } = "login";
 }
 
+/// <summary>
+/// محتوى Quick QR Token بعد فك التشفير.
+/// </summary>
 public class QuickTokenPayload
 {
+    /// <summary>معرّف العمارة.</summary>
     public string BuildingId { get; set; } = "";
+
+    /// <summary>معرّف الشقة.</summary>
     public string AptId { get; set; } = "";
+
+    /// <summary>رقم الشقة (للعرض).</summary>
     public int AptNumber { get; set; }
+
+    /// <summary>ترتيب الدور (للعرض).</summary>
     public int FloorOrder { get; set; }
+
+    /// <summary>تاريخ الانتهاء (UTC بصيغة "o").</summary>
     public string ExpiresAt { get; set; } = "";
+
+    /// <summary>أقصى عدد استخدامات.</summary>
     public int MaxUses { get; set; }
+
+    /// <summary>هل التوكن مرة واحدة؟</summary>
     public bool OneTime { get; set; }
+
+    /// <summary>معرّف فريد للتوكن (يُستخدم كـ PK في QrUsages).</summary>
     public string TokenId { get; set; } = "";
-    public string Purpose { get; set; } = "login";   // التوكنات القديمة من غير Purpose = login
+
+    /// <summary>
+    /// الهدف: <c>"login"</c> أو <c>"setpin"</c>.
+    /// </summary>
+    public string Purpose { get; set; } = "login";
 }
 
+/// <summary>
+/// نتيجة التحقق من Quick QR Token.
+/// </summary>
+public class QuickTokenValidation
+{
+    /// <summary>هل التوكن صحيح؟</summary>
+    public bool IsSuccess { get; set; }
+
+    /// <summary>رسالة الخطأ (لو فشل).</summary>
+    public string? Error { get; set; }
+
+    /// <summary>الـ payload (لو نجح).</summary>
+    public QuickTokenPayload? Data { get; set; }
+
+    /// <summary>يرجع نتيجة نجاح.</summary>
+    public static QuickTokenValidation Ok(QuickTokenPayload data) =>
+        new() { IsSuccess = true, Data = data };
+
+    /// <summary>يرجع نتيجة فشل.</summary>
+    public static QuickTokenValidation Fail(string error) =>
+        new() { IsSuccess = false, Error = error };
+}
+
+/// <summary>
+/// نتيجة فك تشفير Quick QR Token.
+/// </summary>
 public class QrUsage
 {
     public string TokenId { get; set; } = "";
@@ -280,17 +380,4 @@ public class QrUsage
     public string FirstUsedAt { get; set; } = "";
     public string LastUsedAt { get; set; } = "";
     public string? DeviceFingerprint { get; set; }
-}
-
-public class QuickTokenValidation
-{
-    public bool IsSuccess { get; set; }
-    public string? Error { get; set; }
-    public QuickTokenPayload? Data { get; set; }
-
-    public static QuickTokenValidation Ok(QuickTokenPayload data) =>
-        new() { IsSuccess = true, Data = data };
-
-    public static QuickTokenValidation Fail(string error) =>
-        new() { IsSuccess = false, Error = error };
 }

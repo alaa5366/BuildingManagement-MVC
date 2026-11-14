@@ -8,7 +8,9 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
-
+// ============================================================
+// AccountController نقطة الدخول الوحيدة للنظام(UnifiedLogin, QuickLogin, SetPin, Logout)
+// ============================================================
 [AllowAnonymous]
 public class AccountController : Controller
 {
@@ -348,6 +350,9 @@ public class AccountController : Controller
 
     private async Task SignInCookieAsync(AuthResult res)
     {
+
+        HttpContext.Session.Clear();
+
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, res.Uid!),

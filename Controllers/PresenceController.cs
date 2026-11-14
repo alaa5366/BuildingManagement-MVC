@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
-
+// ============================================================
+//  PresenceController	تتبع "متصل الآن"
+// ============================================================
 [Authorize]
 public class PresenceController : Controller
 {

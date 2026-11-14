@@ -5,7 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
-
+// ============================================================
+//  ResidentHomeController	لوحة تحكم الساكن (Dashboard)
+// ============================================================
 [Authorize(Roles = "resident")]
 public class ResidentHomeController : Controller
 {

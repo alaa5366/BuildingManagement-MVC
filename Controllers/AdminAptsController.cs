@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
+// ============================================================
+//  AdminAptsController	إدارة الشقق للأدمن (فتح/إغلاق/تعطيل/تعديل)
+// ============================================================
 
 [Authorize(Roles = "admin")]
 [AdminPermission(AdminPermissions.ManageResidents)]

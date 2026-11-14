@@ -78,7 +78,7 @@ public class AuditLogController : Controller
             entries, page, pageSize);
 
         ViewBag.Buildings = IsSuperAdmin
-            ? await _buildings.GetAllAsync()
+            ? await _buildings.GetSummariesAsync()
             : new List<Building>();
 
         ViewBag.CurrentRole = IsSuperAdmin ? "superadmin" : (IsAdmin ? "admin" : "resident");

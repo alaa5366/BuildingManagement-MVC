@@ -7,7 +7,9 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
-
+// ============================================================
+//  CamerasController	عرض الكاميرات المباشر (HLS via MediaMTX)
+// ============================================================
 [Authorize]
 public class CamerasController : Controller
 {

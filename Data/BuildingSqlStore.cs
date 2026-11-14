@@ -12,7 +12,7 @@ using System.Globalization;
 
 namespace BuildingManagementMvc.Data;
 
-public sealed class BuildingSqlStore
+public class BuildingSqlStore
 {
     private readonly IDbContextFactory<AppDbContext> _factory;
     private readonly ILogger<BuildingSqlStore> _log;
@@ -23,7 +23,7 @@ public sealed class BuildingSqlStore
         _log = log;
     }
 
-    public async Task<Building?> GetByIdAsync(string id)
+    public virtual async Task<Building?> GetByIdAsync(string id)
     {
         await using var db = await _factory.CreateDbContextAsync();
         return await BuildingSqlMapper.LoadAsync(db, id);
@@ -45,8 +45,11 @@ public sealed class BuildingSqlStore
         return list;
     }
 
-    // قايمة خفيفة (Id/Name/BuildingNumber بس) لصفحات الدخول والقوائم — استعلام واحد
-    public async Task<List<Building>> GetSummariesAsync()
+    // =====================================================================
+    //  GetSummariesAsync — خفيف: Id/Name/BuildingNumber فقط
+    //  (لصفحات الدخول والقوائم — استعلام واحد بدل 16×N)
+    // =====================================================================
+    public virtual async Task<List<Building>> GetSummariesAsync()
     {
         await using var db = await _factory.CreateDbContextAsync();
         var rows = await db.Buildings.AsNoTracking()
@@ -61,7 +64,42 @@ public sealed class BuildingSqlStore
         }).ToList();
     }
 
-    public async Task<string?> FindBuildingIdByApartmentAsync(string apartmentId)
+    // =====================================================================
+    //  GetSummariesWithCountsAsync — نفس GetSummariesAsync
+    //  لكن بترجع كمان عدد الشقق والأدوار (بدون تحميلهم فعلياً).
+    //  مفيدة للـ Views اللي بتستخدم @b.Apartments.Count و @b.Floors.Count.
+    // =====================================================================
+    public virtual async Task<List<Building>> GetSummariesWithCountsAsync()
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+
+        // استعلام واحد — بترجع البيانات الأساسية + Counts
+        var rows = await db.Buildings.AsNoTracking()
+            .OrderBy(b => b.BuildingNumber)
+            .Select(b => new
+            {
+                b.Id,
+                b.Name,
+                b.BuildingNumber,
+                ApartmentsCount = b.Apartments.Count(),
+                FloorsCount = b.Floors.Count()
+            })
+            .ToListAsync();
+
+        return rows.Select(r => new Building
+        {
+            Id = r.Id,
+            Name = r.Name,
+            BuildingNumber = r.BuildingNumber,
+            // pseudo-objects للعرض فقط — Count هيشتغل عادي
+            Apartments = Enumerable.Range(0, r.ApartmentsCount)
+                .Select(_ => new Apartment()).ToList(),
+            Floors = Enumerable.Range(0, r.FloorsCount)
+                .Select(_ => new Floor()).ToList()
+        }).ToList();
+    }
+
+    public virtual async Task<string?> FindBuildingIdByApartmentAsync(string apartmentId)
     {
         await using var db = await _factory.CreateDbContextAsync();
         return await db.Apartments.AsNoTracking()

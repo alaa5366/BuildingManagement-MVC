@@ -8,7 +8,9 @@ using System.Linq;
 using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Controllers;
-
+// ============================================================
+//  CategoriesController	الفئات المالية (Expense + Revenue)
+// ============================================================
 [Authorize(Roles = "superadmin,admin")]
 [HasPermission(AdminPermissions.ManageCategories)]
 public class CategoriesController : Controller
@@ -37,7 +39,7 @@ public class CategoriesController : Controller
     {
         if (IsSuperAdmin)
         {
-            var buildings = await _buildings.GetAllAsync();
+            var buildings = await _buildings.GetSummariesWithCountsAsync();
             return View("ChooseBuilding", buildings);
         }
 

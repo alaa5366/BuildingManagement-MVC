@@ -4,7 +4,9 @@ using BuildingManagementMvc.Services;
 using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Controllers;
-
+// ============================================================
+//  BuildingsController	إدارة العمارات (SuperAdmin)
+// ============================================================
 [Authorize]
 public class BuildingsController : Controller
 {
@@ -23,7 +25,7 @@ public class BuildingsController : Controller
     [Authorize(Roles = "superadmin")]
     public async Task<IActionResult> Index(int page = 1, int pageSize = 50)
     {
-        var allBuildings = await _service.GetAllAsync();
+        var allBuildings = await _service.GetSummariesAsync();
         var paged = BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Building>
             .Create(allBuildings, page, pageSize);
 

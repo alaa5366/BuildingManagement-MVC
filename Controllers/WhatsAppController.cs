@@ -5,10 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
-
-// نسخة مبسطة من js/features/whatsapp-templates.js — توليد رسالة جاهزة
-// من قالب + فتح رابط wa.me (الإرسال الفعلي بيتم من واتساب الأدمن يدويًا،
-// زي أي رابط wa.me عادي).
+// ============================================================
+//  WhatsAppController	رسائل WhatsApp (من قوالب)
+// ============================================================
 [Authorize(Roles = "admin")]
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.UseWhatsApp)]
 public class WhatsAppController : Controller

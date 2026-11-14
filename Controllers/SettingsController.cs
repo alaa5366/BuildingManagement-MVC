@@ -9,7 +9,9 @@ using System.Linq;
 using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Controllers;
-
+// ============================================================
+//  SettingsController	الإعدادات (Global + Building + Own)
+// ============================================================
 [Authorize]
 public class SettingsController : Controller
 {
@@ -98,7 +100,7 @@ public class SettingsController : Controller
         {
             if (string.IsNullOrWhiteSpace(id))
             {
-                ViewBag.Buildings = await _buildings.GetAllAsync();
+                ViewBag.Buildings = await _buildings.GetSummariesAsync();
                 return View("ChooseBuilding");
             }
             buildingId = id;

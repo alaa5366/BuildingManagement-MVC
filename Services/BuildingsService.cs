@@ -5,6 +5,21 @@ using System.Text.RegularExpressions;
 
 namespace BuildingManagementMvc.Services;
 
+// ============================================================
+//  BuildingsService — الواجهة الرئيسية للتعامل مع الـ Building Aggregate
+// ============================================================
+//  مسؤول عن:
+//   - جلب/إضافة/تعديل/حذف العمارات
+//   - إدارة الأدوار والشقق
+//   - العمليات المالية على المستوى الكلي
+//
+//  ⚠️ ليه Singleton؟
+//  لأنه stateless تماماً، وبيستخدم BuildingSqlStore (اللي بيستخدم
+//  IDbContextFactory). لو حاولنا نخليه Scoped، هيبقى فيه overhead
+//  غير مبرر.
+//
+//  See also: BuildingSqlStore, BuildingSqlMapper, WalletService
+// ============================================================
 public class BuildingsService
 {
     private readonly BuildingSqlStore _sql;
@@ -21,6 +36,14 @@ public class BuildingsService
     // ============================================================
     // ✅ القراءة
     // ============================================================
+
+    /// <summary>
+    /// يجيب كل العمارات ببياناتها الكاملة (16 استعلام لكل عمارة).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ استخدمها بحذر — بطيئة. للقوائم استخدم <see cref="GetSummariesAsync"/>
+    /// أو <see cref="GetSummariesWithCountsAsync"/>.
+    /// </remarks>
     public async Task<List<Building>> GetAllAsync()
     {
         var list = await _sql.GetAllAsync();
@@ -28,12 +51,33 @@ public class BuildingsService
         return list;
     }
 
-    // خفيف: Id/Name/BuildingNumber فقط (للقوائم وصفحات الدخول)
+    /// <summary>
+    /// خفيف: Id/Name/BuildingNumber فقط (للقوائم وصفحات الدخول).
+    /// </summary>
+    /// <remarks>
+    /// استعلام واحد بدل 16×N. استخدمها في صفحات: اختيار عمارة، الفلاتر.
+    /// </remarks>
     public Task<List<Building>> GetSummariesAsync() => _sql.GetSummariesAsync();
 
+    /// <summary>
+    /// نفس <see cref="GetSummariesAsync"/> + عدد الشقق والأدوار.
+    /// </summary>
+    /// <remarks>
+    /// استعلام واحد. مفيدة للـ Views اللي بتستخدم <c>@b.Apartments.Count</c>
+    /// و <c>@b.Floors.Count</c>.
+    /// </remarks>
+    public Task<List<Building>> GetSummariesWithCountsAsync()
+        => _sql.GetSummariesWithCountsAsync();
+
+    /// <summary>
+    /// يجيب buildingId من apartmentId (بدون تحميل كل العمارة).
+    /// </summary>
     public Task<string?> FindBuildingIdByApartmentAsync(string apartmentId)
         => _sql.FindBuildingIdByApartmentAsync(apartmentId);
 
+    /// <summary>
+    /// يجيب العمارة ببياناتها الكاملة.
+    /// </summary>
     public async Task<Building?> GetByIdAsync(string id)
     {
         if (string.IsNullOrWhiteSpace(id)) return null;
@@ -46,6 +90,11 @@ public class BuildingsService
     // ============================================================
     // ✅ الكتابة
     // ============================================================
+
+    /// <summary>
+    /// ينشئ عمارة جديدة.
+    /// </summary>
+    /// <returns>Tuple (Id, BuildingNumber).</returns>
     public async Task<(string Id, string BuildingNumber)> CreateAsync(
         string name, string adminPin, string adminWhatsapp = "",
         string? logoUrl = null, string? buildingNumber = null,
@@ -91,11 +140,23 @@ public class BuildingsService
         return (building.Id, nextNumber);
     }
 
+    /// <summary>
+    /// يحذف عمارة (وكل البيانات المرتبطة بيها).
+    /// </summary>
     public async Task DeleteAsync(string id)
     {
         await _sql.DeleteAsync(id);
     }
 
+    /// <summary>
+    /// يحفظ العمارة بكل بياناتها (Upsert بالمقارنة).
+    /// </summary>
+    /// <remarks>
+    /// - الجديد بيتضاف
+    /// - الموجود بيتحدّث
+    /// - اللي مش موجود في الـ incoming بيتشال
+    /// - AuditLog: Append-only (بيضيف بس)
+    /// </remarks>
     public async Task SaveFullAsync(Building building)
     {
         await _sql.SaveFullAsync(building);
@@ -104,6 +165,11 @@ public class BuildingsService
     // ============================================================
     // ✅ إضافة أدوار وشقق
     // ============================================================
+
+    /// <summary>
+    /// يضيف دور جديد مع شقق (phone + pin لكل شقة).
+    /// </summary>
+    /// <returns>معرّف الدور الجديد.</returns>
     public async Task<string> AddFloorAsync(string buildingId, string label, List<(string Phone, string Pin)> apartments)
     {
         var building = await GetByIdAsync(buildingId)
@@ -140,6 +206,9 @@ public class BuildingsService
         return floorId;
     }
 
+    /// <summary>
+    /// يضيف شقة واحدة لدور موجود.
+    /// </summary>
     public async Task AddApartmentAsync(string buildingId, string floorId, string phoneRaw, string pin)
     {
         var building = await GetByIdAsync(buildingId)
@@ -168,6 +237,10 @@ public class BuildingsService
         await SaveFullAsync(building);
     }
 
+    // ============================================================
+    // ✅ الفئات الافتراضية
+    // ============================================================
+
     public static List<FinancialCategory> DefaultExpenseCategories() => new()
     {
         new FinancialCategory{ Id="water",       Name="مياه",   Color="#4A90D9", Active=true, Order=0 },
@@ -184,6 +257,10 @@ public class BuildingsService
         new FinancialCategory{ Id="other-revenue", Name="إيراد آخر",   Color="#B9853B", Active=true, Order=3 },
     };
 
+    // ============================================================
+    // ✅ Helpers
+    // ============================================================
+
     private static void NormalizeOrder(Building building)
     {
         building.Floors = building.Floors.OrderBy(f => f.Order).ToList();
@@ -194,6 +271,13 @@ public class BuildingsService
             .ToList();
     }
 
+    /// <summary>
+    /// يحدّث بيانات شقة (المالك، الجوال، الرسوم، إلخ).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ الـ PIN مابقاش بيتخزّن في جدول الشقق — استخدم
+    /// <c>ResidentsService.SetApartmentPinAsync</c> بدلاً منه.
+    /// </remarks>
     public async Task UpdateApartmentAsync(
         string buildingId, string aptId, string owner, string label,
         string phone, string pin, double monthlyFee, string notes, string? email = null)

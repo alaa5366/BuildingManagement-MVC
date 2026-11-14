@@ -1,12 +1,39 @@
+# ============ .NET ============
 bin/
 obj/
 .vs/
+
+# ============ Secrets & Keys ============
 keys/
 Backups/
+secrets.json
+appsettings.Development.json
+appsettings.Production.json
 *.user
 *.pubxml.user
 Properties/PublishProfiles/*.pubxml
-appsettings.Development.json
-appsettings.Production.json
-secrets.json
+
+# ============ OCR ============
 tessdata/*.traineddata
+
+# ============ Serilog ============
+# ✅ logs/serilog/ داخل المشروع (من التطوير المحلي)
+logs/serilog/*
+!logs/serilog/.gitkeep
+
+# ============ App_Data (لو استخدمناه لاحقاً) ============
+App_Data/logs/*
+!App_Data/logs/.gitkeep
+
+# ============ Publish output ============
+publish/
+*.publishproj
+
+# ============ IDE ============
+.idea/
+*.swp
+*~
+
+# ============ OS ============
+.DS_Store
+Thumbs.db

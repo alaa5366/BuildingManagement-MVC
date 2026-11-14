@@ -6,9 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
-
-// نفس شاشة js/views/admin/admin-expenses.js
-[Authorize(Roles = "admin")]
+// ============================================================
+//  ExpensesController	المصروفات الشهرية
+// ============================================================[Authorize(Roles = "admin")]
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageExpenses)]
 public class ExpensesController : Controller
 {
@@ -16,15 +16,24 @@ public class ExpensesController : Controller
     private readonly WalletService _wallet;
     private readonly ExpensesService _expenses;
     private readonly AuditLogService _audit;
+    private readonly ILogger<ExpensesController> _logger;
 
-    public ExpensesController(BuildingsService buildings, WalletService wallet, ExpensesService expenses, AuditLogService audit)
+    public ExpensesController(
+        BuildingsService buildings,
+        WalletService wallet,
+        ExpensesService expenses,
+        AuditLogService audit,
+        ILogger<ExpensesController> logger)
     {
-        _buildings = buildings; _wallet = wallet; _expenses = expenses; _audit = audit;
+        _buildings = buildings;
+        _wallet = wallet;
+        _expenses = expenses;
+        _audit = audit;
+        _logger = logger;
     }
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
 
-    [HttpGet]
     [HttpGet]
     public async Task<IActionResult> Index(string? month, int page = 1, int pageSize = 50)
     {
@@ -62,13 +71,21 @@ public class ExpensesController : Controller
         if (building == null) return NotFound();
         var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
 
-        if (amount > 0 && !string.IsNullOrWhiteSpace(categoryId))
+        try
         {
-            _expenses.AddExpense(building, categoryId, note, amount, date, mk);
-            _wallet.RecalculateDistribution(building, mk);
-            _audit.Push(building, "expense_add", $"{amount:0.##} ج.م — {note}", "admin", User.Identity?.Name ?? "admin");
-            await _buildings.SaveFullAsync(building);
-            TempData["Message"] = Loc.T("Expense_Added");
+            if (amount > 0 && !string.IsNullOrWhiteSpace(categoryId))
+            {
+                _expenses.AddExpense(building, categoryId, note, amount, date, mk);
+                _wallet.RecalculateDistribution(building, mk);
+                _audit.Push(building, "expense_add", $"{amount:0.##} ج.م — {note}", "admin", User.Identity?.Name ?? "admin");
+                await _buildings.SaveFullAsync(building);
+                TempData["Message"] = Loc.T("Expense_Added");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to add expense for building {BuildingId}", BuildingId);
+            TempData["Error"] = Loc.T("Failed_To_Add_Expense");
         }
 
         return RedirectToAction("Index", new { month = mk });
@@ -81,10 +98,18 @@ public class ExpensesController : Controller
         var building = await _buildings.GetByIdAsync(BuildingId);
         if (building == null) return NotFound();
 
-        _expenses.DeleteExpense(building, id, month);
-        _wallet.RecalculateDistribution(building, month);
-        _audit.Push(building, "expense_delete", "حذف مصروف", "admin", User.Identity?.Name ?? "admin");
-        await _buildings.SaveFullAsync(building);
+        try
+        {
+            _expenses.DeleteExpense(building, id, month);
+            _wallet.RecalculateDistribution(building, month);
+            _audit.Push(building, "expense_delete", "حذف مصروف", "admin", User.Identity?.Name ?? "admin");
+            await _buildings.SaveFullAsync(building);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete expense {ExpenseId}", id);
+            TempData["Error"] = Loc.T("Failed_To_Delete_Expense");
+        }
 
         return RedirectToAction("Index", new { month });
     }

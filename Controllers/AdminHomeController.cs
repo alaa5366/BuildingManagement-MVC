@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
-
+// ============================================================
+//  AdminHomeController — لوحة تحكم الأدمن الرئيسية (Building Map)
+// ============================================================
 [Authorize(Roles = "admin")]
 public class AdminHomeController : Controller
 {

@@ -5,9 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
-
-// نفس شاشة js/features/invoice.js — توليد فاتورة PDF فيها QR للتحقق
-[Authorize(Roles = "superadmin,admin,resident")]
+// ============================================================
+//  InvoiceController	توليد فواتير PDF
+// ============================================================[Authorize(Roles = "superadmin,admin,resident")]
 public class InvoiceController : Controller
 {
     private readonly BuildingsService _buildings;

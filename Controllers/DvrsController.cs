@@ -6,7 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
-
+// ============================================================
+//  DvrsController	إدارة أجهزة DVR والكاميرات
+// ============================================================
 [Authorize(Roles = "superadmin,admin")]
 [AdminPermission(AdminPermissions.ManageDvrs)]
 public class DvrsController : Controller
@@ -44,7 +46,7 @@ public class DvrsController : Controller
     {
         if (IsSuperAdmin && string.IsNullOrEmpty(buildingId))
         {
-            var allBuildings = await _buildings.GetAllAsync();
+            var allBuildings = await _buildings.GetSummariesWithCountsAsync();
             return View("ChooseBuilding", allBuildings);
         }
 

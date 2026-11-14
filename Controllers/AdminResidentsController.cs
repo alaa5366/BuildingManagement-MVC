@@ -1,7 +1,4 @@
-﻿// =====================================================================
-//  AdminResidentsController — إدارة الساكنين
-//  متاح للأدمن (في عمارته بس) والـ SuperAdmin (كل العمارات)
-// =====================================================================
+﻿
 using BuildingManagementMvc.Attributes;
 using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
@@ -10,7 +7,10 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
-
+// =====================================================================
+//  AdminResidentsController — إدارة الساكنين
+//  متاح للأدمن (في عمارته بس) والـ SuperAdmin (كل العمارات)
+// =====================================================================
 [Authorize(Roles = "admin,superadmin")]
 public class AdminResidentsController : Controller
 {
@@ -43,7 +43,7 @@ public class AdminResidentsController : Controller
         // SuperAdmin: يختار العمارة
         if (IsSuperAdmin && string.IsNullOrWhiteSpace(buildingId))
         {
-            var allBuildings = await _buildings.GetAllAsync();
+            var allBuildings = await _buildings.GetSummariesAsync();
             return View("ChooseBuilding", allBuildings);
         }
 

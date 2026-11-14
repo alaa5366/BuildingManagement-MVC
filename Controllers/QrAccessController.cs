@@ -6,9 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
-
-// نفس منطق التحقق من توكن QR في js/features/qr-token-store.js — بيسمح
-// للساكن يدخل مباشرة من غير تليفون/PIN لو معاه رابط/QR صالح من الأدمن
+// ============================================================
+//  QrAccessController	دخول بـ QR مؤقت (بدون PIN)
+// ============================================================
 [AllowAnonymous]
 public class QrAccessController : Controller
 {

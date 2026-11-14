@@ -8,7 +8,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BuildingManagementMvc.Controllers;
-
+// ============================================================
+//  ImpersonationController	الانتحال (أدمن → ساكن / SuperAdmin → Admin)
+// ============================================================
 public class ImpersonationController : Controller
 {
     private readonly BuildingsService _buildings;

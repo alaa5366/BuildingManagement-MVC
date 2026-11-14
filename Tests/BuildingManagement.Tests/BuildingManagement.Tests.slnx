@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="../../BuildingManagementMVC.csproj" />
+  <Project Path="BuildingManagement.Tests.csproj" />
+</Solution>

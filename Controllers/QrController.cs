@@ -5,8 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
-
-// نفس شاشات js/features/qr-generator.js و js/views/admin/modals/qr-access-modal.js
+// ============================================================
+//  QrController	إدارة QRs (Stable + Access Links)
+// ============================================================
 [Authorize(Roles = "admin")]
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageResidents)]
 public class QrController : Controller

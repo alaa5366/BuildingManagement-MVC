@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BuildingManagementMvc.Controllers;
-
-// توليد صور QR محليًا. قبل كده الصفحات كانت بتبعت الرابط (فيه توكنات الدخول وتعيين الـ PIN)
-// لموقع خارجي (api.qrserver.com) عشان يرسم الصورة — ودلوقتي الرابط مابيخرجش من السيرفر.
+// ============================================================
+//  QrImageController	توليد صور QR
+// ============================================================
 [Authorize(Roles = "admin,superadmin")]
 public class QrImageController : Controller
 {

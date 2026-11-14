@@ -4,8 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
-
-// نفس شاشة js/views/resident/resident-polls.js
+// ============================================================
+//  ResidentPollsController	تصويتات الساكن
+// ============================================================
 [Authorize(Roles = "resident")]
 public class ResidentPollsController : Controller
 {

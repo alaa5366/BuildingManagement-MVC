@@ -6,7 +6,9 @@ using BuildingManagementMvc.Models;
 using BuildingManagementMvc.ViewModels;
 
 namespace BuildingManagementMvc.Controllers;
-
+// ============================================================
+//  ResidentWalletController	محفظة الساكن + كشف الحساب + OCR
+// ============================================================
 [Authorize(Roles = "resident")]
 public class ResidentWalletController : Controller
 {

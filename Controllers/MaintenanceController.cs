@@ -5,8 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
-
-// نفس شاشة js/views/admin/admin-maintenance.js
+// ============================================================
+//  MaintenanceController	سجل الصيانة
+// ============================================================
 [Authorize(Roles = "admin")]
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageMaintenance)]
 public class MaintenanceController : Controller

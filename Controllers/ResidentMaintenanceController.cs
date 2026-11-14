@@ -4,8 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
-
-// نفس شاشة js/views/resident/resident-maintenance.js (عرض فقط)
+// ============================================================
+//  ResidentMaintenanceController	(صيانة الساكن (عرض فقط
+// ============================================================
 [Authorize(Roles = "resident")]
 public class ResidentMaintenanceController : Controller
 {

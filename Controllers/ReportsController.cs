@@ -6,8 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
-
-// نفس شاشة js/features/reports.js
+// ============================================================
+//  ReportsController	التقارير المالية (Charts + CSV)
+// ============================================================
 [Authorize(Roles = "admin")]
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ViewReports)]
 public class ReportsController : Controller

@@ -7,7 +7,9 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Controllers;
-
+// ============================================================
+//  PermissionsController	مصفوفة الصلاحيات (SuperAdmin فقط)
+// ============================================================
 [Authorize(Roles = "superadmin")]
 [HasPermission(AdminPermissions.ManageAdmins)]
 public class PermissionsController : Controller
@@ -29,7 +31,7 @@ public class PermissionsController : Controller
         var admins = await _admins.GetAdminsAsync();
         ViewBag.AllPermissions = AdminPermissions.All;
         ViewBag.GroupedPermissions = GetGroupedPermissions();
-        ViewBag.Buildings = await _buildings.GetAllAsync();
+        ViewBag.Buildings = await _buildings.GetSummariesAsync();
         ViewBag.SelectedBuildingId = buildingId;
         return View(admins);
     }

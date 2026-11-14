@@ -4,8 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
-
-// نفس منطق core/notifications.js (إشعارات داخل التطبيق للأدمن والساكن)
+// ============================================================
+//  NotificationsController	الإشعارات
+// ============================================================
 [Authorize(Roles = "admin,resident")]
 public class NotificationsController : Controller
 {

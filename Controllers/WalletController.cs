@@ -6,8 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
-
-// نفس شاشة js/views/admin/admin-wallet.js (أرصدة الشقق + الدفعات المعلقة)
+// ============================================================
+//  WalletController	المحفظة (أرصدة + دفعات معلقة + تعديلات)
+// ============================================================
 [Authorize(Roles = "admin")]
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageWallet)]
 public class WalletController : Controller
