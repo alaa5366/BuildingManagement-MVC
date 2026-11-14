@@ -34,7 +34,7 @@
     <div class="row justify-content-center">
         <div class="col-md-4 col-sm-6 text-center">
             <div class="border rounded p-4 qr-card">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=@Uri.EscapeDataString(adminQrUrl)"
+                <img src="/QrImage/Png?size=220&data=@Uri.EscapeDataString(adminQrUrl)"
                      alt="Admin QR" class="img-fluid mb-3 qr-image" />
                 <div class="small">
                     <strong style="font-size: 14px;">@Loc.T("Admin_2")</strong>
@@ -81,7 +81,7 @@
 
                 <div class="col-md-4 col-sm-6">
                     <div class="border rounded p-3 text-center h-100 qr-card">
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=@Uri.EscapeDataString(qrUrl)"
+                        <img src="/QrImage/Png?size=180&data=@Uri.EscapeDataString(qrUrl)"
                              alt="Apt QR" class="img-fluid mb-2 qr-image" />
                         <div class="small">
                             <strong>@Loc.T("Apartment_N_2", apt.Number)</strong>

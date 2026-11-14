@@ -19,7 +19,8 @@ public class AdminPermissionAttribute : Attribute, IAuthorizationFilter
         if (!user.IsInRole("admin")) return;
 
         var config = context.HttpContext.RequestServices.GetRequiredService<IConfiguration>();
-        if (!config.GetValue<bool>("Auth:EnforceAdminPermissions")) return;
+        // الفحص شغال دايمًا. مفتاح طوارئ فقط: Auth:EnforceAdminPermissions=false
+        if (config.GetValue<bool?>("Auth:EnforceAdminPermissions") == false) return;
 
         if (user.HasClaim("perm", _permission)) return;
 

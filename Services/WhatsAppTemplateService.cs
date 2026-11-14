@@ -33,8 +33,10 @@ public class WhatsAppTemplateService
             "🏠 الشقة رقم: {apt}\n" +
             "🏗️ الدور: {floor}\n\n" +
             "🔑 *بيانات الدخول:*\n" +
-            "📱 رقم الموبايل: {phone}\n" +
-            "🔒 PIN: {pin}\n\n" +
+            "📱 رقم الموبايل: {phone}\n\n" +
+            "🔒 *تعيين الـ PIN:*\n" +
+            "اضغط الرابط واختار الـ PIN الخاص بيك (الرابط يُستخدم مرة واحدة):\n" +
+            "{setpin_link}\n\n" +
             "🚀 *طرق الدخول:*\n" +
             "1️⃣ *دخول سريع:*\n" +
             "امسح الـ QR المرفق أو اضغط الرابط:\n" +
@@ -43,7 +45,7 @@ public class WhatsAppTemplateService
             "{login_url}\n\n" +
             "⚠️ *ملاحظات:*\n" +
             "- الرابط صالح لمدة محدودة\n" +
-            "- لا تشارك الـ PIN مع أحد\n\n" +
+            "- لا تشارك الـ PIN ولا الرابط مع أحد\n\n" +
             "أهلاً بك 🌹"),
     };
 
@@ -65,7 +67,7 @@ public class WhatsAppTemplateService
             // ✅ جديد — للترحيب
             ["floor"] = floor?.Label ?? "—",
             ["phone"] = apt.Phone ?? "",
-            ["pin"] = apt.Pin ?? "",
+            ["setpin_link"] = "",
             ["quick_link"] = "",
             ["login_url"] = ""
         };

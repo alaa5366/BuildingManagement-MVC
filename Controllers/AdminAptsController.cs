@@ -129,8 +129,23 @@ public class AdminAptsController : Controller
         var token = _qrSecurity.GenerateQuickToken(options);
         var quickUrl = $"{baseUrl}/Account/QuickLogin?token={token}";
 
+        // رابط تعيين الـ PIN (مرة واحدة) — بدل ما نبعت الـ PIN نفسه
+        var setPinToken = _qrSecurity.GenerateQuickToken(new QuickQrOptions
+        {
+            BuildingId = building.Id,
+            AptId = apt.Id,
+            AptNumber = apt.Number,
+            FloorOrder = floor?.Order ?? 0,
+            Validity = TimeSpan.FromHours(hours),
+            OneTime = true,
+            MaxUses = 1,
+            Purpose = "setpin"
+        });
+        var setPinUrl = $"{baseUrl}/Account/SetPin?token={setPinToken}";
+
         var extra = new Dictionary<string, string>
         {
+            ["setpin_link"] = setPinUrl,
             ["quick_link"] = quickUrl,
             ["login_url"] = WhatsAppTemplateService.BuildLoginUrl(baseUrl)
         };
@@ -355,7 +370,7 @@ public class AdminAptsController : Controller
         string owner,
         string label,
         string phone,
-        string pin,
+        string? pin,
         double monthlyFee,
         string? notes,
         string? email)
@@ -372,7 +387,8 @@ public class AdminAptsController : Controller
             return RedirectToAction(nameof(Edit), new { aptId });
         }
 
-        if (string.IsNullOrWhiteSpace(pin) || pin.Length != 4 || !pin.All(char.IsDigit))
+        // الـ PIN اختياري: فاضي = يفضل زي ما هو، 4 أرقام = إعادة تعيين
+        if (!string.IsNullOrWhiteSpace(pin) && (pin.Length != 4 || !pin.All(char.IsDigit)))
         {
             TempData["Error"] = Loc.T("PIN_Must_Be_Exactly_4_Digits");
             return RedirectToAction(nameof(Edit), new { aptId });
@@ -383,11 +399,12 @@ public class AdminAptsController : Controller
             // 1. تحديث جدول الشقق
             await _buildings.UpdateApartmentAsync(
                 BuildingId, aptId,
-                owner, label ?? "", phone ?? "", pin,
+                owner, label ?? "", phone ?? "", "",
                 monthlyFee, notes ?? "", email);
 
             // 2. ✅ تحديث جدول السكان باستخدام الدالة المركزية
-            await _residents.UpdateResidentPinAsync(BuildingId, aptId, pin);
+            if (!string.IsNullOrWhiteSpace(pin))
+                await _residents.SetApartmentPinAsync(BuildingId, aptId, pin, CurrentUserId);
 
             await _auditLogger.LogAsync(
                 action: "apartment.updated",

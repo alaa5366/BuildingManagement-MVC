@@ -922,7 +922,7 @@
     <value>⚠️ تأكيد نهائي</value>
   </data>
   <data name="Once_You_Click_Confirm_Import_A" xml:space="preserve">
-    <value>بمجرد الضغط على "تأكيد الاستيراد"، هتتعمل عمارة جديدة في قاعدة البيانات، وهتتعمل حسابات Firebase Auth لكل شقة.</value>
+    <value>بمجرد الضغط على "تأكيد الاستيراد"، هيتم إنشاء عمارة جديدة في قاعدة البيانات مع كل شققها.</value>
   </data>
   <data name="Confirm_Import_2" xml:space="preserve">
     <value>✅ تأكيد الاستيراد</value>
@@ -1780,7 +1780,7 @@
     <value>&lt;strong&gt;إنشاء عمارة جديدة&lt;/strong&gt; — رقم تلقائي (BLD-001، BLD-002، ...)</value>
   </data>
   <data name="Add_Floors_And_Apartments_With_Automatic" xml:space="preserve">
-    <value>&lt;strong&gt;إضافة أدوار وشقق&lt;/strong&gt; — مع إنشاء Firebase Auth تلقائي</value>
+    <value>&lt;strong&gt;إضافة أدوار وشقق&lt;/strong&gt; — مع بيانات الدخول لكل شقة</value>
   </data>
   <data name="Generate_QRs_For_The_Admin_And" xml:space="preserve">
     <value>&lt;strong&gt;توليد QRs&lt;/strong&gt; — للأدمن وكل شقة (PDF فيه كل الـ QRs)</value>
@@ -1855,13 +1855,13 @@
     <value>بعمل Refresh الصفحة وبتطلعلي رسالة حمراء "فشل الحفظ"</value>
   </data>
   <data name="There_Is_Probably_A_Problem_Connecting" xml:space="preserve">
-    <value>غالبًا فيه مشكلة في الاتصال بـ Firebase. تأكد من:</value>
+    <value>غالبًا في مشكلة في الاتصال بالسيرفر. اتأكد إن:</value>
   </data>
   <data name="Your_Internet_Connection_Is_Working" xml:space="preserve">
     <value>الإنترنت شغال</value>
   </data>
   <data name="You_Are_Not_Using_A_VPN" xml:space="preserve">
-    <value>ما استخدمتش VPN (ممكن يحجب Firebase)</value>
+    <value>إنك مش بتستخدم VPN (ممكن يحجب الاتصال)</value>
   </data>
   <data name="Try_Logging_Out_And_Logging_In" xml:space="preserve">
     <value>جرّب تعمل Logout + Login تاني</value>
@@ -3457,7 +3457,7 @@
     <value>نسخ احتياطي كامل + استعادة</value>
   </data>
   <data name="Sync_Firebase_Auth_With_Firestore_Check" xml:space="preserve">
-    <value>مزامنة Firebase Auth مع Firestore (فحص/إصلاح)</value>
+    <value>أدوات المزامنة القديمة (مش مطلوبة بعد الانتقال لـ SQL)</value>
   </data>
   <data name="Secret_Access_Impersonation_To_Buildings_And" xml:space="preserve">
     <value>الدخول السري (impersonation) للعمارات والشقق</value>
@@ -4545,4 +4545,71 @@
   </data>
   <data name="Changing_It_Automatically_Updates_The_Database" xml:space="preserve"><value>⚠️ تغييره يحدث قاعدة البيانات تلقائيًا</value></data>
   <!-- ===== Dashboard & Nav Missing Keys ===== -->
+  <!-- ===== Phase 6: keys that were missing ===== -->
+  <data name="17_Permissions_For_A_Regular_Admin" xml:space="preserve"><value>17 صلاحية — لأدمن عادي</value></data>
+  <data name="27_Permissions_Super_Admin_Permissions" xml:space="preserve"><value>27 صلاحية — ⚠️ صلاحيات السوبر أدمن الكاملة</value></data>
+  <data name="Apartment_Required" xml:space="preserve"><value>الشقة مطلوبة</value></data>
+  <data name="Building_Required" xml:space="preserve"><value>العمارة مطلوبة</value></data>
+  <data name="Choose" xml:space="preserve"><value>— اختر —</value></data>
+  <data name="Choose_Building" xml:space="preserve"><value>اختر العمارة</value></data>
+  <data name="Choose_Building_First" xml:space="preserve"><value>اختر العمارة أولًا</value></data>
+  <data name="Choose_Building_For_Residents" xml:space="preserve"><value>اختر عمارة</value></data>
+  <data name="Choose_Building_To_Manage_Residents" xml:space="preserve"><value>اختر عمارة لإدارة سكانها</value></data>
+  <data name="Choose_Floor_First" xml:space="preserve"><value>اختر الدور أولًا</value></data>
+  <data name="Created_At" xml:space="preserve"><value>تاريخ الإنشاء</value></data>
+  <data name="Floor_Not_Found" xml:space="preserve"><value>الدور غير موجود</value></data>
+  <data name="Floor_Required" xml:space="preserve"><value>الدور مطلوب</value></data>
+  <data name="Full_Template_17" xml:space="preserve"><value>⚡ القالب الكامل (17)</value></data>
+  <data name="Import_Template" xml:space="preserve"><value>قالب الاستيراد</value></data>
+  <data name="Import_Template_Desc" xml:space="preserve"><value>تنزيل قالب Excel المستخدم لاستيراد بيانات العمارة</value></data>
+  <data name="Loading" xml:space="preserve"><value>جارِ التحميل...</value></data>
+  <data name="Manage_Cameras" xml:space="preserve"><value>إدارة الكاميرات</value></data>
+  <data name="Manage_Cameras_Desc" xml:space="preserve"><value>إضافة وتعديل وحذف الكاميرات</value></data>
+  <data name="Manage_DVRs" xml:space="preserve"><value>إدارة أجهزة DVR</value></data>
+  <data name="Manage_DVRs_Desc" xml:space="preserve"><value>إضافة وتعديل وحذف أجهزة DVR وإعدادات الاتصال بها</value></data>
+  <data name="No_Apartments" xml:space="preserve"><value>لا توجد شقق</value></data>
+  <data name="No_Floors" xml:space="preserve"><value>لا توجد أدوار</value></data>
+  <data name="PIN_Not_Set_Contact_Admin" xml:space="preserve"><value>الـ PIN غير مُعيَّن — تواصل مع الأدمن</value></data>
+  <data name="PIN_Required" xml:space="preserve"><value>الـ PIN مطلوب</value></data>
+  <data name="Phone_Required" xml:space="preserve"><value>رقم التليفون مطلوب</value></data>
+  <data name="Resident_Created_Successfully" xml:space="preserve"><value>تم إنشاء الساكن بنجاح</value></data>
+  <data name="Resident_Deleted_Successfully" xml:space="preserve"><value>تم حذف الساكن</value></data>
+  <data name="Resident_Disabled_Successfully" xml:space="preserve"><value>تم تعطيل الساكن</value></data>
+  <data name="Resident_Enabled_Successfully" xml:space="preserve"><value>تم تفعيل الساكن</value></data>
+  <data name="Resident_Updated_Successfully" xml:space="preserve"><value>تم تحديث بيانات الساكن بنجاح</value></data>
+  <data name="Super_Template_27" xml:space="preserve"><value>👑 قالب السوبر (27)</value></data>
+  <data name="This_Account_Is_Inactive" xml:space="preserve"><value>الحساب ده غير نشط</value></data>
+  <data name="View_Cameras" xml:space="preserve"><value>عرض الكاميرات</value></data>
+  <data name="View_Cameras_Desc" xml:space="preserve"><value>مشاهدة بث الكاميرات المباشر</value></data>
+  <data name="Warning_Restoring_Writes_Data_To_SQL" xml:space="preserve"><value>&lt;strong&gt;تحذير:&lt;/strong&gt; الاستعادة بتكتب بيانات النسخة الاحتياطية في قاعدة بيانات SQL وتستبدل البيانات الحالية.</value></data>
+  <data name="Warning_Restoring_Writes_Data_To_SQL_2" xml:space="preserve"><value>&lt;strong&gt;تحذير:&lt;/strong&gt; الاستعادة بتكتب بيانات النسخة الاحتياطية في قاعدة بيانات SQL وتستبدل البيانات الحالية.</value></data>
+  <!-- ===== Phase 6: extracted UI strings ===== -->
+  <data name="Dvr_Added_Successfully" xml:space="preserve"><value>تم إضافة DVR بنجاح</value></data>
+  <data name="Dvr_Updated_Successfully" xml:space="preserve"><value>تم تعديل DVR</value></data>
+  <data name="Dvr_Deleted_Successfully" xml:space="preserve"><value>تم حذف DVR</value></data>
+  <data name="Camera_Added_Successfully" xml:space="preserve"><value>تم إضافة الكاميرا</value></data>
+  <data name="Camera_Deleted_Successfully" xml:space="preserve"><value>تم حذف الكاميرا</value></data>
+  <data name="Migration_DryRun_N" xml:space="preserve"><value>🔍 Dry Run: {0} ساكن هيترحّلوا</value></data>
+  <data name="Migration_Residents_Done_N" xml:space="preserve"><value>✅ تم ترحيل {0} ساكن بنجاح</value></data>
+  <data name="Migration_Residents_Failed_N" xml:space="preserve"><value>⚠️ فشل: {0} ساكن</value></data>
+  <data name="Confirm_Enter_As_Admin" xml:space="preserve"><value>هل تريد الدخول كـ Admin لهذه العمارة؟</value></data>
+  <data name="Confirm_Enter_Resident_Wallet" xml:space="preserve"><value>هل تريد الدخول على محفظة الساكن؟</value></data>
+  <data name="Confirm_Enter_As_Resident" xml:space="preserve"><value>هل تريد الدخول كـ Resident؟</value></data>
+  <data name="Enter_As_Admin" xml:space="preserve"><value>دخول كـ Admin</value></data>
+  <data name="Enter_As_Resident" xml:space="preserve"><value>دخول كـ ساكن</value></data>
+  <data name="Impersonation_Browsing_As" xml:space="preserve"><value>تتصفح باسم:</value></data>
+  <data name="Impersonation_Original_Admin" xml:space="preserve"><value>— المدير الأصلي:</value></data>
+  <data name="Back_To_My_Account" xml:space="preserve"><value>رجوع لحسابي</value></data>
+  <data name="Accounts_Linked_To_Number" xml:space="preserve"><value>حسابات مرتبطة بالرقم ({0})</value></data>
+  <data name="Floor_Label_With_Order" xml:space="preserve"><value>{0} (رقم {1})</value></data>
+  <data name="Resident_Of_Apartment_N" xml:space="preserve"><value>ساكن شقة {0}</value></data>
+  <!-- ===== Phase 8: set-PIN link ===== -->
+  <data name="Set_Pin_Title" xml:space="preserve"><value>تعيين الـ PIN</value></data>
+  <data name="Set_Pin_Intro" xml:space="preserve"><value>اختار PIN من 4 أرقام لتسجيل الدخول لحساب شقتك.</value></data>
+  <data name="Set_Pin_Done" xml:space="preserve"><value>✅ تم تعيين الـ PIN. تقدر تسجّل الدخول دلوقتي.</value></data>
+  <data name="Pin_Stored_Securely_Note" xml:space="preserve"><value>الـ PIN متخزّن بشكل آمن ومش ممكن عرضه. استخدم رسالة الترحيب لإرسال رابط للساكن يعيّن بيه الـ PIN بنفسه.</value></data>
+  <data name="Pin_Hidden" xml:space="preserve"><value>🔒 مخفي</value></data>
+  <data name="Leave_Empty_To_Keep_Current_Pin" xml:space="preserve"><value>سيبه فاضي عشان الـ PIN الحالي يفضل زي ما هو. اكتب 4 أرقام لو عايز تعيّن PIN جديد.</value></data>
+  <!-- ===== Phase 9: security ===== -->
+  <data name="Invalid_Image_File" xml:space="preserve"><value>الملف مش صورة صالحة (JPG أو PNG أو WebP أو GIF أو HEIC)</value></data>
 </root>

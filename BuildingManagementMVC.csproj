@@ -9,6 +9,16 @@
     <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
 
+  <!-- مشروع الاختبارات جوه فولدر Tests — لازم مايتجمّعش مع الموقع -->
+  <ItemGroup>
+    <Compile Remove="Tests\**" />
+    <Content Remove="Tests\**" />
+    <EmbeddedResource Remove="Tests\**" />
+    <None Remove="Tests\**" />
+    <!-- يسمح لمشروع الاختبارات يشوف الدوال internal (زي LoginThrottle.K) -->
+    <InternalsVisibleTo Include="BuildingManagement.Tests" />
+  </ItemGroup>
+
   <ItemGroup>
     <None Include=".github\workflows\BuildingManagementMVC20260930173859.yml" />
   </ItemGroup>

@@ -24,20 +24,54 @@ public class ResidentsService
     // ═══════════════════════════════════════════════════════════
     // ✅ دالة مركزية لتحديث PIN الساكن (تحدث الشقق والسكان معاً)
     // ═══════════════════════════════════════════════════════════
+    // تعيين PIN للشقة (رابط التعيين أو إعادة التعيين من الأدمن).
+    // لو مفيش ساكن للشقة بنعمل ساكن رئيسي من بيانات الشقة.
+    public async Task SetApartmentPinAsync(string buildingId, string apartmentId, string newPin, string? updatedBy)
+    {
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        var hashed = SecretVerifier.Hash(newPin);
+
+        var residents = await db.Residents
+            .Where(r => r.BuildingId == buildingId && r.ApartmentId == apartmentId)
+            .ToListAsync();
+
+        if (residents.Count == 0)
+        {
+            var apt = await db.Apartments.AsNoTracking()
+                .FirstOrDefaultAsync(a => a.BuildingId == buildingId && a.Id == apartmentId)
+                ?? throw new InvalidOperationException("apartment-not-found");
+
+            db.Residents.Add(new BuildingManagementMvc.Data.Entities.ResidentEntity
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                Uid = Guid.NewGuid().ToString("N"),
+                BuildingId = buildingId,
+                ApartmentId = apartmentId,
+                Name = apt.Owner ?? "",
+                Phone = apt.Phone ?? "",
+                Whatsapp = apt.Phone ?? "",
+                Email = apt.Email ?? "",
+                PinHash = hashed,
+                IsPrimary = true,
+                IsOwner = true,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = updatedBy
+            });
+        }
+        else
+        {
+            foreach (var res in residents) res.PinHash = hashed;
+        }
+
+        await db.SaveChangesAsync();
+    }
+
     public async Task UpdateResidentPinAsync(string buildingId, string apartmentId, string newPin)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
 
-        // 1. تحديث جدول الشقق (Apartments) - نص صريح
-        var apt = await db.Apartments
-            .FirstOrDefaultAsync(a => a.BuildingId == buildingId && a.Id == apartmentId);
-
-        if (apt != null)
-        {
-            apt.Pin = newPin;
-        }
-
-        // 2. تحديث جدول السكان (Residents) - مشفر
+        // الـ PIN مابقاش بيتخزّن نص صريح في جدول الشقق — بنحدّث جدول السكان (مشفر) بس
         var residents = await db.Residents
             .Where(r => r.ApartmentId == apartmentId)
             .ToListAsync();

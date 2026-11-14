@@ -61,7 +61,7 @@ public class UsersService
                 case "name": doc.Name = v; break;
                 case "phone": doc.Phone = v; break;
                 case "whatsapp": doc.Whatsapp = v; break;
-                case "pin": doc.Pin = v; break;
+                case "pin": doc.Pin = string.IsNullOrEmpty(v) ? v : SecretVerifier.HashIfPlain(v); break;
                 case "photoUrl": doc.PhotoUrl = v; break;
                 case "role": doc.Role = v; break;
                 case "isActive": doc.IsActive = kv.Value is bool ib && ib; break;

@@ -200,7 +200,7 @@ public class BuildingMapService
 
             Owner = apt.Owner,
             Phone = apt.Phone,
-            Pin = apt.Pin,
+            Pin = "",
             Email = apt.Email,
 
             MonthlyFee = apt.MonthlyFee,

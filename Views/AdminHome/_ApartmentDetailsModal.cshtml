@@ -46,7 +46,7 @@
                 </div>
                 <div class="detail-item">
                     <label>🔒 PIN</label>
-                    <span class="pin-value">@Model.Pin</span>
+                    <span class="pin-value" title="@Loc.T("Pin_Stored_Securely_Note")">@Loc.T("Pin_Hidden")</span>
                 </div>
                 <div class="detail-item">
                     <label>@Loc.T("Last_Seen")</label>
@@ -138,7 +138,7 @@
                     <input type="hidden" name="aptId" value="@Model.AptId" />
                     <input type="hidden" name="buildingId" value="@Model.BuildingId" />
                     <button type="submit" class="qa-btn qa-wallet"
-                            onclick="return confirm('هل تريد الدخول على محفظة الساكن؟');">
+                            onclick="return confirm('@Loc.Js("Confirm_Enter_Resident_Wallet")');">
                         <span class="qa-icon">💼</span>
                         <span>@Loc.T("Wallet_2")</span>
                     </button>
@@ -165,7 +165,7 @@
                     <input type="hidden" name="aptId" value="@Model.AptId" />
                     <input type="hidden" name="buildingId" value="@Model.BuildingId" />
                     <button type="submit" class="qa-btn qa-impersonate"
-                            onclick="return confirm('هل تريد الدخول كـ Resident؟');">
+                            onclick="return confirm('@Loc.Js("Confirm_Enter_As_Resident")');">
                         <span class="qa-icon">🚪</span>
                         <span>@Loc.T("Log_In_As_Resident")</span>
                     </button>

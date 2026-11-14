@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using BuildingManagementMvc.Data;
@@ -11,6 +12,8 @@ public class QrSecurityService
 {
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly string _secretKey;
+    // مفتاح تشفير/توثيق مشتق (منفصل عن مفتاح التوقيع الثابت) — v2
+    private readonly byte[] _quickKey;
     private readonly ILogger<QrSecurityService> _logger;
 
     public QrSecurityService(
@@ -20,6 +23,9 @@ public class QrSecurityService
     {
         _sqlFactory = sqlFactory;
         _secretKey = ConfigSecrets.Require(config, "Qr:SecretKey", "Excel:SecretKey");
+        _quickKey = HMACSHA256.HashData(
+            Encoding.UTF8.GetBytes(_secretKey),
+            Encoding.UTF8.GetBytes("qr-quick-token-v2"));
         _logger = logger;
     }
 
@@ -57,46 +63,41 @@ public class QrSecurityService
             ExpiresAt = DateTime.UtcNow.Add(options.Validity).ToString("o"),
             MaxUses = options.MaxUses,
             OneTime = options.OneTime,
-            TokenId = Guid.NewGuid().ToString("N")
+            TokenId = Guid.NewGuid().ToString("N"),
+            Purpose = options.Purpose
         };
 
+        // v2: AES-GCM (تشفير + توثيق في خطوة واحدة) بمفتاح مشتق ومعاه nonce عشوائي
         var json = JsonSerializer.Serialize(payload);
-        var encrypted = EncryptAes(json);
-
-        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(_secretKey));
-        var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(encrypted));
-        var signature = Convert.ToHexString(hash).ToLower()[..16];
-
-        return $"{encrypted}.{signature}";
+        return "v2." + SealQuick(json);
     }
 
     public async Task<QuickTokenValidation> ValidateQuickToken(string token, string? deviceFingerprint = null)
     {
-        var parts = token.Split('.');
-        if (parts.Length != 2)
+        if (string.IsNullOrEmpty(token) || !token.StartsWith("v2.", StringComparison.Ordinal))
             return QuickTokenValidation.Fail(Loc.T("Invalid_Token"));
-
-        var encrypted = parts[0];
-        var signature = parts[1];
-
-        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(_secretKey));
-        var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(encrypted));
-        var expectedSig = Convert.ToHexString(hash).ToLower()[..16];
-        if (signature != expectedSig)
-            return QuickTokenValidation.Fail(Loc.T("The_Token_Has_Been_Tampered_With"));
 
         QuickTokenPayload payload;
         try
         {
-            var json = DecryptAes(encrypted);
+            var json = OpenQuick(token.Substring(3));
             payload = JsonSerializer.Deserialize<QuickTokenPayload>(json)!;
+        }
+        catch (CryptographicException)
+        {
+            return QuickTokenValidation.Fail(Loc.T("The_Token_Has_Been_Tampered_With"));
         }
         catch
         {
             return QuickTokenValidation.Fail(Loc.T("Corrupted_Token"));
         }
 
-        if (DateTime.UtcNow > DateTime.Parse(payload.ExpiresAt))
+        // وقت الانتهاء محفوظ UTC بصيغة "o" — نقراه RoundtripKind عشان توقيت السيرفر مايأثرش
+        if (!DateTime.TryParse(payload.ExpiresAt, CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind, out var expiresAt))
+            return QuickTokenValidation.Fail(Loc.T("Corrupted_Token"));
+
+        if (DateTime.UtcNow > expiresAt.ToUniversalTime())
             return QuickTokenValidation.Fail(Loc.T("The_QR_Has_Expired"));
 
         // ✅ استخدام SQL بدل Firestore
@@ -151,39 +152,96 @@ public class QrSecurityService
     }
 
     // ============================================================
-    // AES
+    // استهلاك atomic: UPDATE ... WHERE UseCount < الحد الأقصى
+    // (يمنع إن توكن "مرة واحدة" يتستخدم مرتين لو طلبين وصلوا مع بعض)
     // ============================================================
-    private string EncryptAes(string plainText)
+    public async Task<bool> TryConsumeQuickTokenAsync(QuickTokenPayload p, string? deviceFingerprint = null)
     {
-        using var aes = Aes.Create();
-        aes.Key = Encoding.UTF8.GetBytes(_secretKey.PadRight(32).Substring(0, 32));
-        aes.IV = new byte[16];
+        var limit = p.OneTime ? 1 : (p.MaxUses > 0 ? p.MaxUses : int.MaxValue);
+        var now = DateTime.UtcNow.ToString("o");
 
-        using var encryptor = aes.CreateEncryptor();
-        var plainBytes = Encoding.UTF8.GetBytes(plainText);
-        var cipherBytes = encryptor.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
+        await using var db = await _sqlFactory.CreateDbContextAsync();
 
-        return Convert.ToBase64String(cipherBytes).Replace("+", "-").Replace("/", "_").Replace("=", "");
+        var updated = await db.QrUsages
+            .Where(x => x.TokenId == p.TokenId && x.UseCount < limit)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(x => x.UseCount, x => x.UseCount + 1)
+                .SetProperty(x => x.LastUsedAt, now));
+        if (updated == 1) return true;
+
+        // موجود وواصل للحد الأقصى
+        if (await db.QrUsages.AnyAsync(x => x.TokenId == p.TokenId)) return false;
+
+        // أول استخدام: لو طلب تاني سبقنا بالـ insert (نفس الـ PK) نرجع نجرب الـ UPDATE مرة
+        try
+        {
+            db.QrUsages.Add(new QrUsageEntity
+            {
+                Id = p.TokenId,
+                TokenId = p.TokenId,
+                UseCount = 1,
+                FirstUsedAt = now,
+                LastUsedAt = now,
+                DeviceFingerprint = deviceFingerprint,
+                CreatedAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+            return true;
+        }
+        catch (DbUpdateException)
+        {
+            db.ChangeTracker.Clear();
+            updated = await db.QrUsages
+                .Where(x => x.TokenId == p.TokenId && x.UseCount < limit)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(x => x.UseCount, x => x.UseCount + 1)
+                    .SetProperty(x => x.LastUsedAt, now));
+            return updated == 1;
+        }
     }
 
-    private string DecryptAes(string cipherText)
+    // ============================================================
+    // AES-GCM  (nonce[12] | tag[16] | ciphertext) → base64url
+    // ============================================================
+    private string SealQuick(string plainText)
     {
-        var padded = cipherText.Replace("-", "+").Replace("_", "/");
+        var plain = Encoding.UTF8.GetBytes(plainText);
+        var nonce = RandomNumberGenerator.GetBytes(12);
+        var tag = new byte[16];
+        var cipher = new byte[plain.Length];
+
+        using var gcm = new AesGcm(_quickKey, 16);
+        gcm.Encrypt(nonce, plain, cipher, tag);
+
+        var all = new byte[12 + 16 + cipher.Length];
+        Buffer.BlockCopy(nonce, 0, all, 0, 12);
+        Buffer.BlockCopy(tag, 0, all, 12, 16);
+        Buffer.BlockCopy(cipher, 0, all, 28, cipher.Length);
+
+        return Convert.ToBase64String(all).Replace("+", "-").Replace("/", "_").TrimEnd('=');
+    }
+
+    private string OpenQuick(string token)
+    {
+        var padded = token.Replace("-", "+").Replace("_", "/");
         switch (padded.Length % 4)
         {
             case 2: padded += "=="; break;
             case 3: padded += "="; break;
         }
 
-        using var aes = Aes.Create();
-        aes.Key = Encoding.UTF8.GetBytes(_secretKey.PadRight(32).Substring(0, 32));
-        aes.IV = new byte[16];
+        var all = Convert.FromBase64String(padded);
+        if (all.Length < 28) throw new CryptographicException("short token");
 
-        using var decryptor = aes.CreateDecryptor();
-        var cipherBytes = Convert.FromBase64String(padded);
-        var plainBytes = decryptor.TransformFinalBlock(cipherBytes, 0, cipherBytes.Length);
+        var nonce = all.AsSpan(0, 12);
+        var tag = all.AsSpan(12, 16);
+        var cipher = all.AsSpan(28);
+        var plain = new byte[cipher.Length];
 
-        return Encoding.UTF8.GetString(plainBytes);
+        using var gcm = new AesGcm(_quickKey, 16);
+        gcm.Decrypt(nonce, cipher, tag, plain);   // بيرمي CryptographicException لو اتعدّل
+
+        return Encoding.UTF8.GetString(plain);
     }
 }
 
@@ -197,6 +255,9 @@ public class QuickQrOptions
     public TimeSpan Validity { get; set; } = TimeSpan.FromMinutes(5);
     public int MaxUses { get; set; } = 1;
     public bool OneTime { get; set; } = true;
+
+    // "login" (دخول سريع) أو "setpin" (رابط تعيين PIN) — التوكنين مش بيتبدلوا ببعض
+    public string Purpose { get; set; } = "login";
 }
 
 public class QuickTokenPayload
@@ -209,6 +270,7 @@ public class QuickTokenPayload
     public int MaxUses { get; set; }
     public bool OneTime { get; set; }
     public string TokenId { get; set; } = "";
+    public string Purpose { get; set; } = "login";   // التوكنات القديمة من غير Purpose = login
 }
 
 public class QrUsage

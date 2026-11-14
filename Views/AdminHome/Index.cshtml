@@ -317,7 +317,7 @@
                     document.getElementById('newQrBtn').style.display = 'inline-block';
 
                     document.getElementById('quickQrImage').src =
-                        'https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=' + encodeURIComponent(data.url);
+                        '/QrImage/Png?size=280&data=' + encodeURIComponent(data.url);
                     document.getElementById('quickQrUrl').value = data.url;
                     document.getElementById('quickQrOpenLink').href = data.url;
                 } catch (err) {

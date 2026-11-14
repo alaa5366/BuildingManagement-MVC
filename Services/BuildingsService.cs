@@ -28,6 +28,12 @@ public class BuildingsService
         return list;
     }
 
+    // خفيف: Id/Name/BuildingNumber فقط (للقوائم وصفحات الدخول)
+    public Task<List<Building>> GetSummariesAsync() => _sql.GetSummariesAsync();
+
+    public Task<string?> FindBuildingIdByApartmentAsync(string apartmentId)
+        => _sql.FindBuildingIdByApartmentAsync(apartmentId);
+
     public async Task<Building?> GetByIdAsync(string id)
     {
         if (string.IsNullOrWhiteSpace(id)) return null;
@@ -72,7 +78,7 @@ public class BuildingsService
             Id = Guid.NewGuid().ToString("N"),
             BuildingNumber = nextNumber,
             Name = name,
-            AdminPin = adminPin,
+            AdminPin = "", // مابنخزّنش الـ PIN نص صريح
             AdminWhatsapp = AuthHelpers.NormalizePhone(adminWhatsapp),
             LogoUrl = logoUrl ?? "",
             DataVersion = "3.2",
@@ -122,7 +128,7 @@ public class BuildingsService
                 Number = number,
                 Phone = phone,
                 MonthlyFee = 0,
-                Pin = pin,
+                Pin = "",
                 Closed = false,
                 OpenDate = DateTime.UtcNow.ToString("o")
             });
@@ -154,7 +160,7 @@ public class BuildingsService
             Number = nextNum,
             Phone = phone,
             MonthlyFee = 0,
-            Pin = pin,
+            Pin = "",
             Closed = false,
             OpenDate = DateTime.UtcNow.ToString("o")
         });
@@ -201,7 +207,7 @@ public class BuildingsService
         apt.Owner = owner ?? "";
         apt.Label = label ?? "";
         apt.Phone = AuthHelpers.NormalizePhone(phone);
-        apt.Pin = pin;
+        // الـ PIN مابقاش بيتخزّن في جدول الشقق
         apt.MonthlyFee = monthlyFee;
         apt.Notes = notes ?? "";
         if (!string.IsNullOrWhiteSpace(email))

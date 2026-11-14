@@ -147,7 +147,7 @@ public static class BuildingSqlMapper
             Id = be.Id,
             BuildingNumber = be.BuildingNumber,
             Name = be.Name,
-            AdminPin = be.AdminPin,
+            AdminPin = "", // لم يعد يُخزَّن (كان نص صريح)
             DataVersion = be.DataVersion,
             LogoUrl = be.LogoUrl,
             AdminWhatsapp = be.AdminWhatsapp,
@@ -170,7 +170,7 @@ public static class BuildingSqlMapper
                 Owner = a.Owner,
                 Phone = a.Phone,
                 MonthlyFee = (double)a.MonthlyFee,
-                Pin = a.Pin,
+                Pin = "",
                 Closed = a.IsClosed,
                 Label = a.Label,
                 Email = a.Email,
@@ -397,7 +397,7 @@ public static class BuildingSqlMapper
         }
         be.BuildingNumber = Cut(src.BuildingNumber, 50);
         be.Name = Cut(src.Name, 200);
-        be.AdminPin = Cut(src.AdminPin, 256);
+        be.AdminPin = ""; // لم يعد يُخزَّن
         be.DataVersion = Cut(src.DataVersion, 20);
         be.LogoUrl = Cut(src.LogoUrl, 1000);
         be.AdminWhatsapp = Cut(src.AdminWhatsapp, 32);
@@ -452,7 +452,7 @@ public static class BuildingSqlMapper
                 Phone = Cut(a.Phone, 32),
                 Email = Cut(a.Email, 256),
                 MonthlyFee = fee,
-                Pin = Cut(a.Pin, 256),
+                Pin = "",
                 IsClosed = a.Closed,
                 Label = Cut(a.Label, 100),
                 Notes = Cut(a.Notes, 1000),

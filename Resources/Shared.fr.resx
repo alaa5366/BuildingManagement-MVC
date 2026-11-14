@@ -883,7 +883,7 @@
     <value>⚠️ Confirmation finale</value>
   </data>
   <data name="Once_You_Click_Confirm_Import_A" xml:space="preserve">
-    <value>Une fois que vous cliquez sur « Confirmer l'importation », un nouvel immeuble sera créé dans la base de données et des comptes Firebase Auth seront créés pour chaque appartement.</value>
+    <value>Dès que vous cliquez sur « Confirmer l'import », un nouveau bâtiment sera créé dans la base de données avec tous ses appartements.</value>
   </data>
   <data name="Confirm_Import_2" xml:space="preserve">
     <value>✅ Confirmer l'importation</value>
@@ -1764,7 +1764,7 @@
     <value>&lt;strong&gt;Créer un nouvel immeuble&lt;/strong&gt; — numéro automatique (BLD-001, BLD-002, ...)</value>
   </data>
   <data name="Add_Floors_And_Apartments_With_Automatic" xml:space="preserve">
-    <value>&lt;strong&gt;Ajouter des étages et des appartements&lt;/strong&gt; — avec création automatique Firebase Auth</value>
+    <value>&lt;strong&gt;Ajouter des étages et des appartements&lt;/strong&gt; — avec les identifiants de connexion de chaque appartement</value>
   </data>
   <data name="Generate_QRs_For_The_Admin_And" xml:space="preserve">
     <value>&lt;strong&gt;Générer des QR&lt;/strong&gt; — pour l'administrateur et chaque appartement (PDF contenant tous les QR)</value>
@@ -1839,13 +1839,13 @@
     <value>Quand j'actualise la page, j'obtiens un message rouge "Échec de l'enregistrement"</value>
   </data>
   <data name="There_Is_Probably_A_Problem_Connecting" xml:space="preserve">
-    <value>Il y a probablement un problème de connexion à Firebase. Assurez-vous que :</value>
+    <value>Il y a probablement un problème de connexion au serveur. Assurez-vous que :</value>
   </data>
   <data name="Your_Internet_Connection_Is_Working" xml:space="preserve">
     <value>Votre connexion Internet fonctionne</value>
   </data>
   <data name="You_Are_Not_Using_A_VPN" xml:space="preserve">
-    <value>Vous n'utilisez pas de VPN (il peut bloquer Firebase)</value>
+    <value>Vous n'utilisez pas de VPN (il peut bloquer la connexion)</value>
   </data>
   <data name="Try_Logging_Out_And_Logging_In" xml:space="preserve">
     <value>Essayez de vous déconnecter et de vous reconnecter</value>
@@ -3449,7 +3449,7 @@
     <value>Sauvegarde complète + restauration</value>
   </data>
   <data name="Sync_Firebase_Auth_With_Firestore_Check" xml:space="preserve">
-    <value>Synchroniser Firebase Auth avec Firestore (vérifier/corriger)</value>
+    <value>Anciens outils de synchronisation (inutiles depuis la migration vers SQL)</value>
   </data>
   <data name="Secret_Access_Impersonation_To_Buildings_And" xml:space="preserve">
     <value>Accès secret (usurpation d'identité) aux immeubles et appartements</value>
@@ -5101,4 +5101,45 @@ Cette opération peut prendre quelques secondes.</value>
     <value>Ordre de l'étage</value>
   </data>
   <data name="Changing_It_Automatically_Updates_The_Database" xml:space="preserve"><value>⚠️ Le modifier met à jour automatiquement la base de données</value></data>
+  <!-- ===== Phase 6: keys that were missing ===== -->
+  <data name="Choose_Building" xml:space="preserve"><value>Choisir un bâtiment</value></data>
+  <data name="Import_Template" xml:space="preserve"><value>Modèle d'import</value></data>
+  <data name="Import_Template_Desc" xml:space="preserve"><value>Télécharger le modèle Excel d'import des données du bâtiment</value></data>
+  <data name="Manage_Cameras" xml:space="preserve"><value>Gérer les caméras</value></data>
+  <data name="Manage_Cameras_Desc" xml:space="preserve"><value>Ajouter, modifier et supprimer des caméras</value></data>
+  <data name="Manage_DVRs" xml:space="preserve"><value>Gérer les DVR</value></data>
+  <data name="Manage_DVRs_Desc" xml:space="preserve"><value>Ajouter, modifier et supprimer des DVR et leurs paramètres de connexion</value></data>
+  <data name="View_Cameras" xml:space="preserve"><value>Voir les caméras</value></data>
+  <data name="View_Cameras_Desc" xml:space="preserve"><value>Voir les flux des caméras en direct</value></data>
+  <data name="Warning_Restoring_Writes_Data_To_SQL" xml:space="preserve"><value>&lt;strong&gt;Attention :&lt;/strong&gt; la restauration écrit les données de la sauvegarde dans la base SQL et remplace les données existantes.</value></data>
+  <data name="Warning_Restoring_Writes_Data_To_SQL_2" xml:space="preserve"><value>&lt;strong&gt;Attention :&lt;/strong&gt; la restauration écrit les données de la sauvegarde dans la base SQL et remplace les données existantes.</value></data>
+  <!-- ===== Phase 6: extracted UI strings ===== -->
+  <data name="Dvr_Added_Successfully" xml:space="preserve"><value>DVR ajouté avec succès</value></data>
+  <data name="Dvr_Updated_Successfully" xml:space="preserve"><value>DVR modifié</value></data>
+  <data name="Dvr_Deleted_Successfully" xml:space="preserve"><value>DVR supprimé</value></data>
+  <data name="Camera_Added_Successfully" xml:space="preserve"><value>Caméra ajoutée</value></data>
+  <data name="Camera_Deleted_Successfully" xml:space="preserve"><value>Caméra supprimée</value></data>
+  <data name="Migration_DryRun_N" xml:space="preserve"><value>🔍 Simulation : {0} résidents seraient migrés</value></data>
+  <data name="Migration_Residents_Done_N" xml:space="preserve"><value>✅ {0} résidents migrés avec succès</value></data>
+  <data name="Migration_Residents_Failed_N" xml:space="preserve"><value>⚠️ Échec : {0} résidents</value></data>
+  <data name="Confirm_Enter_As_Admin" xml:space="preserve"><value>Entrer en tant qu'Admin de ce bâtiment ?</value></data>
+  <data name="Confirm_Enter_Resident_Wallet" xml:space="preserve"><value>Ouvrir le portefeuille du résident ?</value></data>
+  <data name="Confirm_Enter_As_Resident" xml:space="preserve"><value>Entrer en tant que Résident ?</value></data>
+  <data name="Enter_As_Admin" xml:space="preserve"><value>Entrer en tant qu'Admin</value></data>
+  <data name="Enter_As_Resident" xml:space="preserve"><value>Entrer en tant que résident</value></data>
+  <data name="Impersonation_Browsing_As" xml:space="preserve"><value>Vous naviguez en tant que :</value></data>
+  <data name="Impersonation_Original_Admin" xml:space="preserve"><value>— Admin d'origine :</value></data>
+  <data name="Back_To_My_Account" xml:space="preserve"><value>Retour à mon compte</value></data>
+  <data name="Accounts_Linked_To_Number" xml:space="preserve"><value>Comptes liés au numéro ({0})</value></data>
+  <data name="Floor_Label_With_Order" xml:space="preserve"><value>{0} (n° {1})</value></data>
+  <data name="Resident_Of_Apartment_N" xml:space="preserve"><value>Résident de l'appartement {0}</value></data>
+  <!-- ===== Phase 8: set-PIN link ===== -->
+  <data name="Set_Pin_Title" xml:space="preserve"><value>Définir votre PIN</value></data>
+  <data name="Set_Pin_Intro" xml:space="preserve"><value>Choisissez un PIN à 4 chiffres pour vous connecter au compte de votre appartement.</value></data>
+  <data name="Set_Pin_Done" xml:space="preserve"><value>✅ Votre PIN a été défini. Vous pouvez maintenant vous connecter.</value></data>
+  <data name="Pin_Stored_Securely_Note" xml:space="preserve"><value>Le PIN est stocké de façon sécurisée et ne peut pas être affiché. Utilisez le message de bienvenue pour envoyer au résident un lien lui permettant de définir son PIN.</value></data>
+  <data name="Pin_Hidden" xml:space="preserve"><value>🔒 Masqué</value></data>
+  <data name="Leave_Empty_To_Keep_Current_Pin" xml:space="preserve"><value>Laissez vide pour conserver le PIN actuel. Saisissez 4 chiffres pour le réinitialiser.</value></data>
+  <!-- ===== Phase 9: security ===== -->
+  <data name="Invalid_Image_File" xml:space="preserve"><value>Le fichier n'est pas une image valide (JPG, PNG, WebP, GIF ou HEIC)</value></data>
 </root>

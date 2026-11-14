@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
@@ -18,6 +19,15 @@ public class AccountController : Controller
     private readonly LoginThrottle _throttle;
     private readonly ILogger<AccountController> _log;
     private string? ClientIp => HttpContext.Connection.RemoteIpAddress?.ToString();
+    // مفتاح قفل موحّد لكل طرق الدخول: الرقم بعد التطبيع (0100.. = +20100.. = 20100..) أو الإيميل
+    private static string AcctKey(string? id)
+    {
+        var s = (id ?? "").Trim();
+        if (s.Contains('@')) return "acct:" + s.ToLowerInvariant();
+        var p = AuthHelpers.NormalizePhone(s);
+        return "acct:" + (string.IsNullOrEmpty(p) ? s.ToLowerInvariant() : p);
+    }
+
     private static string LockedMsg => Loc.T("Too_Many_Failed_Login_Attempts_Try");
 
     public AccountController(
@@ -44,25 +54,26 @@ public class AccountController : Controller
     [HttpGet]
     public async Task<IActionResult> LoginResident()
     {
-        ViewBag.Buildings = await _buildings.GetAllAsync();
+        ViewBag.Buildings = await _buildings.GetSummariesAsync();
         return View(new ResidentLoginVm());
     }
 
     [HttpPost]
+    [EnableRateLimiting("login")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> LoginResident(ResidentLoginVm vm)
     {
         if (!ModelState.IsValid)
         {
-            ViewBag.Buildings = await _buildings.GetAllAsync();
+            ViewBag.Buildings = await _buildings.GetSummariesAsync();
             return View(vm);
         }
 
-        var throttleKey = $"res:{vm.BuildingId}:{vm.Whatsapp}";
+        var throttleKey = AcctKey(vm.Whatsapp);
         if (_throttle.IsLocked(throttleKey, ClientIp))
         {
             ViewBag.Error = LockedMsg;
-            ViewBag.Buildings = await _buildings.GetAllAsync();
+            ViewBag.Buildings = await _buildings.GetSummariesAsync();
             return View(vm);
         }
 
@@ -73,7 +84,7 @@ public class AccountController : Controller
         {
             _throttle.RegisterFailure(throttleKey, ClientIp);
             ViewBag.Error = MapError(res.Error, res.Reason);
-            ViewBag.Buildings = await _buildings.GetAllAsync();
+            ViewBag.Buildings = await _buildings.GetSummariesAsync();
             return View(vm);
         }
 
@@ -88,25 +99,26 @@ public class AccountController : Controller
     [HttpGet]
     public async Task<IActionResult> LoginAdmin()
     {
-        ViewBag.Buildings = await _buildings.GetAllAsync();
+        ViewBag.Buildings = await _buildings.GetSummariesAsync();
         return View(new AdminLoginVm());
     }
 
     [HttpPost]
+    [EnableRateLimiting("login")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> LoginAdmin(AdminLoginVm vm)
     {
         if (!ModelState.IsValid)
         {
-            ViewBag.Buildings = await _buildings.GetAllAsync();
+            ViewBag.Buildings = await _buildings.GetSummariesAsync();
             return View(vm);
         }
 
-        var throttleKey = $"adm:{vm.BuildingId}:{vm.Phone}";
+        var throttleKey = AcctKey(vm.Phone);
         if (_throttle.IsLocked(throttleKey, ClientIp))
         {
             ViewBag.Error = LockedMsg;
-            ViewBag.Buildings = await _buildings.GetAllAsync();
+            ViewBag.Buildings = await _buildings.GetSummariesAsync();
             return View(vm);
         }
 
@@ -116,7 +128,7 @@ public class AccountController : Controller
         {
             _throttle.RegisterFailure(throttleKey, ClientIp);
             ViewBag.Error = MapError(res.Error, res.Reason);
-            ViewBag.Buildings = await _buildings.GetAllAsync();
+            ViewBag.Buildings = await _buildings.GetSummariesAsync();
             return View(vm);
         }
 
@@ -132,12 +144,13 @@ public class AccountController : Controller
     public IActionResult LoginSuperAdmin() => View(new SuperAdminLoginVm());
 
     [HttpPost]
+    [EnableRateLimiting("login")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> LoginSuperAdmin(SuperAdminLoginVm vm)
     {
         if (!ModelState.IsValid) return View(vm);
 
-        var throttleKey = "sa:" + vm.Email;
+        var throttleKey = AcctKey(vm.Email);
         if (_throttle.IsLocked(throttleKey, ClientIp))
         {
             ViewBag.Error = LockedMsg;
@@ -169,6 +182,7 @@ public class AccountController : Controller
     }
 
     [HttpPost]
+    [EnableRateLimiting("login")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UnifiedLogin(UnifiedLoginVm vm)
     {
@@ -177,7 +191,7 @@ public class AccountController : Controller
         var identifier = vm.Identifier.Trim();
         var credential = vm.Credential.Trim();
 
-        var throttleKey = "uni:" + identifier;
+        var throttleKey = AcctKey(identifier);
         if (_throttle.IsLocked(throttleKey, ClientIp))
         {
             ViewBag.Error = LockedMsg;
@@ -210,7 +224,7 @@ public class AccountController : Controller
 
         // ✅ تحسين رسالة الترحيب
         var fullName = contexts.Count > 1
-            ? $"حسابات مرتبطة بالرقم ({identifier})"
+            ? Loc.T("Accounts_Linked_To_Number", identifier)
             : (contexts.FirstOrDefault()?.Name ?? identifier);
 
         var token = StoreContextsInSession(contexts, fullName);
@@ -243,6 +257,7 @@ public class AccountController : Controller
     }
 
     [HttpPost]
+    [EnableRateLimiting("login")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ChooseContext(string sessionToken, string contextId)
     {
@@ -277,6 +292,7 @@ public class AccountController : Controller
     // 6. Logout
     // ═══════════════════════════════════════════════════════════
     [HttpPost]
+    [EnableRateLimiting("login")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
@@ -367,9 +383,19 @@ public class AccountController : Controller
         }
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+        // الأدمن والسوبر أدمن: جلسة 12 ساعة ومش بتتمدد (الساكن زي ما هو: 7 أيام متجددة)
+        var props = new AuthenticationProperties();
+        if (res.Role == "admin" || res.Role == "superadmin")
+        {
+            props.ExpiresUtc = DateTimeOffset.UtcNow.AddHours(12);
+            props.AllowRefresh = false;
+        }
+
         await HttpContext.SignInAsync(
             CookieAuthenticationDefaults.AuthenticationScheme,
-            new ClaimsPrincipal(identity));
+            new ClaimsPrincipal(identity),
+            props);
     }
 
     private static string MapError(string? error, string? reason = null) => error switch
@@ -383,10 +409,9 @@ public class AccountController : Controller
         "pin-required" => Loc.T("PIN_Required"),
         "apartment-not-found" => Loc.T("The_Apartment_Does_Not_Exist"),
         "no-admin" => Loc.T("No_Admin_Has_Been_Registered_Yet"),
-        "wrong-credentials" => Loc.T("Incorrect_Phone_Number_Or_PIN"),
-        "wrong-wa" => Loc.T("The_WhatsApp_Number_Does_Not_Match"),
-        "wrong-pin" => Loc.T("Incorrect_PIN"),
-        "not-in-building" => Loc.T("You_Are_Not_In_This_Building"),
+        // رسالة واحدة لكل أخطاء بيانات الدخول (منع كشف الحسابات)
+        "wrong-credentials" or "wrong-wa" or "wrong-pin" or "not-in-building"
+            => Loc.T("Incorrect_Phone_Number_Or_PIN"),
         "not-superadmin" => Loc.T("This_Email_Is_Not_Authorized_For_2"),
         "pin-not-set" => Loc.T("PIN_Not_Set_Contact_Admin"),
         "account-disabled" => Loc.T("This_Account_Is_Disabled") + (string.IsNullOrWhiteSpace(reason) ? "" : Loc.T("Reason_N", reason)),
@@ -400,6 +425,7 @@ public class AccountController : Controller
     // ═══════════════════════════════════════════════════════════
     [HttpGet]
     [AllowAnonymous]
+    [EnableRateLimiting("lookup")]
     public async Task<IActionResult> GetFloors(string buildingId)
     {
         if (string.IsNullOrWhiteSpace(buildingId))
@@ -415,7 +441,7 @@ public class AccountController : Controller
             {
                 id = f.Id,
                 order = f.Order,
-                label = $"{f.Label} (رقم {f.Order})"
+                label = Loc.T("Floor_Label_With_Order", f.Label, f.Order)
             })
             .ToList();
 
@@ -424,6 +450,7 @@ public class AccountController : Controller
 
     [HttpGet]
     [AllowAnonymous]
+    [EnableRateLimiting("lookup")]
     public async Task<IActionResult> GetApartments(string buildingId, string floorId)
     {
         if (string.IsNullOrWhiteSpace(buildingId) || string.IsNullOrWhiteSpace(floorId))
@@ -440,7 +467,7 @@ public class AccountController : Controller
             {
                 id = a.Id,
                 number = a.Number,
-                label = $"شقة {a.Number}" + (string.IsNullOrWhiteSpace(a.Label) ? "" : $" — {a.Label}")
+                label = Loc.T("Apartment_N", a.Number) + (string.IsNullOrWhiteSpace(a.Label) ? "" : $" — {a.Label}")
             })
             .ToList();
 
@@ -459,69 +486,207 @@ public class AccountController : Controller
         if (string.IsNullOrEmpty(token))
             return RedirectToAction("LoginChoice");
 
-        // 1. تحقق من الـ Token
-        var validation = await qrSecurity.ValidateQuickToken(token);
-        if (!validation.IsSuccess)
+        // ✅ GET مابيستهلكش التوكن — بيعرض صفحة تأكيد بس (معاينة الرابط في واتساب/الأنتي فايروس ماتحرقوش)
+        var ctx = await ResolveQuickLoginAsync(token, qrSecurity);
+        if (ctx.Error != null)
         {
-            ViewBag.Error = validation.Error;
+            ViewBag.Error = ctx.Error;
             return View("QuickLoginError");
         }
 
-        var payload = validation.Data!;
+        ViewBag.Token = token;
+        ViewBag.AptNumber = ctx.Apt!.Number;
+        ViewBag.BuildingName = ctx.Building!.Name;
+        return View("QuickLoginConfirm");
+    }
 
-        // 2. جيب الـ Building
-        var building = await _buildings.GetByIdAsync(payload.BuildingId);
-        if (building == null)
+    [HttpPost]
+    [EnableRateLimiting("login")]
+    [AllowAnonymous]
+    public async Task<IActionResult> QuickLoginConfirm(
+        string token,
+        [FromServices] QrSecurityService qrSecurity)
+    {
+        if (string.IsNullOrEmpty(token))
+            return RedirectToAction("LoginChoice");
+
+        var ctx = await ResolveQuickLoginAsync(token, qrSecurity);
+        if (ctx.Error != null)
         {
-            ViewBag.Error = Loc.T("The_Building_Does_Not_Exist");
+            ViewBag.Error = ctx.Error;
             return View("QuickLoginError");
         }
 
-        // 3. جيب الشقة
-        var apt = building.Apartments.FirstOrDefault(a => a.Id == payload.AptId);
-        if (apt == null)
+        var payload = ctx.Payload!;
+        var building = ctx.Building!;
+        var apt = ctx.Apt!;
+        var resident = ctx.Resident!;
+
+        // ✅ استهلاك atomic قبل تسجيل الدخول — لو طلب تاني سبقنا يفشل هنا
+        var consumed = await qrSecurity.TryConsumeQuickTokenAsync(payload);
+        if (!consumed)
         {
-            ViewBag.Error = Loc.T("The_Apartment_Does_Not_Exist");
+            ViewBag.Error = Loc.T("This_QR_Has_Already_Been_Used");
             return View("QuickLoginError");
         }
 
-        // 4. جيب الساكن من الـ Residents table
-        var residents = await _residents.GetByApartmentAsync(payload.BuildingId, payload.AptId);
-        var resident = residents.FirstOrDefault(r => r.IsPrimary && !r.IsDisabled)
-                    ?? residents.FirstOrDefault(r => !r.IsDisabled);
-
-        if (resident == null)
-        {
-            ViewBag.Error = Loc.T("The_Apartment_Does_Not_Exist");
-            return View("QuickLoginError");
-        }
-
-        // 5. Sign In Cookie
         var result = AuthResult.Ok(
             uid: resident.Uid,
             role: "resident",
             email: resident.Email ?? "",
             name: string.IsNullOrWhiteSpace(resident.Name)
-                ? $"ساكن شقة {apt.Number}" : resident.Name,
+                ? Loc.T("Resident_Of_Apartment_N", apt.Number) : resident.Name,
             buildingIds: new List<string> { building.Id },
             aptId: resident.ApartmentId,
             aptNumber: apt.Number);
 
         await SignInCookieAsync(result);
 
-        // 6. Mark Token as used
-        try
-        {
-            await qrSecurity.MarkQuickTokenUsed(payload.TokenId);
-        }
-        catch (Exception ex)
-        {
-            _log.LogWarning(ex, "[QuickLogin] Failed to mark token as used");
-        }
-
         _log.LogInformation("[QuickLogin] Resident logged in: {Name} (apt {Apt})",
             resident.Name, apt.Number);
 
         return RedirectToAction("Index", "ResidentHome");
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // رابط تعيين الـ PIN (بيتبعت في رسالة الترحيب بدل الـ PIN نفسه)
+    // ═══════════════════════════════════════════════════════════
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<IActionResult> SetPin(string token, [FromServices] QrSecurityService qrSecurity)
+    {
+        var ctx = await ResolveSetPinAsync(token, qrSecurity);
+        if (ctx.Error != null)
+        {
+            ViewBag.Error = ctx.Error;
+            return View("QuickLoginError");
+        }
+
+        ViewBag.Token = token;
+        ViewBag.AptNumber = ctx.Apt!.Number;
+        ViewBag.BuildingName = ctx.Building!.Name;
+        return View("SetPin");
+    }
+
+    [HttpPost]
+    [AllowAnonymous]
+    [EnableRateLimiting("login")]
+    public async Task<IActionResult> SetPin(
+        string token, string newPin, string confirmPin,
+        [FromServices] QrSecurityService qrSecurity)
+    {
+        var ctx = await ResolveSetPinAsync(token, qrSecurity);
+        if (ctx.Error != null)
+        {
+            ViewBag.Error = ctx.Error;
+            return View("QuickLoginError");
+        }
+
+        ViewBag.Token = token;
+        ViewBag.AptNumber = ctx.Apt!.Number;
+        ViewBag.BuildingName = ctx.Building!.Name;
+
+        if (string.IsNullOrEmpty(newPin) || newPin.Length != 4 || !newPin.All(char.IsDigit))
+        {
+            ViewBag.FormError = Loc.T("PIN_Must_Be_Exactly_4_Digits");
+            return View("SetPin");
+        }
+
+        if (newPin != confirmPin)
+        {
+            ViewBag.FormError = Loc.T("The_New_PIN_And_Its_Confirmation_2");
+            return View("SetPin");
+        }
+
+        // استهلاك atomic: الرابط يتستخدم مرة واحدة بس
+        if (!await qrSecurity.TryConsumeQuickTokenAsync(ctx.Payload!))
+        {
+            ViewBag.Error = Loc.T("This_QR_Has_Already_Been_Used");
+            return View("QuickLoginError");
+        }
+
+        try
+        {
+            await _residents.SetApartmentPinAsync(ctx.Payload!.BuildingId, ctx.Payload.AptId, newPin, "setpin-link");
+            _log.LogInformation("[SetPin] PIN set via link for apartment {Apt} in building {B}",
+                ctx.Apt.Number, ctx.Payload.BuildingId);
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "[SetPin] failed to set PIN");
+            ViewBag.Error = Loc.T("An_Unexpected_Error_Occurred");
+            return View("QuickLoginError");
+        }
+
+        ViewBag.Done = true;
+        return View("SetPin");
+    }
+
+    private async Task<QuickLoginContext> ResolveSetPinAsync(string token, QrSecurityService qrSecurity)
+    {
+        if (string.IsNullOrEmpty(token))
+            return new QuickLoginContext { Error = Loc.T("Invalid_Token") };
+
+        var validation = await qrSecurity.ValidateQuickToken(token);
+        if (!validation.IsSuccess)
+            return new QuickLoginContext { Error = validation.Error };
+
+        var payload = validation.Data!;
+        if (!string.Equals(payload.Purpose, "setpin", StringComparison.OrdinalIgnoreCase))
+            return new QuickLoginContext { Error = Loc.T("Invalid_Token") };
+
+        var building = await _buildings.GetByIdAsync(payload.BuildingId);
+        if (building == null)
+            return new QuickLoginContext { Error = Loc.T("The_Building_Does_Not_Exist") };
+
+        var apt = building.Apartments.FirstOrDefault(a => a.Id == payload.AptId);
+        if (apt == null)
+            return new QuickLoginContext { Error = Loc.T("The_Apartment_Does_Not_Exist") };
+
+        return new QuickLoginContext { Payload = payload, Building = building, Apt = apt };
+    }
+
+    private sealed class QuickLoginContext
+    {
+        public string? Error { get; init; }
+        public QuickTokenPayload? Payload { get; init; }
+        public Building? Building { get; init; }
+        public Apartment? Apt { get; init; }
+        public BuildingManagementMvc.Data.Entities.ResidentEntity? Resident { get; init; }
+    }
+
+    private async Task<QuickLoginContext> ResolveQuickLoginAsync(string token, QrSecurityService qrSecurity)
+    {
+        var validation = await qrSecurity.ValidateQuickToken(token);
+        if (!validation.IsSuccess)
+            return new QuickLoginContext { Error = validation.Error };
+
+        var payload = validation.Data!;
+
+        // توكن تعيين الـ PIN مايعملش دخول
+        if (!string.Equals(payload.Purpose, "login", StringComparison.OrdinalIgnoreCase))
+            return new QuickLoginContext { Error = Loc.T("Invalid_Token") };
+
+        var building = await _buildings.GetByIdAsync(payload.BuildingId);
+        if (building == null)
+            return new QuickLoginContext { Error = Loc.T("The_Building_Does_Not_Exist") };
+
+        var apt = building.Apartments.FirstOrDefault(a => a.Id == payload.AptId);
+        if (apt == null)
+            return new QuickLoginContext { Error = Loc.T("The_Apartment_Does_Not_Exist") };
+
+        var residents = await _residents.GetByApartmentAsync(payload.BuildingId, payload.AptId);
+        var resident = residents.FirstOrDefault(r => r.IsPrimary && !r.IsDisabled && r.IsActive)
+                    ?? residents.FirstOrDefault(r => !r.IsDisabled && r.IsActive);
+        if (resident == null)
+            return new QuickLoginContext { Error = Loc.T("The_Apartment_Does_Not_Exist") };
+
+        return new QuickLoginContext
+        {
+            Payload = payload,
+            Building = building,
+            Apt = apt,
+            Resident = resident
+        };
     }
 }

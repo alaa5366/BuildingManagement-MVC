@@ -13,6 +13,9 @@ using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.DataProtection; // ✅ لحفظ المفاتيح
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 QuestPDF.Settings.License = LicenseType.Community;
 QuestPDF.Settings.UseEnvironmentFonts = false;
@@ -33,22 +36,54 @@ builder.Services.Configure<FormOptions>(options =>
     options.ValueCountLimit = 10000;
     options.KeyLengthLimit = 4096;
     options.ValueLengthLimit = 4 * 1024 * 1024;
-    options.MultipartBodyLengthLimit = 100 * 1024 * 1024;
+    // الافتراضي 10MB — الأكشنز اللي محتاجة أكبر (استعادة النسخ الاحتياطي) عليها [RequestFormLimits] خاص بيها
+    options.MultipartBodyLengthLimit = 10 * 1024 * 1024;
     options.MultipartHeadersCountLimit = 32;
     options.MultipartHeadersLengthLimit = 32 * 1024;
 });
 
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.Limits.MaxRequestHeadersTotalSize = 4 * 1024 * 1024;
-    options.Limits.MaxRequestLineSize = 1024 * 1024;
-    options.Limits.MaxRequestBodySize = 100 * 1024 * 1024;
+    // حدود معقولة على مستوى التطبيق. الرفع الكبير (نسخ احتياطي / Excel / صور الإيصالات)
+    // له [RequestSizeLimit] مخصوص على الأكشن نفسه.
+    options.Limits.MaxRequestHeadersTotalSize = 64 * 1024;
+    options.Limits.MaxRequestLineSize = 16 * 1024;
+    options.Limits.MaxRequestBodySize = 5 * 1024 * 1024;
     options.Limits.MaxRequestBufferSize = 4 * 1024 * 1024;
+});
+
+builder.Services.Configure<IISServerOptions>(o => o.MaxRequestBodySize = 5 * 1024 * 1024);
+
+// ✅ Rate limiting على طلبات الدخول (POST): 30 طلب/دقيقة لكل IP
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // endpoints الاستعلام المفتوحة (أدوار/شقق في صفحة الدخول): 120 طلب/دقيقة لكل IP
+    o.AddPolicy("lookup", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 120,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+    o.AddPolicy("login", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
 });
 
 builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute());
+    options.Filters.Add(new BuildingManagementMvc.Services.BuildingWriteLockFilter());
 })
     .AddViewLocalization()
     .AddDataAnnotationsLocalization(options =>
@@ -252,19 +287,46 @@ builder.Services.AddAntiforgery(options =>
 });
 
 // ✅ Forwarded Headers
+// ✅ لا نثق في X-Forwarded-For إلا من بروكسي معروف (Proxy:KnownProxies = "ip1,ip2").
+// من غير إعداد: بنقبل X-Forwarded-Proto بس (للـ HTTPS) وبنتجاهل X-Forwarded-For/Host
+// عشان محدّش يزوّر الـ IP ويلف حوالين حماية تخمين الـ PIN.
+var knownProxies = (builder.Configuration["Proxy:KnownProxies"] ?? "")
+    .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
-                             | ForwardedHeaders.XForwardedProto
-                             | ForwardedHeaders.XForwardedHost;
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
+
+    if (knownProxies.Length > 0)
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
+                                 | ForwardedHeaders.XForwardedProto
+                                 | ForwardedHeaders.XForwardedHost;
+        foreach (var p in knownProxies)
+            if (System.Net.IPAddress.TryParse(p, out var ip)) options.KnownProxies.Add(ip);
+    }
+    else
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedProto;
+    }
 });
 
 // ✅ حماية المفاتيح (عشان السيرفر ميعملش Logout عشوائي)
+// DataProtection:KeysPath = مسار دائم خارج فولدر النشر (عشان النشر مايمسحش المفاتيح ويعمل Logout للكل)
+var dpKeysPath = builder.Configuration["DataProtection:KeysPath"];
+if (string.IsNullOrWhiteSpace(dpKeysPath))
+    dpKeysPath = Path.Combine(builder.Environment.ContentRootPath, "keys");
+
 builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "keys")))
+    .PersistKeysToFileSystem(new DirectoryInfo(dpKeysPath))
     .SetApplicationName("BuildingManagement");
+
+// ✅ مفاتيح الـ DataProtection بتتشفّر على القرص (AES-GCM بمفتاح مشتق من Encryption:SecretKey)
+var encryptionSecret = ConfigSecrets.Require(builder.Configuration, "Encryption:SecretKey");
+var dpKeyHolder = new DataProtectionKeyHolder(encryptionSecret);
+builder.Services.AddSingleton(dpKeyHolder);
+builder.Services.Configure<KeyManagementOptions>(o => o.XmlEncryptor = new AesGcmXmlEncryptor(dpKeyHolder.Key));
 
 var app = builder.Build();
 
@@ -309,10 +371,78 @@ ConfigSecrets.Require(app.Configuration, "Encryption:SecretKey");
 var superAdminEmails = ConfigSecrets.Require(app.Configuration, "Auth:SuperAdminEmails");
 SqlAuthService.ConfigureSuperAdmins(superAdminEmails);
 
+// مفتاح طوارئ مؤقت فقط: Auth:AllowLegacyPlainPins=true يسمح بمقارنة PIN نص صريح قديم
+SecretVerifier.AllowLegacyPlain = app.Configuration.GetValue<bool>("Auth:AllowLegacyPlainPins");
+
+// تشفير ملفات النسخ الاحتياطي المخزنة على السيرفر
+BackupFileProtector.Initialize(encryptionSecret);
+
+// تحويل أي PIN نص صريح لـ BCrypt (مرة واحدة عند الإقلاع، وبعدها مفيش حاجة تتعمل)
+try
+{
+    using var migrationScope = app.Services.CreateScope();
+    var pinMigration = migrationScope.ServiceProvider.GetRequiredService<PinMigrationService>();
+    var (mUsers, mResidents, mCleared) = await pinMigration.MigrateLegacySecretsAsync();
+    Console.WriteLine($"[Startup] Legacy secrets: users={mUsers}, residents={mResidents}, buildingAdminPinsCleared={mCleared}");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"[Startup] Legacy secrets migration FAILED: {ex.Message}");
+}
+
+// حالات قفل تسجيل الدخول بتفضل بعد أي restart
+await app.Services.GetRequiredService<LoginThrottle>().InitializeAsync();
+
 // ============================================================
 // Middleware
 // ============================================================
 app.UseForwardedHeaders();
+
+// Security:CspMode = enforce (الافتراضي) | report-only | off  — مفتاح طوارئ لو صفحة اتكسرت بسبب الـ CSP
+var cspMode = (app.Configuration["Security:CspMode"] ?? "enforce").Trim().ToLowerInvariant();
+const string CspPolicy =
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; " +
+    "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; " +
+    "img-src 'self' data: blob: https:; " +
+    "media-src 'self' blob: https: http:; " +
+    "connect-src 'self' https: http: ws: wss:; " +
+    "frame-src 'self' https: http:; " +
+    "worker-src 'self' blob:; " +
+    "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'";
+
+// ✅ Security headers (CSP الكامل محتاج nonces للـ inline scripts — دلوقتي بنفرض الأجزاء الآمنة بس)
+app.Use(async (ctx, next) =>
+{
+    var h = ctx.Response.Headers;
+    h["X-Content-Type-Options"] = "nosniff";
+    h["X-Frame-Options"] = "SAMEORIGIN";
+    h["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    h["Permissions-Policy"] = "camera=(self), microphone=(), geolocation=()";
+    h["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups";
+    h["X-Permitted-Cross-Domain-Policies"] = "none";
+    // صفحات الدخول وتعيين الـ PIN وصور الـ QR (فيها توكنات) مايتخزّنوش في الكاش
+    if (ctx.Request.Path.StartsWithSegments("/Account") || ctx.Request.Path.StartsWithSegments("/QrImage"))
+    {
+        // بنحطه وقت بدء الرد ولو مفيش Cache-Control (الـ antiforgery بيحط no-store بنفسه
+        // في الصفحات اللي فيها فورم، ولو حطّيناه قبله بيطلع تحذير في اللوج)
+        ctx.Response.OnStarting(() =>
+        {
+            if (!ctx.Response.Headers.ContainsKey("Cache-Control"))
+                ctx.Response.Headers["Cache-Control"] = "no-store";
+            return Task.CompletedTask;
+        });
+    }
+    if (cspMode != "off")
+    {
+        var cspHeader = cspMode == "report-only"
+            ? "Content-Security-Policy-Report-Only"
+            : "Content-Security-Policy";
+        h[cspHeader] = CspPolicy;
+    }
+    await next();
+});
 
 var fontsDir = Path.Combine(app.Environment.WebRootPath, "fonts");
 
@@ -350,6 +480,8 @@ var locOptions = app.Services.GetRequiredService<IOptions<RequestLocalizationOpt
 app.UseRequestLocalization(locOptions.Value);
 
 app.UseRouting();
+
+app.UseRateLimiter();
 
 app.UseSession();
 app.UseAuthentication();

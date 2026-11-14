@@ -111,6 +111,7 @@ public class BackupController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(100 * 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 100 * 1024 * 1024)]
     public async Task<IActionResult> PreviewRestore(IFormFile backupFile)
     {
         if (backupFile == null || backupFile.Length == 0)
@@ -220,7 +221,8 @@ public class BackupController : Controller
         var path = await _scheduled.GetBackupFilePathAsync(_env, fileName);
         if (path == null) return NotFound();
 
-        var bytes = await System.IO.File.ReadAllBytesAsync(path);
+        // الملف مشفّر على السيرفر — بنفكّه هنا عشان الأدمن ينزّل ZIP عادي (ويقدر يستعيده)
+        var bytes = BackupFileProtector.Unprotect(await System.IO.File.ReadAllBytesAsync(path));
         return File(bytes, "application/zip", fileName);
     }
 
@@ -259,6 +261,7 @@ public class BackupController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(10 * 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 10 * 1024 * 1024)]
     public async Task<IActionResult> UploadExcel(IFormFile excelFile)
     {
         if (excelFile == null || excelFile.Length == 0)
@@ -380,7 +383,7 @@ public class BackupController : Controller
                         Owner = aptData.Owner,
                         Phone = phone,
                         MonthlyFee = aptData.MonthlyFee,
-                        Pin = aptData.Pin,
+                        Pin = "",
                         Closed = aptData.Status.Equals("closed", StringComparison.OrdinalIgnoreCase),
                         Label = aptData.AptLabel,
                         Notes = aptData.Notes,
@@ -467,7 +470,7 @@ public class BackupController : Controller
         infoSheet.Cell(3, 1).Value = "Building Number";
         infoSheet.Cell(3, 2).Value = building.BuildingNumber;
         infoSheet.Cell(4, 1).Value = "Admin PIN";
-        infoSheet.Cell(4, 2).Value = building.AdminPin;
+        infoSheet.Cell(4, 2).Value = ""; // لا نصدّر الـ PIN
         infoSheet.Cell(5, 1).Value = "Admin WhatsApp";
         infoSheet.Cell(5, 2).Value = building.AdminWhatsapp;
         infoSheet.Cell(6, 1).Value = "Logo URL";
@@ -494,7 +497,7 @@ public class BackupController : Controller
                 aptsSheet.Cell(row, 3).Value = apt.Number;
                 aptsSheet.Cell(row, 4).Value = apt.Owner;
                 aptsSheet.Cell(row, 5).Value = apt.Phone;
-                aptsSheet.Cell(row, 6).Value = apt.Pin;
+                aptsSheet.Cell(row, 6).Value = ""; // لا نصدّر الـ PIN
                 aptsSheet.Cell(row, 7).Value = apt.MonthlyFee;
                 aptsSheet.Cell(row, 8).Value = apt.Label;
                 aptsSheet.Cell(row, 9).Value = apt.Closed ? "closed" : "open";

@@ -42,6 +42,8 @@ public class SqlAuthService
             .ToArray();
     }
 
+    private static bool VerifySecret(string? input, string? stored) => SecretVerifier.Verify(input, stored);
+
     public static bool IsSuperAdminEmail(string? email)
     {
         var normalized = email?.Trim().ToLowerInvariant() ?? "";
@@ -92,13 +94,14 @@ public class SqlAuthService
             _log.LogWarning(
                 "[SqlAuth] Resident not found: {B}/{F}/{A}/{P}",
                 buildingId, floorId, aptId, normalizedPhone);
+            SecretVerifier.BurnTime();
             return AuthResult.Fail("wrong-credentials");
         }
 
         if (string.IsNullOrWhiteSpace(resident.PinHash))
             return AuthResult.Fail("pin-not-set");
 
-        if (!_hasher.VerifyPin(pin, resident.PinHash))
+        if (!VerifySecret(pin, resident.PinHash))
         {
             _log.LogWarning("[SqlAuth] Wrong PIN for resident {Uid}", resident.Uid);
             return AuthResult.Fail("wrong-pin");
@@ -119,7 +122,7 @@ public class SqlAuthService
             role: "resident",
             email: resident.Email ?? "",
             name: string.IsNullOrWhiteSpace(resident.Name)
-                ? $"ساكن شقة {apt.Number}" : resident.Name,
+                ? Loc.T("Resident_Of_Apartment_N", apt.Number) : resident.Name,
             buildingIds: new List<string> { building.Id },
             aptId: resident.ApartmentId,
             aptNumber: apt.Number);
@@ -155,6 +158,7 @@ public class SqlAuthService
         if (candidates.Count == 0)
         {
             _log.LogWarning("[SqlAuth] Admin not found: phone={P}", normalizedPhone);
+            SecretVerifier.BurnTime();
             return AuthResult.Fail("wrong-credentials");
         }
 
@@ -167,56 +171,27 @@ public class SqlAuthService
             _log.LogWarning(
                 "[SqlAuth] No admin in building {B} with phone {P}",
                 buildingId, normalizedPhone);
+            SecretVerifier.BurnTime();
             return AuthResult.Fail("not-in-building");
         }
 
-        // ✅ تحقق من الحالة
-        if (admin.IsDisabled)
-            return AuthResult.Fail("account-disabled", admin.DisabledReason);
-
-        if (!admin.IsActive)
-            return AuthResult.Fail("account-inactive");
-
-        // ✅ تحقق من الـ PIN بطريقة ذكية
+        // الـ PIN الأول، وبعدها حالة الحساب (عشان رسالة الخطأ ماتكشفش إن الحساب موجود)
         if (string.IsNullOrWhiteSpace(admin.Pin))
             return AuthResult.Fail("pin-not-set");
 
-        bool pinValid = false;
-
-        // 1. هل الباسورد نص صريح؟
-        if (admin.Pin == pin)
-        {
-            pinValid = true;
-        }
-        // 2. هل الباسورد مشفر؟
-        else if (admin.Pin.StartsWith("$2a$"))
-        {
-            try
-            {
-                pinValid = BCrypt.Net.BCrypt.Verify(pin, admin.Pin);
-            }
-            catch
-            {
-                try
-                {
-                    var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<object>();
-                    var result = hasher.VerifyHashedPassword(new object(), admin.Pin, pin);
-                    pinValid = result != Microsoft.AspNetCore.Identity.PasswordVerificationResult.Failed;
-                }
-                catch
-                {
-                    pinValid = false;
-                }
-            }
-        }
-
-        if (!pinValid)
+        if (!VerifySecret(pin, admin.Pin))
         {
             _log.LogWarning(
                 "[SqlAuth] Wrong PIN for admin {Uid} in building {B}",
                 admin.Uid, buildingId);
             return AuthResult.Fail("wrong-pin");
         }
+
+        if (admin.IsDisabled)
+            return AuthResult.Fail("account-disabled", admin.DisabledReason);
+
+        if (!admin.IsActive)
+            return AuthResult.Fail("account-inactive");
 
         _log.LogInformation(
             "[SqlAuth] Admin: {Name} ({Email}) in building {B}",
@@ -227,7 +202,8 @@ public class SqlAuthService
             role: "admin",
             email: admin.Email,
             name: admin.Name,
-            buildingIds: admin.BuildingAdmins.Select(ba => ba.BuildingId).ToList());
+            // الجلسة مربوطة بالعمارة اللي سجّل دخول عليها بس (كان بياخد أول عمارة من القايمة)
+            buildingIds: new List<string> { buildingId });
     }
     // ═══════════════════════════════════════════════════════════
     // 3. Super Admin Login
@@ -251,8 +227,7 @@ public class SqlAuthService
             return AuthResult.Fail("pin-not-set");
 
         // ✅ دعم الاتنين
-        var passwordValid = superAdmin.Pin == password
-            || _hasher.Verify(password, superAdmin.Pin);
+        var passwordValid = VerifySecret(password, superAdmin.Pin);
 
         if (!passwordValid)
         {
@@ -300,6 +275,10 @@ public class SqlAuthService
                     });
                 }
             }
+            else
+            {
+                SecretVerifier.BurnTime();
+            }
             return contexts;
         }
 
@@ -317,57 +296,31 @@ public class SqlAuthService
             .Where(u => u.Role == "admin" && u.Phone == phone)
             .ToListAsync();
 
+        var verified = false;   // هل عملنا BCrypt فعلًا؟ (لو لأ نعمل واحد وهمي في الآخر)
+
         foreach (var admin in admins)
         {
             if (admin.IsDisabled) continue;
 
-            // ✅ التحقق الذكي من الباسورد
-            bool pinValid = false;
+            verified = true;
+            if (!VerifySecret(credential, admin.Pin)) continue;
 
-            if (!string.IsNullOrWhiteSpace(admin.Pin))
+            var adminBuildingIds = admin.BuildingAdmins.Select(ba => ba.BuildingId).ToList();
+            var adminBuildings = await db.Buildings.AsNoTracking()
+                .Where(b => adminBuildingIds.Contains(b.Id))
+                .Select(b => new { b.Id, b.Name, b.BuildingNumber })
+                .ToListAsync();
+
+            foreach (var building in adminBuildings)
             {
-                // 1. هل الباسورد المكتوب يطابق النص الصريح؟
-                if (admin.Pin == credential)
-                {
-                    pinValid = true;
-                }
-                // 2. هل الباسورد مشفر؟ جرب فك التشفير باستخدام المكتبتين
-                else if (admin.Pin.StartsWith("$2a$"))
-                {
-                    try
-                    {
-                        // جرب المكتبة الأولى
-                        pinValid = BCrypt.Net.BCrypt.Verify(credential, admin.Pin);
-                    }
-                    catch
-                    {
-                        try
-                        {
-                            // جرب مكتبة ASP.NET Identity كاحتياط
-                            var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<object>();
-                            var result = hasher.VerifyHashedPassword(new object(), admin.Pin, credential);
-                            pinValid = result != Microsoft.AspNetCore.Identity.PasswordVerificationResult.Failed;
-                        }
-                        catch { pinValid = false; }
-                    }
-                }
-            }
-
-            if (!pinValid) continue; // لو الباسورد غلط، انتقل للسجل التالي
-
-            foreach (var ba in admin.BuildingAdmins)
-            {
-                var building = await _buildings.GetByIdAsync(ba.BuildingId);
-                if (building == null) continue;
-
                 contexts.Add(new UserContext
                 {
-                    Id = $"admin_{ba.BuildingId}",
+                    Id = $"admin_{building.Id}",
                     Type = "admin",
                     Icon = "🏢",
                     Title = Loc.T("Admin"),
                     Subtitle = building.Name,
-                    BuildingId = ba.BuildingId,
+                    BuildingId = building.Id,
                     BuildingName = building.Name,
                     BuildingNumber = building.BuildingNumber,
                     Email = admin.Email,
@@ -378,53 +331,49 @@ public class SqlAuthService
         }
 
         // ==========================================
-        // 2. فحص السكان (Residents)
+        // 2. فحص السكان (Residents) — استعلام مباشر بالرقم بدل تحميل كل العمارات
         // ==========================================
-        var buildings = await _buildings.GetAllAsync();
-        foreach (var building in buildings)
+        var residentCandidates = await db.Residents.AsNoTracking()
+            .Where(r => r.Phone == phone && r.IsActive && !r.IsDisabled)
+            .ToListAsync();
+
+        foreach (var r in residentCandidates)
         {
-            var residents = await _residents.GetByBuildingAsync(building.Id);
+            verified = true;
+            if (!VerifySecret(credential, r.PinHash)) continue;
 
-            foreach (var r in residents)
+            var apt = await db.Apartments.AsNoTracking()
+                .Where(a => a.BuildingId == r.BuildingId && a.Id == r.ApartmentId)
+                .Select(a => new { a.Number, a.Label })
+                .FirstOrDefaultAsync();
+            if (apt == null) continue;
+
+            var building = await db.Buildings.AsNoTracking()
+                .Where(b => b.Id == r.BuildingId)
+                .Select(b => new { b.Id, b.Name, b.BuildingNumber })
+                .FirstOrDefaultAsync();
+            if (building == null) continue;
+
+            contexts.Add(new UserContext
             {
-                if (r.Phone != phone) continue;
-                if (r.IsDisabled || !r.IsActive) continue;
-
-                // ✅ التعديل هنا: دعم النص الصريح والمشفر
-                var pinValid = false;
-                if (!string.IsNullOrWhiteSpace(r.PinHash))
-                {
-                    pinValid = r.PinHash == credential || _hasher.VerifyPin(credential, r.PinHash);
-                }
-
-                // ✅ إذا لم يتم العثور على الشقة، قد يكون ApartmentId فارغاً
-                var apt = building.Apartments.FirstOrDefault(a => a.Id == r.ApartmentId);
-
-                // إذا لم توجد شقة، يمكنك إما تخطي السجل أو عرضه بدون رقم شقة
-                // هنا سنتخطى السجل لأن شاشة الاختيار تحتاج لرقم شقة
-                if (apt == null) continue;
-
-                if (!pinValid) continue;
-
-                contexts.Add(new UserContext
-                {
-                    Id = $"resident_{building.Id}_{r.ApartmentId}",
-                    Type = "resident",
-                    Icon = "🏠",
-                    Title = Loc.T("Resident_2"),
-                    Subtitle = $"{building.Name} — شقة {apt.Number}",
-                    BuildingId = building.Id,
-                    BuildingName = building.Name,
-                    BuildingNumber = building.BuildingNumber,
-                    AptNumber = apt.Number,
-                    AptId = r.ApartmentId,
-                    AptLabel = apt.Label,
-                    Email = r.Email,
-                    Uid = r.Uid,
-                    Name = r.Name
-                });
-            }
+                Id = $"resident_{building.Id}_{r.ApartmentId}",
+                Type = "resident",
+                Icon = "🏠",
+                Title = Loc.T("Resident_2"),
+                Subtitle = building.Name + " — " + Loc.T("Apartment_N", apt.Number),
+                BuildingId = building.Id,
+                BuildingName = building.Name,
+                BuildingNumber = building.BuildingNumber,
+                AptNumber = apt.Number,
+                AptId = r.ApartmentId,
+                AptLabel = apt.Label,
+                Email = r.Email,
+                Uid = r.Uid,
+                Name = r.Name
+            });
         }
+
+        if (!verified) SecretVerifier.BurnTime();
 
         return contexts;
     }

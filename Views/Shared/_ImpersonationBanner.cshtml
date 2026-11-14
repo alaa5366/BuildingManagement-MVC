@@ -11,10 +11,10 @@
             <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-person-badge" style="font-size: 20px;"></i>
                 <div>
-                    <strong>🔴 أنت في وضع Impersonation</strong>
+                    <strong>🔴 @Loc.T("You_Are_In_Impersonation_Mode")</strong>
                     <div class="small" style="opacity: 0.9;">
-                        تتصفح باسم: <strong>@User.FindFirst(ClaimTypes.Name)?.Value</strong>
-                        — المدير الأصلي: <strong>@impersonatedBy</strong>
+                        @Loc.T("Impersonation_Browsing_As") <strong>@User.FindFirst(ClaimTypes.Name)?.Value</strong>
+                        @Loc.T("Impersonation_Original_Admin") <strong>@impersonatedBy</strong>
                     </div>
                 </div>
             </div>
@@ -22,7 +22,7 @@
                 @Html.AntiForgeryToken()
                 <button type="submit" class="btn btn-light btn-sm fw-bold">
                     <i class="bi bi-box-arrow-left"></i>
-                    رجوع لحسابي
+                    @Loc.T("Back_To_My_Account")
                 </button>
             </form>
         </div>

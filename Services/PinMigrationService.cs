@@ -110,6 +110,54 @@ public class PinMigrationService
     }
 
     // ═══════════════════════════════════════════════════════════
+    // بيشتغل عند إقلاع التطبيق: أي PIN نص صريح (أدمن/سوبر أدمن/ساكن) يتحوّل BCrypt،
+    // وأي Building.AdminPin قديم بيتمسح.
+    // ═══════════════════════════════════════════════════════════
+    public async Task<(int Users, int Residents, int BuildingPinsCleared)> MigrateLegacySecretsAsync()
+    {
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+
+        var users = await db.Users
+            .Where(u => (u.Role == "admin" || u.Role == "superadmin") && u.Pin != "")
+            .ToListAsync();
+
+        var migratedUsers = 0;
+        foreach (var u in users.Where(x => !SecretVerifier.IsBcrypt(x.Pin)))
+        {
+            u.Pin = SecretVerifier.Hash(u.Pin);
+            u.UpdatedAt = DateTime.UtcNow;
+            u.UpdatedBy = "pin-migration";
+            migratedUsers++;
+        }
+
+        var residents = await db.Residents.Where(r => r.PinHash != "").ToListAsync();
+        var migratedResidents = 0;
+        foreach (var r in residents.Where(x => !SecretVerifier.IsBcrypt(x.PinHash)))
+        {
+            r.PinHash = SecretVerifier.Hash(r.PinHash);
+            migratedResidents++;
+        }
+
+        if (migratedUsers + migratedResidents > 0)
+            await db.SaveChangesAsync();
+
+        var cleared = await db.Buildings
+            .Where(b => b.AdminPin != "")
+            .ExecuteUpdateAsync(s => s.SetProperty(b => b.AdminPin, ""));
+
+        // PIN الشقق النص الصريح القديم — مابقاش مستخدم في أي مكان
+        var clearedApts = await db.Apartments
+            .Where(a => a.Pin != "")
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.Pin, ""));
+
+        _log.LogInformation(
+            "[PinMigration] startup: users={U}, residents={R}, buildingAdminPinsCleared={B}, apartmentPinsCleared={A}",
+            migratedUsers, migratedResidents, cleared, clearedApts);
+
+        return (migratedUsers, migratedResidents, cleared);
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // Helper — هل النص BCrypt؟
     // ═══════════════════════════════════════════════════════════
     private static bool IsBcrypt(string value)

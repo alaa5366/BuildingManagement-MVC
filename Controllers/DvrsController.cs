@@ -90,7 +90,7 @@ public class DvrsController : Controller
         }
 
         var id = await _dvrs.CreateAsync(buildingId, name, ip, port, brand, username, password);
-        TempData["Success"] = "تم إضافة DVR بنجاح";
+        TempData["Success"] = Loc.T("Dvr_Added_Successfully");
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -118,7 +118,7 @@ public class DvrsController : Controller
         if (!await CanManageAsync(dvr.BuildingId)) return Forbid();
 
         await _dvrs.UpdateAsync(id, name, ip, port, brand, username, newPassword, isActive);
-        TempData["Success"] = "تم تعديل DVR";
+        TempData["Success"] = Loc.T("Dvr_Updated_Successfully");
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -155,7 +155,7 @@ public class DvrsController : Controller
         var pathName = $"cam_{camId}";
         await _mediamtx.AddOrUpdatePathAsync(pathName, rtspUrl);
 
-        TempData["Success"] = "تم إضافة الكاميرا";
+        TempData["Success"] = Loc.T("Camera_Added_Successfully");
         return RedirectToAction(nameof(Details), new { id = dvrId });
     }
 
@@ -173,7 +173,7 @@ public class DvrsController : Controller
         await _dvrs.DeleteCameraAsync(cameraId);
         await _mediamtx.DeletePathAsync($"cam_{cameraId}");
 
-        TempData["Success"] = "تم حذف الكاميرا";
+        TempData["Success"] = Loc.T("Camera_Deleted_Successfully");
         return RedirectToAction(nameof(Details), new { id = dvrId });
     }
 
@@ -188,7 +188,7 @@ public class DvrsController : Controller
         if (!await CanManageAsync(dvr.BuildingId)) return Forbid();
 
         await _dvrs.DeleteAsync(id);
-        TempData["Success"] = "تم حذف DVR";
+        TempData["Success"] = Loc.T("Dvr_Deleted_Successfully");
         return RedirectToAction(nameof(Index), new { buildingId = dvr.BuildingId });
     }
 }

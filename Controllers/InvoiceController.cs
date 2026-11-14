@@ -13,10 +13,10 @@ public class InvoiceController : Controller
     private readonly BuildingsService _buildings;
     private readonly InvoiceService _invoice;
     private readonly InvoicePdfService _pdf;
-    private readonly AuditLogService _audit;
+    private readonly IAuditLogger _audit;
 
     public InvoiceController(BuildingsService buildings, InvoiceService invoice,
-        InvoicePdfService pdf, AuditLogService audit)
+        InvoicePdfService pdf, IAuditLogger audit)
     {
         _buildings = buildings;
         _invoice = invoice;
@@ -35,21 +35,12 @@ public class InvoiceController : Controller
         // ✅ لو مش موجود (SuperAdmin من غير Impersonation) → نستخدم aptId للبحث
         if (string.IsNullOrEmpty(buildingId) && !string.IsNullOrEmpty(aptId))
         {
-            // SuperAdmin: نبحث عن الشقة في كل العمارات
-            var allBuildings = await _buildings.GetAllAsync();
-            Building? foundBuilding = null;
-            Apartment? foundApt = null;
+            // SuperAdmin: نجيب العمارة من الشقة بدل ما نحمّل كل العمارات
+            var foundBuildingId = await _buildings.FindBuildingIdByApartmentAsync(aptId);
+            if (string.IsNullOrEmpty(foundBuildingId)) return NotFound();
 
-            foreach (var b in allBuildings)
-            {
-                var apt = b.Apartments.FirstOrDefault(a => a.Id == aptId);
-                if (apt != null)
-                {
-                    foundBuilding = b;
-                    foundApt = apt;
-                    break;
-                }
-            }
+            var foundBuilding = await _buildings.GetByIdAsync(foundBuildingId);
+            var foundApt = foundBuilding?.Apartments.FirstOrDefault(a => a.Id == aptId);
 
             if (foundBuilding == null || foundApt == null) return NotFound();
 
@@ -82,13 +73,15 @@ public class InvoiceController : Controller
         var data = _invoice.BuildInvoiceData(building, apt, mk);
         var pdfBytes = _pdf.Generate(data);
 
-        _audit.Push(building, "invoice_download",
-            $"شقة {apt.Number} — {data.InvoiceNo}",
-            role,
-            User.Identity?.Name ?? role,
-            apt.Number.ToString());
-
-        await _buildings.SaveFullAsync(building);
+        // تسجيل في جدول الـ Audit مباشرة (من غير ما نحفظ العمارة كلها في طلب GET)
+        await _audit.LogAsync(
+            action: "invoice_download",
+            buildingId: building.Id,
+            apartmentId: apt.Id,
+            userId: User.FindFirstValue(ClaimTypes.NameIdentifier),
+            userRole: role,
+            metadata: new { aptNumber = apt.Number, invoiceNo = data.InvoiceNo, actor = User.Identity?.Name ?? role },
+            severity: "info");
 
         var fileName = $"invoice-{building.BuildingNumber}-apt-{apt.Number}-{mk}.pdf";
         return File(pdfBytes, "application/pdf", fileName);

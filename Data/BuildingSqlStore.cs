@@ -45,6 +45,31 @@ public sealed class BuildingSqlStore
         return list;
     }
 
+    // قايمة خفيفة (Id/Name/BuildingNumber بس) لصفحات الدخول والقوائم — استعلام واحد
+    public async Task<List<Building>> GetSummariesAsync()
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        var rows = await db.Buildings.AsNoTracking()
+            .OrderBy(b => b.BuildingNumber)
+            .Select(b => new { b.Id, b.Name, b.BuildingNumber })
+            .ToListAsync();
+        return rows.Select(r => new Building
+        {
+            Id = r.Id,
+            Name = r.Name,
+            BuildingNumber = r.BuildingNumber
+        }).ToList();
+    }
+
+    public async Task<string?> FindBuildingIdByApartmentAsync(string apartmentId)
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        return await db.Apartments.AsNoTracking()
+            .Where(a => a.Id == apartmentId)
+            .Select(a => a.BuildingId)
+            .FirstOrDefaultAsync();
+    }
+
     public async Task SaveFullAsync(Building building)
     {
         await using var db = await _factory.CreateDbContextAsync();

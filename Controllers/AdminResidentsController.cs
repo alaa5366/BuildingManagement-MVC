@@ -341,16 +341,16 @@ public class AdminResidentsController : Controller
             // ✅ رسالة نجاح
             if (isDryRun)
             {
-                TempData["Success"] = $"🔍 Dry Run: {result.EntriesMigrated} ساكن هيترحّلوا";
+                TempData["Success"] = Loc.T("Migration_DryRun_N", result.EntriesMigrated);
             }
             else
             {
-                TempData["Success"] = $"✅ تم ترحيل {result.EntriesMigrated} ساكن بنجاح";
+                TempData["Success"] = Loc.T("Migration_Residents_Done_N", result.EntriesMigrated);
             }
 
             if (result.EntriesFailed > 0)
             {
-                TempData["Error"] = $"⚠️ فشل: {result.EntriesFailed} ساكن";
+                TempData["Error"] = Loc.T("Migration_Residents_Failed_N", result.EntriesFailed);
             }
 
             // ✅ ارجع لصفحة Sync

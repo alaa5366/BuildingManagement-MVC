@@ -150,7 +150,7 @@ public class ScheduledBackupService
             var folder = GetBackupsFolder(env);
             var fileName = $"scheduled-{DateTime.UtcNow:yyyy-MM-dd-HHmm}.zip";
             var fullPath = Path.Combine(folder, fileName);
-            await File.WriteAllBytesAsync(fullPath, bytes);
+            await File.WriteAllBytesAsync(fullPath, BackupFileProtector.Protect(bytes));   // مشفّر على القرص
 
             await using (var db = await _sqlFactory.CreateDbContextAsync())
             {

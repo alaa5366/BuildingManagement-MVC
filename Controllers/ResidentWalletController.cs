@@ -148,6 +148,8 @@ public class ResidentWalletController : Controller
     // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequestSizeLimit(15 * 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 15 * 1024 * 1024)]
     public async Task<IActionResult> CreateDeposit(string month, double amount, string? note,
         IFormFile? receiptImage,
         [FromServices] CloudinaryService cloudinary)
@@ -165,6 +167,12 @@ public class ResidentWalletController : Controller
             if (receiptImage != null && receiptImage.Length > 0)
             {
                 using var stream = receiptImage.OpenReadStream();
+                if (!ImageSniffer.IsAllowedImage(stream))
+                {
+                    TempData["Error"] = Loc.T("Invalid_Image_File");
+                    return RedirectToAction("Index", new { month = mk });
+                }
+
                 receipt = await cloudinary.UploadReceiptAsync(
                     stream,
                     receiptImage.FileName,
@@ -192,6 +200,8 @@ public class ResidentWalletController : Controller
     // ============================================================
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequestSizeLimit(15 * 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 15 * 1024 * 1024)]
     public async Task<IActionResult> ParseReceiptImage(IFormFile image,
         [FromServices] OcrService ocr,
         [FromServices] TransactionParser parser)
@@ -205,6 +215,9 @@ public class ResidentWalletController : Controller
         try
         {
             using var stream = image.OpenReadStream();
+            if (!ImageSniffer.IsAllowedImage(stream))
+                return Json(new { success = false, error = Loc.T("Invalid_Image_File") });
+
             var text = ocr.ExtractText(stream);
             var parsed = parser.Parse(text);
 

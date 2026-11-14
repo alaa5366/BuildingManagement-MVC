@@ -272,13 +272,8 @@ public class SettingsService
         // التحقق من الـ PIN الحالي
         if (!string.IsNullOrWhiteSpace(newPin))
         {
-            var isCurrentPinValid = false;
-            if (apt.Pin == currentPin) isCurrentPinValid = true;
-            else if (primaryResident != null && !string.IsNullOrWhiteSpace(primaryResident.PinHash))
-            {
-                isCurrentPinValid = primaryResident.PinHash == currentPin ||
-                                    BCrypt.Net.BCrypt.Verify(currentPin, primaryResident.PinHash);
-            }
+            var isCurrentPinValid = primaryResident != null &&
+                                    SecretVerifier.Verify(currentPin, primaryResident.PinHash);
 
             if (!isCurrentPinValid)
                 throw new InvalidOperationException(Loc.T("The_Current_PIN_Is_Incorrect"));
@@ -350,7 +345,7 @@ public class SettingsService
                                  AuthHelpers.NormalizePhone(newPhone) != user.Phone;
         var pinChanged = !string.IsNullOrWhiteSpace(newPin);
 
-        if ((phoneChangedByUser || pinChanged) && currentPin != user.Pin)
+        if ((phoneChangedByUser || pinChanged) && !SecretVerifier.Verify(currentPin, user.Pin))
             throw new InvalidOperationException(Loc.T("The_Current_PIN_Is_Incorrect"));
 
         var updates = new Dictionary<string, object>();

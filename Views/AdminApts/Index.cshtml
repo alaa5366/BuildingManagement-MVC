@@ -71,7 +71,7 @@
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="aptId" value="@apt.Id" />
                                     <button type="submit" class="apt-action-btn btn-wallet"
-                                            onclick="return confirm('هل تريد الدخول على محفظة الساكن؟');">
+                                            onclick="return confirm('@Loc.Js("Confirm_Enter_Resident_Wallet")');">
                                         <span class="icon">💼</span>
                                         <span class="label">@Loc.T("Wallet_2")</span>
                                     </button>
@@ -229,7 +229,7 @@
                 document.getElementById('newQrBtn').style.display = 'inline-block';
 
                 document.getElementById('quickQrImage').src =
-                    `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(data.url)}`;
+                    `/QrImage/Png?size=280&data=${encodeURIComponent(data.url)}`;
                 document.getElementById('quickQrUrl').value = data.url;
                 document.getElementById('quickQrOpenLink').href = data.url;
             } catch (err) {

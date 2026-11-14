@@ -922,7 +922,7 @@
     <value>⚠️ Final confirmation</value>
   </data>
   <data name="Once_You_Click_Confirm_Import_A" xml:space="preserve">
-    <value>Once you click "Confirm import", a new building will be created in the database, and Firebase Auth accounts will be created for every apartment.</value>
+    <value>Once you click "Confirm import", a new building will be created in the database together with all its apartments.</value>
   </data>
   <data name="Confirm_Import_2" xml:space="preserve">
     <value>✅ Confirm import</value>
@@ -1780,7 +1780,7 @@
     <value>&lt;strong&gt;Create a new building&lt;/strong&gt; — automatic number (BLD-001, BLD-002, ...)</value>
   </data>
   <data name="Add_Floors_And_Apartments_With_Automatic" xml:space="preserve">
-    <value>&lt;strong&gt;Add floors and apartments&lt;/strong&gt; — with automatic Firebase Auth creation</value>
+    <value>&lt;strong&gt;Add floors and apartments&lt;/strong&gt; — with login details for each apartment</value>
   </data>
   <data name="Generate_QRs_For_The_Admin_And" xml:space="preserve">
     <value>&lt;strong&gt;Generate QRs&lt;/strong&gt; — for the admin and every apartment (PDF containing all QRs)</value>
@@ -1855,13 +1855,13 @@
     <value>When I refresh the page I get a red "Save failed" message</value>
   </data>
   <data name="There_Is_Probably_A_Problem_Connecting" xml:space="preserve">
-    <value>There is probably a problem connecting to Firebase. Make sure that:</value>
+    <value>There is probably a problem connecting to the server. Make sure that:</value>
   </data>
   <data name="Your_Internet_Connection_Is_Working" xml:space="preserve">
     <value>Your internet connection is working</value>
   </data>
   <data name="You_Are_Not_Using_A_VPN" xml:space="preserve">
-    <value>You are not using a VPN (it may block Firebase)</value>
+    <value>You are not using a VPN (it may block the connection)</value>
   </data>
   <data name="Try_Logging_Out_And_Logging_In" xml:space="preserve">
     <value>Try logging out and logging in again</value>
@@ -3460,7 +3460,7 @@
     <value>Full backup + restore</value>
   </data>
   <data name="Sync_Firebase_Auth_With_Firestore_Check" xml:space="preserve">
-    <value>Sync Firebase Auth with Firestore (check/fix)</value>
+    <value>Legacy data-sync tools (no longer needed after the SQL migration)</value>
   </data>
   <data name="Secret_Access_Impersonation_To_Buildings_And" xml:space="preserve">
     <value>Secret access (impersonation) to buildings and apartments</value>
@@ -4077,4 +4077,71 @@ This operation can take a few seconds.</value>
   <data name="Deposit_Cancelled_Successfully" xml:space="preserve">
   <value>✅ Payment cancelled successfully</value>
 </data>
+  <!-- ===== Phase 6: keys that were missing ===== -->
+  <data name="17_Permissions_For_A_Regular_Admin" xml:space="preserve"><value>17 permissions — for a regular admin</value></data>
+  <data name="27_Permissions_Super_Admin_Permissions" xml:space="preserve"><value>27 permissions — ⚠️ full Super Admin permissions</value></data>
+  <data name="Apartment_Required" xml:space="preserve"><value>Apartment is required</value></data>
+  <data name="Building_Required" xml:space="preserve"><value>Building is required</value></data>
+  <data name="Choose" xml:space="preserve"><value>— Choose —</value></data>
+  <data name="Choose_Building" xml:space="preserve"><value>Choose a building</value></data>
+  <data name="Choose_Building_First" xml:space="preserve"><value>Choose a building first</value></data>
+  <data name="Choose_Building_For_Residents" xml:space="preserve"><value>Choose a building</value></data>
+  <data name="Choose_Building_To_Manage_Residents" xml:space="preserve"><value>Choose a building to manage its residents</value></data>
+  <data name="Choose_Floor_First" xml:space="preserve"><value>Choose a floor first</value></data>
+  <data name="Created_At" xml:space="preserve"><value>Created at</value></data>
+  <data name="Floor_Not_Found" xml:space="preserve"><value>Floor not found</value></data>
+  <data name="Floor_Required" xml:space="preserve"><value>Floor is required</value></data>
+  <data name="Full_Template_17" xml:space="preserve"><value>⚡ Full template (17)</value></data>
+  <data name="Import_Template" xml:space="preserve"><value>Import template</value></data>
+  <data name="Import_Template_Desc" xml:space="preserve"><value>Download the Excel template used to import building data</value></data>
+  <data name="Loading" xml:space="preserve"><value>Loading...</value></data>
+  <data name="Manage_Cameras" xml:space="preserve"><value>Manage cameras</value></data>
+  <data name="Manage_Cameras_Desc" xml:space="preserve"><value>Add, edit and delete cameras</value></data>
+  <data name="Manage_DVRs" xml:space="preserve"><value>Manage DVRs</value></data>
+  <data name="Manage_DVRs_Desc" xml:space="preserve"><value>Add, edit and delete DVR devices and their connection settings</value></data>
+  <data name="No_Apartments" xml:space="preserve"><value>No apartments</value></data>
+  <data name="No_Floors" xml:space="preserve"><value>No floors</value></data>
+  <data name="PIN_Not_Set_Contact_Admin" xml:space="preserve"><value>PIN not set — contact the admin</value></data>
+  <data name="PIN_Required" xml:space="preserve"><value>PIN is required</value></data>
+  <data name="Phone_Required" xml:space="preserve"><value>Phone number is required</value></data>
+  <data name="Resident_Created_Successfully" xml:space="preserve"><value>Resident created successfully</value></data>
+  <data name="Resident_Deleted_Successfully" xml:space="preserve"><value>Resident deleted</value></data>
+  <data name="Resident_Disabled_Successfully" xml:space="preserve"><value>Resident disabled</value></data>
+  <data name="Resident_Enabled_Successfully" xml:space="preserve"><value>Resident enabled</value></data>
+  <data name="Resident_Updated_Successfully" xml:space="preserve"><value>Resident updated successfully</value></data>
+  <data name="Super_Template_27" xml:space="preserve"><value>👑 Super template (27)</value></data>
+  <data name="This_Account_Is_Inactive" xml:space="preserve"><value>This account is inactive</value></data>
+  <data name="View_Cameras" xml:space="preserve"><value>View cameras</value></data>
+  <data name="View_Cameras_Desc" xml:space="preserve"><value>View live camera streams</value></data>
+  <data name="Warning_Restoring_Writes_Data_To_SQL" xml:space="preserve"><value>&lt;strong&gt;Warning:&lt;/strong&gt; restoring writes the backup data into the SQL database and overwrites existing data.</value></data>
+  <data name="Warning_Restoring_Writes_Data_To_SQL_2" xml:space="preserve"><value>&lt;strong&gt;Warning:&lt;/strong&gt; restoring writes the backup data into the SQL database and overwrites existing data.</value></data>
+  <!-- ===== Phase 6: extracted UI strings ===== -->
+  <data name="Dvr_Added_Successfully" xml:space="preserve"><value>DVR added successfully</value></data>
+  <data name="Dvr_Updated_Successfully" xml:space="preserve"><value>DVR updated</value></data>
+  <data name="Dvr_Deleted_Successfully" xml:space="preserve"><value>DVR deleted</value></data>
+  <data name="Camera_Added_Successfully" xml:space="preserve"><value>Camera added</value></data>
+  <data name="Camera_Deleted_Successfully" xml:space="preserve"><value>Camera deleted</value></data>
+  <data name="Migration_DryRun_N" xml:space="preserve"><value>🔍 Dry run: {0} residents would be migrated</value></data>
+  <data name="Migration_Residents_Done_N" xml:space="preserve"><value>✅ {0} residents migrated successfully</value></data>
+  <data name="Migration_Residents_Failed_N" xml:space="preserve"><value>⚠️ Failed: {0} residents</value></data>
+  <data name="Confirm_Enter_As_Admin" xml:space="preserve"><value>Enter as Admin of this building?</value></data>
+  <data name="Confirm_Enter_Resident_Wallet" xml:space="preserve"><value>Open the resident's wallet?</value></data>
+  <data name="Confirm_Enter_As_Resident" xml:space="preserve"><value>Enter as Resident?</value></data>
+  <data name="Enter_As_Admin" xml:space="preserve"><value>Enter as Admin</value></data>
+  <data name="Enter_As_Resident" xml:space="preserve"><value>Enter as resident</value></data>
+  <data name="Impersonation_Browsing_As" xml:space="preserve"><value>Browsing as:</value></data>
+  <data name="Impersonation_Original_Admin" xml:space="preserve"><value>— Original admin:</value></data>
+  <data name="Back_To_My_Account" xml:space="preserve"><value>Back to my account</value></data>
+  <data name="Accounts_Linked_To_Number" xml:space="preserve"><value>Accounts linked to number ({0})</value></data>
+  <data name="Floor_Label_With_Order" xml:space="preserve"><value>{0} (No. {1})</value></data>
+  <data name="Resident_Of_Apartment_N" xml:space="preserve"><value>Resident of apartment {0}</value></data>
+  <!-- ===== Phase 8: set-PIN link ===== -->
+  <data name="Set_Pin_Title" xml:space="preserve"><value>Set your PIN</value></data>
+  <data name="Set_Pin_Intro" xml:space="preserve"><value>Choose a 4-digit PIN to log in to your apartment account.</value></data>
+  <data name="Set_Pin_Done" xml:space="preserve"><value>✅ Your PIN was set. You can now log in.</value></data>
+  <data name="Pin_Stored_Securely_Note" xml:space="preserve"><value>The PIN is stored securely and cannot be viewed. Use the welcome message to send the resident a link to set their own PIN.</value></data>
+  <data name="Pin_Hidden" xml:space="preserve"><value>🔒 Hidden</value></data>
+  <data name="Leave_Empty_To_Keep_Current_Pin" xml:space="preserve"><value>Leave empty to keep the current PIN. Enter 4 digits to reset it.</value></data>
+  <!-- ===== Phase 9: security ===== -->
+  <data name="Invalid_Image_File" xml:space="preserve"><value>The file is not a valid image (JPG, PNG, WebP, GIF or HEIC)</value></data>
 </root>

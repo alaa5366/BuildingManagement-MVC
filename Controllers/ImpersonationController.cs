@@ -146,7 +146,7 @@ public class ImpersonationController : Controller
 
         // ✅ اقرأ الـ Stack قبل
         var stackBefore = _impersonation.ReadBackupStack(HttpContext);
-        _logger.LogWarning(
+        _logger.LogDebug(
             "[Impersonation] Exit BEFORE. Count={Count}, roles=[{Roles}]",
             stackBefore.Count,
             string.Join(", ", stackBefore.Select(s => s.Role)));
@@ -161,7 +161,7 @@ public class ImpersonationController : Controller
 
         // ✅ اقرأ الـ Stack بعد
         var stackAfter = _impersonation.ReadBackupStack(HttpContext);
-        _logger.LogWarning(
+        _logger.LogDebug(
             "[Impersonation] Exit AFTER. Count={Count}, roles=[{Roles}], poppedRole={Popped}",
             stackAfter.Count,
             string.Join(", ", stackAfter.Select(s => s.Role)),
@@ -205,7 +205,7 @@ public class ImpersonationController : Controller
             StartedAt = DateTime.UtcNow.ToString("o")
         };
 
-        _logger.LogWarning(
+        _logger.LogDebug(
             "[Impersonation] Push BEFORE. Count={Count}, roles=[{Roles}]. Adding: {NewRole} (isSuperAdmin={IsSuper})",
             stackBefore.Count,
             string.Join(", ", stackBefore.Select(s => s.Role)),
@@ -215,7 +215,7 @@ public class ImpersonationController : Controller
         _impersonation.PushBackup(HttpContext, backup);
 
         var stackAfter = _impersonation.ReadBackupStack(HttpContext);
-        _logger.LogWarning(
+        _logger.LogDebug(
             "[Impersonation] Push AFTER. Count={Count}, roles=[{Roles}]",
             stackAfter.Count,
             string.Join(", ", stackAfter.Select(s => s.Role)));
@@ -280,8 +280,26 @@ public class ImpersonationController : Controller
     private async Task SignInAsync(List<Claim> claims)
     {
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+        // جلسة الانتحال لها نفس عمر كوكي الرجوع (ساعتين) ومابتتجددش —
+        // عشان مايحصلش إن الكوكي الأصلي يموت والشخص يفضل عالق كساكن
+        var props = new AuthenticationProperties();
+        if (claims.Any(c => c.Type == "impersonated" && c.Value == "true"))
+        {
+            props.IsPersistent = false;
+            props.AllowRefresh = false;
+            props.ExpiresUtc = DateTimeOffset.UtcNow.AddHours(2);
+        }
+        else if (claims.Any(c => c.Type == ClaimTypes.Role && (c.Value == "admin" || c.Value == "superadmin")))
+        {
+            // الرجوع لحساب الأدمن الأصلي: نفس حد الـ 12 ساعة
+            props.ExpiresUtc = DateTimeOffset.UtcNow.AddHours(12);
+            props.AllowRefresh = false;
+        }
+
         await HttpContext.SignInAsync(
             CookieAuthenticationDefaults.AuthenticationScheme,
-            new ClaimsPrincipal(identity));
+            new ClaimsPrincipal(identity),
+            props);
     }
 }
