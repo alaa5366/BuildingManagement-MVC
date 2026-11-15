@@ -315,7 +315,7 @@ public class AdminResidentsController : Controller
     [Authorize(Roles = "superadmin")]
     public async Task<IActionResult> Migrate()
     {
-        var buildings = await _buildings.GetAllAsync();
+        var buildings = await _buildings.GetSummariesWithCountsAsync();
         ViewBag.Buildings = buildings;
         ViewBag.TotalResidents = await _residents.CountAsync();
 

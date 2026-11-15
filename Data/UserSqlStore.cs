@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Data;
 
-public sealed class UserSqlStore
+public class UserSqlStore
 {
     private readonly IDbContextFactory<AppDbContext> _factory;
     private readonly ILogger<UserSqlStore> _log;
@@ -22,7 +22,7 @@ public sealed class UserSqlStore
     // =====================================================================
     //  Upsert (كتابة)
     // =====================================================================
-    public async Task<bool> UpsertAsync(AppUserDoc u, CancellationToken ct = default)
+    public virtual async Task<bool> UpsertAsync(AppUserDoc u, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(u.Uid)) return false;
         if (u.Role is not ("superadmin" or "admin" or "resident"))
@@ -83,7 +83,7 @@ public sealed class UserSqlStore
     // =====================================================================
     //  قراءة واحدة
     // =====================================================================
-    public async Task<UserEntity?> GetByUidAsync(string uid, CancellationToken ct = default)
+    public virtual  async Task<UserEntity?> GetByUidAsync(string uid, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(uid)) return null;
         await using var db = await _factory.CreateDbContextAsync(ct);
@@ -97,7 +97,7 @@ public sealed class UserSqlStore
     // =====================================================================
     //  قراءة الكل
     // =====================================================================
-    public async Task<List<UserEntity>> GetAllAsync(CancellationToken ct = default)
+    public virtual async Task<List<UserEntity>> GetAllAsync(CancellationToken ct = default)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
         return await db.Users
@@ -110,7 +110,7 @@ public sealed class UserSqlStore
     // =====================================================================
     //  قراءة الأدمنز
     // =====================================================================
-    public async Task<List<UserEntity>> GetAdminsAsync(CancellationToken ct = default)
+    public virtual  async Task<List<UserEntity>> GetAdminsAsync(CancellationToken ct = default)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
         return await db.Users
@@ -124,7 +124,7 @@ public sealed class UserSqlStore
     // =====================================================================
     //  قراءة أدمنز مبنى معين
     // =====================================================================
-    public async Task<List<UserEntity>> GetBuildingAdminsAsync(string buildingId, CancellationToken ct = default)
+    public virtual async Task<List<UserEntity>> GetBuildingAdminsAsync(string buildingId, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(buildingId)) return new();
         await using var db = await _factory.CreateDbContextAsync(ct);

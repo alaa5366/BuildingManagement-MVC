@@ -18,7 +18,13 @@ public class TransactionParser
 
         if (!amountMatch.Success)
         {
-            // لو مفيش فاصلة، يدور على رقم من 3 لـ 6 أرقام
+            // fallback 1: رقم بكسر عشري (250.75)
+            amountMatch = Regex.Match(ocrText, @"\b(\d{3,6}\.\d{1,2})\b");
+        }
+
+        if (!amountMatch.Success)
+        {
+            // fallback 2: رقم صحيح (250)
             amountMatch = Regex.Match(ocrText, @"\b(\d{3,6})\b");
         }
 

@@ -7,7 +7,8 @@ using System.Security.Claims;
 namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  InvoiceController	توليد فواتير PDF
-// ============================================================[Authorize(Roles = "superadmin,admin,resident")]
+// ============================================================
+[Authorize(Roles = "superadmin,admin,resident")]
 public class InvoiceController : Controller
 {
     private readonly BuildingsService _buildings;

@@ -14,7 +14,7 @@ public class SuperAdminHomeController : Controller
 
     public async Task<IActionResult> Index()
     {
-        var buildings = await _buildings.GetAllAsync();
+        var buildings = await _buildings.GetSummariesWithCountsAsync();
         return View(buildings);
     }
 }

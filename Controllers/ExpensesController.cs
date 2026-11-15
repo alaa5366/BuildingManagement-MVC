@@ -8,7 +8,8 @@ using System.Security.Claims;
 namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  ExpensesController	المصروفات الشهرية
-// ============================================================[Authorize(Roles = "admin")]
+// ============================================================
+[Authorize(Roles = "admin")]
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageExpenses)]
 public class ExpensesController : Controller
 {
