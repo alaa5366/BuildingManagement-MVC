@@ -57,7 +57,7 @@ public class BackupController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(string? tab = "overview")
     {
-        var buildings = await _buildings.GetAllAsync();
+        var buildings = await _buildings.GetSummariesWithCountsAsync();
         var stats = await _backup.GetStatsAsync();
         var backupFiles = _scheduled.ListBackupFiles(_env);
         var settings = await _scheduled.GetSettingsAsync();
@@ -436,7 +436,7 @@ public class BackupController : Controller
     [HttpGet]
     public async Task<IActionResult> ExportAllJson()
     {
-        var buildings = await _buildings.GetAllAsync();
+        var buildings = await _buildings.GetSummariesWithCountsAsync();
 
         var wrapper = new
         {

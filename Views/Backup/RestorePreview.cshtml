@@ -78,8 +78,8 @@
             onclick="return confirm('@Loc.Js("Confirm_The_Restore")');">
         @Loc.T("Run_Restore")
     </button>
-    <a asp-action="Restore" class="btn btn-secondary">@Loc.T("Cancel_2")</a>
-</form>
+        <a asp-action="Index" asp-route-tab="backup" class="btn btn-secondary">@Loc.T("Cancel_2")</a>
+    </form>
 </div>
 
 @section Scripts {
