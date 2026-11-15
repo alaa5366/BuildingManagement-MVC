@@ -148,7 +148,6 @@ public class DvrService
 
     public async Task<SyncDvrReport> SyncAllToSqlAsync()
     {
-        // بعد إلغاء Firebase، مفيش حاجة تتزامن
         return new SyncDvrReport
         {
             Elapsed = TimeSpan.Zero,

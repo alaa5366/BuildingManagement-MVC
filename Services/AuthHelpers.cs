@@ -1,8 +1,7 @@
-namespace BuildingManagementMvc.Services;
+﻿namespace BuildingManagementMvc.Services;
 
 // ترجمة حرفية لدوال js/utils/auth-helpers.js و js/utils/phone-utils.js
 // عشان الحسابات المُشفَّرة (internal email/password) تطلع متطابقة 100%
-// مع نسخة الـ JS، فتقدر تستخدم نفس مستخدمي Firebase Auth الموجودين.
 public static class AuthHelpers
 {
     public static string ResidentInternalEmail(string buildingId, int floorOrder, int aptNumber)

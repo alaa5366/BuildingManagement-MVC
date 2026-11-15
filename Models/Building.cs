@@ -1,8 +1,7 @@
-namespace BuildingManagementMvc.Models;
+﻿namespace BuildingManagementMvc.Models;
 
 // ============================================================
 // Building — aggregate كامل للعمارة (مستخدم في كل الخدمات)
-// كان Firestore doc، دلوقتي SQL (عن طريق BuildingSqlStore)
 // ============================================================
 
 public class Building

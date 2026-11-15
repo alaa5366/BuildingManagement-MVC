@@ -1,6 +1,5 @@
-namespace BuildingManagementMvc.Models;
+﻿namespace BuildingManagementMvc.Models;
 
-// نماذج عرض مخصّصة لشاشة التقارير (features/reports.js) — مش بتتخزن في Firestore
 public class ReportsVm
 {
     public Building Building { get; set; } = null!;

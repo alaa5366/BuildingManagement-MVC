@@ -1,9 +1,7 @@
-// =====================================================================
-//  BuildingSqlStore - بديل Firestore لعمليات الـ aggregate بتاعة BuildingsService.
+﻿// =====================================================================
 //  Singleton (لأن BuildingsService نفسه Singleton) فبيستخدم IDbContextFactory:
 //  كل عملية بتفتح DbContext جديد وتقفله.
 //
-//  Last-write-wins زي Firestore Overwrite الحالي (مفيش optimistic concurrency).
 // =====================================================================
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;

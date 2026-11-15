@@ -62,7 +62,6 @@ public class AuditLogController : Controller
             ViewBag.CanFilterByApartment = true;
         }
 
-        // ✅ نجيب كل السجلات (بدون pagination على Firestore)
         var entries = await _audit.QueryAsync(
             buildingId: qBuildingId,
             apartmentId: qApartmentId,

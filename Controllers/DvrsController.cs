@@ -171,7 +171,6 @@ public class DvrsController : Controller
         if (dvr == null) return NotFound();
         if (!await CanManageAsync(dvr.BuildingId)) return Forbid();
 
-        // امسح من SQL + Firestore + MediaMTX
         await _dvrs.DeleteCameraAsync(cameraId);
         await _mediamtx.DeletePathAsync($"cam_{cameraId}");
 

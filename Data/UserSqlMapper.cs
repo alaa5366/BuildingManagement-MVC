@@ -1,5 +1,4 @@
 ﻿// =====================================================================
-//  UserSqlMapper - تحويل بين AppUserDoc (Firestore) و UserEntity (SQL)
 // =====================================================================
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
