@@ -3,11 +3,17 @@
 namespace BuildingManagementMvc.Services;
 
 // خدمة إدارة الفئات المالية (مصروفات + إيرادات) داخل مستند العمارة
+/// <summary>
+/// Business logic for expense and revenue categories.
+/// </summary>
 public class CategoriesService
 {
     private readonly BuildingsService _buildings;
     private readonly IAuditLogger _audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CategoriesService"/> class.
+    /// </summary>
     public CategoriesService(BuildingsService buildings, IAuditLogger audit)
     {
         _buildings = buildings;
@@ -17,21 +23,36 @@ public class CategoriesService
     // ============================================================
     // قراءة
     // ============================================================
+    /// <summary>
+    /// Gets the expense categories.
+    /// </summary>
     public List<FinancialCategory> GetExpenseCategories(Building building)
         => (building.ExpenseCategories ?? new()).OrderBy(c => c.Order).ThenBy(c => c.Name).ToList();
 
+    /// <summary>
+    /// Gets the revenue categories.
+    /// </summary>
     public List<FinancialCategory> GetRevenueCategories(Building building)
         => (building.RevenueCategories ?? new()).OrderBy(c => c.Order).ThenBy(c => c.Name).ToList();
 
+    /// <summary>
+    /// Finds the expense category.
+    /// </summary>
     public FinancialCategory? FindExpenseCategory(Building building, string id)
         => building.ExpenseCategories?.FirstOrDefault(c => c.Id == id);
 
+    /// <summary>
+    /// Finds the revenue category.
+    /// </summary>
     public FinancialCategory? FindRevenueCategory(Building building, string id)
         => building.RevenueCategories?.FirstOrDefault(c => c.Id == id);
 
     // ============================================================
     // إنشاء
     // ============================================================
+    /// <summary>
+    /// Adds the operation on the categories.
+    /// </summary>
     public async Task<FinancialCategory> AddAsync(
         Building building,
         bool isExpense,
@@ -79,6 +100,9 @@ public class CategoriesService
     // ============================================================
     // تعديل
     // ============================================================
+    /// <summary>
+    /// Updates the operation on the categories.
+    /// </summary>
     public async Task<bool> UpdateAsync(
         Building building,
         bool isExpense,
@@ -121,6 +145,9 @@ public class CategoriesService
     // ============================================================
     // حذف
     // ============================================================
+    /// <summary>
+    /// Deletes the operation on the categories.
+    /// </summary>
     public async Task<bool> DeleteAsync(
         Building building,
         bool isExpense,
@@ -173,6 +200,9 @@ public class CategoriesService
     // ============================================================
     // إعادة الترتيب
     // ============================================================
+    /// <summary>
+    /// Persists a new display order for the categories of a building.
+    /// </summary>
     public async Task ReorderAsync(
         Building building,
         bool isExpense,

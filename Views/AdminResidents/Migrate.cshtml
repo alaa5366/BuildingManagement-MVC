@@ -1,4 +1,10 @@
-﻿@{
+﻿@* =============================================================================
+   View:        AdminResidents/Migrate
+   Rendered by: AdminResidentsController.Migrate
+   Model:       none
+   Purpose:     Migrate page.
+   ============================================================================= *@
+@{
     ViewData["Title"] = Loc.T("Migrate_Residents");
     var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Models.Building> ?? new();
     var totalResidents = (int)(ViewBag.TotalResidents ?? 0);
@@ -36,7 +42,7 @@
                         @foreach (var b in buildings)
                         {
                             <option value="@b.Id">
-                                @b.Name (@b.BuildingNumber) — @b.Apartments.Count @Loc.T("Apartments")
+                                @b.Name (@b.BuildingNumber) — @b.ApartmentsCount @Loc.T("Apartments")
                             </option>
                         }
                     </select>

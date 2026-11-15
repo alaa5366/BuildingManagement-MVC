@@ -5,12 +5,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Business logic for DVR devices and cameras, including encryption of stored credentials.
+/// </summary>
 public class DvrService
 {
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly IEncryptionService _enc;
     private readonly ILogger<DvrService> _log;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DvrService"/> class.
+    /// </summary>
     public DvrService(
         IDbContextFactory<AppDbContext> sqlFactory,
         IEncryptionService enc,
@@ -21,6 +27,9 @@ public class DvrService
         _log = log;
     }
 
+    /// <summary>
+    /// Gets the by building.
+    /// </summary>
     public async Task<List<DvrEntity>> GetByBuildingAsync(string buildingId)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
@@ -33,6 +42,9 @@ public class DvrService
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Gets the by ID.
+    /// </summary>
     public async Task<DvrEntity?> GetByIdAsync(string id)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
@@ -42,6 +54,9 @@ public class DvrService
             .FirstOrDefaultAsync(d => d.Id == id);
     }
 
+    /// <summary>
+    /// Creates the operation on the DVR.
+    /// </summary>
     public async Task<string> CreateAsync(
         string buildingId, string name, string ip, int port,
         string brand, string username, string password)
@@ -50,7 +65,9 @@ public class DvrService
         var now = DateTime.UtcNow;
 
         name = string.IsNullOrWhiteSpace(name) ? "DVR" : name.Trim();
-        ip = string.IsNullOrWhiteSpace(ip) ? "127.0.0.1" : ip.Trim();
+        ip = ip?.Trim() ?? string.Empty;
+        if (!DvrNetworkPolicy.IsAllowedEndpoint(ip, port))
+            throw new ArgumentException("DVR host must be a private-network IP address and port must be valid.");
         brand = string.IsNullOrWhiteSpace(brand) ? "Other" : brand.Trim();
         username = username?.Trim() ?? "";
         password = password ?? "";
@@ -74,12 +91,17 @@ public class DvrService
         return id;
     }
 
+    /// <summary>
+    /// Updates the operation on the DVR.
+    /// </summary>
     public async Task UpdateAsync(
         string id, string name, string ip, int port,
         string brand, string username, string? newPassword, bool isActive)
     {
         name = string.IsNullOrWhiteSpace(name) ? "DVR" : name.Trim();
-        ip = string.IsNullOrWhiteSpace(ip) ? "127.0.0.1" : ip.Trim();
+        ip = ip?.Trim() ?? string.Empty;
+        if (!DvrNetworkPolicy.IsAllowedEndpoint(ip, port))
+            throw new ArgumentException("DVR host must be a private-network IP address and port must be valid.");
         brand = string.IsNullOrWhiteSpace(brand) ? "Other" : brand.Trim();
         username = username?.Trim() ?? "";
 
@@ -101,16 +123,24 @@ public class DvrService
         await db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Deletes the operation on the DVR.
+    /// </summary>
     public async Task DeleteAsync(string id)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
         await db.Dvrs.Where(d => d.Id == id).ExecuteDeleteAsync();
     }
 
+    /// <summary>
+    /// Adds the camera.
+    /// </summary>
     public async Task<string> AddCameraAsync(string dvrId, string name, int channel, string rtspPath)
     {
         name = string.IsNullOrWhiteSpace(name) ? $"Camera {channel}" : name.Trim();
         rtspPath = rtspPath?.Trim() ?? "";
+        if (channel is < 1 or > 256 || !DvrNetworkPolicy.IsSafeRelativeRtspPath(rtspPath))
+            throw new ArgumentException("Camera channel or RTSP path is invalid.");
 
         await using var db = await _sqlFactory.CreateDbContextAsync();
         var dvr = await db.Dvrs.FirstOrDefaultAsync(d => d.Id == dvrId)
@@ -132,12 +162,18 @@ public class DvrService
         return id;
     }
 
+    /// <summary>
+    /// Deletes the camera.
+    /// </summary>
     public async Task DeleteCameraAsync(string cameraId)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
         await db.Cameras.Where(c => c.Id == cameraId).ExecuteDeleteAsync();
     }
 
+    /// <summary>
+    /// Gets the decrypted password.
+    /// </summary>
     public async Task<string> GetDecryptedPasswordAsync(string dvrId)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
@@ -146,8 +182,12 @@ public class DvrService
         return _enc.Decrypt(dvr.PasswordEncrypted);
     }
 
+    /// <summary>
+    /// Synchronizes the all to SQL.
+    /// </summary>
     public async Task<SyncDvrReport> SyncAllToSqlAsync()
     {
+        // بعد إلغاء Firebase، مفيش حاجة تتزامن
         return new SyncDvrReport
         {
             Elapsed = TimeSpan.Zero,
@@ -156,14 +196,41 @@ public class DvrService
     }
 }
 
+/// <summary>
+/// Result of synchronizing DVR devices and their cameras with the media server.
+/// </summary>
 public class SyncDvrReport
 {
+    /// <summary>
+    /// Gets or sets the dvrs added.
+    /// </summary>
     public int DvrsAdded { get; set; }
+    /// <summary>
+    /// Gets or sets the dvrs updated.
+    /// </summary>
     public int DvrsUpdated { get; set; }
+    /// <summary>
+    /// Gets or sets the cameras added.
+    /// </summary>
     public int CamerasAdded { get; set; }
+    /// <summary>
+    /// Gets or sets the cameras updated.
+    /// </summary>
     public int CamerasUpdated { get; set; }
+    /// <summary>
+    /// Gets or sets the elapsed.
+    /// </summary>
     public TimeSpan Elapsed { get; set; }
+    /// <summary>
+    /// Gets or sets the errors.
+    /// </summary>
     public List<string> Errors { get; set; } = new();
+    /// <summary>
+    /// Gets the dvrs total.
+    /// </summary>
     public int DvrsTotal => DvrsAdded + DvrsUpdated;
+    /// <summary>
+    /// Gets the cameras total.
+    /// </summary>
     public int CamerasTotal => CamerasAdded + CamerasUpdated;
 }

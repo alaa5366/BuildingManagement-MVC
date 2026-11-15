@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Attributes;
+﻿using BuildingManagementMvc.Attributes;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +8,12 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  MaintenanceController	سجل الصيانة
 // ============================================================
+/// <summary>
+/// Admin maintenance log: create, update status, delete and convert a record's cost into an expense.
+/// </summary>
+/// <remarks>
+/// Access: requires one of the roles <c>admin</c>.
+/// </remarks>
 [Authorize(Roles = "admin")]
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageMaintenance)]
 public class MaintenanceController : Controller
@@ -17,6 +23,9 @@ public class MaintenanceController : Controller
     private readonly AuditLogService _audit;
     private readonly NotificationsService _notify;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MaintenanceController"/> class.
+    /// </summary>
     public MaintenanceController(BuildingsService buildings, MaintenanceService maint, AuditLogService audit, NotificationsService notify)
     {
         _buildings = buildings; _maint = maint; _audit = audit; _notify = notify;
@@ -24,6 +33,12 @@ public class MaintenanceController : Controller
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
 
+    /// <summary>
+    /// Shows the main page of the maintenance screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Index(int page = 1, int pageSize = 50)
     {
@@ -43,12 +58,28 @@ public class MaintenanceController : Controller
         return View(pagedRecords);
     }
 
+    /// <summary>
+    /// Handles the add form submission of the maintenance screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Add(string title, string? description, string date, double cost, string? vendor, string status)
+    public async Task<IActionResult> Add(string title, string? description, string date, decimal cost, string? vendor, string status)
     {
         var building = await _buildings.GetByIdAsync(BuildingId);
         if (building == null) return NotFound();
+
+        if (string.IsNullOrWhiteSpace(title) || cost < 0 ||
+            !DateTime.TryParse(date, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AssumeUniversal, out _) ||
+            (!string.IsNullOrWhiteSpace(status) &&
+             !new[] { "open", "inprogress", "done", "cancelled" }.Contains(status.Trim().ToLowerInvariant())))
+        {
+            TempData["Error"] = "يرجى إدخال عنوان وتاريخ صحيحين وتكلفة غير سالبة.";
+            return RedirectToAction("Index");
+        }
 
         if (!string.IsNullOrWhiteSpace(title))
         {
@@ -61,13 +92,28 @@ public class MaintenanceController : Controller
         return RedirectToAction("Index");
     }
 
+    /// <summary>
+    /// Handles the update form submission of the maintenance screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Update(string id, string title, string? description, string date, double cost, string? vendor, string status)
+    public async Task<IActionResult> Update(string id, string title, string? description, string date, decimal cost, string? vendor, string status)
     {
         var building = await _buildings.GetByIdAsync(BuildingId);
         if (building == null) return NotFound();
 
+        if (string.IsNullOrWhiteSpace(title) || cost < 0 ||
+            !DateTime.TryParse(date, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AssumeUniversal, out _) ||
+            !new[] { "open", "inprogress", "done", "cancelled" }.Contains((status ?? "").Trim().ToLowerInvariant()))
+        {
+            TempData["Error"] = "يرجى إدخال عنوان وتاريخ صحيحين وتكلفة غير سالبة.";
+            return RedirectToAction("Index");
+        }
+        status = Request.Form["status"].ToString() ?? "Pending";
         var rec = _maint.Update(building, id, title, description, date, cost, vendor, status);
         if (rec != null)
         {
@@ -78,6 +124,12 @@ public class MaintenanceController : Controller
         return RedirectToAction("Index");
     }
 
+    /// <summary>
+    /// Handles the delete form submission of the maintenance screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string id)
@@ -94,6 +146,12 @@ public class MaintenanceController : Controller
         return RedirectToAction("Index");
     }
 
+    /// <summary>
+    /// Adds the to expenses.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddToExpenses(string id, string? month)

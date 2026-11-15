@@ -8,6 +8,12 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  ResidentHomeController	لوحة تحكم الساكن (Dashboard)
 // ============================================================
+/// <summary>
+/// Resident dashboard: current balance, payment progress, recent activity and quick links.
+/// </summary>
+/// <remarks>
+/// Access: requires one of the roles <c>resident</c>.
+/// </remarks>
 [Authorize(Roles = "resident")]
 public class ResidentHomeController : Controller
 {
@@ -17,6 +23,9 @@ public class ResidentHomeController : Controller
     private readonly MaintenanceService _maint;
     private readonly NotificationsService _notify;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ResidentHomeController"/> class.
+    /// </summary>
     public ResidentHomeController(
         BuildingsService buildings,
         WalletService wallet,
@@ -31,6 +40,9 @@ public class ResidentHomeController : Controller
         _notify = notify;
     }
 
+    /// <summary>
+    /// Shows the main page of the resident home screen.
+    /// </summary>
     public async Task<IActionResult> Index()
     {
         var buildingId = User.FindFirstValue("buildingId");
@@ -208,6 +220,12 @@ public class ResidentHomeController : Controller
         return View(apt);
     }
 
+    /// <summary>
+    /// Diagnostics page of the resident dashboard. Not intended for production use.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public IActionResult Debug()
     {

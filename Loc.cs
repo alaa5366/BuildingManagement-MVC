@@ -9,11 +9,17 @@ namespace BuildingManagementMvc;
 // - T("Key") / T("Key", args) بترجع النص بلغة الـ request الحالية (ar / en) من Resources/Shared.*.resx
 // - لو المفتاح مش موجود بترجع المفتاح نفسه (بيبان في الشاشة بدل ما يطلع فاضي)
 // - static عشان تشتغل في الـ Views والـ Controllers والـ Services (وحتى الـ static methods) من غير حقن
+/// <summary>
+/// Static localization helper. <c>T</c> returns a translated string for the current UI culture and <c>Js</c> returns one that is safe inside a JavaScript string.
+/// </summary>
 public static class Loc
 {
     private static readonly ResourceManager Rm =
         new("BuildingManagementMvc.Resources.Shared", typeof(Loc).Assembly);
 
+    /// <summary>
+    /// Returns the t.
+    /// </summary>
     public static string T(string key)
     {
         try
@@ -26,6 +32,9 @@ public static class Loc
         }
     }
 
+    /// <summary>
+    /// Returns the t.
+    /// </summary>
     public static string T(string key, params object?[] args)
     {
         var format = T(key);
@@ -41,11 +50,17 @@ public static class Loc
     }
 
     // للاستخدام جوه JavaScript (داخل سكريبت أو onclick): بيعمل escape للنص
+    /// <summary>
+    /// Returns the js.
+    /// </summary>
     public static string Js(string key, params object?[] args) =>
         HttpUtility.JavaScriptStringEncode(T(key, args));
 
     // للـ JavaScript الثابت (wwwroot/js): بيطلّع JSON بالمفاتيح المطلوبة بلغة الـ request
     // الاستخدام في الـ View: <script>window.I18N = Object.assign(window.I18N || {}, @Html.Raw(Loc.JsonDict("Js_Close")));</script>
+    /// <summary>
+    /// Returns the JSON dict.
+    /// </summary>
     public static string JsonDict(params string[] keys)
     {
         var d = new Dictionary<string, string>();

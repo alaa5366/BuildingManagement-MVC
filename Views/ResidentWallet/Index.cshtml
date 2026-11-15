@@ -1,9 +1,15 @@
+@* =============================================================================
+   View:        ResidentWallet/Index
+   Rendered by: ResidentWalletController.Index
+   Model:       none
+   Purpose:     Main page.
+   ============================================================================= *@
 @{
     ViewData["Title"] = Loc.T("My_Wallet_4");
     var building = (Building)ViewBag.Building;
     var apt = (Apartment)ViewBag.Apartment;
     string month = ViewBag.Month;
-    double balance = ViewBag.Balance;
+    decimal balance = ViewBag.Balance;
     var transactions = (BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.WalletTransactionVm>)ViewBag.Transactions;
     var pendingDeposits = (BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Deposit>)ViewBag.PendingDeposits;
 

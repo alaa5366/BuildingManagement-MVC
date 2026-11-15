@@ -11,6 +11,12 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 // AccountController نقطة الدخول الوحيدة للنظام(UnifiedLogin, QuickLogin, SetPin, Logout)
 // ============================================================
+/// <summary>
+/// Handles sign-in for residents, admins and super admins: unified login, account selection, QR quick login, set-PIN links, language-neutral lookups for the login page, and sign-out.
+/// </summary>
+/// <remarks>
+/// Access: anonymous.
+/// </remarks>
 [AllowAnonymous]
 public class AccountController : Controller
 {
@@ -32,6 +38,9 @@ public class AccountController : Controller
 
     private static string LockedMsg => Loc.T("Too_Many_Failed_Login_Attempts_Try");
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AccountController"/> class.
+    /// </summary>
     public AccountController(
         SqlAuthService sqlAuth,
         BuildingsService buildings,
@@ -48,11 +57,20 @@ public class AccountController : Controller
         _log = logger;
     }
 
+    /// <summary>
+    /// Signs in the choice.
+    /// </summary>
     public IActionResult LoginChoice() => RedirectToAction("UnifiedLogin");
 
     // ═══════════════════════════════════════════════════════════
     // 1. Resident Login
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Signs in the resident.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> LoginResident()
     {
@@ -60,6 +78,12 @@ public class AccountController : Controller
         return View(new ResidentLoginVm());
     }
 
+    /// <summary>
+    /// Signs in the resident.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST. Rate limited.
+    /// </remarks>
     [HttpPost]
     [EnableRateLimiting("login")]
     [ValidateAntiForgeryToken]
@@ -98,6 +122,12 @@ public class AccountController : Controller
     // ═══════════════════════════════════════════════════════════
     // 2. Admin Login
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Signs in the admin.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> LoginAdmin()
     {
@@ -105,6 +135,12 @@ public class AccountController : Controller
         return View(new AdminLoginVm());
     }
 
+    /// <summary>
+    /// Signs in the admin.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST. Rate limited.
+    /// </remarks>
     [HttpPost]
     [EnableRateLimiting("login")]
     [ValidateAntiForgeryToken]
@@ -142,9 +178,21 @@ public class AccountController : Controller
     // ═══════════════════════════════════════════════════════════
     // 3. SuperAdmin Login
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Signs in the super admin.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public IActionResult LoginSuperAdmin() => View(new SuperAdminLoginVm());
 
+    /// <summary>
+    /// Signs in the super admin.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST. Rate limited.
+    /// </remarks>
     [HttpPost]
     [EnableRateLimiting("login")]
     [ValidateAntiForgeryToken]
@@ -176,6 +224,12 @@ public class AccountController : Controller
     // ═══════════════════════════════════════════════════════════
     // 4. Unified Login
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Shows the unified login page: one form for an e-mail or phone number plus a password or PIN.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public IActionResult UnifiedLogin(string? returnUrl = null)
     {
@@ -183,6 +237,12 @@ public class AccountController : Controller
         return View(new UnifiedLoginVm());
     }
 
+    /// <summary>
+    /// Authenticates the submitted identifier and credential. Signs the user in directly, or redirects to account selection when several accounts match.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST. Rate limited.
+    /// </remarks>
     [HttpPost]
     [EnableRateLimiting("login")]
     [ValidateAntiForgeryToken]
@@ -237,6 +297,12 @@ public class AccountController : Controller
     // ═══════════════════════════════════════════════════════════
     // 5. ChooseContext
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Shows the account selection page for the accounts found by the unified login.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public IActionResult ChooseContext(string token)
     {
@@ -258,6 +324,12 @@ public class AccountController : Controller
         return View("LoginChoice", vm);
     }
 
+    /// <summary>
+    /// Signs in with the account the user selected on the account selection page.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST. Rate limited.
+    /// </remarks>
     [HttpPost]
     [EnableRateLimiting("login")]
     [ValidateAntiForgeryToken]
@@ -293,6 +365,12 @@ public class AccountController : Controller
     // ═══════════════════════════════════════════════════════════
     // 6. Logout
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Handles the logout form submission of the account screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST. Rate limited.
+    /// </remarks>
     [HttpPost]
     [EnableRateLimiting("login")]
     [ValidateAntiForgeryToken]
@@ -428,6 +506,12 @@ public class AccountController : Controller
     // ═══════════════════════════════════════════════════════════
     // AJAX: Get Floors / Apartments
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Gets the floors.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET. Anonymous access. Rate limited.
+    /// </remarks>
     [HttpGet]
     [AllowAnonymous]
     [EnableRateLimiting("lookup")]
@@ -453,6 +537,12 @@ public class AccountController : Controller
         return Json(floors);
     }
 
+    /// <summary>
+    /// Gets the apartments.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET. Anonymous access. Rate limited.
+    /// </remarks>
     [HttpGet]
     [AllowAnonymous]
     [EnableRateLimiting("lookup")]
@@ -482,6 +572,12 @@ public class AccountController : Controller
     // ═══════════════════════════════════════════════════════════
     // Quick Login (QR السريع)
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Shows the confirmation page of a quick-login link. It does not consume the token, so link previews cannot burn it.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET. Anonymous access.
+    /// </remarks>
     [HttpGet]
     [AllowAnonymous]
     public async Task<IActionResult> QuickLogin(
@@ -505,6 +601,12 @@ public class AccountController : Controller
         return View("QuickLoginConfirm");
     }
 
+    /// <summary>
+    /// Consumes the quick-login token (atomically) and signs the resident in.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST. Anonymous access. Rate limited.
+    /// </remarks>
     [HttpPost]
     [EnableRateLimiting("login")]
     [AllowAnonymous]
@@ -556,6 +658,12 @@ public class AccountController : Controller
     // ═══════════════════════════════════════════════════════════
     // رابط تعيين الـ PIN (بيتبعت في رسالة الترحيب بدل الـ PIN نفسه)
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Sets the PIN.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET. Anonymous access.
+    /// </remarks>
     [HttpGet]
     [AllowAnonymous]
     public async Task<IActionResult> SetPin(string token, [FromServices] QrSecurityService qrSecurity)
@@ -573,6 +681,12 @@ public class AccountController : Controller
         return View("SetPin");
     }
 
+    /// <summary>
+    /// Sets the PIN.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST. Anonymous access. Rate limited.
+    /// </remarks>
     [HttpPost]
     [AllowAnonymous]
     [EnableRateLimiting("login")]

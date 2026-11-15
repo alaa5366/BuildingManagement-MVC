@@ -5,6 +5,9 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Re-checks signed-in users against the database (disabled, removed, permissions changed) on every cookie validation, with a short cache.
+/// </summary>
 public class SessionRevalidator
 {
     private static readonly TimeSpan CacheFor = TimeSpan.FromMinutes(2);
@@ -17,6 +20,9 @@ public class SessionRevalidator
     private readonly IMemoryCache _cache;
     private readonly ILogger<SessionRevalidator> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SessionRevalidator"/> class.
+    /// </summary>
     public SessionRevalidator(
         UsersService users,
         IDbContextFactory<AppDbContext> sqlFactory,
@@ -29,8 +35,14 @@ public class SessionRevalidator
         _logger = logger;
     }
 
+    /// <summary>
+    /// Outcome of a session validation: whether the session is still valid and the refreshed permissions of the user.
+    /// </summary>
     public sealed record Result(bool Valid, List<string>? Permissions);
 
+    /// <summary>
+    /// Validates a signed-in principal against the database. Returns the refreshed permissions for admins, or rejects the session when the account was disabled or removed.
+    /// </summary>
     public async Task<Result> ValidateAsync(ClaimsPrincipal user)
     {
         var role = user.FindFirst(ClaimTypes.Role)?.Value;

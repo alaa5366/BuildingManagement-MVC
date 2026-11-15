@@ -1,4 +1,10 @@
-﻿@model List<BuildingManagementMvc.Data.Entities.CameraEntity>
+﻿@* =============================================================================
+   View:        Cameras/Live
+   Rendered by: CamerasController.Live
+   Model:       List<BuildingManagementMvc.Data.Entities.CameraEntity>
+   Purpose:     Live view.
+   ============================================================================= *@
+@model List<BuildingManagementMvc.Data.Entities.CameraEntity>
 @{
     ViewData["Title"] = Loc.T("Live_Cameras");
     var building = ViewBag.Building as BuildingManagementMvc.Models.Building;
@@ -17,7 +23,7 @@
         : Loc.T("Common_Back");
 }
 
-<link href="https://cdn.jsdelivr.net/npm/video.js@8/dist/video-js.min.css" rel="stylesheet" />
+<link href="~/lib/video.js/dist/video-js.min.css" rel="stylesheet" />
 
 <div class="container-fluid">
 
@@ -80,7 +86,7 @@
 </div>
 
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/video.js@8/dist/video.min.js"></script>
+    <script src="~/lib/video.js/dist/video.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const cameras = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(

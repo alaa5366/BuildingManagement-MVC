@@ -3,25 +3,49 @@ using BuildingManagementMvc.Models;
 namespace BuildingManagementMvc.Services;
 
 // ترجمة حرفية لـ js/features/polls.js
+/// <summary>
+/// Business logic for polls and votes.
+/// </summary>
 public class PollsService
 {
+    /// <summary>
+    /// Gets the polls.
+    /// </summary>
     public List<Poll> GetPolls(Building building) =>
         building.Polls.OrderByDescending(p => p.CreatedAt).ToList();
 
+    /// <summary>
+    /// Determines whether the value is poll expired.
+    /// </summary>
     public static bool IsPollExpired(Poll poll)
     {
         if (string.IsNullOrWhiteSpace(poll.Deadline)) return false;
         return DateTime.TryParse(poll.Deadline, out var d) && d < DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Determines whether the value is poll active.
+    /// </summary>
     public static bool IsPollActive(Poll poll) => !poll.Closed && !IsPollExpired(poll);
 
+    /// <summary>
+    /// Returns the total votes.
+    /// </summary>
     public static int TotalVotes(Poll poll) => poll.Votes.Count;
 
+    /// <summary>
+    /// Returns the option votes.
+    /// </summary>
     public static int OptionVotes(Poll poll, string optionId) => poll.Votes.Values.Count(v => v == optionId);
 
+    /// <summary>
+    /// Returns the my vote.
+    /// </summary>
     public static string? MyVote(Poll poll, string aptId) => poll.Votes.TryGetValue(aptId, out var v) ? v : null;
 
+    /// <summary>
+    /// Creates the poll.
+    /// </summary>
     public Poll CreatePoll(Building building, string question, string? description, List<string> optionTexts, string? deadline, string createdBy)
     {
         var poll = new Poll
@@ -42,6 +66,9 @@ public class PollsService
     }
 
     // بيرجع false لو الشقة صوّتت قبل كده أو التصويت مقفول
+    /// <summary>
+    /// Records a vote on the operation on the polls.
+    /// </summary>
     public bool Vote(Building building, string pollId, string aptId, string optionId)
     {
         var poll = building.Polls.FirstOrDefault(p => p.Id == pollId);
@@ -53,6 +80,9 @@ public class PollsService
         return true;
     }
 
+    /// <summary>
+    /// Sets the closed.
+    /// </summary>
     public bool SetClosed(Building building, string pollId, bool closed)
     {
         var poll = building.Polls.FirstOrDefault(p => p.Id == pollId);
@@ -61,6 +91,9 @@ public class PollsService
         return true;
     }
 
+    /// <summary>
+    /// Deletes the operation on the polls.
+    /// </summary>
     public bool Delete(Building building, string pollId)
     {
         var before = building.Polls.Count;

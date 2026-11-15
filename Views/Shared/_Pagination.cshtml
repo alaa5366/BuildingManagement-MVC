@@ -1,4 +1,10 @@
-﻿@using System.Linq
+﻿@* =============================================================================
+   View:        Shared/_Pagination
+   Rendered by: shared layout or partial view (used by several controllers)
+   Model:       none
+   Purpose:     Pagination partial.
+   ============================================================================= *@
+@using System.Linq
 @{
     // ✅ نقرا من ViewData بدل Model
     int currentPage = (int)(ViewData["CurrentPage"] ?? 1);

@@ -5,12 +5,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Business logic for resident accounts: create, update, enable/disable, delete and PIN handling.
+/// </summary>
 public class ResidentsService
 {
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly IAuditLogger _audit;
     private readonly ILogger<ResidentsService> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ResidentsService"/> class.
+    /// </summary>
     public ResidentsService(
         IDbContextFactory<AppDbContext> sqlFactory,
         IAuditLogger audit,
@@ -26,6 +32,9 @@ public class ResidentsService
     // ═══════════════════════════════════════════════════════════
     // تعيين PIN للشقة (رابط التعيين أو إعادة التعيين من الأدمن).
     // لو مفيش ساكن للشقة بنعمل ساكن رئيسي من بيانات الشقة.
+    /// <summary>
+    /// Sets the PIN of every resident of an apartment (stored as a BCrypt hash). When the apartment has no resident yet, a primary resident is created from the apartment data.
+    /// </summary>
     public async Task SetApartmentPinAsync(string buildingId, string apartmentId, string newPin, string? updatedBy)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
@@ -67,13 +76,16 @@ public class ResidentsService
         await db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Updates the resident PIN.
+    /// </summary>
     public async Task UpdateResidentPinAsync(string buildingId, string apartmentId, string newPin)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
 
         // الـ PIN مابقاش بيتخزّن نص صريح في جدول الشقق — بنحدّث جدول السكان (مشفر) بس
         var residents = await db.Residents
-            .Where(r => r.ApartmentId == apartmentId)
+            .Where(r => r.BuildingId == buildingId && r.ApartmentId == apartmentId)
             .ToListAsync();
 
         if (residents.Any())
@@ -91,6 +103,9 @@ public class ResidentsService
     // ═══════════════════════════════════════════════════════════
     // الدوال الأصلية (مع تصحيح أنواع التواريخ والتحذيرات)
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Gets the by building.
+    /// </summary>
     public async Task<List<ResidentEntity>> GetByBuildingAsync(string buildingId)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
@@ -100,6 +115,9 @@ public class ResidentsService
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Gets the by apartment.
+    /// </summary>
     public async Task<List<ResidentEntity>> GetByApartmentAsync(string buildingId, string apartmentId)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
@@ -108,12 +126,18 @@ public class ResidentsService
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Gets the by ID.
+    /// </summary>
     public async Task<ResidentEntity?> GetByIdAsync(string id)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
         return await db.Residents.FirstOrDefaultAsync(r => r.Id == id);
     }
 
+    /// <summary>
+    /// Creates the operation on the residents.
+    /// </summary>
     public async Task CreateAsync(
         string buildingId, string apartmentId,
         string name, string phone, string whatsapp, string pin, string? email,
@@ -141,6 +165,9 @@ public class ResidentsService
         await db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Updates the operation on the residents.
+    /// </summary>
     public async Task UpdateAsync(
         string id, string name, string phone, string whatsapp, string? email,
         bool isPrimary, bool isOwner, string updatedBy)
@@ -161,6 +188,9 @@ public class ResidentsService
         await db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Changes the PIN.
+    /// </summary>
     public async Task ChangePinAsync(string id, string newPin, string updatedBy)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
@@ -174,6 +204,9 @@ public class ResidentsService
         await db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Sets the disabled.
+    /// </summary>
     public async Task SetDisabledAsync(string id, bool disabled, string? reason, string updatedBy)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
@@ -188,6 +221,9 @@ public class ResidentsService
         await db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Deletes the operation on the residents.
+    /// </summary>
     public async Task DeleteAsync(string id, string deletedBy)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
@@ -198,12 +234,18 @@ public class ResidentsService
         await db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Counts the operation on the residents.
+    /// </summary>
     public async Task<int> CountAsync()
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
         return await db.Residents.CountAsync();
     }
 
+    /// <summary>
+    /// Migrates the from apartments.
+    /// </summary>
     public async Task<MigrationResult> MigrateFromApartmentsAsync(string? buildingId, bool dryRun)
     {
         return new MigrationResult();

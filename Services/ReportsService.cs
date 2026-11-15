@@ -3,9 +3,15 @@ using BuildingManagementMvc.Models;
 namespace BuildingManagementMvc.Services;
 
 // ترجمة حرفية لـ js/features/reports.js
+/// <summary>
+/// Builds the financial reports (summaries, monthly series, category breakdowns, top debtors and creditors).
+/// </summary>
 public class ReportsService
 {
     private readonly WalletService _wallet;
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ReportsService"/> class.
+    /// </summary>
     public ReportsService(WalletService wallet) => _wallet = wallet;
 
     private static string[] MonthNamesAr => new[]
@@ -14,6 +20,9 @@ public class ReportsService
         Loc.T("July"), Loc.T("August"), Loc.T("September"), Loc.T("October"), Loc.T("November"), Loc.T("December")
     };
 
+    /// <summary>
+    /// Returns the month label.
+    /// </summary>
     public static string MonthLabel(string key)
     {
         var parts = key.Split('-');
@@ -21,6 +30,9 @@ public class ReportsService
         return $"{MonthNamesAr[m - 1]} {parts[0]}";
     }
 
+    /// <summary>
+    /// Returns the shift month.
+    /// </summary>
     public static string ShiftMonth(string key, int delta)
     {
         var parts = key.Split('-');
@@ -31,6 +43,9 @@ public class ReportsService
         return $"{y}-{m:D2}";
     }
 
+    /// <summary>
+    /// Gets the report months.
+    /// </summary>
     public List<string> GetReportMonths(Building building, string range, string currentMonth)
     {
         var allKeys = building.Months.Keys.OrderBy(k => k).ToList();
@@ -51,19 +66,22 @@ public class ReportsService
         return keys;
     }
 
+    /// <summary>
+    /// Builds the report.
+    /// </summary>
     public ReportsVm BuildReport(Building building, string range, string currentMonth)
     {
         var months = GetReportMonths(building, range, currentMonth);
 
-        double totalCollected = 0, totalExpenses = 0, totalRevenues = 0;
+        decimal totalCollected = 0, totalExpenses = 0, totalRevenues = 0;
         var monthly = new List<MonthlyPoint>();
 
         foreach (var mk in months)
         {
-            double collected = 0;
+            decimal collected = 0;
             foreach (var a in building.Apartments) collected += _wallet.TotalConfirmedDeposits(building, a.Id, mk);
 
-            double expenses = 0, revenues = 0;
+            decimal expenses = 0, revenues = 0;
             if (building.Months.TryGetValue(mk, out var m))
             {
                 expenses = m.Expenses.Sum(e => e.Amount);

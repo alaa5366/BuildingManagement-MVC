@@ -4,6 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Business logic for creating and managing admin accounts and their permissions.
+/// </summary>
 public class AdminManagementService
 {
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
@@ -11,6 +14,9 @@ public class AdminManagementService
     private readonly IAuditLogger _audit;
     private readonly ILogger<AdminManagementService> _log;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AdminManagementService"/> class.
+    /// </summary>
     public AdminManagementService(
         IDbContextFactory<AppDbContext> sqlFactory,
         UsersService users,
@@ -23,6 +29,9 @@ public class AdminManagementService
         _log = log ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<AdminManagementService>.Instance;
     }
 
+    /// <summary>
+    /// Gets the admins.
+    /// </summary>
     public async Task<List<AppUserDoc>> GetAdminsAsync(string? buildingId = null)
     {
         var admins = await _users.GetAdminsAsync();
@@ -31,8 +40,14 @@ public class AdminManagementService
         return admins.OrderBy(a => a.Name).ToList();
     }
 
+    /// <summary>
+    /// Gets the admin.
+    /// </summary>
     public async Task<AppUserDoc?> GetAdminAsync(string uid) => await _users.GetByUidAsync(uid);
 
+    /// <summary>
+    /// Creates the admin.
+    /// </summary>
     public async Task<string> CreateAdminAsync(
         string name, string phone, string buildingId, string pin,
         List<string> permissions, string createdBy)
@@ -82,6 +97,9 @@ public class AdminManagementService
         }
     }
 
+    /// <summary>
+    /// Updates the admin.
+    /// </summary>
     public async Task UpdateAdminAsync(
         string uid, string name, string phone, List<string> permissions, bool isActive, string updatedBy)
     {
@@ -107,6 +125,9 @@ public class AdminManagementService
             severity: "critical");
     }
 
+    /// <summary>
+    /// Changes the PIN.
+    /// </summary>
     public async Task ChangePinAsync(string uid, string newPin, string updatedBy)
     {
         var admin = await _users.GetByUidAsync(uid)
@@ -128,6 +149,9 @@ public class AdminManagementService
             severity: "critical");
     }
 
+    /// <summary>
+    /// Deactivates the admin account.
+    /// </summary>
     public async Task DeactivateAsync(string uid, string updatedBy)
     {
         var admin = await _users.GetByUidAsync(uid)
@@ -150,6 +174,9 @@ public class AdminManagementService
             severity: "critical");
     }
 
+    /// <summary>
+    /// Activates the admin account.
+    /// </summary>
     public async Task ActivateAsync(string uid, string updatedBy)
     {
         var admin = await _users.GetByUidAsync(uid)
@@ -172,6 +199,9 @@ public class AdminManagementService
             severity: "critical");
     }
 
+    /// <summary>
+    /// Deletes the operation on the admin management.
+    /// </summary>
     public async Task DeleteAsync(string uid, string deletedBy)
     {
         var admin = await _users.GetByUidAsync(uid)
@@ -196,6 +226,9 @@ public class AdminManagementService
             severity: "critical");
     }
 
+    /// <summary>
+    /// Synchronizes the permissions.
+    /// </summary>
     public async Task SyncPermissionsAsync(string uid, List<string> permissions, string updatedBy)
     {
         var admin = await _users.GetByUidAsync(uid);

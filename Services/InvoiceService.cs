@@ -4,11 +4,20 @@ using System.Text.Json;
 namespace BuildingManagementMvc.Services;
 
 // ترجمة حرفية للجزء الحسابي من js/features/invoice.js (من غير html2canvas/jsPDF)
+/// <summary>
+/// Builds invoice data (balances, shares, deposits) for an apartment and month.
+/// </summary>
 public class InvoiceService
 {
     private readonly WalletService _wallet;
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InvoiceService"/> class.
+    /// </summary>
     public InvoiceService(WalletService wallet) => _wallet = wallet;
 
+    /// <summary>
+    /// Builds the invoice data.
+    /// </summary>
     public InvoiceData BuildInvoiceData(Building building, Apartment apt, string monthKey)
     {
         var floor = building.Floors.FirstOrDefault(f => f.Id == apt.FloorId);

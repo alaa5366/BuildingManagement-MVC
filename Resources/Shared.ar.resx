@@ -4612,4 +4612,32 @@
   <data name="Leave_Empty_To_Keep_Current_Pin" xml:space="preserve"><value>سيبه فاضي عشان الـ PIN الحالي يفضل زي ما هو. اكتب 4 أرقام لو عايز تعيّن PIN جديد.</value></data>
   <!-- ===== Phase 9: security ===== -->
   <data name="Invalid_Image_File" xml:space="preserve"><value>الملف مش صورة صالحة (JPG أو PNG أو WebP أو GIF أو HEIC)</value></data>
+  <!-- ===== Phase 12: backup collection labels ===== -->
+  <data name="Backup_Collection_globalSettings" xml:space="preserve"><value>الإعدادات العامة</value></data>
+  <data name="Backup_Collection_scheduledBackupSettings" xml:space="preserve"><value>إعدادات النسخ المجدولة</value></data>
+  <data name="Backup_Collection_users" xml:space="preserve"><value>المستخدمون</value></data>
+  <data name="Backup_Collection_buildings" xml:space="preserve"><value>العمارات</value></data>
+  <data name="Backup_Collection_buildingSettings" xml:space="preserve"><value>إعدادات العمارات</value></data>
+  <data name="Backup_Collection_buildingAdmins" xml:space="preserve"><value>أدمن العمارات</value></data>
+  <data name="Backup_Collection_floors" xml:space="preserve"><value>الأدوار</value></data>
+  <data name="Backup_Collection_apartments" xml:space="preserve"><value>الشقق</value></data>
+  <data name="Backup_Collection_residents" xml:space="preserve"><value>السكان</value></data>
+  <data name="Backup_Collection_financialCategories" xml:space="preserve"><value>الفئات المالية</value></data>
+  <data name="Backup_Collection_expenses" xml:space="preserve"><value>المصروفات</value></data>
+  <data name="Backup_Collection_revenues" xml:space="preserve"><value>الإيرادات</value></data>
+  <data name="Backup_Collection_monthlyApartmentShares" xml:space="preserve"><value>حصص الشقق الشهرية</value></data>
+  <data name="Backup_Collection_deposits" xml:space="preserve"><value>الدفعات</value></data>
+  <data name="Backup_Collection_depositEditHistory" xml:space="preserve"><value>سجل تعديل الدفعات</value></data>
+  <data name="Backup_Collection_walletAdjustments" xml:space="preserve"><value>تعديلات المحفظة</value></data>
+  <data name="Backup_Collection_userPermissions" xml:space="preserve"><value>صلاحيات المستخدمين</value></data>
+  <data name="Backup_Collection_auditLog" xml:space="preserve"><value>سجل التدقيق</value></data>
+  <data name="Backup_Collection_notifications" xml:space="preserve"><value>الإشعارات</value></data>
+  <data name="Backup_Collection_polls" xml:space="preserve"><value>التصويتات</value></data>
+  <data name="Backup_Collection_pollOptions" xml:space="preserve"><value>خيارات التصويت</value></data>
+  <data name="Backup_Collection_pollVotes" xml:space="preserve"><value>أصوات التصويت</value></data>
+  <data name="Backup_Collection_maintenanceRecords" xml:space="preserve"><value>سجلات الصيانة</value></data>
+  <data name="Backup_Collection_dvrs" xml:space="preserve"><value>أجهزة التسجيل</value></data>
+  <data name="Backup_Collection_cameras" xml:space="preserve"><value>الكاميرات</value></data>
+  <data name="Backup_Collection_qrTokens" xml:space="preserve"><value>رموز QR</value></data>
+  <data name="Backup_Collection_qrUsages" xml:space="preserve"><value>استخدام رموز QR</value></data>
 </root>

@@ -10,6 +10,12 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  AdminsController	إدارة الأدمنز (SuperAdmin فقط)
 // ============================================================
+/// <summary>
+/// Super admin screens for creating and managing admin accounts, their buildings and PINs.
+/// </summary>
+/// <remarks>
+/// Access: requires one of the roles <c>superadmin</c>.
+/// </remarks>
 [Authorize(Roles = "superadmin")]
 [HasPermission(AdminPermissions.ManageAdmins)]
 public class AdminsController : Controller
@@ -17,6 +23,9 @@ public class AdminsController : Controller
     private readonly AdminManagementService _admins;
     private readonly BuildingsService _buildings;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AdminsController"/> class.
+    /// </summary>
     public AdminsController(AdminManagementService admins, BuildingsService buildings)
     {
         _admins = admins;
@@ -26,6 +35,9 @@ public class AdminsController : Controller
     private string CurrentUserId =>
         User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
 
+    /// <summary>
+    /// Shows the main page of the admins screen.
+    /// </summary>
     public async Task<IActionResult> Index(string? buildingId, int page = 1, int pageSize = 50)
     {
         ViewBag.Buildings = await _buildings.GetSummariesAsync();
@@ -44,6 +56,12 @@ public class AdminsController : Controller
         return View(paged);
     }
 
+    /// <summary>
+    /// Creates the admins create page.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Create()
     {
@@ -52,6 +70,12 @@ public class AdminsController : Controller
         return View();
     }
 
+    /// <summary>
+    /// Handles the create form submission of the admins screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(
@@ -81,6 +105,12 @@ public class AdminsController : Controller
         }
     }
 
+    /// <summary>
+    /// Edits the admins edit page.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Edit(string id)
     {
@@ -92,6 +122,12 @@ public class AdminsController : Controller
         return View(admin);
     }
 
+    /// <summary>
+    /// Handles the edit form submission of the admins screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(
@@ -113,6 +149,12 @@ public class AdminsController : Controller
         }
     }
 
+    /// <summary>
+    /// Changes the PIN.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ChangePin(string id, string newPin)
@@ -129,6 +171,12 @@ public class AdminsController : Controller
         return RedirectToAction(nameof(Edit), new { id });
     }
 
+    /// <summary>
+    /// Deactivates an admin account so that it can no longer sign in.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Deactivate(string id)
@@ -138,6 +186,12 @@ public class AdminsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Re-activates a previously deactivated admin account.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Activate(string id)
@@ -147,6 +201,12 @@ public class AdminsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    /// Handles the delete form submission of the admins screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string id)

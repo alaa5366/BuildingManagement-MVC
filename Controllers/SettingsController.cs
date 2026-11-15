@@ -12,6 +12,12 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  SettingsController	الإعدادات (Global + Building + Own)
 // ============================================================
+/// <summary>
+/// Personal, building and global settings screens.
+/// </summary>
+/// <remarks>
+/// Access: any signed-in user (roles are checked per action).
+/// </remarks>
 [Authorize]
 public class SettingsController : Controller
 {
@@ -20,6 +26,9 @@ public class SettingsController : Controller
     private readonly UsersService _users;
     private readonly ILogger<SettingsController> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SettingsController"/> class.
+    /// </summary>
     public SettingsController(
         SettingsService settings,
         BuildingsService buildings,
@@ -44,6 +53,12 @@ public class SettingsController : Controller
     // ============================================================
     // Router — حسب الدور
     // ============================================================
+    /// <summary>
+    /// Shows the main page of the settings screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public IActionResult Index()
     {
@@ -59,6 +74,12 @@ public class SettingsController : Controller
     // ============================================================
     // Global Settings (Super Admin)
     // ============================================================
+    /// <summary>
+    /// Shows the global settings page (super admin).
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET. Requires one of the roles <c>superadmin</c>. Requires the admin permission <c>AdminPermissions.ManageSettingsGlobal</c>.
+    /// </remarks>
     [HttpGet]
     [Authorize(Roles = "superadmin")]
     [HasPermission(AdminPermissions.ManageSettingsGlobal)]
@@ -68,6 +89,12 @@ public class SettingsController : Controller
         return View(settings);
     }
 
+    /// <summary>
+    /// Saves the global settings.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST. Requires one of the roles <c>superadmin</c>. Requires the admin permission <c>AdminPermissions.ManageSettingsGlobal</c>.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "superadmin")]
@@ -90,6 +117,12 @@ public class SettingsController : Controller
     // ============================================================
     // Building Settings (Admin + Super Admin)
     // ============================================================
+    /// <summary>
+    /// Shows the settings page of a building.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET. Requires one of the roles <c>superadmin,admin</c>.
+    /// </remarks>
     [HttpGet]
     [Authorize(Roles = "superadmin,admin")]
     public async Task<IActionResult> Building(string? id)
@@ -123,6 +156,12 @@ public class SettingsController : Controller
         return View(settings);
     }
 
+    /// <summary>
+    /// Saves the settings of a building.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST. Requires one of the roles <c>superadmin,admin</c>.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "superadmin,admin")]
@@ -148,6 +187,12 @@ public class SettingsController : Controller
     // ============================================================
     // Own Settings (Resident + Admin + Super Admin)
     // ============================================================
+    /// <summary>
+    /// Shows the signed-in user's own settings page.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Own()
     {
@@ -208,6 +253,12 @@ public class SettingsController : Controller
         }
     }
 
+    /// <summary>
+    /// Saves the signed-in user's own settings (profile, PIN change and preferences).
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Own(

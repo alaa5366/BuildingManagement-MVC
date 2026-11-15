@@ -15,6 +15,12 @@ namespace BuildingManagementMvc.Controllers;
 //  BackupController	نسخ احتياطي واستيراد (ZIP + Excel + Scheduled)
 // ============================================================
 
+/// <summary>
+/// Super admin tools for full backups, restore, Excel building import, JSON export and scheduled-backup settings.
+/// </summary>
+/// <remarks>
+/// Access: requires one of the roles <c>superadmin</c>.
+/// </remarks>
 [Authorize(Roles = "superadmin")]
 [HasPermission(AdminPermissions.ManageBackup)]
 public class BackupController : Controller
@@ -28,6 +34,9 @@ public class BackupController : Controller
     private readonly IWebHostEnvironment _env;
     private readonly ILogger<BackupController> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BackupController"/> class.
+    /// </summary>
     public BackupController(
         BuildingsService buildings,
         UsersService users,
@@ -54,6 +63,12 @@ public class BackupController : Controller
     // ═══════════════════════════════════════════════════════════
     // Index
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Shows the main page of the backup screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Index(string? tab = "overview")
     {
@@ -84,6 +99,12 @@ public class BackupController : Controller
     // ═══════════════════════════════════════════════════════════
     // Backup ZIP
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Handles the create form submission of the backup screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(List<string> collections)
@@ -111,6 +132,12 @@ public class BackupController : Controller
     // ═══════════════════════════════════════════════════════════
     // Restore
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Previews the restore.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(100 * 1024 * 1024)]
@@ -150,12 +177,18 @@ public class BackupController : Controller
         }
     }
 
+    /// <summary>
+    /// Executes the restore.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ExecuteRestore(
-        string tempFilePath, List<string> collections, bool overwrite)
+        string restoreSessionId, List<string> collections, bool overwrite)
     {
-        if (string.IsNullOrEmpty(tempFilePath) || collections == null || collections.Count == 0)
+        if (string.IsNullOrEmpty(restoreSessionId) || collections == null || collections.Count == 0)
         {
             TempData["Error"] = Loc.T("Incomplete_Data");
             return RedirectToAction(nameof(Index), new { tab = "restore" });
@@ -163,7 +196,7 @@ public class BackupController : Controller
 
         try
         {
-            var result = await _backup.RestoreAsync(tempFilePath, collections, overwrite, CurrentUserId);
+            var result = await _backup.RestoreSessionAsync(restoreSessionId, collections, overwrite, CurrentUserId);
             return View("RestoreResult", result);
         }
         catch (Exception ex)
@@ -177,6 +210,12 @@ public class BackupController : Controller
     // ═══════════════════════════════════════════════════════════
     // Scheduled
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Saves the scheduled settings.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveScheduledSettings(ScheduledBackupSettings model)
@@ -201,6 +240,12 @@ public class BackupController : Controller
         return RedirectToAction(nameof(Index), new { tab = "scheduled" });
     }
 
+    /// <summary>
+    /// Runs the now.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RunNow()
@@ -218,6 +263,12 @@ public class BackupController : Controller
         return RedirectToAction(nameof(Index), new { tab = "scheduled" });
     }
 
+    /// <summary>
+    /// Downloads the backup.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> DownloadBackup(string fileName)
     {
@@ -229,6 +280,12 @@ public class BackupController : Controller
         return File(bytes, "application/zip", fileName);
     }
 
+    /// <summary>
+    /// Deletes the backup.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteBackup(string fileName)
@@ -241,6 +298,12 @@ public class BackupController : Controller
     // ═══════════════════════════════════════════════════════════
     // Excel
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Downloads the template.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public IActionResult DownloadTemplate()
     {
@@ -261,6 +324,12 @@ public class BackupController : Controller
         }
     }
 
+    /// <summary>
+    /// Uploads the excel.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(10 * 1024 * 1024)]
@@ -304,6 +373,12 @@ public class BackupController : Controller
         }
     }
 
+    /// <summary>
+    /// Confirms the import.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ConfirmImport(
@@ -358,6 +433,7 @@ public class BackupController : Controller
                 .ToList();
 
             int globalAptNumber = 1;
+            var importedPinAssignments = new List<(string ApartmentId, string Pin)>();
 
             foreach (var group in floorsGrouped)
             {
@@ -396,10 +472,17 @@ public class BackupController : Controller
                         Disabled = aptData.IsDisabled,
                         DisabledReason = aptData.IsDisabled ? aptData.ClosedReason : ""
                     });
+                    if (!string.IsNullOrWhiteSpace(aptData.Pin))
+                        importedPinAssignments.Add((aptId, aptData.Pin));
                 }
             }
 
             await _buildings.SaveFullAsync(building);
+
+            // Create the primary resident account from the PIN explicitly supplied in the signed Excel template.
+            var residentService = HttpContext.RequestServices.GetRequiredService<ResidentsService>();
+            foreach (var assignment in importedPinAssignments)
+                await residentService.SetApartmentPinAsync(buildingId, assignment.ApartmentId, assignment.Pin, CurrentUserId);
 
             TempData["Message"] = Loc.T("Building_N_Imported_Successfully_N_Apartments",
                 data.Name, data.Apartments.Count);
@@ -416,6 +499,12 @@ public class BackupController : Controller
     // ═══════════════════════════════════════════════════════════
     // Export
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Exports the JSON.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> ExportJson(string id)
     {
@@ -433,6 +522,12 @@ public class BackupController : Controller
         return File(bytes, "application/json", fileName);
     }
 
+    /// <summary>
+    /// Exports the all JSON.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> ExportAllJson()
     {
@@ -457,6 +552,12 @@ public class BackupController : Controller
         return File(bytes, "application/json", fileName);
     }
 
+    /// <summary>
+    /// Exports the excel.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> ExportExcel(string id)
     {

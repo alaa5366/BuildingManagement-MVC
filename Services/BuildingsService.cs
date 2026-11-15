@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Data;
+﻿using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
 using System.Text.RegularExpressions;
@@ -20,11 +20,17 @@ namespace BuildingManagementMvc.Services;
 //
 //  See also: BuildingSqlStore, BuildingSqlMapper, WalletService
 // ============================================================
+/// <summary>
+/// Business logic for buildings, floors and apartments (create, update, delete, settings).
+/// </summary>
 public class BuildingsService
 {
     private readonly BuildingSqlStore _sql;
     private readonly ILogger<BuildingsService>? _log;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BuildingsService"/> class.
+    /// </summary>
     public BuildingsService(
         BuildingSqlStore sql,
         ILogger<BuildingsService>? log = null)
@@ -58,6 +64,14 @@ public class BuildingsService
     /// استعلام واحد بدل 16×N. استخدمها في صفحات: اختيار عمارة، الفلاتر.
     /// </remarks>
     public Task<List<Building>> GetSummariesAsync() => _sql.GetSummariesAsync();
+    /// <summary>
+    /// يسترجع صفحة من ملخصات المباني.
+    /// </summary>
+    /// <param name="page">رقم الصفحة (يبدأ من 1).</param>
+    /// <param name="pageSize">عدد العناصر في الصفحة.</param>
+    /// <returns>صفحة من ملخصات المباني.</returns>
+    public Task<PagedResult<Building>> GetSummariesPagedAsync(int page, int pageSize)
+        => _sql.GetSummariesPagedAsync(page, pageSize);
 
     /// <summary>
     /// نفس <see cref="GetSummariesAsync"/> + عدد الشقق والأدوار.
@@ -241,6 +255,9 @@ public class BuildingsService
     // ✅ الفئات الافتراضية
     // ============================================================
 
+    /// <summary>
+    /// Returns the default expense categories.
+    /// </summary>
     public static List<FinancialCategory> DefaultExpenseCategories() => new()
     {
         new FinancialCategory{ Id="water",       Name="مياه",   Color="#4A90D9", Active=true, Order=0 },
@@ -249,6 +266,9 @@ public class BuildingsService
         new FinancialCategory{ Id="other",       Name="أخرى",   Color="#A0432A", Active=true, Order=3 },
     };
 
+    /// <summary>
+    /// Returns the default revenue categories.
+    /// </summary>
     public static List<FinancialCategory> DefaultRevenueCategories() => new()
     {
         new FinancialCategory{ Id="rent-roof",     Name="تأجير السطح", Color="#2E7D5B", Active=true, Order=0 },
@@ -280,7 +300,7 @@ public class BuildingsService
     /// </remarks>
     public async Task UpdateApartmentAsync(
         string buildingId, string aptId, string owner, string label,
-        string phone, string pin, double monthlyFee, string notes, string? email = null)
+        string phone, string pin, decimal monthlyFee, string notes, string? email = null)
     {
         var building = await GetByIdAsync(buildingId)
             ?? throw new InvalidOperationException("building-not-found");

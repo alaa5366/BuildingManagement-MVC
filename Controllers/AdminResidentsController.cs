@@ -11,12 +11,21 @@ namespace BuildingManagementMvc.Controllers;
 //  AdminResidentsController — إدارة الساكنين
 //  متاح للأدمن (في عمارته بس) والـ SuperAdmin (كل العمارات)
 // =====================================================================
+/// <summary>
+/// Admin screens for managing the residents of the current building (create, edit, enable/disable, delete, PIN reset).
+/// </summary>
+/// <remarks>
+/// Access: requires one of the roles <c>admin,superadmin</c>.
+/// </remarks>
 [Authorize(Roles = "admin,superadmin")]
 public class AdminResidentsController : Controller
 {
     private readonly ResidentsService _residents;
     private readonly BuildingsService _buildings;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AdminResidentsController"/> class.
+    /// </summary>
     public AdminResidentsController(
         ResidentsService residents,
         BuildingsService buildings)
@@ -37,6 +46,12 @@ public class AdminResidentsController : Controller
     // Index — قائمة الساكنين
     // ═══════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Shows the main page of the admin residents screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Index(string? buildingId, string? search)
     {
@@ -80,6 +95,12 @@ public class AdminResidentsController : Controller
     // Details — تفاصيل ساكن
     // ═══════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Shows the details page of the admin residents screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Details(string id)
     {
@@ -102,6 +123,12 @@ public class AdminResidentsController : Controller
     // Create (GET)
     // ═══════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Creates the admin residents create page.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Create(string? buildingId, string? apartmentId)
     {
@@ -121,6 +148,12 @@ public class AdminResidentsController : Controller
     // Create (POST)
     // ═══════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Handles the create form submission of the admin residents screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(
@@ -163,6 +196,12 @@ public class AdminResidentsController : Controller
     // Edit (GET)
     // ═══════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Edits the admin residents edit page.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Edit(string id)
     {
@@ -185,6 +224,12 @@ public class AdminResidentsController : Controller
     // Edit (POST)
     // ═══════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Handles the edit form submission of the admin residents screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(
@@ -228,6 +273,12 @@ public class AdminResidentsController : Controller
     // ChangePin
     // ═══════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Changes the PIN.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ChangePin(string id, string newPin)
@@ -255,6 +306,12 @@ public class AdminResidentsController : Controller
     // Disable / Enable
     // ═══════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Handles the disable form submission of the admin residents screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Disable(string id, string? reason)
@@ -271,6 +328,12 @@ public class AdminResidentsController : Controller
         return RedirectToAction(nameof(Index), new { buildingId = resident.BuildingId });
     }
 
+    /// <summary>
+    /// Handles the enable form submission of the admin residents screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Enable(string id, string? reason)
@@ -291,6 +354,12 @@ public class AdminResidentsController : Controller
     // Delete
     // ═══════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Handles the delete form submission of the admin residents screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string id)
@@ -311,6 +380,12 @@ public class AdminResidentsController : Controller
     // Migration (SuperAdmin only)
     // ═══════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Migrates the admin residents data.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET. Requires one of the roles <c>superadmin</c>.
+    /// </remarks>
     [HttpGet]
     [Authorize(Roles = "superadmin")]
     public async Task<IActionResult> Migrate()
@@ -326,6 +401,12 @@ public class AdminResidentsController : Controller
     // Migration (SuperAdmin only)
     // ═══════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Runs the migration.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST. Requires one of the roles <c>superadmin</c>.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "superadmin")]

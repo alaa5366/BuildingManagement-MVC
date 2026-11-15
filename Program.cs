@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using BuildingManagementMvc.Services;
 using BuildingManagementMvc.Data;
 using Microsoft.EntityFrameworkCore;
@@ -335,7 +335,13 @@ try
 
     var dpKeysPath = builder.Configuration["DataProtection:KeysPath"];
     if (string.IsNullOrWhiteSpace(dpKeysPath))
-        dpKeysPath = Path.Combine(builder.Environment.ContentRootPath, "keys");
+    {
+        dpKeysPath = builder.Environment.IsDevelopment()
+            ? Path.Combine(builder.Environment.ContentRootPath, "keys")
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "BuildingManagement", "DataProtection-Keys");
+    }
+    Directory.CreateDirectory(dpKeysPath);
 
     builder.Services.AddDataProtection()
         .PersistKeysToFileSystem(new DirectoryInfo(dpKeysPath))
@@ -431,9 +437,9 @@ try
     var cspMode = (app.Configuration["Security:CspMode"] ?? "enforce").Trim().ToLowerInvariant();
     const string CspPolicy =
         "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; " +
-        "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; " +
+        "script-src 'self' 'unsafe-inline'; " +
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+        "font-src 'self' data: https://fonts.gstatic.com; " +
         "img-src 'self' data: blob: https:; " +
         "media-src 'self' blob: https: http:; " +
         "connect-src 'self' https: http: ws: wss:; " +

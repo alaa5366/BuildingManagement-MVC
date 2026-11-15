@@ -1,4 +1,10 @@
-﻿@using Microsoft.AspNetCore.Localization
+﻿@* =============================================================================
+   View:        Shared/_Topbar
+   Rendered by: shared layout or partial view (used by several controllers)
+   Model:       none
+   Purpose:     Topbar partial.
+   ============================================================================= *@
+@using Microsoft.AspNetCore.Localization
 @{
     var name = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "?";
     var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";

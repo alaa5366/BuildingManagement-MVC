@@ -42,7 +42,7 @@ public class TransactionParserTests
     {
         var result = _parser.Parse(text);
         Assert.NotNull(result);
-        Assert.Equal(expected, result.Amount);
+        Assert.Equal((decimal)expected, result.Amount);
     }
 
     [Fact]
@@ -245,7 +245,7 @@ Ahmed Ali
         var result = _parser.Parse(text);
 
         Assert.NotNull(result);
-        Assert.Equal(1678.50, result.Amount);
+        Assert.Equal(1678.50m, result.Amount);
         Assert.Equal("707714830636", result.Reference);
         Assert.Equal("01 Sep 2026 09:23 PM", result.Date);
         Assert.True(result.IsSuccessful);

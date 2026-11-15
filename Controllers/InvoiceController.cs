@@ -8,6 +8,12 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  InvoiceController	توليد فواتير PDF
 // ============================================================
+/// <summary>
+/// Generates apartment wallet invoices as PDF files.
+/// </summary>
+/// <remarks>
+/// Access: requires one of the roles <c>superadmin,admin,resident</c>.
+/// </remarks>
 [Authorize(Roles = "superadmin,admin,resident")]
 public class InvoiceController : Controller
 {
@@ -16,6 +22,9 @@ public class InvoiceController : Controller
     private readonly InvoicePdfService _pdf;
     private readonly IAuditLogger _audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InvoiceController"/> class.
+    /// </summary>
     public InvoiceController(BuildingsService buildings, InvoiceService invoice,
         InvoicePdfService pdf, IAuditLogger audit)
     {
@@ -27,6 +36,12 @@ public class InvoiceController : Controller
 
     // aptId اختياري: الأدمن يحدده لأي شقة في عمارته، الساكن بياخد شقته هو بس دايمًا
     // SuperAdmin: لازم يحدد aptId + buildingId (عن طريق Impersonation أو مباشرة)
+    /// <summary>
+    /// Downloads the invoice data.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Download(string? aptId, string? month)
     {

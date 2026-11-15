@@ -1,0 +1,13 @@
+@{ ViewData["Title"] = "تأكيد الدخول عبر QR"; }
+<div class="auth-wrap">
+    <div class="auth-card text-center">
+        <div style="font-size:42px;">🔐</div>
+        <h3 class="mt-2">تأكيد الدخول عبر QR</h3>
+        <p class="text-muted">اضغط متابعة لإكمال تسجيل الدخول إلى حساب الشقة المرتبط بهذا الرمز.</p>
+        <form asp-controller="QrAccess" asp-action="Confirm" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="token" value="@ViewBag.Token" />
+            <button type="submit" class="btn btn-brand w-100">متابعة</button>
+        </form>
+    </div>
+</div>

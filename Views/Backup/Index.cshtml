@@ -1,4 +1,10 @@
-﻿@{
+﻿@* =============================================================================
+   View:        Backup/Index
+   Rendered by: BackupController.Index
+   Model:       none
+   Purpose:     Main page.
+   ============================================================================= *@
+@{
     ViewData["Title"] = Loc.T("Backup");
     var buildings = (List<Building>)ViewBag.Buildings;
     var stats = ViewBag.Stats as List<BuildingManagementMvc.Models.BackupStats> ?? new();
@@ -286,8 +292,8 @@
                             <tr>
                                 <td><code>@b.BuildingNumber</code></td>
                                 <td>@b.Name</td>
-                                <td>@b.Apartments.Count</td>
-                                <td>@b.Floors.Count</td>
+                                <td>@b.ApartmentsCount</td>
+                                <td>@b.FloorsCount</td>
                                 <td class="d-flex gap-1">
                                     <a asp-action="ExportJson" asp-route-id="@b.Id" class="btn btn-sm btn-outline-primary">📄 JSON</a>
                                     <a asp-action="ExportExcel" asp-route-id="@b.Id" class="btn btn-sm btn-outline-success">📊 Excel</a>

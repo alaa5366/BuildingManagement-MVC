@@ -7,6 +7,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Authenticates residents, admins and super admins against the database and builds the list of accounts a phone/e-mail can enter.
+/// </summary>
 public class SqlAuthService
 {
     private readonly ResidentSqlStore _residents;
@@ -18,6 +21,9 @@ public class SqlAuthService
 
     private static string[] SuperAdminEmails = Array.Empty<string>();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SqlAuthService"/> class.
+    /// </summary>
     public SqlAuthService(
         ResidentSqlStore residents,
         UserSqlStore users,
@@ -34,6 +40,9 @@ public class SqlAuthService
         _log = log;
     }
 
+    /// <summary>
+    /// Sets the list of e-mail addresses that are allowed to sign in as super admin.
+    /// </summary>
     public static void ConfigureSuperAdmins(string commaSeparated)
     {
         SuperAdminEmails = commaSeparated
@@ -44,6 +53,9 @@ public class SqlAuthService
 
     private static bool VerifySecret(string? input, string? stored) => SecretVerifier.Verify(input, stored);
 
+    /// <summary>
+    /// Determines whether an e-mail address is in the configured super-admin list.
+    /// </summary>
     public static bool IsSuperAdminEmail(string? email)
     {
         var normalized = email?.Trim().ToLowerInvariant() ?? "";
@@ -53,6 +65,9 @@ public class SqlAuthService
     // ═══════════════════════════════════════════════════════════
     // 1. Resident Login
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Signs in a resident by building, floor, apartment, phone number and PIN. Unknown accounts and wrong PINs return the same error and take the same time.
+    /// </summary>
     public async Task<AuthResult> SignInResidentAsync(
         string buildingId, string floorId, string aptId, string whatsapp, string pin)
     {
@@ -130,6 +145,9 @@ public class SqlAuthService
     // ═══════════════════════════════════════════════════════════
     // 2. Admin Login
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Signs in an admin of a specific building by phone number and PIN. The PIN is checked before the account status so the response does not reveal that the account exists.
+    /// </summary>
     public async Task<AuthResult> SignInAdminAsync(
      string buildingId, string phone, string pin)
     {
@@ -208,6 +226,9 @@ public class SqlAuthService
     // ═══════════════════════════════════════════════════════════
     // 3. Super Admin Login
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Signs in a super admin by e-mail and password. The e-mail must be in the configured super-admin list.
+    /// </summary>
     public async Task<AuthResult> SignInSuperAdminAsync(string email, string password)
     {
         if (!IsSuperAdminEmail(email))
@@ -235,7 +256,7 @@ public class SqlAuthService
             return AuthResult.Fail("wrong-credentials");
         }
 
-        _log.LogInformation("[SqlAuth] SuperAdmin: {Email}", email);
+        _log.LogDebug("[SqlAuth] SuperAdmin sign-in succeeded");
 
         return AuthResult.Ok(
             uid: superAdmin.Uid,
@@ -249,6 +270,9 @@ public class SqlAuthService
     // ═══════════════════════════════════════════════════════════
     // 4. Unified Login — يجرّب كل الاحتمالات
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Finds every account (admin of a building, resident of an apartment) that matches an identifier and credential, for the unified login page.
+    /// </summary>
     public async Task<List<UserContext>> FindAllContextsAsync(
     string identifier, string credential)
     {
@@ -381,6 +405,9 @@ public class SqlAuthService
     // ═══════════════════════════════════════════════════════════
     // 5. Sign In From Context
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Signs the in from context.
+    /// </summary>
     public Task<AuthResult> SignInFromContextAsync(UserContext context)
     {
         if (context.Type == "superadmin")

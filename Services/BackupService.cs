@@ -7,52 +7,89 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Collections.Concurrent;
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Exports database collections as JSON/ZIP backups and restores them, with a preview step.
+/// </summary>
+/// <remarks>
+/// The service works against the <see cref="AppDbContext"/> through
+/// <see cref="IDbContextFactory{TContext}"/> so that every operation gets its own short-lived
+/// context. All restore operations are wrapped in a database transaction when the provider is
+/// relational (SQL Server in production) and fall back to plain execution for in-memory providers
+/// used by tests.
+/// </remarks>
 public class BackupService
 {
+    private sealed record RestoreSession(string Path, string UserId, DateTime ExpiresAtUtc);
+    private static readonly ConcurrentDictionary<string, RestoreSession> RestoreSessions = new();
+    private static readonly TimeSpan RestoreSessionLifetime = TimeSpan.FromMinutes(20);
+    private const long MaxArchiveBytes = 100L * 1024 * 1024;
+    private const long MaxExpandedBytes = 500L * 1024 * 1024;
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly IAuditLogger _audit;
     private readonly ILogger<BackupService> _log;
 
+    /// <summary>
+    /// Gets the map of known collection names to their localized display labels.
+    /// </summary>
+    /// <remarks>
+    /// The order of this dictionary defines the display order in the UI and is also used by
+    /// <see cref="GetStatsAsync"/> to enumerate collections.
+    /// </remarks>
     private static Dictionary<string, string> KnownTables => new()
     {
-        ["globalSettings"] = "الإعدادات العامة",
-        ["scheduledBackupSettings"] = "إعدادات النسخ المجدولة",
-        ["users"] = "المستخدمون",
-        ["buildings"] = "العمارات",
-        ["buildingSettings"] = "إعدادات العمارات",
-        ["buildingAdmins"] = "أدمن العمارات",
-        ["floors"] = "الأدوار",
-        ["apartments"] = "الشقق",
-        ["residents"] = "السكان",
-        ["financialCategories"] = "الفئات المالية",
-        ["expenses"] = "المصروفات",
-        ["revenues"] = "الإيرادات",
-        ["monthlyApartmentShares"] = "حصص الشقق الشهرية",
-        ["deposits"] = "الدفعات",
-        ["depositEditHistory"] = "سجل تعديل الدفعات",
-        ["walletAdjustments"] = "تعديلات المحفظة",
-        ["userPermissions"] = "صلاحيات المستخدمين",
-        ["auditLog"] = "سجل التدقيق",
-        ["notifications"] = "الإشعارات",
-        ["polls"] = "التصويتات",
-        ["pollOptions"] = "خيارات التصويت",
-        ["pollVotes"] = "أصوات التصويت",
-        ["maintenanceRecords"] = "سجلات الصيانة",
-        ["dvrs"] = "أجهزة التسجيل",
-        ["cameras"] = "الكاميرات",
-        ["qrTokens"] = "رموز QR",
-        ["qrUsages"] = "استخدام رموز QR"
+        ["globalSettings"] = Loc.T("Backup_Collection_globalSettings"),
+        ["scheduledBackupSettings"] = Loc.T("Backup_Collection_scheduledBackupSettings"),
+        ["users"] = Loc.T("Backup_Collection_users"),
+        ["buildings"] = Loc.T("Backup_Collection_buildings"),
+        ["buildingSettings"] = Loc.T("Backup_Collection_buildingSettings"),
+        ["buildingAdmins"] = Loc.T("Backup_Collection_buildingAdmins"),
+        ["floors"] = Loc.T("Backup_Collection_floors"),
+        ["apartments"] = Loc.T("Backup_Collection_apartments"),
+        ["residents"] = Loc.T("Backup_Collection_residents"),
+        ["financialCategories"] = Loc.T("Backup_Collection_financialCategories"),
+        ["expenses"] = Loc.T("Backup_Collection_expenses"),
+        ["revenues"] = Loc.T("Backup_Collection_revenues"),
+        ["monthlyApartmentShares"] = Loc.T("Backup_Collection_monthlyApartmentShares"),
+        ["deposits"] = Loc.T("Backup_Collection_deposits"),
+        ["depositEditHistory"] = Loc.T("Backup_Collection_depositEditHistory"),
+        ["walletAdjustments"] = Loc.T("Backup_Collection_walletAdjustments"),
+        ["userPermissions"] = Loc.T("Backup_Collection_userPermissions"),
+        ["auditLog"] = Loc.T("Backup_Collection_auditLog"),
+        ["notifications"] = Loc.T("Backup_Collection_notifications"),
+        ["polls"] = Loc.T("Backup_Collection_polls"),
+        ["pollOptions"] = Loc.T("Backup_Collection_pollOptions"),
+        ["pollVotes"] = Loc.T("Backup_Collection_pollVotes"),
+        ["maintenanceRecords"] = Loc.T("Backup_Collection_maintenanceRecords"),
+        ["dvrs"] = Loc.T("Backup_Collection_dvrs"),
+        ["cameras"] = Loc.T("Backup_Collection_cameras"),
+        ["qrTokens"] = Loc.T("Backup_Collection_qrTokens"),
+        ["qrUsages"] = Loc.T("Backup_Collection_qrUsages")
     };
 
+    /// <summary>
+    /// Gets the JSON options used when deserializing entities during a restore.
+    /// </summary>
+    /// <remarks>
+    /// Property matching is case-insensitive so that backups created with a different
+    /// serializer configuration still restore correctly, and null properties are ignored
+    /// to avoid overwriting defaults with nulls.
+    /// </remarks>
     private static readonly JsonSerializerOptions RestoreJsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BackupService"/> class.
+    /// </summary>
+    /// <param name="sqlFactory">Factory used to create short-lived <see cref="AppDbContext"/> instances.</param>
+    /// <param name="audit">Audit logger used to record backup/restore actions.</param>
+    /// <param name="log">Logger for diagnostic and warning messages.</param>
     public BackupService(
         IDbContextFactory<AppDbContext> sqlFactory,
         IAuditLogger audit,
@@ -63,11 +100,26 @@ public class BackupService
         _log = log;
     }
 
+    /// <summary>
+    /// Gets the known collections.
+    /// </summary>
+    /// <returns>A read-only dictionary mapping collection names to Arabic labels.</returns>
     public static IReadOnlyDictionary<string, string> GetKnownCollections() => KnownTables;
 
+    /// <summary>
+    /// Gets the stats.
+    /// </summary>
+    /// <remarks>
+    /// Counts rows in every known collection. Any per-collection failure is logged as a
+    /// warning and reported as a count of <c>0</c> so that one broken table does not break
+    /// the whole statistics page.
+    /// </remarks>
+    /// <returns>A list of <see cref="BackupStats"/> ordered like <see cref="KnownTables"/>.</returns>
     public async Task<List<BackupStats>> GetStatsAsync()
     {
         var result = new List<BackupStats>();
+
+        // كل عملية بتحصل في context مستقل قصير العمر
         await using var db = await _sqlFactory.CreateDbContextAsync();
 
         foreach (var kv in KnownTables)
@@ -75,6 +127,7 @@ public class BackupService
             int count = 0;
             try
             {
+                // نحسب عدد الصفوف لكل collection حسب نوعها
                 count = kv.Key switch
                 {
                     "globalSettings" => await db.GlobalSettings.CountAsync(),
@@ -109,6 +162,7 @@ public class BackupService
             }
             catch (Exception ex)
             {
+                // فشل collection واحد مش لازم يوقف الصفحة كلها
                 _log.LogWarning(ex, "Stats count failed for {Table}", kv.Key);
             }
 
@@ -124,6 +178,20 @@ public class BackupService
         return result;
     }
 
+    /// <summary>
+    /// Creates the backup.
+    /// </summary>
+    /// <remarks>
+    /// Serializes each selected collection to a JSON file and packs everything into a ZIP
+    /// along with a <c>README.md</c>. Per-collection failures are captured in
+    /// <see cref="BackupResult.Errors"/> and do not abort the whole backup.
+    /// </remarks>
+    /// <param name="selectedTables">The collection names to include in the backup.</param>
+    /// <param name="userId">The id of the user performing the backup (recorded in the audit log).</param>
+    /// <returns>
+    /// A tuple containing the produced ZIP bytes and a <see cref="BackupResult"/> describing
+    /// the operation (collections, document count, file size, duration and file name).
+    /// </returns>
     public async Task<(byte[] Bytes, BackupResult Result)> CreateBackupAsync(
         List<string> selectedTables, string userId)
     {
@@ -135,27 +203,34 @@ public class BackupService
         {
             foreach (var tableName in selectedTables)
             {
+                // تجاهل أي collection غير معروفة
                 if (!KnownTables.ContainsKey(tableName)) continue;
 
                 try
                 {
+                    // 1) قراءة صفوف الـ collection من الداتابيز
                     var docs = await ReadTableAsync(tableName);
+
+                    // 2) تحويلها لـ JSON منسّق
                     var json = JsonSerializer.Serialize(docs, new JsonSerializerOptions
                     {
                         WriteIndented = true,
                         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
                     });
 
+                    // 3) إضافة الملف للـ ZIP
                     AddFileToZip(zip, $"{tableName}.json", json);
                     result.Collections.Add(tableName);
                     result.TotalDocuments += docs.Count;
                 }
                 catch (Exception ex)
                 {
+                    // فشل collection واحد يتسجل وميكملش
                     result.Errors.Add($"{tableName}: {ex.Message}");
                 }
             }
 
+            // 4) إضافة ملف README يوضح محتويات الـ ZIP
             var readme = $@"# Building Management — SQL Backup
 Created: {DateTime.UtcNow:O}
 By: {userId}
@@ -177,6 +252,7 @@ By: {userId}
         result.Duration = sw.Elapsed;
         result.FileName = $"backup-{DateTime.UtcNow:yyyy-MM-dd-HHmm}.zip";
 
+        // تسجيل العملية في الـ audit
         await _audit.LogAsync(
             action: "backup.create",
             userId: userId,
@@ -192,6 +268,16 @@ By: {userId}
         return (ms.ToArray(), result);
     }
 
+    /// <summary>
+    /// Reads all rows of the given table as a list of <c>{ id, data }</c> dictionaries.
+    /// </summary>
+    /// <remarks>
+    /// The <c>id</c> value is either the entity's primary key or a composite key joined
+    /// with underscores (for tables whose primary key is made of several columns). The
+    /// composite-key format is the one expected by <see cref="RestoreEntityAsync"/>.
+    /// </remarks>
+    /// <param name="tableName">The collection name to read.</param>
+    /// <returns>A list of row dictionaries, one per entity.</returns>
     private async Task<List<Dictionary<string, object>>> ReadTableAsync(string tableName)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
@@ -220,14 +306,17 @@ By: {userId}
                     result.Add(ToDict(bs.BuildingId, bs));
                 break;
             case "buildingAdmins":
+                // مفتاح مركّب: buildingId_adminUid
                 foreach (var ba in await db.BuildingAdmins.AsNoTracking().ToListAsync())
                     result.Add(ToDict($"{ba.BuildingId}_{ba.AdminUid}", ba));
                 break;
             case "floors":
+                // مفتاح مركّب: buildingId_floorId
                 foreach (var f in await db.Floors.AsNoTracking().ToListAsync())
                     result.Add(ToDict($"{f.BuildingId}_{f.Id}", f));
                 break;
             case "apartments":
+                // مفتاح مركّب: buildingId_apartmentId
                 foreach (var a in await db.Apartments.AsNoTracking().ToListAsync())
                     result.Add(ToDict($"{a.BuildingId}_{a.Id}", a));
                 break;
@@ -236,22 +325,27 @@ By: {userId}
                     result.Add(ToDict(r.Id, r));
                 break;
             case "financialCategories":
+                // مفتاح مركّب: buildingId_kind_categoryId
                 foreach (var c in await db.FinancialCategories.AsNoTracking().ToListAsync())
                     result.Add(ToDict($"{c.BuildingId}_{c.Kind}_{c.Id}", c));
                 break;
             case "expenses":
+                // مفتاح مركّب: buildingId_expenseId
                 foreach (var e in await db.Expenses.AsNoTracking().ToListAsync())
                     result.Add(ToDict($"{e.BuildingId}_{e.Id}", e));
                 break;
             case "revenues":
+                // مفتاح مركّب: buildingId_revenueId
                 foreach (var r in await db.Revenues.AsNoTracking().ToListAsync())
                     result.Add(ToDict($"{r.BuildingId}_{r.Id}", r));
                 break;
             case "monthlyApartmentShares":
+                // مفتاح مركّب: buildingId_monthKey_apartmentId
                 foreach (var s in await db.MonthlyApartmentShares.AsNoTracking().ToListAsync())
                     result.Add(ToDict($"{s.BuildingId}_{s.MonthKey}_{s.ApartmentId}", s));
                 break;
             case "deposits":
+                // مفتاح مركّب: buildingId_depositId
                 foreach (var d in await db.Deposits.AsNoTracking().ToListAsync())
                     result.Add(ToDict($"{d.BuildingId}_{d.Id}", d));
                 break;
@@ -260,10 +354,12 @@ By: {userId}
                     result.Add(ToDict(de.EditId.ToString(), de));
                 break;
             case "walletAdjustments":
+                // مفتاح مركّب: buildingId_adjustmentId
                 foreach (var w in await db.WalletAdjustments.AsNoTracking().ToListAsync())
                     result.Add(ToDict($"{w.BuildingId}_{w.Id}", w));
                 break;
             case "userPermissions":
+                // مفتاح مركّب: uid_permission
                 foreach (var p in await db.UserPermissions.AsNoTracking().ToListAsync())
                     result.Add(ToDict($"{p.Uid}_{p.Permission}", p));
                 break;
@@ -272,22 +368,27 @@ By: {userId}
                     result.Add(ToDict(a.AuditId.ToString(), a));
                 break;
             case "notifications":
+                // مفتاح مركّب: buildingId_notificationId
                 foreach (var n in await db.Notifications.AsNoTracking().ToListAsync())
                     result.Add(ToDict($"{n.BuildingId}_{n.Id}", n));
                 break;
             case "polls":
+                // مفتاح مركّب: buildingId_pollId
                 foreach (var p in await db.Polls.AsNoTracking().ToListAsync())
                     result.Add(ToDict($"{p.BuildingId}_{p.Id}", p));
                 break;
             case "pollOptions":
+                // مفتاح مركّب: buildingId_pollId_optionId
                 foreach (var o in await db.PollOptions.AsNoTracking().ToListAsync())
                     result.Add(ToDict($"{o.BuildingId}_{o.PollId}_{o.Id}", o));
                 break;
             case "pollVotes":
+                // مفتاح مركّب: buildingId_pollId_apartmentId
                 foreach (var v in await db.PollVotes.AsNoTracking().ToListAsync())
                     result.Add(ToDict($"{v.BuildingId}_{v.PollId}_{v.ApartmentId}", v));
                 break;
             case "maintenanceRecords":
+                // مفتاح مركّب: buildingId_recordId
                 foreach (var m in await db.MaintenanceRecords.AsNoTracking().ToListAsync())
                     result.Add(ToDict($"{m.BuildingId}_{m.Id}", m));
                 break;
@@ -312,6 +413,12 @@ By: {userId}
         return result;
     }
 
+    /// <summary>
+    /// Wraps an entity into the <c>{ id, data }</c> shape used inside backup JSON files.
+    /// </summary>
+    /// <param name="id">The (possibly composite) primary key of the entity.</param>
+    /// <param name="entity">The entity instance.</param>
+    /// <returns>A dictionary with the row id and the serialized entity data.</returns>
     private static Dictionary<string, object> ToDict(string id, object entity)
     {
         return new Dictionary<string, object>
@@ -322,6 +429,12 @@ By: {userId}
         };
     }
 
+    /// <summary>
+    /// Adds a text file to the given ZIP archive.
+    /// </summary>
+    /// <param name="zip">The target ZIP archive.</param>
+    /// <param name="fileName">The name of the entry inside the archive.</param>
+    /// <param name="content">The UTF-8 text content.</param>
     private static void AddFileToZip(ZipArchive zip, string fileName, string content)
     {
         var entry = zip.CreateEntry(fileName, CompressionLevel.Optimal);
@@ -330,52 +443,108 @@ By: {userId}
         stream.Write(bytes, 0, bytes.Length);
     }
 
+    /// <summary>
+    /// Restores the operation on the backup.
+    /// </summary>
+    /// <remarks>
+    /// Tables are restored in a fixed order (<c>restoreOrder</c>) so that parent rows are
+    /// inserted before their children. When the provider is relational, all work happens
+    /// inside a single transaction that is committed on success and rolled back on failure.
+    /// For non-relational test providers, changes are saved only after the full archive has
+    /// validated successfully. The temporary ZIP file is always deleted at the end.
+    /// </remarks>
+    /// <param name="restoreSessionId"></param>
+    /// <param name="selectedTables">The collection names to restore.</param>
+    /// <param name="overwrite">When <c>true</c>, existing rows are updated in place; otherwise they are skipped.</param>
+    /// <param name="userId">The id of the user performing the restore (recorded in the audit log).</param>
+    /// <returns>A <see cref="RestoreResult"/> summarizing restored/skipped counts and any errors.</returns>
+    public async Task<RestoreResult> RestoreSessionAsync(
+        string restoreSessionId, List<string> selectedTables, bool overwrite, string userId)
+    {
+        if (string.IsNullOrWhiteSpace(restoreSessionId) || !RestoreSessions.TryGetValue(restoreSessionId, out var session))
+            return new RestoreResult { Success = false, Errors = { Loc.T("The_Temporary_File_Does_Not_Exist") } };
+        if (!string.Equals(session.UserId, userId, StringComparison.Ordinal))
+            return new RestoreResult { Success = false, Errors = { Loc.T("The_Temporary_File_Does_Not_Exist") } };
+        if (session.ExpiresAtUtc < DateTime.UtcNow)
+        {
+            if (RestoreSessions.TryRemove(restoreSessionId, out var expired)) { try { File.Delete(expired.Path); } catch { } }
+            return new RestoreResult { Success = false, Errors = { Loc.T("The_Temporary_File_Does_Not_Exist") } };
+        }
+        if (!RestoreSessions.TryRemove(restoreSessionId, out var consumedSession))
+            return new RestoreResult { Success = false, Errors = { Loc.T("The_Temporary_File_Does_Not_Exist") } };
+        return await RestoreAsync(consumedSession.Path, selectedTables, overwrite, userId);
+    }
+    /// <summary>
+    /// يستعيد نسخة احتياطية إلى قاعدة البيانات.
+    /// </summary>
+    /// <param name="tempFilePath">مسار ملف النسخة الاحتياطية.</param>
+    /// <param name="selectedTables">معرّف جلسة الاستعادة.</param>
+    /// <param name="overwrite"></param>
+    /// <param name="userId"></param>
+    /// <returns>مهمة تُكمل عند انتهاء الاستعادة.</returns>
     public async Task<RestoreResult> RestoreAsync(
-    string tempFilePath, List<string> selectedTables, bool overwrite, string userId)
+        string tempFilePath, List<string> selectedTables, bool overwrite, string userId)
     {
         var sw = Stopwatch.StartNew();
         var result = new RestoreResult();
 
+        // 0) الملف لازم يكون اللي اتعمل في خطوة المعاينة (restore-<guid>.zip في فولدر الـ temp)،
+        //    مش أي مسار جاي من الفورم — وإلا ممكن نفتح/نمسح أي ملف على السيرفر
+        if (!IsSafeRestoreFile(tempFilePath))
+        {
+            result.Errors.Add(Loc.T("The_Temporary_File_Does_Not_Exist"));
+            return result;
+        }
+
+        // 1) تحقق إن الملف المؤقت موجود
         if (!File.Exists(tempFilePath))
         {
             result.Errors.Add(Loc.T("The_Temporary_File_Does_Not_Exist"));
             return result;
         }
 
+        // 2) ترتيب الاستعادة حسب الـ FK (الأب قبل الابن)
         var restoreOrder = new[]
         {
-        "globalSettings",
-        "scheduledBackupSettings",
-        "users",
-        "buildings",
-        "buildingSettings",
-        "buildingAdmins",
-        "floors",
-        "apartments",
-        "residents",
-        "financialCategories",
-        "expenses",
-        "revenues",
-        "monthlyApartmentShares",
-        "deposits",
-        "depositEditHistory",
-        "walletAdjustments",
-        "userPermissions",
-        "auditLog",
-        "notifications",
-        "polls",
-        "pollOptions",
-        "pollVotes",
-        "maintenanceRecords",
-        "dvrs",
-        "cameras",
-        "qrTokens",
-        "qrUsages"
-    };
+            "globalSettings",
+            "scheduledBackupSettings",
+            "users",
+            "buildings",
+            "buildingSettings",
+            "buildingAdmins",
+            "floors",
+            "apartments",
+            "residents",
+            "financialCategories",
+            "expenses",
+            "revenues",
+            "monthlyApartmentShares",
+            "deposits",
+            "depositEditHistory",
+            "walletAdjustments",
+            "userPermissions",
+            "auditLog",
+            "notifications",
+            "polls",
+            "pollOptions",
+            "pollVotes",
+            "maintenanceRecords",
+            "dvrs",
+            "cameras",
+            "qrTokens",
+            "qrUsages"
+        };
 
+        // نحتفظ فقط بالجداول اللي المستخدم اختارها
         var orderedTables = restoreOrder
-            .Where(t => selectedTables.Contains(t))
+            .Where(t => selectedTables.Contains(t, StringComparer.Ordinal))
             .ToList();
+        if (orderedTables.Count == 0 || selectedTables.Any(t => !restoreOrder.Contains(t, StringComparer.Ordinal)))
+        {
+            result.Errors.Add("Invalid restore collection selection.");
+            try { File.Delete(tempFilePath); } catch { }
+            return result;
+        }
 
         try
         {
@@ -426,6 +595,7 @@ By: {userId}
 
                             try
                             {
+                                // استعادة سجل واحد — لو نجح نزوّد restored وإلا skipped
                                 var success = await RestoreEntityAsync(db, tableName, id, data, overwrite);
                                 if (success) restored++;
                                 else skipped++;
@@ -440,20 +610,40 @@ By: {userId}
                         result.Restored += restored;
                         result.Skipped += skipped;
                         result.Details.Add($"{tableName}: {restored} restored, {skipped} skipped");
+
+                        // حفظ الجدول ده (جوه الـ transaction) — من غير SaveChanges مفيش حاجة بتتكتب فعلًا
+                        if (tx != null)
+                        {
+                            await db.SaveChangesAsync();
+                            db.ChangeTracker.Clear();
+                        }
                     }
                     catch (Exception ex)
                     {
+                        // فشل الجدول كله → rollback ورمي الخطأ
                         result.Errors.Add($"{tableName}: {ex.Message}");
-                        if (tx != null) await tx.RollbackAsync();
                         throw;
                     }
                 }
 
-                if (tx != null) await tx.CommitAsync();
-                result.Success = result.Errors.Count == 0;
+                if (result.Errors.Count > 0)
+                {
+                    if (tx != null) await tx.RollbackAsync();
+                    else db.ChangeTracker.Clear(); // no SaveChanges occurred for non-relational providers
+                    result.Success = false;
+                    result.Restored = 0;
+                    result.Details.Add("Rolled back: no changes were saved because of the errors above");
+                }
+                else
+                {
+                    if (tx != null) await tx.CommitAsync();
+                    else await db.SaveChangesAsync();
+                    result.Success = true;
+                }
             }
             catch
             {
+                // أي خطأ غير متوقع → rollback
                 if (tx != null) await tx.RollbackAsync();
                 throw;
             }
@@ -469,12 +659,14 @@ By: {userId}
         }
         finally
         {
+            // امسح الملف المؤقت في كل الأحوال
             try { File.Delete(tempFilePath); } catch { }
         }
 
         sw.Stop();
         result.Duration = sw.Elapsed;
 
+        // تسجيل العملية في الـ audit
         await _audit.LogAsync(
             action: "backup.restore",
             userId: userId,
@@ -491,6 +683,21 @@ By: {userId}
         return result;
     }
 
+    /// <summary>
+    /// Restores a single row into its target table based on the row's <c>id</c> and data.
+    /// </summary>
+    /// <remarks>
+    /// The composite <c>id</c> format must match the one produced by <see cref="ReadTableAsync"/>:
+    /// <c>buildingId_adminUid</c>, <c>buildingId_monthKey_apartmentId</c>, etc.
+    /// Returns <c>false</c> when the row already exists and <paramref name="overwrite"/> is
+    /// <c>false</c>, or when the id cannot be parsed.
+    /// </remarks>
+    /// <param name="db">The active <see cref="AppDbContext"/> (shared across the whole restore).</param>
+    /// <param name="tableName">The target collection name.</param>
+    /// <param name="id">The row's (possibly composite) primary key.</param>
+    /// <param name="data">The JSON payload of the entity.</param>
+    /// <param name="overwrite">When <c>true</c>, the existing row is deleted before insertion.</param>
+    /// <returns><c>true</c> when the row was restored; <c>false</c> when it was skipped.</returns>
     private async Task<bool> RestoreEntityAsync(
         AppDbContext db, string tableName, string id, JsonElement data, bool overwrite)
     {
@@ -498,14 +705,15 @@ By: {userId}
         {
             case "globalSettings":
                 {
+                    // لو موجود → نحذفه (لو overwrite) أو نتخطاه
                     var existing = await db.GlobalSettings.FirstOrDefaultAsync(x => x.Id == id);
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.GlobalSettings.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.GlobalSettingsEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null) { entity.Id = id; db.GlobalSettings.Add(entity); }
+                    if (entity != null) { entity.Id = id; ApplyOrAdd(db, db.GlobalSettings, existing, entity); }
                     return true;
                 }
 
@@ -515,10 +723,10 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.ScheduledBackupSettings.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.ScheduledBackupSettingsEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null) { entity.Id = id; db.ScheduledBackupSettings.Add(entity); }
+                    if (entity != null) { entity.Id = id; ApplyOrAdd(db, db.ScheduledBackupSettings, existing, entity); }
                     return true;
                 }
 
@@ -528,10 +736,10 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.Users.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.UserEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null) { entity.Uid = id; db.Users.Add(entity); }
+                    if (entity != null) { entity.Uid = id; ApplyOrAdd(db, db.Users, existing, entity); }
                     return true;
                 }
 
@@ -541,10 +749,10 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.Buildings.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.BuildingEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null) { entity.Id = id; db.Buildings.Add(entity); }
+                    if (entity != null) { entity.Id = id; ApplyOrAdd(db, db.Buildings, existing, entity); }
                     return true;
                 }
 
@@ -554,15 +762,16 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.BuildingSettings.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.BuildingSettingsEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null) { entity.BuildingId = id; db.BuildingSettings.Add(entity); }
+                    if (entity != null) { entity.BuildingId = id; ApplyOrAdd(db, db.BuildingSettings, existing, entity); }
                     return true;
                 }
 
             case "buildingAdmins":
                 {
+                    // فك المفتاح المركّب buildingId_adminUid
                     var parts = id.Split('_');
                     if (parts.Length != 2) return false;
                     var buildingId = parts[0];
@@ -573,20 +782,21 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.BuildingAdmins.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.BuildingAdminEntity>(data.GetRawText(), RestoreJsonOptions);
                     if (entity != null)
                     {
                         entity.BuildingId = buildingId;
                         entity.AdminUid = adminUid;
-                        db.BuildingAdmins.Add(entity);
+                        ApplyOrAdd(db, db.BuildingAdmins, existing, entity);
                     }
                     return true;
                 }
 
             case "floors":
                 {
+                    // فك المفتاح المركّب buildingId_floorId
                     var parts = id.Split('_');
                     if (parts.Length != 2) return false;
                     var buildingId = parts[0];
@@ -597,20 +807,21 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.Floors.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.FloorEntity>(data.GetRawText(), RestoreJsonOptions);
                     if (entity != null)
                     {
                         entity.BuildingId = buildingId;
                         entity.Id = floorId;
-                        db.Floors.Add(entity);
+                        ApplyOrAdd(db, db.Floors, existing, entity);
                     }
                     return true;
                 }
 
             case "apartments":
                 {
+                    // فك المفتاح المركّب buildingId_apartmentId
                     var parts = id.Split('_');
                     if (parts.Length != 2) return false;
                     var buildingId = parts[0];
@@ -621,14 +832,14 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.Apartments.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.ApartmentEntity>(data.GetRawText(), RestoreJsonOptions);
                     if (entity != null)
                     {
                         entity.BuildingId = buildingId;
                         entity.Id = aptId;
-                        db.Apartments.Add(entity);
+                        ApplyOrAdd(db, db.Apartments, existing, entity);
                     }
                     return true;
                 }
@@ -639,15 +850,16 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.Residents.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.ResidentEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null) { entity.Id = id; db.Residents.Add(entity); }
+                    if (entity != null) { entity.Id = id; ApplyOrAdd(db, db.Residents, existing, entity); }
                     return true;
                 }
 
             case "financialCategories":
                 {
+                    // فك المفتاح المركّب buildingId_kind_categoryId (categoryId ممكن يحتوي على _)
                     var parts = id.Split('_');
                     if (parts.Length < 3) return false;
                     var buildingId = parts[0];
@@ -659,7 +871,7 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.FinancialCategories.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.FinancialCategoryEntity>(data.GetRawText(), RestoreJsonOptions);
                     if (entity != null)
@@ -667,13 +879,14 @@ By: {userId}
                         entity.BuildingId = buildingId;
                         entity.Kind = kind;
                         entity.Id = catId;
-                        db.FinancialCategories.Add(entity);
+                        ApplyOrAdd(db, db.FinancialCategories, existing, entity);
                     }
                     return true;
                 }
 
             case "expenses":
                 {
+                    // فك المفتاح المركّب buildingId_expenseId
                     var parts = id.Split('_');
                     if (parts.Length != 2) return false;
                     var buildingId = parts[0];
@@ -684,20 +897,21 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.Expenses.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.ExpenseEntity>(data.GetRawText(), RestoreJsonOptions);
                     if (entity != null)
                     {
                         entity.BuildingId = buildingId;
                         entity.Id = expId;
-                        db.Expenses.Add(entity);
+                        ApplyOrAdd(db, db.Expenses, existing, entity);
                     }
                     return true;
                 }
 
             case "revenues":
                 {
+                    // فك المفتاح المركّب buildingId_revenueId
                     var parts = id.Split('_');
                     if (parts.Length != 2) return false;
                     var buildingId = parts[0];
@@ -708,20 +922,21 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.Revenues.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.RevenueEntity>(data.GetRawText(), RestoreJsonOptions);
                     if (entity != null)
                     {
                         entity.BuildingId = buildingId;
                         entity.Id = revId;
-                        db.Revenues.Add(entity);
+                        ApplyOrAdd(db, db.Revenues, existing, entity);
                     }
                     return true;
                 }
 
             case "monthlyApartmentShares":
                 {
+                    // فك المفتاح المركّب buildingId_monthKey_apartmentId
                     var parts = id.Split('_');
                     if (parts.Length != 3) return false;
                     var buildingId = parts[0];
@@ -733,7 +948,7 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.MonthlyApartmentShares.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.MonthlyApartmentShareEntity>(data.GetRawText(), RestoreJsonOptions);
                     if (entity != null)
@@ -741,13 +956,14 @@ By: {userId}
                         entity.BuildingId = buildingId;
                         entity.MonthKey = monthKey;
                         entity.ApartmentId = aptId;
-                        db.MonthlyApartmentShares.Add(entity);
+                        ApplyOrAdd(db, db.MonthlyApartmentShares, existing, entity);
                     }
                     return true;
                 }
 
             case "deposits":
                 {
+                    // فك المفتاح المركّب buildingId_depositId
                     var parts = id.Split('_');
                     if (parts.Length != 2) return false;
                     var buildingId = parts[0];
@@ -758,33 +974,35 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.Deposits.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.DepositEntity>(data.GetRawText(), RestoreJsonOptions);
                     if (entity != null)
                     {
                         entity.BuildingId = buildingId;
                         entity.Id = depId;
-                        db.Deposits.Add(entity);
+                        ApplyOrAdd(db, db.Deposits, existing, entity);
                     }
                     return true;
                 }
 
             case "depositEditHistory":
                 {
+                    // مفتاح رقمي بسيط
                     var existing = await db.DepositEditHistory.FirstOrDefaultAsync(x => x.EditId == long.Parse(id));
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.DepositEditHistory.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.DepositEditEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null) db.DepositEditHistory.Add(entity);
+                    if (entity != null) { if (existing == null) entity.EditId = 0; ApplyOrAdd(db, db.DepositEditHistory, existing, entity); }
                     return true;
                 }
 
             case "walletAdjustments":
                 {
+                    // فك المفتاح المركّب buildingId_adjustmentId
                     var parts = id.Split('_');
                     if (parts.Length != 2) return false;
                     var buildingId = parts[0];
@@ -795,20 +1013,21 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.WalletAdjustments.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.WalletAdjustmentEntity>(data.GetRawText(), RestoreJsonOptions);
                     if (entity != null)
                     {
                         entity.BuildingId = buildingId;
                         entity.Id = adjId;
-                        db.WalletAdjustments.Add(entity);
+                        ApplyOrAdd(db, db.WalletAdjustments, existing, entity);
                     }
                     return true;
                 }
 
             case "userPermissions":
                 {
+                    // فك المفتاح المركّب uid_permission
                     var parts = id.Split('_');
                     if (parts.Length != 2) return false;
                     var uid = parts[0];
@@ -819,27 +1038,29 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.UserPermissions.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.UserPermissionEntity>(data.GetRawText(), RestoreJsonOptions);
                     if (entity != null)
                     {
                         entity.Uid = uid;
                         entity.Permission = permission;
-                        db.UserPermissions.Add(entity);
+                        ApplyOrAdd(db, db.UserPermissions, existing, entity);
                     }
                     return true;
                 }
 
             case "auditLog":
                 {
+                    // جدول append-only → نضيف دايماً بدون حذف
                     var entity = JsonSerializer.Deserialize<Data.Entities.AuditLogEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null) db.AuditLog.Add(entity);
+                    if (entity != null) { entity.AuditId = 0; db.AuditLog.Add(entity); }   // الـ id بيتولّد من الداتابيز (identity)
                     return true;
                 }
 
             case "notifications":
                 {
+                    // فك المفتاح المركّب buildingId_notificationId
                     var parts = id.Split('_');
                     if (parts.Length != 2) return false;
                     var buildingId = parts[0];
@@ -850,20 +1071,21 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.Notifications.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.NotificationEntity>(data.GetRawText(), RestoreJsonOptions);
                     if (entity != null)
                     {
                         entity.BuildingId = buildingId;
                         entity.Id = notifId;
-                        db.Notifications.Add(entity);
+                        ApplyOrAdd(db, db.Notifications, existing, entity);
                     }
                     return true;
                 }
 
             case "polls":
                 {
+                    // فك المفتاح المركّب buildingId_pollId
                     var parts = id.Split('_');
                     if (parts.Length != 2) return false;
                     var buildingId = parts[0];
@@ -874,20 +1096,21 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.Polls.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.PollEntity>(data.GetRawText(), RestoreJsonOptions);
                     if (entity != null)
                     {
                         entity.BuildingId = buildingId;
                         entity.Id = pollId;
-                        db.Polls.Add(entity);
+                        ApplyOrAdd(db, db.Polls, existing, entity);
                     }
                     return true;
                 }
 
             case "pollOptions":
                 {
+                    // فك المفتاح المركّب buildingId_pollId_optionId
                     var parts = id.Split('_');
                     if (parts.Length != 3) return false;
                     var buildingId = parts[0];
@@ -899,7 +1122,7 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.PollOptions.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.PollOptionEntity>(data.GetRawText(), RestoreJsonOptions);
                     if (entity != null)
@@ -907,13 +1130,14 @@ By: {userId}
                         entity.BuildingId = buildingId;
                         entity.PollId = pollId;
                         entity.Id = optionId;
-                        db.PollOptions.Add(entity);
+                        ApplyOrAdd(db, db.PollOptions, existing, entity);
                     }
                     return true;
                 }
 
             case "pollVotes":
                 {
+                    // فك المفتاح المركّب buildingId_pollId_apartmentId
                     var parts = id.Split('_');
                     if (parts.Length != 3) return false;
                     var buildingId = parts[0];
@@ -925,7 +1149,7 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.PollVotes.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.PollVoteEntity>(data.GetRawText(), RestoreJsonOptions);
                     if (entity != null)
@@ -933,13 +1157,14 @@ By: {userId}
                         entity.BuildingId = buildingId;
                         entity.PollId = pollId;
                         entity.ApartmentId = aptId;
-                        db.PollVotes.Add(entity);
+                        ApplyOrAdd(db, db.PollVotes, existing, entity);
                     }
                     return true;
                 }
 
             case "maintenanceRecords":
                 {
+                    // فك المفتاح المركّب buildingId_recordId
                     var parts = id.Split('_');
                     if (parts.Length != 2) return false;
                     var buildingId = parts[0];
@@ -950,14 +1175,14 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.MaintenanceRecords.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.MaintenanceRecordEntity>(data.GetRawText(), RestoreJsonOptions);
                     if (entity != null)
                     {
                         entity.BuildingId = buildingId;
                         entity.Id = recordId;
-                        db.MaintenanceRecords.Add(entity);
+                        ApplyOrAdd(db, db.MaintenanceRecords, existing, entity);
                     }
                     return true;
                 }
@@ -968,10 +1193,10 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.Dvrs.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.DvrEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null) { entity.Id = id; db.Dvrs.Add(entity); }
+                    if (entity != null) { entity.Id = id; ApplyOrAdd(db, db.Dvrs, existing, entity); }
                     return true;
                 }
 
@@ -981,10 +1206,10 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.Cameras.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.CameraEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null) { entity.Id = id; db.Cameras.Add(entity); }
+                    if (entity != null) { entity.Id = id; ApplyOrAdd(db, db.Cameras, existing, entity); }
                     return true;
                 }
 
@@ -994,10 +1219,10 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.QrTokens.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.QrTokenEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null) { entity.Uid = id; db.QrTokens.Add(entity); }
+                    if (entity != null) { entity.Uid = id; ApplyOrAdd(db, db.QrTokens, existing, entity); }
                     return true;
                 }
 
@@ -1007,43 +1232,75 @@ By: {userId}
                     if (existing != null)
                     {
                         if (!overwrite) return false;
-                        db.QrUsages.Remove(existing);
+                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.QrUsageEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null) { entity.Id = id; db.QrUsages.Add(entity); }
+                    if (entity != null) { entity.Id = id; ApplyOrAdd(db, db.QrUsages, existing, entity); }
                     return true;
                 }
 
             default:
+                // collection غير معروفة → نتخطاها
                 return false;
         }
     }
+
+    /// <summary>
+    /// Previews the restore.
+    /// </summary>
+    /// <remarks>
+    /// The uploaded stream is first copied into a temporary file, then decrypted via
+    /// <see cref="BackupFileProtector.Unprotect"/>, then opened as a ZIP. Every JSON entry
+    /// whose name matches a known collection is counted and added to the preview. The
+    /// An opaque, single-use session identifier is returned so the browser never receives
+    /// the server-side temporary file path.
+    /// </remarks>
+    /// <param name="zipStream">The uploaded ZIP stream (may be encrypted).</param>
+    /// <param name="fileName">The original file name (shown in the preview).</param>
+    /// <param name="userId">The id of the user performing the preview (reserved for audit).</param>
+    /// <returns>A <see cref="RestorePreview"/> describing the collections inside the archive.</returns>
     public async Task<RestorePreview> PreviewRestoreAsync(Stream zipStream, string fileName, string userId)
     {
         var result = new RestorePreview { FileName = fileName };
+        string? localsTempPath = null;
 
         try
         {
             var tempPath = Path.Combine(Path.GetTempPath(), $"restore-{Guid.NewGuid():N}.zip");
+            localsTempPath = tempPath;
 
-            // 1. اقرأ الملف في الذاكرة
+            // 1. Read with a hard compressed-size limit to avoid unbounded memory use.
             using var ms = new MemoryStream();
-            await zipStream.CopyToAsync(ms);
+            var buffer = new byte[81920];
+            int read;
+            while ((read = await zipStream.ReadAsync(buffer)) > 0)
+            {
+                if (ms.Length + read > MaxArchiveBytes)
+                    throw new InvalidDataException("Backup archive exceeds the maximum allowed size.");
+                await ms.WriteAsync(buffer.AsMemory(0, read));
+            }
             var fileBytes = ms.ToArray();
 
             // 2. فك التشفير لو الملف مشفر
             var decryptedBytes = BackupFileProtector.Unprotect(fileBytes);
+            if (decryptedBytes.LongLength > MaxArchiveBytes)
+                throw new InvalidDataException("Decrypted backup exceeds the maximum allowed size.");
 
-            // 3. اكتب الملف المفكوك
+            // 3. Write the validated archive to a private, unpredictable temporary path.
             await File.WriteAllBytesAsync(tempPath, decryptedBytes);
-            result.TempFilePath = tempPath;
+            result.TempFilePath = tempPath; // retained for internal tests; the MVC view posts only RestoreSessionId
             result.FileSize = decryptedBytes.Length;
 
-            // 4. اقرأ الـ ZIP
+            // 4. Validate archive shape and expanded size before reading JSON payloads.
             using var zip = ZipFile.OpenRead(tempPath);
+            if (zip.Entries.Count > 100 || zip.Entries.Sum(e => e.Length) > MaxExpandedBytes)
+                throw new InvalidDataException("Backup archive contains too many or oversized entries.");
             foreach (var entry in zip.Entries)
             {
-                if (!entry.Name.EndsWith(".json")) continue;
+                if (entry.Length > MaxArchiveBytes)
+                    throw new InvalidDataException($"Archive entry '{entry.Name}' is too large.");
+                if (!entry.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals(entry.FullName, entry.Name, StringComparison.Ordinal)) continue;
                 var tableName = Path.GetFileNameWithoutExtension(entry.Name);
                 if (!KnownTables.ContainsKey(tableName)) continue;
 
@@ -1065,17 +1322,65 @@ By: {userId}
                 }
                 catch (Exception ex)
                 {
+                    // ملف JSON تالف → يتسجل وميكملش
                     result.Errors.Add($"{tableName}: {ex.Message}");
                 }
             }
 
-            result.Success = result.Collections.Count > 0;
+            result.Success = result.Collections.Count > 0 && result.Errors.Count == 0;
+            if (result.Success)
+            {
+                // The browser receives only an opaque, single-use session id, never a server path.
+                foreach (var expired in RestoreSessions.Where(x => x.Value.ExpiresAtUtc <= DateTime.UtcNow).ToArray())
+                {
+                    if (RestoreSessions.TryRemove(expired.Key, out var stale)) { try { File.Delete(stale.Path); } catch { } }
+                }
+                var sessionId = Guid.NewGuid().ToString("N");
+                RestoreSessions[sessionId] = new RestoreSession(tempPath, userId, DateTime.UtcNow.Add(RestoreSessionLifetime));
+                result.RestoreSessionId = sessionId;
+            }
+            else
+            {
+                try { File.Delete(tempPath); } catch { }
+            }
         }
         catch (Exception ex)
         {
             result.Errors.Add(ex.Message);
+            if (result.RestoreSessionId == null && localsTempPath != null) { try { File.Delete(localsTempPath); } catch { } }
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Adds the entity, or copies its values into the already-tracked existing row.
+    /// </summary>
+    /// <remarks>
+    /// Updating in place (instead of delete + insert) avoids database cascade deletes that would
+    /// remove related rows that are not part of the restore, and avoids duplicate-key tracking errors.
+    /// </remarks>
+    private static void ApplyOrAdd<T>(AppDbContext db, Microsoft.EntityFrameworkCore.DbSet<T> set, T? existing, T entity) where T : class
+    {
+        if (existing != null) db.Entry(existing).CurrentValues.SetValues(entity);
+        else set.Add(entity);
+    }
+
+    /// <summary>
+    /// Determines whether a restore file path is the temporary file created by the preview step:
+    /// directly inside the temp folder and named <c>restore-&lt;32 hex digits&gt;.zip</c>.
+    /// </summary>
+    private static bool IsSafeRestoreFile(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return false;
+        try
+        {
+            var full = Path.GetFullPath(path);
+            var dir = Path.GetDirectoryName(full)?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var temp = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return string.Equals(dir, temp, StringComparison.OrdinalIgnoreCase)
+                && System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(full), @"^restore-[0-9a-fA-F]{32}\.zip$");
+        }
+        catch { return false; }
     }
 }

@@ -3,9 +3,15 @@ using QRCoder;
 namespace BuildingManagementMvc.Services;
 
 // ترجمة حرفية لـ js/features/qr-generator.js (توليد صور QR)
+/// <summary>
+/// Generates QR code images (PNG) locally.
+/// </summary>
 public class QrGeneratorService
 {
     // بيرجع صورة QR بصيغة PNG كـ byte[]
+    /// <summary>
+    /// Generates the png.
+    /// </summary>
     public byte[] GeneratePng(string text, int pixelsPerModule = 10)
     {
         using var generator = new QRCodeGenerator();
@@ -16,6 +22,9 @@ public class QrGeneratorService
 
     // رابط ثابت للشقة (بيتحط على QR يتلصق على باب الشقة) — بيودّي مباشرة
     // لصفحة دخول الساكن مع تعبئة العمارة/الدور/رقم الشقة تلقائيًا
+    /// <summary>
+    /// Gets the apartment login URL.
+    /// </summary>
     public string GetApartmentLoginUrl(string baseUrl, string buildingId, int floorOrder, int aptNumber) =>
         $"{baseUrl.TrimEnd('/')}/Account/LoginResident?buildingId={buildingId}&floorOrder={floorOrder}&aptNumber={aptNumber}";
 }

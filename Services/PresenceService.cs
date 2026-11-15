@@ -5,19 +5,31 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Tracks and reports which users are online.
+/// </summary>
 public class PresenceService
 {
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly ILogger<PresenceService> _logger;
 
+    /// <summary>
+    /// The online threshold field.
+    /// </summary>
     public static readonly TimeSpan OnlineThreshold = TimeSpan.FromMinutes(2);
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PresenceService"/> class.
+    /// </summary>
     public PresenceService(IDbContextFactory<AppDbContext> sqlFactory, ILogger<PresenceService> logger)
     {
         _sqlFactory = sqlFactory;
         _logger = logger;
     }
 
+    /// <summary>
+    /// Builds the document ID.
+    /// </summary>
     public static string BuildDocId(string uid, string aptId, string buildingId)
     {
         return !string.IsNullOrEmpty(buildingId) && !string.IsNullOrEmpty(aptId)
@@ -25,6 +37,9 @@ public class PresenceService
             : uid;
     }
 
+    /// <summary>
+    /// Stores the last-seen time of a user.
+    /// </summary>
     public async Task HeartbeatAsync(string uid, string aptId, string buildingId)
     {
         if (string.IsNullOrEmpty(uid)) return;
@@ -61,6 +76,9 @@ public class PresenceService
         }
     }
 
+    /// <summary>
+    /// Gets the online count.
+    /// </summary>
     public async Task<int> GetOnlineCountAsync(string buildingId)
     {
         try
@@ -77,6 +95,9 @@ public class PresenceService
         }
     }
 
+    /// <summary>
+    /// Gets the by building.
+    /// </summary>
     public async Task<Dictionary<string, Presence>> GetByBuildingAsync(string buildingId)
     {
         var result = new Dictionary<string, Presence>();
@@ -111,6 +132,9 @@ public class PresenceService
         return result;
     }
 
+    /// <summary>
+    /// Determines whether the value is online.
+    /// </summary>
     public static bool IsOnline(Presence? p)
     {
         if (p == null || p.Ts <= 0) return false;
@@ -118,6 +142,9 @@ public class PresenceService
         return DateTime.UtcNow - lastSeen <= OnlineThreshold;
     }
 
+    /// <summary>
+    /// Determines whether the value is recent.
+    /// </summary>
     public static bool IsRecent(Presence? p)
     {
         if (p == null || p.Ts <= 0) return false;
@@ -125,6 +152,9 @@ public class PresenceService
         return DateTime.UtcNow - lastSeen < TimeSpan.FromHours(24);
     }
 
+    /// <summary>
+    /// Returns the time ago.
+    /// </summary>
     public static string TimeAgo(Presence? p)
     {
         if (p == null || p.Ts <= 0) return Loc.T("Never_Logged_In");
@@ -138,6 +168,9 @@ public class PresenceService
         return lastSeen.ToString("yyyy-MM-dd");
     }
 
+    /// <summary>
+    /// Clears the old.
+    /// </summary>
     public async Task<int> ClearOldAsync(int olderThanDays = 30)
     {
         try

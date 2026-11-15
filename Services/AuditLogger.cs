@@ -5,17 +5,26 @@ using Newtonsoft.Json;
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Persists audit entries to the database. Implementation of <see cref="IAuditLogger"/>.
+/// </summary>
 public class AuditLogger : IAuditLogger
 {
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly ILogger<AuditLogger> _log;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AuditLogger"/> class.
+    /// </summary>
     public AuditLogger(IDbContextFactory<AppDbContext> sqlFactory, ILogger<AuditLogger> log)
     {
         _sqlFactory = sqlFactory;
         _log = log;
     }
 
+    /// <summary>
+    /// Logs the operation on the audit logger.
+    /// </summary>
     public async Task LogAsync(
         string action,
         string? buildingId = null,
@@ -40,9 +49,24 @@ public class AuditLogger : IAuditLogger
                 ? null
                 : JsonConvert.SerializeObject(metadata);
 
+            int? apartmentNumber = null;
+            if (!string.IsNullOrWhiteSpace(effectiveBuildingId) && !string.IsNullOrWhiteSpace(apartmentId))
+            {
+                apartmentNumber = await db.Apartments.AsNoTracking()
+                    .Where(a => a.BuildingId == effectiveBuildingId && a.Id == apartmentId)
+                    .Select(a => (int?)a.Number).FirstOrDefaultAsync();
+            }
+
+            var severityValue = (severity ?? "info").Trim().ToLowerInvariant();
+            var normalizedSeverity = new[] { "info", "warning", "error", "critical" }
+                .Contains(severityValue) ? severityValue : "info";
+
             db.AuditLog.Add(new AuditLogEntity
             {
                 BuildingId = effectiveBuildingId,
+                ApartmentId = apartmentNumber.HasValue ? apartmentId : null,
+                AptNumber = apartmentNumber,
+                Severity = normalizedSeverity,
                 Ts = DateTime.UtcNow,
                 Action = Cut(action, 100),
                 Label = Cut(action, 300),
@@ -51,8 +75,7 @@ public class AuditLogger : IAuditLogger
                 Details = metadataJson ?? "",
                 MonthKey = DateTime.UtcNow.ToString("yyyy-MM"),
                 SourceId = null,
-                BuildingNumber = null,
-                AptNumber = null
+                BuildingNumber = null
             });
 
             await db.SaveChangesAsync();
@@ -63,6 +86,9 @@ public class AuditLogger : IAuditLogger
         }
     }
 
+    /// <summary>
+    /// Returns the query.
+    /// </summary>
     public async Task<List<AuditEntryDoc>> QueryAsync(
         string? buildingId = null,
         string? apartmentId = null,
@@ -79,6 +105,12 @@ public class AuditLogger : IAuditLogger
         if (!string.IsNullOrWhiteSpace(buildingId))
             query = query.Where(x => x.BuildingId == buildingId);
 
+        if (!string.IsNullOrWhiteSpace(apartmentId))
+            query = query.Where(x => x.ApartmentId == apartmentId);
+
+        if (!string.IsNullOrWhiteSpace(severity))
+            query = query.Where(x => x.Severity == severity);
+
         if (!string.IsNullOrWhiteSpace(action))
             query = query.Where(x => x.Action == action);
 
@@ -91,6 +123,7 @@ public class AuditLogger : IAuditLogger
         if (to.HasValue)
             query = query.Where(x => x.Ts <= to.Value);
 
+        limit = Math.Clamp(limit, 1, 50000);
         var entries = await query
             .OrderByDescending(x => x.Ts)
             .Take(limit)
@@ -98,16 +131,55 @@ public class AuditLogger : IAuditLogger
 
         return entries.Select(ToDoc).ToList();
     }
+    /// <summary>
+    /// يسترجع صفحة من سجلات التدقيق حسب معايير التصفية.
+    /// </summary>
+    /// <param name="buildingId">معايير التصفية والترقيم.</param>
+    /// <param name="apartmentId"></param>
+    /// <param name="userId"></param>
+    /// <param name="from"></param>
+    /// <param name="to"></param>
+    /// <param name="action"></param>
+    /// <param name="severity"></param>
+    /// <param name="page"></param>
+    /// <param name="pageSize"></param>
+    /// <returns>صفحة من سجلات التدقيق.</returns>
+    public async Task<BuildingManagementMvc.Models.PagedResult<AuditEntryDoc>> QueryPageAsync(
+        string? buildingId, string? apartmentId, string? userId, DateTime? from, DateTime? to,
+        string? action, string? severity, int page, int pageSize)
+    {
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        var query = db.AuditLog.AsNoTracking().AsQueryable();
+        if (!string.IsNullOrWhiteSpace(buildingId)) query = query.Where(x => x.BuildingId == buildingId);
+        if (!string.IsNullOrWhiteSpace(apartmentId)) query = query.Where(x => x.ApartmentId == apartmentId);
+        if (!string.IsNullOrWhiteSpace(userId)) query = query.Where(x => x.Actor == userId);
+        if (!string.IsNullOrWhiteSpace(action)) query = query.Where(x => x.Action == action);
+        if (!string.IsNullOrWhiteSpace(severity)) query = query.Where(x => x.Severity == severity);
+        if (from.HasValue) query = query.Where(x => x.Ts >= from.Value);
+        if (to.HasValue) query = query.Where(x => x.Ts <= to.Value);
+
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 200);
+        var total = await query.CountAsync();
+        var totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
+        page = Math.Min(page, totalPages);
+        var rows = await query.OrderByDescending(x => x.Ts).ThenByDescending(x => x.AuditId)
+            .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        return new BuildingManagementMvc.Models.PagedResult<AuditEntryDoc>
+        {
+            Items = rows.Select(ToDoc).ToList(), CurrentPage = page, PageSize = pageSize, TotalItems = total
+        };
+    }
 
     private static AuditEntryDoc ToDoc(AuditLogEntity e) => new()
     {
         Id = e.SourceId ?? e.AuditId.ToString(),
         Action = e.Action,
         BuildingId = e.BuildingId,
-        ApartmentId = e.AptNumber?.ToString(),
+        ApartmentId = e.ApartmentId ?? e.AptNumber?.ToString(),
         UserId = e.Actor,
         UserRole = e.ActorRole,
-        Severity = "info",
+        Severity = string.IsNullOrWhiteSpace(e.Severity) ? "info" : e.Severity,
         Details = e.Details,
         CreatedAt = DateTime.SpecifyKind(e.Ts, DateTimeKind.Utc)
     };

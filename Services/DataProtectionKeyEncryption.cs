@@ -9,22 +9,40 @@ namespace BuildingManagementMvc.Services;
 // بمفتاح مشتق من Encryption:SecretKey. المفاتيح القديمة غير المشفرة لسه بتشتغل،
 // وأي مفتاح جديد بيتكتب مشفّر. مهم: لو Encryption:SecretKey اتغيّر المفاتيح المشفرة مش هتتفك
 // (المستخدمين هيتعملهم تسجيل خروج) — فما تغيّرهوش من غير سبب.
+/// <summary>
+/// Holds the symmetric key (derived from <c>Encryption:SecretKey</c>) used to encrypt the ASP.NET data-protection key ring on disk.
+/// </summary>
 public sealed class DataProtectionKeyHolder
 {
+    /// <summary>
+    /// Gets the key.
+    /// </summary>
     public byte[] Key { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataProtectionKeyHolder"/> class.
+    /// </summary>
     public DataProtectionKeyHolder(string secret) =>
         Key = HMACSHA256.HashData(
             Encoding.UTF8.GetBytes(secret),
             Encoding.UTF8.GetBytes("dataprotection-keys-v1"));
 }
 
+/// <summary>
+/// Encrypts data-protection key XML with AES-GCM before it is written to disk.
+/// </summary>
 public sealed class AesGcmXmlEncryptor : IXmlEncryptor
 {
     private readonly byte[] _key;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AesGcmXmlEncryptor"/> class.
+    /// </summary>
     public AesGcmXmlEncryptor(byte[] key) => _key = key;
 
+    /// <summary>
+    /// Encrypts the operation on the AES GCM XML encryptor.
+    /// </summary>
     public EncryptedXmlInfo Encrypt(XElement plaintextElement)
     {
         var plain = Encoding.UTF8.GetBytes(plaintextElement.ToString(SaveOptions.DisableFormatting));
@@ -48,14 +66,23 @@ public sealed class AesGcmXmlEncryptor : IXmlEncryptor
     }
 }
 
+/// <summary>
+/// Decrypts data-protection key XML that was encrypted by <see cref="AesGcmXmlEncryptor"/>.
+/// </summary>
 public sealed class AesGcmXmlDecryptor : IXmlDecryptor
 {
     private readonly byte[] _key;
 
     // بيتعمل له instance من الـ DataProtection مع IServiceProvider
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AesGcmXmlDecryptor"/> class.
+    /// </summary>
     public AesGcmXmlDecryptor(IServiceProvider services) =>
         _key = ((DataProtectionKeyHolder)services.GetService(typeof(DataProtectionKeyHolder))!).Key;
 
+    /// <summary>
+    /// Decrypts the operation on the AES GCM XML decryptor.
+    /// </summary>
     public XElement Decrypt(XElement encryptedElement)
     {
         var all = Convert.FromBase64String((string)encryptedElement.Element("value")!);

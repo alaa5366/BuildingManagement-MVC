@@ -6,18 +6,39 @@ using BCrypt.Net;
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Hashes and verifies passwords and PINs.
+/// </summary>
 public interface IPasswordHasher
 {
+    /// <summary>
+    /// Hashes the operation on the i password hasher.
+    /// </summary>
     string Hash(string password);
+    /// <summary>
+    /// Verifies the operation on the i password hasher.
+    /// </summary>
     bool Verify(string password, string hash);
+    /// <summary>
+    /// Hashes the PIN.
+    /// </summary>
     string HashPin(string pin);
+    /// <summary>
+    /// Verifies the PIN.
+    /// </summary>
     bool VerifyPin(string pin, string hash);
 }
 
+/// <summary>
+/// BCrypt implementation of <see cref="IPasswordHasher"/>.
+/// </summary>
 public class BcryptPasswordHasher : IPasswordHasher
 {
     private const int WorkFactor = 12;
 
+    /// <summary>
+    /// Hashes the operation on the BCrypt password hasher.
+    /// </summary>
     public string Hash(string password)
     {
         if (string.IsNullOrWhiteSpace(password))
@@ -26,6 +47,9 @@ public class BcryptPasswordHasher : IPasswordHasher
         return BCrypt.Net.BCrypt.HashPassword(password, WorkFactor);
     }
 
+    /// <summary>
+    /// Verifies the operation on the BCrypt password hasher.
+    /// </summary>
     public bool Verify(string password, string hash)
     {
         if (string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(hash))
@@ -41,6 +65,9 @@ public class BcryptPasswordHasher : IPasswordHasher
         }
     }
 
+    /// <summary>
+    /// Hashes the PIN.
+    /// </summary>
     public string HashPin(string pin)
     {
         if (string.IsNullOrWhiteSpace(pin))
@@ -49,6 +76,9 @@ public class BcryptPasswordHasher : IPasswordHasher
         return BCrypt.Net.BCrypt.HashPassword(pin, 10);
     }
 
+    /// <summary>
+    /// Verifies the PIN.
+    /// </summary>
     public bool VerifyPin(string pin, string hash)
     {
         if (string.IsNullOrWhiteSpace(pin) || string.IsNullOrWhiteSpace(hash))

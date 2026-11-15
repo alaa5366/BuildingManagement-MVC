@@ -1,4 +1,10 @@
-﻿@model BuildingManagementMvc.Models.AppUserDoc
+﻿@* =============================================================================
+   View:        Admins/Edit
+   Rendered by: AdminsController.Edit
+   Model:       BuildingManagementMvc.Models.AppUserDoc
+   Purpose:     Edit form.
+   ============================================================================= *@
+@model BuildingManagementMvc.Models.AppUserDoc
 @{
     ViewData["Title"] = Loc.T("Edit_Admin");
     var allPerms = ViewBag.AllPermissions as List<string> ?? new();

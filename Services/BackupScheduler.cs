@@ -1,12 +1,18 @@
 ﻿namespace BuildingManagementMvc.Services;
 
 // Background Service — بيفحص كل 30 دقيقة
+/// <summary>
+/// Background service that wakes up periodically and runs the scheduled backup when it is due.
+/// </summary>
 public class BackupScheduler : BackgroundService
 {
     private readonly IServiceProvider _services;
     private readonly ILogger<BackupScheduler> _logger;
     private readonly TimeSpan _checkInterval = TimeSpan.FromMinutes(30);
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BackupScheduler"/> class.
+    /// </summary>
     public BackupScheduler(IServiceProvider services, ILogger<BackupScheduler> logger)
     {
         _services = services;

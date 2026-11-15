@@ -10,6 +10,12 @@ namespace BuildingManagementMvc.Controllers;
 //  AdminAptsController	إدارة الشقق للأدمن (فتح/إغلاق/تعطيل/تعديل)
 // ============================================================
 
+/// <summary>
+/// Admin screens for managing the apartments of the current building: listing, editing, opening/closing, enabling/disabling, welcome messages and quick-login QR codes.
+/// </summary>
+/// <remarks>
+/// Access: requires one of the roles <c>admin</c>.
+/// </remarks>
 [Authorize(Roles = "admin")]
 [AdminPermission(AdminPermissions.ManageResidents)]
 public class AdminAptsController : Controller
@@ -23,6 +29,9 @@ public class AdminAptsController : Controller
     private readonly NotificationsService _notify;
     private readonly IAuditLogger _auditLogger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AdminAptsController"/> class.
+    /// </summary>
     public AdminAptsController(
         BuildingsService buildings,
         ResidentsService residents,
@@ -51,6 +60,9 @@ public class AdminAptsController : Controller
     // ============================================================
     // 1. Index
     // ============================================================
+    /// <summary>
+    /// Shows the main page of the admin apartments screen.
+    /// </summary>
     public async Task<IActionResult> Index()
     {
         var building = await _buildings.GetByIdAsync(BuildingId);
@@ -61,6 +73,12 @@ public class AdminAptsController : Controller
     // ============================================================
     // 2. GenerateQuickQr
     // ============================================================
+    /// <summary>
+    /// Generates the quick QR.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> GenerateQuickQr(
@@ -103,6 +121,12 @@ public class AdminAptsController : Controller
     // ============================================================
     // 3. GenerateWelcome
     // ============================================================
+    /// <summary>
+    /// Generates the welcome.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> GenerateWelcome(string aptId, int validityHours)
@@ -174,6 +198,12 @@ public class AdminAptsController : Controller
     // ============================================================
     // 4. OpenApartment
     // ============================================================
+    /// <summary>
+    /// Opens the apartment.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> OpenApartment(string aptId)
@@ -218,6 +248,12 @@ public class AdminAptsController : Controller
     // ============================================================
     // 5. CloseApartment
     // ============================================================
+    /// <summary>
+    /// Closes the apartment.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CloseApartment(string aptId, string? reason)
@@ -268,6 +304,12 @@ public class AdminAptsController : Controller
     // ============================================================
     // 6. DisableApartment
     // ============================================================
+    /// <summary>
+    /// Disables the apartment.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DisableApartment(string aptId, string? reason)
@@ -307,6 +349,12 @@ public class AdminAptsController : Controller
     // ============================================================
     // 7. EnableApartment
     // ============================================================
+    /// <summary>
+    /// Enables the apartment.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EnableApartment(string aptId, string? reason)
@@ -346,6 +394,12 @@ public class AdminAptsController : Controller
     // ============================================================
     // 8. ✅ صفحة تعديل الشقة (GET) — هذه هي الدالة المفقودة
     // ============================================================
+    /// <summary>
+    /// Edits the admin apartments edit page.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Edit(string aptId)
     {
@@ -366,6 +420,12 @@ public class AdminAptsController : Controller
     // ============================================================
     // 9. صفحة تعديل الشقة (POST)
     // ============================================================
+    /// <summary>
+    /// Handles the edit form submission of the admin apartments screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(
@@ -374,7 +434,7 @@ public class AdminAptsController : Controller
         string label,
         string phone,
         string? pin,
-        double monthlyFee,
+        decimal monthlyFee,
         string? notes,
         string? email)
     {

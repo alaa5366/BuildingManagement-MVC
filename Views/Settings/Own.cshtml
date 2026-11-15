@@ -1,4 +1,10 @@
-﻿@model BuildingManagementMvc.Models.OwnSettings
+﻿@* =============================================================================
+   View:        Settings/Own
+   Rendered by: SettingsController.Own
+   Model:       BuildingManagementMvc.Models.OwnSettings
+   Purpose:     Own page.
+   ============================================================================= *@
+@model BuildingManagementMvc.Models.OwnSettings
 @{
     ViewData["Title"] = Loc.T("My_Settings");
     var isResident = ViewBag.IsResident as bool? ?? false;

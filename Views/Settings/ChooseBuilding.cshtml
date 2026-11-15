@@ -1,4 +1,10 @@
-﻿@{
+﻿@* =============================================================================
+   View:        Settings/ChooseBuilding
+   Rendered by: SettingsController.ChooseBuilding
+   Model:       none
+   Purpose:     Choose building page.
+   ============================================================================= *@
+@{
     ViewData["Title"] = Loc.T("Select_Building");
     var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Models.Building> ?? new();
 }

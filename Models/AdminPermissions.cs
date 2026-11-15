@@ -1,69 +1,156 @@
 ﻿namespace BuildingManagementMvc.Models;
 
+/// <summary>
+/// Catalog of admin permissions: permission keys, categories, labels and the ready-made templates.
+/// </summary>
 public static class AdminPermissions
 {
     // ============================================================
     // إدارة
     // ============================================================
+    /// <summary>
+    /// The manage buildings constant.
+    /// </summary>
     public const string ManageBuildings = "buildings.manage";
+    /// <summary>
+    /// The manage admins constant.
+    /// </summary>
     public const string ManageAdmins = "admins.manage";
+    /// <summary>
+    /// The manage residents constant.
+    /// </summary>
     public const string ManageResidents = "residents.manage";
+    /// <summary>
+    /// The disable apartment constant.
+    /// </summary>
     public const string DisableApartment = "apartment.disable";
 
     // ============================================================
     // الكاميرات و DVR ✅ جديد
     // ============================================================
+    /// <summary>
+    /// The manage dvrs constant.
+    /// </summary>
     public const string ManageDvrs = "dvrs.manage";
+    /// <summary>
+    /// The view cameras constant.
+    /// </summary>
     public const string ViewCameras = "cameras.view";
+    /// <summary>
+    /// The manage cameras constant.
+    /// </summary>
     public const string ManageCameras = "cameras.manage";
 
     // ============================================================
     // استيراد ✅ جديد
     // ============================================================
+    /// <summary>
+    /// The import template constant.
+    /// </summary>
     public const string ImportTemplate = "template.import";
 
     // ============================================================
     // مالية
     // ============================================================
+    /// <summary>
+    /// The manage wallet constant.
+    /// </summary>
     public const string ManageWallet = "wallet.manage";
+    /// <summary>
+    /// The manage expenses constant.
+    /// </summary>
     public const string ManageExpenses = "expenses.manage";
+    /// <summary>
+    /// The manage revenues constant.
+    /// </summary>
     public const string ManageRevenues = "revenues.manage";
+    /// <summary>
+    /// The manage categories constant.
+    /// </summary>
     public const string ManageCategories = "categories.manage";
+    /// <summary>
+    /// The view reports constant.
+    /// </summary>
     public const string ViewReports = "reports.view";
 
     // ============================================================
     // خدمات
     // ============================================================
+    /// <summary>
+    /// The manage polls constant.
+    /// </summary>
     public const string ManagePolls = "polls.manage";
+    /// <summary>
+    /// The manage maintenance constant.
+    /// </summary>
     public const string ManageMaintenance = "maintenance.manage";
+    /// <summary>
+    /// The send notifications constant.
+    /// </summary>
     public const string SendNotifications = "notifications.send";
+    /// <summary>
+    /// The use whats app constant.
+    /// </summary>
     public const string UseWhatsApp = "whatsapp.use";
 
     // ============================================================
     // السجل
     // ============================================================
+    /// <summary>
+    /// The view audit log all constant.
+    /// </summary>
     public const string ViewAuditLogAll = "audit.view.all";
+    /// <summary>
+    /// The view audit log building constant.
+    /// </summary>
     public const string ViewAuditLogBuilding = "audit.view.building";
+    /// <summary>
+    /// The view audit log own constant.
+    /// </summary>
     public const string ViewAuditLogOwn = "audit.view.own";
 
     // ============================================================
     // الإعدادات
     // ============================================================
+    /// <summary>
+    /// The manage settings global constant.
+    /// </summary>
     public const string ManageSettingsGlobal = "settings.manage.global";
+    /// <summary>
+    /// The manage settings building constant.
+    /// </summary>
     public const string ManageSettingsBuilding = "settings.manage.building";
+    /// <summary>
+    /// The manage settings own constant.
+    /// </summary>
     public const string ManageSettingsOwn = "settings.manage.own";
 
     // ============================================================
     // أدوات
     // ============================================================
+    /// <summary>
+    /// The manage tools constant.
+    /// </summary>
     public const string ManageTools = "tools.manage";
+    /// <summary>
+    /// The manage backup constant.
+    /// </summary>
     public const string ManageBackup = "backup.manage";
+    /// <summary>
+    /// The manage sync constant.
+    /// </summary>
     public const string ManageSync = "sync.manage";
+    /// <summary>
+    /// The secret access constant.
+    /// </summary>
     public const string SecretAccess = "secret.access";
 
     // ============================================================
     // كل الصلاحيات
     // ============================================================
+    /// <summary>
+    /// The all field.
+    /// </summary>
     public static readonly List<string> All = new()
     {
         ManageBuildings, ManageAdmins, ManageResidents, DisableApartment,
@@ -76,6 +163,9 @@ public static class AdminPermissions
         ManageTools, ManageBackup, ManageSync, SecretAccess
     };
 
+    /// <summary>
+    /// The template admin full field.
+    /// </summary>
     public static readonly List<string> TemplateAdminFull = new()
     {
     ManageResidents, DisableApartment,
@@ -89,6 +179,9 @@ public static class AdminPermissions
     };
     // ← 17 عنصر
 
+    /// <summary>
+    /// The template admin financial field.
+    /// </summary>
     public static readonly List<string> TemplateAdminFinancial = new()
     {
         ManageWallet, ManageExpenses, ManageRevenues,
@@ -96,12 +189,18 @@ public static class AdminPermissions
         ViewAuditLogBuilding, ManageSettingsBuilding
     };
 
+    /// <summary>
+    /// The template admin maintenance field.
+    /// </summary>
     public static readonly List<string> TemplateAdminMaintenance = new()
     {
         ManageMaintenance, SendNotifications,
         ViewAuditLogBuilding, ManageSettingsBuilding
     };
 
+    /// <summary>
+    /// The template admin super field.
+    /// </summary>
     public static readonly List<string> TemplateAdminSuper = new()
 {
     ManageBuildings, ManageAdmins, ManageResidents, ImportTemplate,
@@ -115,13 +214,22 @@ public static class AdminPermissions
 };
     // ← 27 عنصر
 
+    /// <summary>
+    /// The super admin all field.
+    /// </summary>
     public static readonly List<string> SuperAdminAll = All;
 
+    /// <summary>
+    /// The resident basic field.
+    /// </summary>
     public static readonly List<string> ResidentBasic = new()
     {
         ManageSettingsOwn, ViewAuditLogOwn
     };
 
+    /// <summary>
+    /// Returns the label ar.
+    /// </summary>
     public static string LabelAr(string key) => key switch
     {
         ManageBuildings => Loc.T("Manage_Buildings"),
@@ -154,6 +262,9 @@ public static class AdminPermissions
         _ => key
     };
 
+    /// <summary>
+    /// A group of related admin permissions shown together in the permission matrix.
+    /// </summary>
     public enum PermissionCategory
     {
         Admin,
@@ -162,6 +273,9 @@ public static class AdminPermissions
         System
     }
 
+    /// <summary>
+    /// Returns the category of.
+    /// </summary>
     public static PermissionCategory CategoryOf(string key) => key switch
     {
         ManageBuildings or ManageAdmins or ManageResidents or DisableApartment or ImportTemplate
@@ -181,6 +295,9 @@ public static class AdminPermissions
         _ => PermissionCategory.System
     };
 
+    /// <summary>
+    /// Returns the category label ar.
+    /// </summary>
     public static string CategoryLabelAr(PermissionCategory cat) => cat switch
     {
         PermissionCategory.Admin => Loc.T("Management"),
@@ -190,6 +307,9 @@ public static class AdminPermissions
         _ => cat.ToString()
     };
 
+    /// <summary>
+    /// Returns the description ar.
+    /// </summary>
     public static string DescriptionAr(string key) => key switch
     {
         ManageBuildings => Loc.T("Create_Edit_Delete_Buildings_Manage_The"),
@@ -222,6 +342,9 @@ public static class AdminPermissions
         _ => key
     };
 
+    /// <summary>
+    /// Returns the backend information.
+    /// </summary>
     public static (string Service, string Controller, string Actions) BackendInfo(string key) => key switch
     {
         ManageBuildings => ("BuildingsService", "BuildingsController",

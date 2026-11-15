@@ -1,4 +1,10 @@
-﻿@{
+﻿@* =============================================================================
+   View:        Shared/_Sidebar
+   Rendered by: shared layout or partial view (used by several controllers)
+   Model:       none
+   Purpose:     Sidebar partial.
+   ============================================================================= *@
+@{
     var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
     var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";

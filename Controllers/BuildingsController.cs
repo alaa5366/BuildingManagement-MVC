@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using BuildingManagementMvc.Services;
 using BuildingManagementMvc.Models;
@@ -7,12 +7,21 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  BuildingsController	إدارة العمارات (SuperAdmin)
 // ============================================================
+/// <summary>
+/// Super admin screens for managing buildings, floors, apartments, QR code sheets and the entry points for admin/resident impersonation.
+/// </summary>
+/// <remarks>
+/// Access: any signed-in user (roles are checked per action).
+/// </remarks>
 [Authorize]
 public class BuildingsController : Controller
 {
     private readonly BuildingsService _service;
     private readonly QrCodePdfService _qrPdf;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BuildingsController"/> class.
+    /// </summary>
     public BuildingsController(BuildingsService service, QrCodePdfService qrPdf)
     {
         _service = service;
@@ -22,12 +31,18 @@ public class BuildingsController : Controller
     // ═══════════════════════════════════════════════════════════
     // Index — SuperAdmin فقط
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Shows the main page of the buildings screen.
+    /// </summary>
+    /// <remarks>
+    /// Requires one of the roles <c>superadmin</c>.
+    /// </remarks>
     [Authorize(Roles = "superadmin")]
     public async Task<IActionResult> Index(int page = 1, int pageSize = 50)
     {
-        var allBuildings = await _service.GetSummariesAsync();
-        var paged = BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Building>
-            .Create(allBuildings, page, pageSize);
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 200);
+        var paged = await _service.GetSummariesPagedAsync(page, pageSize);
 
         ViewBag.RouteValues = new Dictionary<string, string?>
         {
@@ -40,10 +55,22 @@ public class BuildingsController : Controller
     // ═══════════════════════════════════════════════════════════
     // Create — SuperAdmin فقط
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Creates the buildings create page.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET. Requires one of the roles <c>superadmin</c>.
+    /// </remarks>
     [HttpGet]
     [Authorize(Roles = "superadmin")]
     public IActionResult Create() => View();
 
+    /// <summary>
+    /// Handles the create form submission of the buildings screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST. Requires one of the roles <c>superadmin</c>.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "superadmin")]
@@ -107,9 +134,19 @@ public class BuildingsController : Controller
     // ═══════════════════════════════════════════════════════════
     // Details — SuperAdmin + Admin
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Shows the details page of the buildings screen.
+    /// </summary>
+    /// <remarks>
+    /// Requires one of the roles <c>superadmin,admin</c>.
+    /// </remarks>
     [Authorize(Roles = "superadmin,admin")]
     public async Task<IActionResult> Details(string id)
     {
+        if (!User.IsInRole("superadmin") &&
+            !string.Equals(User.FindFirst("buildingId")?.Value, id, StringComparison.Ordinal))
+            return Forbid();
+
         var building = await _service.GetByIdAsync(id);
         if (building == null) return NotFound();
         return View(building);
@@ -118,6 +155,12 @@ public class BuildingsController : Controller
     // ═══════════════════════════════════════════════════════════
     // QrCodes — SuperAdmin فقط
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Shows the printable sheet of QR codes for the admin and for every apartment of a building.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET. Requires one of the roles <c>superadmin</c>.
+    /// </remarks>
     [HttpGet]
     [Authorize(Roles = "superadmin")]
     public async Task<IActionResult> QrCodes(string id)
@@ -130,6 +173,12 @@ public class BuildingsController : Controller
     // ═══════════════════════════════════════════════════════════
     // QrCodesPdf — SuperAdmin فقط
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Downloads the QR code sheet of a building as a PDF.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET. Requires one of the roles <c>superadmin</c>.
+    /// </remarks>
     [HttpGet]
     [Authorize(Roles = "superadmin")]
     public async Task<IActionResult> QrCodesPdf(string id)
@@ -147,6 +196,12 @@ public class BuildingsController : Controller
     // ═══════════════════════════════════════════════════════════
     // Delete — SuperAdmin فقط
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Handles the delete form submission of the buildings screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST. Requires one of the roles <c>superadmin</c>.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "superadmin")]
@@ -159,6 +214,12 @@ public class BuildingsController : Controller
     // ═══════════════════════════════════════════════════════════
     // AddFloor — SuperAdmin فقط
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Adds the floor.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST. Requires one of the roles <c>superadmin</c>.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "superadmin")]
@@ -185,6 +246,12 @@ public class BuildingsController : Controller
     // ═══════════════════════════════════════════════════════════
     // AddApartment — SuperAdmin فقط
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Adds the apartment.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST. Requires one of the roles <c>superadmin</c>.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "superadmin")]
@@ -204,6 +271,12 @@ public class BuildingsController : Controller
     // ═══════════════════════════════════════════════════════════
     // GenerateQuickQr — SuperAdmin + Admin ✅
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Generates the quick QR.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST. Requires one of the roles <c>superadmin,admin</c>.
+    /// </remarks>
     [Authorize(Roles = "superadmin,admin")]
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -212,6 +285,12 @@ public class BuildingsController : Controller
         int validityMinutes, bool oneTime, int maxUses,
         [FromServices] QrSecurityService qrSecurity)
     {
+        if (!User.IsInRole("superadmin") &&
+            !string.Equals(User.FindFirst("buildingId")?.Value, buildingId, StringComparison.Ordinal))
+            return Forbid();
+        if (validityMinutes < 1 || validityMinutes > 1440 || maxUses < 1 || maxUses > 1000)
+            return BadRequest(new { success = false, error = "invalid-qr-options" });
+
         var building = await _service.GetByIdAsync(buildingId);
         if (building == null) return NotFound();
 

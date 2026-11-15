@@ -1,4 +1,10 @@
-﻿@model BuildingManagementMvc.Models.MigrationResult
+﻿@* =============================================================================
+   View:        AdminResidents/MigrationResult
+   Rendered by: AdminResidentsController.MigrationResult
+   Model:       BuildingManagementMvc.Models.MigrationResult
+   Purpose:     Migration result page.
+   ============================================================================= *@
+@model BuildingManagementMvc.Models.MigrationResult
 @{
     ViewData["Title"] = Loc.T("Migration_Result");
     var dryRun = ViewBag.DryRun as bool? ?? false;

@@ -1,10 +1,16 @@
+@* =============================================================================
+   View:        Wallet/Index
+   Rendered by: WalletController.Index
+   Model:       none
+   Purpose:     Main page.
+   ============================================================================= *@
 @{
     ViewData["Title"] = Loc.T("Wallet_2");
     var building = (Building)ViewBag.Building;
     string month = ViewBag.Month;
-    var balances = (BuildingManagementMvc.Models.PagedResult<(BuildingManagementMvc.Models.Apartment Apt, double Balance)>)ViewBag.Balances;
+    var balances = (BuildingManagementMvc.Models.PagedResult<(BuildingManagementMvc.Models.Apartment Apt, decimal Balance)>)ViewBag.Balances;
     var pending = (BuildingManagementMvc.Models.PagedResult<(BuildingManagementMvc.Models.Apartment Apt, BuildingManagementMvc.Models.Deposit Deposit, string MonthKey)>)ViewBag.Pending;
-    var totals = ((double Collected, double Expenses, double Revenues, int OpenCount, int ClosedCount, double Balance, double TotalWallet))ViewBag.Totals;
+    var totals = ((decimal Collected, decimal Expenses, decimal Revenues, int OpenCount, int ClosedCount, decimal Balance, decimal TotalWallet))ViewBag.Totals;
     var routeValues = ViewBag.RouteValues as Dictionary<string, string?> ?? new();
     var routeValuesStr = new Dictionary<string, string>();
     foreach (var kv in routeValues)

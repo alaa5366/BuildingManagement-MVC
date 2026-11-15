@@ -1,4 +1,10 @@
-﻿@model List<BuildingManagementMvc.Models.Building>
+﻿@* =============================================================================
+   View:        Dvrs/ChooseBuilding
+   Rendered by: DvrsController.ChooseBuilding
+   Model:       List<BuildingManagementMvc.Models.Building>
+   Purpose:     Choose building page.
+   ============================================================================= *@
+@model List<BuildingManagementMvc.Models.Building>
 @{
     ViewData["Title"] = Loc.T("Choose_Building_Title");
 }
@@ -33,7 +39,7 @@
                             <h5 class="card-title mt-2">@b.Name</h5>
                             <p class="text-muted mb-2">@b.BuildingNumber</p>
                             <span class="badge bg-secondary">
-                                @b.Apartments.Count @Loc.T("Nav_Apts")
+                                @b.ApartmentsCount @Loc.T("Nav_Apts")
                             </span>
                         </div>
                     </a>

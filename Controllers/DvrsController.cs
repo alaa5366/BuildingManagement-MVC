@@ -9,6 +9,12 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  DvrsController	إدارة أجهزة DVR والكاميرات
 // ============================================================
+/// <summary>
+/// Management of DVR devices and the cameras attached to them (connection settings are stored encrypted).
+/// </summary>
+/// <remarks>
+/// Access: requires one of the roles <c>superadmin,admin</c>.
+/// </remarks>
 [Authorize(Roles = "superadmin,admin")]
 [AdminPermission(AdminPermissions.ManageDvrs)]
 public class DvrsController : Controller
@@ -18,6 +24,9 @@ public class DvrsController : Controller
     private readonly MediaMtxService _mediamtx;
     private readonly ILogger<DvrsController> _log;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DvrsController"/> class.
+    /// </summary>
     public DvrsController(
         DvrService dvrs,
         BuildingsService buildings,
@@ -42,6 +51,9 @@ public class DvrsController : Controller
     // ============================================================
     // Index — كل DVRs العمارة
     // ============================================================
+    /// <summary>
+    /// Shows the main page of the dvrs screen.
+    /// </summary>
     public async Task<IActionResult> Index(string? buildingId)
     {
         if (IsSuperAdmin && string.IsNullOrEmpty(buildingId))
@@ -66,6 +78,12 @@ public class DvrsController : Controller
     // ============================================================
     // Create
     // ============================================================
+    /// <summary>
+    /// Creates the dvrs create page.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Create(string buildingId)
     {
@@ -78,14 +96,21 @@ public class DvrsController : Controller
         return View();
     }
 
+    /// <summary>
+    /// Handles the create form submission of the dvrs screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(
         string buildingId, string name, string ip, int port,
         string brand, string username, string password)
     {
         if (!await CanManageAsync(buildingId)) return Forbid();
-        if (!ModelState.IsValid)
+        if (!ModelState.IsValid || !DvrNetworkPolicy.IsAllowedEndpoint(ip, port))
         {
+            ModelState.AddModelError(string.Empty, "يجب إدخال عنوان IP خاص بالشبكة الداخلية ومنفذ صحيح.");
             ViewBag.BuildingId = buildingId;
             ViewBag.Building = await _buildings.GetByIdAsync(buildingId);
             return View();
@@ -99,6 +124,12 @@ public class DvrsController : Controller
     // ============================================================
     // Edit
     // ============================================================
+    /// <summary>
+    /// Edits the dvrs edit page.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Edit(string id)
     {
@@ -110,6 +141,12 @@ public class DvrsController : Controller
         return View(dvr);
     }
 
+    /// <summary>
+    /// Handles the edit form submission of the dvrs screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(
         string id, string name, string ip, int port,
@@ -118,6 +155,11 @@ public class DvrsController : Controller
         var dvr = await _dvrs.GetByIdAsync(id);
         if (dvr == null) return NotFound();
         if (!await CanManageAsync(dvr.BuildingId)) return Forbid();
+        if (!DvrNetworkPolicy.IsAllowedEndpoint(ip, port))
+        {
+            TempData["Error"] = "يجب إدخال عنوان IP خاص بالشبكة الداخلية ومنفذ صحيح.";
+            return RedirectToAction(nameof(Edit), new { id });
+        }
 
         await _dvrs.UpdateAsync(id, name, ip, port, brand, username, newPassword, isActive);
         TempData["Success"] = Loc.T("Dvr_Updated_Successfully");
@@ -127,6 +169,9 @@ public class DvrsController : Controller
     // ============================================================
     // Details + Cameras
     // ============================================================
+    /// <summary>
+    /// Shows the details page of the dvrs screen.
+    /// </summary>
     public async Task<IActionResult> Details(string id)
     {
         var dvr = await _dvrs.GetByIdAsync(id);
@@ -137,6 +182,12 @@ public class DvrsController : Controller
         return View(dvr);
     }
 
+    /// <summary>
+    /// Adds the camera.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> AddCamera(
         string dvrId, string name, int channel, string? rtspPath)
@@ -144,6 +195,12 @@ public class DvrsController : Controller
         var dvr = await _dvrs.GetByIdAsync(dvrId);
         if (dvr == null) return NotFound();
         if (!await CanManageAsync(dvr.BuildingId)) return Forbid();
+
+        if (channel is < 1 or > 256 || !DvrNetworkPolicy.IsSafeRelativeRtspPath(rtspPath))
+        {
+            TempData["Error"] = "رقم القناة أو مسار RTSP غير صالح.";
+            return RedirectToAction(nameof(Details), new { id = dvrId });
+        }
 
         // سجّل الـ path في MediaMTX
         var password = await _dvrs.GetDecryptedPasswordAsync(dvrId);
@@ -155,7 +212,13 @@ public class DvrsController : Controller
 
         var camId = await _dvrs.AddCameraAsync(dvrId, name, channel, rtspPath ?? "");
         var pathName = $"cam_{camId}";
-        await _mediamtx.AddOrUpdatePathAsync(pathName, rtspUrl);
+        var registered = await _mediamtx.AddOrUpdatePathAsync(pathName, rtspUrl);
+        if (!registered)
+        {
+            await _dvrs.DeleteCameraAsync(camId);
+            TempData["Error"] = "تعذر تسجيل البث في MediaMTX؛ لم يتم الاحتفاظ بالكاميرا.";
+            return RedirectToAction(nameof(Details), new { id = dvrId });
+        }
 
         TempData["Success"] = Loc.T("Camera_Added_Successfully");
         return RedirectToAction(nameof(Details), new { id = dvrId });
@@ -164,6 +227,12 @@ public class DvrsController : Controller
     // ============================================================
     // Delete Camera
     // ============================================================
+    /// <summary>
+    /// Deletes the camera.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteCamera(string cameraId, string dvrId)
     {
@@ -171,8 +240,13 @@ public class DvrsController : Controller
         if (dvr == null) return NotFound();
         if (!await CanManageAsync(dvr.BuildingId)) return Forbid();
 
+        // Remove the MediaMTX path first. If the media server is unavailable, retain the SQL record for retry.
+        if (!await _mediamtx.DeletePathAsync($"cam_{cameraId}"))
+        {
+            TempData["Error"] = "تعذر حذف مسار البث من MediaMTX؛ لم يتم حذف سجل الكاميرا.";
+            return RedirectToAction(nameof(Details), new { id = dvrId });
+        }
         await _dvrs.DeleteCameraAsync(cameraId);
-        await _mediamtx.DeletePathAsync($"cam_{cameraId}");
 
         TempData["Success"] = Loc.T("Camera_Deleted_Successfully");
         return RedirectToAction(nameof(Details), new { id = dvrId });
@@ -181,6 +255,12 @@ public class DvrsController : Controller
     // ============================================================
     // Delete DVR
     // ============================================================
+    /// <summary>
+    /// Handles the delete form submission of the dvrs screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string id)
     {
@@ -188,6 +268,14 @@ public class DvrsController : Controller
         if (dvr == null) return NotFound();
         if (!await CanManageAsync(dvr.BuildingId)) return Forbid();
 
+        foreach (var camera in dvr.Cameras)
+        {
+            if (!await _mediamtx.DeletePathAsync($"cam_{camera.Id}"))
+            {
+                TempData["Error"] = "تعذر حذف جميع مسارات البث من MediaMTX؛ لم يتم حذف جهاز DVR.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+        }
         await _dvrs.DeleteAsync(id);
         TempData["Success"] = Loc.T("Dvr_Deleted_Successfully");
         return RedirectToAction(nameof(Index), new { buildingId = dvr.BuildingId });

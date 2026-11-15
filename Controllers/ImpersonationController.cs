@@ -11,12 +11,18 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  ImpersonationController	الانتحال (أدمن → ساكن / SuperAdmin → Admin)
 // ============================================================
+/// <summary>
+/// Lets super admins and admins enter a building or a resident's session and return to their own account. Every transition is audited.
+/// </summary>
 public class ImpersonationController : Controller
 {
     private readonly BuildingsService _buildings;
     private readonly ImpersonationService _impersonation;
     private readonly ILogger<ImpersonationController> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ImpersonationController"/> class.
+    /// </summary>
     public ImpersonationController(
         BuildingsService buildings,
         ImpersonationService impersonation,
@@ -35,6 +41,12 @@ public class ImpersonationController : Controller
     // ═══════════════════════════════════════════════════════════
     // POST: /Impersonation/EnterResidentWallet
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Enters the resident wallet.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST. Requires one of the roles <c>admin,superadmin</c>.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "admin,superadmin")]
@@ -67,6 +79,12 @@ public class ImpersonationController : Controller
     // ═══════════════════════════════════════════════════════════
     // POST: /Impersonation/EnterResidentHome
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Enters the resident home.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST. Requires one of the roles <c>admin,superadmin</c>.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "admin,superadmin")]
@@ -99,6 +117,12 @@ public class ImpersonationController : Controller
     // ═══════════════════════════════════════════════════════════
     // POST: /Impersonation/EnterBuildingAdmin
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Enters the building admin.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST. Requires one of the roles <c>superadmin</c>.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "superadmin")]
@@ -135,6 +159,12 @@ public class ImpersonationController : Controller
     // ═══════════════════════════════════════════════════════════
     // POST: /Impersonation/Exit
     // ═══════════════════════════════════════════════════════════
+    /// <summary>
+    /// Handles the exit form submission of the impersonation screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST. Requires one of the roles <c>resident,admin,superadmin</c>.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "resident,admin,superadmin")]

@@ -3,12 +3,21 @@ using BuildingManagementMvc.Models;
 namespace BuildingManagementMvc.Services;
 
 // ترجمة حرفية لـ js/core/revenues.js
+/// <summary>
+/// Business logic for monthly revenues.
+/// </summary>
 public class RevenuesService
 {
     private readonly WalletService _wallet;
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RevenuesService"/> class.
+    /// </summary>
     public RevenuesService(WalletService wallet) => _wallet = wallet;
 
-    public Revenue AddRevenue(Building building, string categoryId, string note, double amount, string? date, string monthKey)
+    /// <summary>
+    /// Adds the revenue.
+    /// </summary>
+    public Revenue AddRevenue(Building building, string categoryId, string note, decimal amount, string? date, string monthKey)
     {
         var m = _wallet.GetOrCreateMonth(building, monthKey);
         var revenue = new Revenue
@@ -23,6 +32,9 @@ public class RevenuesService
         return revenue;
     }
 
+    /// <summary>
+    /// Deletes the revenue.
+    /// </summary>
     public bool DeleteRevenue(Building building, string revenueId, string monthKey)
     {
         if (!building.Months.TryGetValue(monthKey, out var m)) return false;
@@ -31,6 +43,9 @@ public class RevenuesService
         return before != m.Revenues.Count;
     }
 
-    public double TotalRevenuesOfMonth(Building building, string monthKey) =>
+    /// <summary>
+    /// Returns the total revenues of month.
+    /// </summary>
+    public decimal TotalRevenuesOfMonth(Building building, string monthKey) =>
         building.Months.TryGetValue(monthKey, out var m) ? m.Revenues.Sum(r => r.Amount) : 0;
 }

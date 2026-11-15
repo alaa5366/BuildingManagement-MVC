@@ -1,4 +1,10 @@
-﻿@model Building
+﻿@* =============================================================================
+   View:        AdminApts/Index
+   Rendered by: AdminAptsController.Index
+   Model:       Building
+   Purpose:     Main page.
+   ============================================================================= *@
+@model Building
 @{
     ViewData["Title"] = Loc.T("Manage_Apartments");
     var currentMonth = BuildingManagementMvc.Services.WalletService.CurrentMonthKey();

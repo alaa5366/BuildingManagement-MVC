@@ -1,3 +1,9 @@
+@* =============================================================================
+   View:        Reports/Index
+   Rendered by: ReportsController.Index
+   Model:       ReportsVm
+   Purpose:     Main page.
+   ============================================================================= *@
 @model ReportsVm
 @{
     ViewData["Title"] = Loc.T("Reports_3");
@@ -101,7 +107,7 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="~/lib/chart.js/dist/chart.umd.js"></script>
 <script>
 const monthly = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Monthly));
 const categories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Categories));

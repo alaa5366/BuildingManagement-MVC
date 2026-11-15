@@ -1,4 +1,10 @@
-﻿@model List<BuildingManagementMvc.Data.Entities.ResidentEntity>
+﻿@* =============================================================================
+   View:        AdminResidents/Index
+   Rendered by: AdminResidentsController.Index
+   Model:       List<BuildingManagementMvc.Data.Entities.ResidentEntity>
+   Purpose:     Main page.
+   ============================================================================= *@
+@model List<BuildingManagementMvc.Data.Entities.ResidentEntity>
 @{
     ViewData["Title"] = Loc.T("Residents_Title");
     var building = ViewBag.Building as Building;

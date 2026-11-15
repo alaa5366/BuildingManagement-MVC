@@ -176,6 +176,29 @@ public class BackupServiceTests
     }
 
     [Fact]
+    public async Task RestoreSession_IsBoundToPreviewingUser_AndSingleUse()
+    {
+        _db.Buildings.Add(new BuildingEntity { Id = "session-b1", Name = "Session Tower", BuildingNumber = "BLD-991" });
+        await _db.SaveChangesAsync();
+        var (bytes, _) = await _service.CreateBackupAsync(new() { "buildings" }, "admin-a");
+        using var stream = new MemoryStream(bytes);
+        var preview = await _service.PreviewRestoreAsync(stream, "session.zip", "admin-a");
+        Assert.True(preview.Success);
+        Assert.False(string.IsNullOrWhiteSpace(preview.RestoreSessionId));
+
+        var denied = await _service.RestoreSessionAsync(preview.RestoreSessionId!, new() { "buildings" }, true, "admin-b");
+        Assert.False(denied.Success);
+        Assert.True(File.Exists(preview.TempFilePath));
+
+        var restored = await _service.RestoreSessionAsync(preview.RestoreSessionId!, new() { "buildings" }, true, "admin-a");
+        Assert.True(restored.Success, string.Join(";", restored.Errors));
+        Assert.False(File.Exists(preview.TempFilePath));
+
+        var replay = await _service.RestoreSessionAsync(preview.RestoreSessionId!, new() { "buildings" }, true, "admin-a");
+        Assert.False(replay.Success);
+    }
+
+    [Fact]
     public async Task PreviewRestoreAsync_InvalidZip_ReturnsError()
     {
         using var ms = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 });
@@ -206,7 +229,7 @@ public class BackupServiceTests
         Assert.True(backupResult.Success, "Backup failed: " + string.Join(", ", backupResult.Errors));
         Assert.Equal(1, backupResult.TotalCollections);
 
-        var tempPath = Path.Combine(Path.GetTempPath(), $"test-{Guid.NewGuid():N}.zip");
+        var tempPath = Path.Combine(Path.GetTempPath(), $"restore-{Guid.NewGuid():N}.zip");
         await File.WriteAllBytesAsync(tempPath, bytes);
 
         try

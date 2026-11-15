@@ -1,18 +1,38 @@
-using BuildingManagementMvc.Models;
+﻿using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Services;
 
 // ترجمة حرفية لـ js/features/maintenance.js
+/// <summary>
+/// Business logic for maintenance records.
+/// </summary>
 public class MaintenanceService
 {
     private readonly WalletService _wallet;
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MaintenanceService"/> class.
+    /// </summary>
     public MaintenanceService(WalletService wallet) => _wallet = wallet;
 
+    /// <summary>
+    /// Gets the log.
+    /// </summary>
     public List<MaintenanceRecord> GetLog(Building building) =>
         building.MaintenanceLog.OrderByDescending(m => m.Date).ToList();
 
-    public MaintenanceRecord Add(Building building, string title, string? description, string date, double cost, string? vendor, string status, string createdBy)
+    /// <summary>
+    /// Adds the operation on the maintenance.
+    /// </summary>
+    public MaintenanceRecord Add(Building building, string title, string? description, string date, decimal cost, string? vendor, string status, string createdBy)
     {
+        if (string.IsNullOrWhiteSpace(title)) throw new ArgumentException("Maintenance title is required.", nameof(title));
+        if (cost < 0) throw new ArgumentOutOfRangeException(nameof(cost), "Maintenance cost cannot be negative.");
+        if (!DateTime.TryParse(date, System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AssumeUniversal, out _))
+            throw new ArgumentException("Maintenance date is invalid.", nameof(date));
+        status = string.IsNullOrWhiteSpace(status) ? "open" : status.Trim().ToLowerInvariant();
+        if (!new[] { "open", "inprogress", "done", "cancelled" }.Contains(status))
+            throw new ArgumentException("Maintenance status is invalid.", nameof(status));
         var record = new MaintenanceRecord
         {
             Id = "mnt-" + Guid.NewGuid().ToString("N"),
@@ -30,10 +50,21 @@ public class MaintenanceService
         return record;
     }
 
-    public MaintenanceRecord? Update(Building building, string id, string title, string? description, string date, double cost, string? vendor, string status)
+    /// <summary>
+    /// Updates the operation on the maintenance.
+    /// </summary>
+    public MaintenanceRecord? Update(Building building, string id, string title, string? description, string date, decimal cost, string? vendor, string status)
     {
         var record = building.MaintenanceLog.FirstOrDefault(r => r.Id == id);
         if (record == null) return null;
+        if (string.IsNullOrWhiteSpace(title)) throw new ArgumentException("Maintenance title is required.", nameof(title));
+        if (cost < 0) throw new ArgumentOutOfRangeException(nameof(cost), "Maintenance cost cannot be negative.");
+        if (!DateTime.TryParse(date, System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AssumeUniversal, out _))
+            throw new ArgumentException("Maintenance date is invalid.", nameof(date));
+        status = (status ?? string.Empty).Trim().ToLowerInvariant();
+        if (!new[] { "open", "inprogress", "done", "cancelled" }.Contains(status))
+            throw new ArgumentException("Maintenance status is invalid.", nameof(status));
         record.Title = title;
         record.Description = description ?? "";
         record.Date = date;
@@ -43,6 +74,9 @@ public class MaintenanceService
         return record;
     }
 
+    /// <summary>
+    /// Deletes the operation on the maintenance.
+    /// </summary>
     public bool Delete(Building building, string id)
     {
         var before = building.MaintenanceLog.Count;
@@ -51,10 +85,13 @@ public class MaintenanceService
     }
 
     // إضافة تكلفة الصيانة كمصروف على الشهر الحالي وإعادة حساب التوزيع
+    /// <summary>
+    /// Adds the cost to expenses.
+    /// </summary>
     public Expense? AddCostToExpenses(Building building, string id, string monthKey, string createdBy)
     {
         var record = building.MaintenanceLog.FirstOrDefault(r => r.Id == id);
-        if (record == null || record.AddedToExpense) return null;
+        if (record == null || record.AddedToExpense || record.Cost <= 0) return null;
 
         var m = _wallet.GetOrCreateMonth(building, monthKey);
 

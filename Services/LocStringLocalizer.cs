@@ -3,6 +3,9 @@ using Microsoft.Extensions.Localization;
 namespace BuildingManagementMvc.Services;
 
 // Adapter بسيط بيخلّي DataAnnotations (ErrorMessage = "Key") والـ _Layout يقروا من نفس ملفات Shared.*.resx
+/// <summary>
+/// Adapter that exposes <see cref="Loc"/> as an ASP.NET <c>IStringLocalizer</c>.
+/// </summary>
 public class LocStringLocalizer : IStringLocalizer
 {
     public LocalizedString this[string name]
@@ -23,6 +26,9 @@ public class LocStringLocalizer : IStringLocalizer
         }
     }
 
+    /// <summary>
+    /// Gets all strings.
+    /// </summary>
     public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) =>
         Enumerable.Empty<LocalizedString>();
 }

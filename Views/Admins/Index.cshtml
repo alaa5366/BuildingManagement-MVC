@@ -1,4 +1,10 @@
-﻿@model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.AppUserDoc>
+﻿@* =============================================================================
+   View:        Admins/Index
+   Rendered by: AdminsController.Index
+   Model:       BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.AppUserDoc>
+   Purpose:     Main page.
+   ============================================================================= *@
+@model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.AppUserDoc>
 @{
     ViewData["Title"] = Loc.T("Manage_Admins");
     var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Models.Building> ?? new();

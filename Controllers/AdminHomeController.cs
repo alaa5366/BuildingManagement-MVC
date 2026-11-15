@@ -7,18 +7,30 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  AdminHomeController — لوحة تحكم الأدمن الرئيسية (Building Map)
 // ============================================================
+/// <summary>
+/// Admin dashboard: building map, apartment details modal and key statistics.
+/// </summary>
+/// <remarks>
+/// Access: requires one of the roles <c>admin</c>.
+/// </remarks>
 [Authorize(Roles = "admin")]
 public class AdminHomeController : Controller
 {
     private readonly BuildingsService _buildings;
     private readonly BuildingMapService _map;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AdminHomeController"/> class.
+    /// </summary>
     public AdminHomeController(BuildingsService buildings, BuildingMapService map)
     {
         _buildings = buildings;
         _map = map;
     }
 
+    /// <summary>
+    /// Shows the main page of the admin home screen.
+    /// </summary>
     public async Task<IActionResult> Index()
     {
         var buildingId = User.FindFirstValue("buildingId");
@@ -35,6 +47,12 @@ public class AdminHomeController : Controller
     // ============================================================
     // ✅ Phase 24.3 — Apartment Details (AJAX)
     // ============================================================
+    /// <summary>
+    /// Returns the apartment details modal (partial view) shown from the building map.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> ApartmentDetails(string aptId)
     {

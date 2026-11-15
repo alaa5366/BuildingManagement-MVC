@@ -375,9 +375,24 @@ public class QuickTokenValidation
 /// </summary>
 public class QrUsage
 {
+    /// <summary>
+    /// Gets or sets the identifier of the token.
+    /// </summary>
     public string TokenId { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the use count.
+    /// </summary>
     public int UseCount { get; set; }
+    /// <summary>
+    /// Gets or sets the first used date and time.
+    /// </summary>
     public string FirstUsedAt { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the last used date and time.
+    /// </summary>
     public string LastUsedAt { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the device fingerprint.
+    /// </summary>
     public string? DeviceFingerprint { get; set; }
 }

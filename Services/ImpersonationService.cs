@@ -4,6 +4,9 @@ using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Keeps the stack of identities for impersonation (super admin to admin to resident) in a protected, time-limited cookie.
+/// </summary>
 public class ImpersonationService
 {
     private const string BackupCookieName = "bm_admin_backup_stack";
@@ -14,6 +17,9 @@ public class ImpersonationService
     private readonly ILogger<ImpersonationService> _logger;
     private readonly ITimeLimitedDataProtector _protector;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ImpersonationService"/> class.
+    /// </summary>
     public ImpersonationService(
         IAuditLogger audit,
         ILogger<ImpersonationService> logger,
@@ -29,6 +35,9 @@ public class ImpersonationService
     // ============================================================
     // 1. قراءة الـ Stack (من Items أو Cookie)
     // ============================================================
+    /// <summary>
+    /// Reads the backup stack.
+    /// </summary>
     public List<AdminBackupData> ReadBackupStack(HttpContext ctx)
     {
         // ✅ الأول: من Items (نفس الطلب)
@@ -61,6 +70,9 @@ public class ImpersonationService
     // ============================================================
     // 2. Push
     // ============================================================
+    /// <summary>
+    /// Pushes the backup.
+    /// </summary>
     public void PushBackup(HttpContext ctx, AdminBackupData data)
     {
         var stack = ReadBackupStack(ctx);
@@ -82,6 +94,9 @@ public class ImpersonationService
     // ============================================================
     // 3. Pop
     // ============================================================
+    /// <summary>
+    /// Pops the backup.
+    /// </summary>
     public AdminBackupData? PopBackup(HttpContext ctx)
     {
         var stack = ReadBackupStack(ctx);
@@ -101,6 +116,9 @@ public class ImpersonationService
     // ============================================================
     // 4. Peek
     // ============================================================
+    /// <summary>
+    /// Returns the peek backup.
+    /// </summary>
     public AdminBackupData? PeekBackup(HttpContext ctx)
     {
         var stack = ReadBackupStack(ctx);
@@ -110,11 +128,17 @@ public class ImpersonationService
     // ============================================================
     // 5. IsImpersonating
     // ============================================================
+    /// <summary>
+    /// Determines whether the value is impersonating.
+    /// </summary>
     public bool IsImpersonating(HttpContext ctx)
     {
         return ctx.User.HasClaim("impersonated", "true");
     }
 
+    /// <summary>
+    /// Returns the stack depth.
+    /// </summary>
     public int StackDepth(HttpContext ctx) => ReadBackupStack(ctx).Count;
 
     // ============================================================
@@ -147,6 +171,9 @@ public class ImpersonationService
     // ============================================================
     // 7. ClearStack
     // ============================================================
+    /// <summary>
+    /// Clears the stack.
+    /// </summary>
     public void ClearStack(HttpContext ctx)
     {
         ctx.Items.Remove(ItemsKey);
@@ -156,6 +183,9 @@ public class ImpersonationService
     // ============================================================
     // 8. Audit Logs
     // ============================================================
+    /// <summary>
+    /// Logs the enter.
+    /// </summary>
     public async Task LogEnterAsync(Building building, Apartment apt, string adminUid, string adminName)
     {
         await _audit.LogAsync(
@@ -168,6 +198,9 @@ public class ImpersonationService
             severity: "critical");
     }
 
+    /// <summary>
+    /// Logs the exit.
+    /// </summary>
     public async Task LogExitAsync(string buildingId, string adminUid, string adminName)
     {
         await _audit.LogAsync(
@@ -179,6 +212,9 @@ public class ImpersonationService
             severity: "warning");
     }
 
+    /// <summary>
+    /// Logs the enter building admin.
+    /// </summary>
     public async Task LogEnterBuildingAdminAsync(Building building, string superAdminUid, string superAdminName)
     {
         await _audit.LogAsync(
@@ -196,14 +232,41 @@ public class ImpersonationService
     }
 }
 
+/// <summary>
+/// Snapshot of the original identity stored while impersonating another user.
+/// </summary>
 public class AdminBackupData
 {
+    /// <summary>
+    /// Gets or sets the user ID.
+    /// </summary>
     public string Uid { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the display name.
+    /// </summary>
     public string Name { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the email.
+    /// </summary>
     public string Email { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the role.
+    /// </summary>
     public string Role { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the building IDs.
+    /// </summary>
     public List<string> BuildingIds { get; set; } = new();
+    /// <summary>
+    /// Gets or sets the permissions.
+    /// </summary>
     public List<string> Permissions { get; set; } = new();
+    /// <summary>
+    /// Gets or sets the started date and time.
+    /// </summary>
     public string StartedAt { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the identifier of the building.
+    /// </summary>
     public string BuildingId { get; set; } = "";
 }

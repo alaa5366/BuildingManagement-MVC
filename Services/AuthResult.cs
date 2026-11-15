@@ -7,19 +7,55 @@
 // =====================================================================
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Outcome of a sign-in attempt: success with the identity data, or failure with a reason code.
+/// </summary>
 public class AuthResult
 {
+    /// <summary>
+    /// Gets or sets a value indicating whether it is success.
+    /// </summary>
     public bool Success { get; set; }
+    /// <summary>
+    /// Gets or sets the error.
+    /// </summary>
     public string? Error { get; set; }
+    /// <summary>
+    /// Gets or sets the reason.
+    /// </summary>
     public string? Reason { get; set; }
+    /// <summary>
+    /// Gets or sets the user ID.
+    /// </summary>
     public string? Uid { get; set; }
+    /// <summary>
+    /// Gets or sets the role.
+    /// </summary>
     public string? Role { get; set; }
+    /// <summary>
+    /// Gets or sets the email.
+    /// </summary>
     public string? Email { get; set; }
+    /// <summary>
+    /// Gets or sets the display name.
+    /// </summary>
     public string? Name { get; set; }
+    /// <summary>
+    /// Gets or sets the building IDs.
+    /// </summary>
     public List<string> BuildingIds { get; set; } = new();
+    /// <summary>
+    /// Gets or sets the identifier of the apartment.
+    /// </summary>
     public string? ApartmentId { get; set; }
+    /// <summary>
+    /// Gets or sets the apartment number.
+    /// </summary>
     public int? ApartmentNumber { get; set; }
 
+    /// <summary>
+    /// Returns the ok.
+    /// </summary>
     public static AuthResult Ok(
         string uid,
         string role,
@@ -39,6 +75,9 @@ public class AuthResult
             ApartmentNumber = aptNumber
         };
 
+    /// <summary>
+    /// Returns the fail.
+    /// </summary>
     public static AuthResult Fail(string error, string? reason = null) =>
         new() { Success = false, Error = error, Reason = reason };
 }

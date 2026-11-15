@@ -7,12 +7,21 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  PresenceController	تتبع "متصل الآن"
 // ============================================================
+/// <summary>
+/// Heartbeat endpoint used to show which users are currently online.
+/// </summary>
+/// <remarks>
+/// Access: any signed-in user (roles are checked per action).
+/// </remarks>
 [Authorize]
 public class PresenceController : Controller
 {
     private readonly PresenceService _presence;
     private readonly ILogger<PresenceController> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PresenceController"/> class.
+    /// </summary>
     public PresenceController(PresenceService presence, ILogger<PresenceController> logger)
     {
         _presence = presence;
@@ -23,6 +32,12 @@ public class PresenceController : Controller
     // POST /Presence/Heartbeat
     // بدون CSRF — لأنها عملية غير حساسة
     // ============================================================
+    /// <summary>
+    /// Records that the signed-in user is online. The browser calls it periodically.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [IgnoreAntiforgeryToken]
     public async Task<IActionResult> Heartbeat()

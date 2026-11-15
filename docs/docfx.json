@@ -1,0 +1,20 @@
+{
+  "metadata": [
+    {
+      "src": [ { "files": [ "BuildingManagementMVC.csproj" ], "src": ".." } ],
+      "dest": "api",
+      "properties": { "TargetFramework": "net8.0" }
+    }
+  ],
+  "build": {
+    "content": [
+      { "files": [ "api/**.yml", "api/index.md" ] },
+      { "files": [ "articles/**.md", "articles/**/toc.yml", "toc.yml", "*.md" ] }
+    ],
+    "dest": "_site",
+    "globalMetadata": {
+      "_appTitle": "Building Management",
+      "_enableSearch": true
+    }
+  }
+}

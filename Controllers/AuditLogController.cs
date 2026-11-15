@@ -11,12 +11,21 @@ using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Controllers;
 
+/// <summary>
+/// Shows and exports the audit log. The scope (all buildings, one building, one apartment) depends on the signed-in role.
+/// </summary>
+/// <remarks>
+/// Access: requires one of the roles <c>superadmin,admin,resident</c>.
+/// </remarks>
 [Authorize(Roles = "superadmin,admin,resident")]
 public class AuditLogController : Controller
 {
     private readonly AuditLogQueryService _audit;
     private readonly BuildingsService _buildings;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AuditLogController"/> class.
+    /// </summary>
     public AuditLogController(AuditLogQueryService audit, BuildingsService buildings)
     {
         _audit = audit;
@@ -29,13 +38,22 @@ public class AuditLogController : Controller
     private bool IsAdmin => User.IsInRole("admin");
     private bool IsResident => User.IsInRole("resident");
 
-    [HttpGet]
+    /// <summary>
+    /// Shows the main page of the audit log screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Index(
     string? buildingId, string? apartmentId, string? userId,
     string? actionFilter, string? severity, string? from, string? to,
     int page = 1, int pageSize = 50)
     {
+        if ((IsResident && (string.IsNullOrWhiteSpace(CurrentBuildingId) || string.IsNullOrWhiteSpace(CurrentApartmentId))) ||
+            (IsAdmin && string.IsNullOrWhiteSpace(CurrentBuildingId))) return Forbid();
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 200);
         string? qBuildingId = null;
         string? qApartmentId = null;
 
@@ -62,19 +80,15 @@ public class AuditLogController : Controller
             ViewBag.CanFilterByApartment = true;
         }
 
-        var entries = await _audit.QueryAsync(
+        var pagedResult = await _audit.QueryPageAsync(
             buildingId: qBuildingId,
             apartmentId: qApartmentId,
             userId: string.IsNullOrWhiteSpace(userId) ? null : userId,
             action: string.IsNullOrWhiteSpace(actionFilter) ? null : actionFilter,
             severity: string.IsNullOrWhiteSpace(severity) ? null : severity,
-            from: ParseDate(from),
-            to: ParseDate(to),
-            limit: 10000);  // ← نجيب كل السجلات، ثم نعمل pagination في الـ memory
-
-        // ✅ Pagination في الـ memory
-        var pagedResult = PagedResult<BuildingManagementMvc.Services.AuditEntryDoc>.Create(
-            entries, page, pageSize);
+            from: ParseDate(from), to: ParseDate(to), page: page, pageSize: pageSize);
+        page = pagedResult.CurrentPage;
+        pageSize = pagedResult.PageSize;
 
         ViewBag.Buildings = IsSuperAdmin
             ? await _buildings.GetSummariesAsync()
@@ -107,12 +121,19 @@ public class AuditLogController : Controller
         return View(pagedResult);
     }
 
-    [HttpGet]
+    /// <summary>
+    /// Exports the CSV.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> ExportCsv(
     string? buildingId, string? apartmentId, string? userId,
     string? actionFilter, string? severity, string? from, string? to)
     {
+        if ((IsResident && (string.IsNullOrWhiteSpace(CurrentBuildingId) || string.IsNullOrWhiteSpace(CurrentApartmentId))) ||
+            (IsAdmin && string.IsNullOrWhiteSpace(CurrentBuildingId))) return Forbid();
         string? qBuildingId = null;
         string? qApartmentId = null;
 
@@ -144,8 +165,7 @@ public class AuditLogController : Controller
 
         var sb = new StringBuilder();
         sb.Append('\uFEFF');
-        void Row(params string[] cells) => sb.AppendLine(string.Join(",",
-            cells.Select(c => $"\"{(c ?? "").Replace("\"", "\"\"")}\"")));
+        void Row(params string[] cells) => sb.AppendLine(string.Join(",", cells.Select(CsvExportSafety.Cell)));
 
         Row(Loc.T("Date"), Loc.T("Action"), Loc.T("Description"), Loc.T("Severity"),
             Loc.T("User"), Loc.T("Role"), Loc.T("Building"), Loc.T("Apartment"));

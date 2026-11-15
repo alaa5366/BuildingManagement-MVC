@@ -1406,4 +1406,32 @@ Beispiel: Bewohner verreist – leere Wohnung – Wartung</value></data>
   <data name="Leave_Empty_To_Keep_Current_Pin" xml:space="preserve"><value>Leer lassen, um die aktuelle PIN zu behalten. Geben Sie 4 Ziffern ein, um sie zurückzusetzen.</value></data>
   <!-- ===== Phase 9: security ===== -->
   <data name="Invalid_Image_File" xml:space="preserve"><value>Die Datei ist kein gültiges Bild (JPG, PNG, WebP, GIF oder HEIC)</value></data>
+  <!-- ===== Phase 12: backup collection labels ===== -->
+  <data name="Backup_Collection_globalSettings" xml:space="preserve"><value>Globale Einstellungen</value></data>
+  <data name="Backup_Collection_scheduledBackupSettings" xml:space="preserve"><value>Einstellungen für geplante Sicherungen</value></data>
+  <data name="Backup_Collection_users" xml:space="preserve"><value>Benutzer</value></data>
+  <data name="Backup_Collection_buildings" xml:space="preserve"><value>Gebäude</value></data>
+  <data name="Backup_Collection_buildingSettings" xml:space="preserve"><value>Gebäudeeinstellungen</value></data>
+  <data name="Backup_Collection_buildingAdmins" xml:space="preserve"><value>Gebäudeadmins</value></data>
+  <data name="Backup_Collection_floors" xml:space="preserve"><value>Etagen</value></data>
+  <data name="Backup_Collection_apartments" xml:space="preserve"><value>Wohnungen</value></data>
+  <data name="Backup_Collection_residents" xml:space="preserve"><value>Bewohner</value></data>
+  <data name="Backup_Collection_financialCategories" xml:space="preserve"><value>Finanzkategorien</value></data>
+  <data name="Backup_Collection_expenses" xml:space="preserve"><value>Ausgaben</value></data>
+  <data name="Backup_Collection_revenues" xml:space="preserve"><value>Einnahmen</value></data>
+  <data name="Backup_Collection_monthlyApartmentShares" xml:space="preserve"><value>Monatliche Wohnungsanteile</value></data>
+  <data name="Backup_Collection_deposits" xml:space="preserve"><value>Einzahlungen</value></data>
+  <data name="Backup_Collection_depositEditHistory" xml:space="preserve"><value>Änderungsverlauf der Einzahlungen</value></data>
+  <data name="Backup_Collection_walletAdjustments" xml:space="preserve"><value>Geldbörsen-Korrekturen</value></data>
+  <data name="Backup_Collection_userPermissions" xml:space="preserve"><value>Benutzerberechtigungen</value></data>
+  <data name="Backup_Collection_auditLog" xml:space="preserve"><value>Prüfprotokoll</value></data>
+  <data name="Backup_Collection_notifications" xml:space="preserve"><value>Benachrichtigungen</value></data>
+  <data name="Backup_Collection_polls" xml:space="preserve"><value>Abstimmungen</value></data>
+  <data name="Backup_Collection_pollOptions" xml:space="preserve"><value>Abstimmungsoptionen</value></data>
+  <data name="Backup_Collection_pollVotes" xml:space="preserve"><value>Abstimmungsstimmen</value></data>
+  <data name="Backup_Collection_maintenanceRecords" xml:space="preserve"><value>Wartungseinträge</value></data>
+  <data name="Backup_Collection_dvrs" xml:space="preserve"><value>DVR-Geräte</value></data>
+  <data name="Backup_Collection_cameras" xml:space="preserve"><value>Kameras</value></data>
+  <data name="Backup_Collection_qrTokens" xml:space="preserve"><value>QR-Token</value></data>
+  <data name="Backup_Collection_qrUsages" xml:space="preserve"><value>QR-Token-Nutzung</value></data>
 </root>

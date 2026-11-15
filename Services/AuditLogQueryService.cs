@@ -2,15 +2,24 @@
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Read-side queries and filtering over the audit log.
+/// </summary>
 public class AuditLogQueryService
 {
     private readonly IAuditLogger _audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AuditLogQueryService"/> class.
+    /// </summary>
     public AuditLogQueryService(IAuditLogger audit)
     {
         _audit = audit;
     }
 
+    /// <summary>
+    /// Returns the query.
+    /// </summary>
     public Task<List<AuditEntryDoc>> QueryAsync(
         string? buildingId = null,
         string? apartmentId = null,
@@ -23,10 +32,30 @@ public class AuditLogQueryService
     {
         return _audit.QueryAsync(buildingId, apartmentId, userId, from, to, action, severity, limit);
     }
+    /// <summary>
+    /// يستعلم عن صفحة من سجلات التدقيق من مصدر البيانات.
+    /// </summary>
+    /// <param name="buildingId">معايير التصفية والترقيم.</param>
+    /// <param name="apartmentId"></param>
+    /// <param name="userId"></param>
+    /// <param name="action"></param>
+    /// <param name="severity"></param>
+    /// <param name="from"></param>
+    /// <param name="to"></param>
+    /// <param name="page"></param>
+    /// <param name="pageSize"></param>
+    /// <returns>صفحة من سجلات التدقيق.</returns>
+    public Task<BuildingManagementMvc.Models.PagedResult<AuditEntryDoc>> QueryPageAsync(
+        string? buildingId, string? apartmentId, string? userId, string? action, string? severity,
+        DateTime? from, DateTime? to, int page, int pageSize)
+        => _audit.QueryPageAsync(buildingId, apartmentId, userId, from, to, action, severity, page, pageSize);
 
     // ============================================================
     // Known Actions
     // ============================================================
+    /// <summary>
+    /// The known actions field.
+    /// </summary>
     public static readonly List<string> KnownActions = new()
     {
         // Admin
@@ -76,6 +105,9 @@ public class AuditLogQueryService
         "impersonation.exit"
     };
 
+    /// <summary>
+    /// Returns the label ar.
+    /// </summary>
     public static string LabelAr(string action) => action switch
     {
         "admin.create" => Loc.T("Create_Admin"),
@@ -133,6 +165,9 @@ public class AuditLogQueryService
         _ => action
     };
 
+    /// <summary>
+    /// Returns the severity badge class.
+    /// </summary>
     public static string SeverityBadgeClass(string severity) => severity switch
     {
         "critical" => "bg-danger",
@@ -141,6 +176,9 @@ public class AuditLogQueryService
         _ => "bg-secondary"
     };
 
+    /// <summary>
+    /// Returns the severity label ar.
+    /// </summary>
     public static string SeverityLabelAr(string severity) => severity switch
     {
         "critical" => Loc.T("Critical"),

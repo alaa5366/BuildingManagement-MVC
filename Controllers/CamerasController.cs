@@ -10,6 +10,12 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  CamerasController	عرض الكاميرات المباشر (HLS via MediaMTX)
 // ============================================================
+/// <summary>
+/// Live camera viewing for residents/admins and camera management for a building.
+/// </summary>
+/// <remarks>
+/// Access: any signed-in user (roles are checked per action).
+/// </remarks>
 [Authorize]
 public class CamerasController : Controller
 {
@@ -17,22 +23,34 @@ public class CamerasController : Controller
     private readonly BuildingsService _buildings;
     private readonly IConfiguration _config;
     private readonly ILogger<CamerasController> _log;
+    private readonly IWebHostEnvironment _env;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CamerasController"/> class.
+    /// </summary>
     public CamerasController(
         IDbContextFactory<AppDbContext> sqlFactory,
         BuildingsService buildings,
         IConfiguration config,
-        ILogger<CamerasController> log)
+        ILogger<CamerasController> log,
+        IWebHostEnvironment env)
     {
         _sqlFactory = sqlFactory;
         _buildings = buildings;
         _config = config;
         _log = log;
+        _env = env;
     }
 
     // ============================================================
     // Live View
     // ============================================================
+    /// <summary>
+    /// Shows the live camera wall of a building.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Live(string? buildingId)
     {
@@ -74,6 +92,12 @@ public class CamerasController : Controller
     // ============================================================
     // Get HLS URL — ✅ HLS مباشر من MediaMTX
     // ============================================================
+    /// <summary>
+    /// Gets the HLS URL.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> GetHlsUrl(string cameraId)
     {
@@ -92,30 +116,28 @@ public class CamerasController : Controller
         if (role != "superadmin" && userBuildingId != cam.BuildingId)
             return Forbid();
 
-        // ✅ استخرج اسم الـ stream من RTSP Path
-        var streamName = cam.RtspPath?.Trim() ?? "";
-
-        // لو الـ RtspPath كامل (rtsp://...)، استخرج اسم المسار
-        if (streamName.StartsWith("rtsp://", StringComparison.OrdinalIgnoreCase))
-        {
-            try
-            {
-                var uri = new Uri(streamName);
-                streamName = uri.AbsolutePath.TrimStart('/');
-            }
-            catch
-            {
-                streamName = $"cam{cam.Channel}";
-            }
-        }
-
-        // لو فاضي، استخدم "cam{channel}"
-        if (string.IsNullOrWhiteSpace(streamName))
-            streamName = $"cam{cam.Channel}";
+        // MediaMTX paths are registered as cam_{cameraId} by DvrsController.AddCamera.
+        var streamName = $"cam_{cam.Id}";
 
         // ✅ HLS URL من MediaMTX
-        var hlsBase = _config["MediaMtx:HlsBaseUrl"] ?? "http://localhost:8888";
-        var hlsUrl = $"{hlsBase.TrimEnd('/')}/{streamName}/index.m3u8";
+        var hlsBase = _config["MediaMtx:HlsBaseUrl"];
+        if (string.IsNullOrWhiteSpace(hlsBase))
+        {
+            if (!_env.IsDevelopment())
+            {
+                _log.LogError("MediaMtx:HlsBaseUrl is not configured for a non-development environment.");
+                return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                    new { error = "camera-stream-not-configured" });
+            }
+            hlsBase = "http://localhost:8888";
+        }
+        if (!Uri.TryCreate(hlsBase, UriKind.Absolute, out var hlsUri) ||
+            (hlsUri.Scheme != Uri.UriSchemeHttp && hlsUri.Scheme != Uri.UriSchemeHttps) ||
+            (!_env.IsDevelopment() && hlsUri.IsLoopback))
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { error = "invalid-camera-stream-configuration" });
+
+        var hlsUrl = $"{hlsBase.TrimEnd('/')}/{streamName.TrimStart('/')}/index.m3u8";
 
         return Json(new
         {

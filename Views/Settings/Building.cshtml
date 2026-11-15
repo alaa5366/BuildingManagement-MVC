@@ -1,4 +1,10 @@
-﻿@model BuildingManagementMvc.Models.BuildingSettings
+﻿@* =============================================================================
+   View:        Settings/Building
+   Rendered by: SettingsController.Building
+   Model:       BuildingManagementMvc.Models.BuildingSettings
+   Purpose:     Building page.
+   ============================================================================= *@
+@model BuildingManagementMvc.Models.BuildingSettings
 @{
     ViewData["Title"] = Loc.T("Building_Settings");
     var building = ViewBag.Building as BuildingManagementMvc.Models.Building;

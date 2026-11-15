@@ -8,6 +8,12 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  QrController	إدارة QRs (Stable + Access Links)
 // ============================================================
+/// <summary>
+/// Generation of QR codes and temporary login links for apartments and admins.
+/// </summary>
+/// <remarks>
+/// Access: requires one of the roles <c>admin</c>.
+/// </remarks>
 [Authorize(Roles = "admin")]
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageResidents)]
 public class QrController : Controller
@@ -18,6 +24,9 @@ public class QrController : Controller
     private readonly QrTokenStoreService _qrStore;
     private readonly AuditLogService _audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="QrController"/> class.
+    /// </summary>
     public QrController(BuildingsService buildings, QrGeneratorService qrGen, QrAuthService qrAuth,
         QrTokenStoreService qrStore, AuditLogService audit)
     {
@@ -26,6 +35,12 @@ public class QrController : Controller
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
 
+    /// <summary>
+    /// Shows the main page of the QR screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Index()
     {
@@ -36,6 +51,12 @@ public class QrController : Controller
 
     // كود QR ثابت للشقة (يتلصق على الباب) — بيودّي لصفحة دخول الساكن
     // مع تعبئة العمارة/الدور/رقم الشقة تلقائيًا
+    /// <summary>
+    /// Renders a printable badge (with a QR code) for one apartment.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> ApartmentBadge(string aptId)
     {
@@ -52,6 +73,12 @@ public class QrController : Controller
     }
 
     // رابط دخول مؤقت (بدون تليفون/PIN) — لما الساكن ينسى الـ PIN مثلًا
+    /// <summary>
+    /// Generates the access link.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> GenerateAccessLink(string aptId, int minutes, bool oneTime)

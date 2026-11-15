@@ -3,8 +3,14 @@ using System.Text.RegularExpressions;
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Parses OCR text of a transfer receipt into amount, reference, date, account and sender.
+/// </summary>
 public class TransactionParser
 {
+    /// <summary>
+    /// Parses OCR text of a transfer receipt. Returns <c>null</c> for empty text; otherwise returns the parsed fields (amount is 0 when none was found).
+    /// </summary>
     public TransactionData? Parse(string ocrText)
     {
         if (string.IsNullOrWhiteSpace(ocrText))
@@ -24,14 +30,20 @@ public class TransactionParser
 
         if (!amountMatch.Success)
         {
-            // fallback 2: رقم صحيح (250)
-            amountMatch = Regex.Match(ocrText, @"\b(\d{3,6})\b");
+            // fallback 2: رقم صحيح (250) — بس لو جنب كلمة مبلغ/عملة،
+            // عشان مانلقطش سنة (2026) أو رقم عشوائي من الصورة على إنه المبلغ.
+            // لو مفيش تطابق المبلغ يفضل 0 والمستخدم يكتبه بإيده.
+            amountMatch = Regex.Match(ocrText,
+                @"(?<![\p{L}\d])(?:Amount|المبلغ|مبلغ|EGP|LE|جنيه|ج\.م)(?![\p{L}])\s*[:\-]?\s*(?<n>\d{3,6})(?![\d.,])" +
+                @"|(?<![\d.,])(?<n>\d{3,6})(?![\d.,])\s*(?:EGP|LE|جنيه|ج\.م)(?![\p{L}])",
+                RegexOptions.IgnoreCase);
         }
 
         if (amountMatch.Success)
         {
-            var cleaned = amountMatch.Groups[1].Value.Replace(",", "");
-            if (double.TryParse(cleaned, NumberStyles.Any, CultureInfo.InvariantCulture, out var amount))
+            var amountText = amountMatch.Groups["n"].Success ? amountMatch.Groups["n"].Value : amountMatch.Groups[1].Value;
+            var cleaned = amountText.Replace(",", "");
+            if (decimal.TryParse(cleaned, NumberStyles.Any, CultureInfo.InvariantCulture, out var amount))
                 data.Amount = amount;
         }
 
@@ -86,16 +98,46 @@ public class TransactionParser
     }
 }
 
+/// <summary>
+/// Parsed fields of a transfer receipt.
+/// </summary>
 public class TransactionData
 {
-    public double Amount { get; set; }
+    /// <summary>
+    /// Gets or sets the amount.
+    /// </summary>
+    public decimal Amount { get; set; }
+    /// <summary>
+    /// Gets or sets the reference.
+    /// </summary>
     public string Reference { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the date.
+    /// </summary>
     public string Date { get; set; } = "";
+    /// <summary>
+    /// Gets or sets a value indicating whether it is successful.
+    /// </summary>
     public bool IsSuccessful { get; set; }
+    /// <summary>
+    /// Gets or sets a value indicating whether it is failed.
+    /// </summary>
     public bool IsFailed { get; set; }
+    /// <summary>
+    /// Gets or sets the recipient account.
+    /// </summary>
     public string RecipientAccount { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the from.
+    /// </summary>
     public string From { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the raw text.
+    /// </summary>
     public string RawText { get; set; } = "";
 
+    /// <summary>
+    /// Gets a value indicating whether it is valid.
+    /// </summary>
     public bool IsValid => Amount > 0 && !string.IsNullOrEmpty(Reference);
 }

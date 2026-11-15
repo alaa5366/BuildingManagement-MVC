@@ -8,8 +8,14 @@ namespace BuildingManagementMvc.Services;
 // فلو ساكن سجّل دفعة وأدمن أكّد دفعة في نفس اللحظة واحدة منهم كانت بتضيع.
 // ملاحظة: القفل داخل نفس العملية (instance واحدة). لو شغّلت أكتر من instance
 // محتاج RowVersion في الـ DB (مرحلة لاحقة بتحتاج Migration).
+/// <summary>
+/// Global MVC filter that serializes write requests (POST/PUT/PATCH/DELETE) per building so two writers cannot overwrite each other's changes.
+/// </summary>
 public sealed class BuildingWriteLockFilter : IAsyncActionFilter
 {
+    /// <summary>
+    /// Holds a per-building lock while a write action runs. The building id comes from the user's claims, or from the <c>buildingId</c> action argument for super admins.
+    /// </summary>
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         var http = context.HttpContext;

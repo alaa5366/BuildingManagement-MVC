@@ -7,6 +7,12 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  ResidentPollsController	تصويتات الساكن
 // ============================================================
+/// <summary>
+/// Resident view of active polls and voting (one vote per apartment).
+/// </summary>
+/// <remarks>
+/// Access: requires one of the roles <c>resident</c>.
+/// </remarks>
 [Authorize(Roles = "resident")]
 public class ResidentPollsController : Controller
 {
@@ -14,6 +20,9 @@ public class ResidentPollsController : Controller
     private readonly PollsService _polls;
     private readonly AuditLogService _audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ResidentPollsController"/> class.
+    /// </summary>
     public ResidentPollsController(BuildingsService buildings, PollsService polls, AuditLogService audit)
     {
         _buildings = buildings; _polls = polls; _audit = audit;
@@ -22,6 +31,12 @@ public class ResidentPollsController : Controller
     private string BuildingId => User.FindFirstValue("buildingId")!;
     private string ApartmentId => User.FindFirstValue("apartmentId")!;
 
+    /// <summary>
+    /// Shows the main page of the resident polls screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     [HttpGet]
     public async Task<IActionResult> Index(int page = 1, int pageSize = 50)
@@ -44,6 +59,12 @@ public class ResidentPollsController : Controller
         return View(paged);
     }
 
+    /// <summary>
+    /// Handles the vote form submission of the resident polls screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Vote(string pollId, string optionId)

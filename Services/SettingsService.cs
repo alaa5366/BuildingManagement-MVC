@@ -4,35 +4,41 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Business logic for personal, building and global settings.
+/// </summary>
 public class SettingsService
 {
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly IAuditLogger _audit;
     private readonly BuildingsService _buildings;
     private readonly UsersService _users;
-    private readonly ResidentsService _residents; // ✅ تمت الإضافة
     private readonly ILogger<SettingsService> _logger;
     private const string GlobalId = "global";
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SettingsService"/> class.
+    /// </summary>
     public SettingsService(
         IDbContextFactory<AppDbContext> sqlFactory,
         IAuditLogger audit,
         BuildingsService buildings,
         UsersService users,
-        ResidentsService residents, // ✅ تمت الإضافة
         ILogger<SettingsService> logger)
     {
         _sqlFactory = sqlFactory;
         _audit = audit;
         _buildings = buildings;
         _users = users;
-        _residents = residents; // ✅ تمت الإضافة
         _logger = logger;
     }
 
     // ============================================================
     // Global Settings (الدوال الأصلية)
     // ============================================================
+    /// <summary>
+    /// Gets the global.
+    /// </summary>
     public async Task<GlobalSettings> GetGlobalAsync()
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
@@ -72,6 +78,9 @@ public class SettingsService
         };
     }
 
+    /// <summary>
+    /// Saves the global.
+    /// </summary>
     public async Task SaveGlobalAsync(GlobalSettings settings, string userId)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
@@ -111,6 +120,9 @@ public class SettingsService
     // ============================================================
     // Building Settings (الدوال الأصلية)
     // ============================================================
+    /// <summary>
+    /// Gets the building.
+    /// </summary>
     public async Task<BuildingSettings> GetBuildingAsync(string buildingId)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
@@ -143,6 +155,9 @@ public class SettingsService
         };
     }
 
+    /// <summary>
+    /// Saves the building.
+    /// </summary>
     public async Task SaveBuildingAsync(string buildingId, BuildingSettings settings, string userId, string userRole)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
@@ -177,6 +192,9 @@ public class SettingsService
     // ============================================================
     // Own Settings (الدوال الأصلية)
     // ============================================================
+    /// <summary>
+    /// Gets the own.
+    /// </summary>
     public async Task<OwnSettings> GetOwnAsync(string uid, string? role = null,
         string? buildingId = null, string? apartmentId = null)
     {
@@ -216,6 +234,9 @@ public class SettingsService
         };
     }
 
+    /// <summary>
+    /// Saves the own.
+    /// </summary>
     public async Task SaveOwnAsync(string uid, OwnSettings settings, string userId, string userRole,
         string? buildingId = null, string? apartmentId = null)
     {
@@ -252,6 +273,9 @@ public class SettingsService
     // ============================================================
     // Update Resident Profile (✅ المعدلة)
     // ============================================================
+    /// <summary>
+    /// Updates the resident profile.
+    /// </summary>
     public async Task UpdateResidentProfileAsync(
         string buildingId, string apartmentId, string ownerName, string aptLabel,
         string newPhone, string? newPin, string currentPin,
@@ -264,17 +288,18 @@ public class SettingsService
             ?? throw new InvalidOperationException("apartment-not-found");
 
         var residents = await db.Residents
-            .Where(r => r.ApartmentId == apartmentId)
+            .Where(r => r.BuildingId == buildingId && r.ApartmentId == apartmentId)
             .ToListAsync();
 
         var primaryResident = residents.FirstOrDefault(r => r.IsPrimary) ?? residents.FirstOrDefault();
 
-        // التحقق من الـ PIN الحالي
+        // Validate the new PIN and current credential before changing any tracked data.
         if (!string.IsNullOrWhiteSpace(newPin))
         {
+            if (newPin.Length != 4 || !newPin.All(char.IsDigit))
+                throw new InvalidOperationException(Loc.T("PIN_Must_Be_Exactly_4_Digits"));
             var isCurrentPinValid = primaryResident != null &&
                                     SecretVerifier.Verify(currentPin, primaryResident.PinHash);
-
             if (!isCurrentPinValid)
                 throw new InvalidOperationException(Loc.T("The_Current_PIN_Is_Incorrect"));
         }
@@ -307,17 +332,14 @@ public class SettingsService
             }
         }
 
-        await db.SaveChangesAsync();
-
-        // ✅ استدعاء الدالة المركزية من ResidentsService
         if (!string.IsNullOrWhiteSpace(newPin))
         {
-            if (newPin.Length != 4 || !newPin.All(char.IsDigit))
-                throw new InvalidOperationException(Loc.T("PIN_Must_Be_Exactly_4_Digits"));
-
-            await _residents.UpdateResidentPinAsync(buildingId, apartmentId, newPin);
+            var hashedPin = SecretVerifier.Hash(newPin);
+            foreach (var resident in residents) resident.PinHash = hashedPin;
             pinChanged = true;
         }
+
+        await db.SaveChangesAsync();
 
         await _audit.LogAsync(
             action: "resident.profile_update",
@@ -332,6 +354,9 @@ public class SettingsService
     // ============================================================
     // Update Admin Profile (الدالة الأصلية)
     // ============================================================
+    /// <summary>
+    /// Updates the admin profile.
+    /// </summary>
     public async Task UpdateAdminProfileAsync(
         string uid, string name, string newPhone, string newWhatsapp,
         string? newPin, string currentPin, string userRole)
@@ -382,6 +407,9 @@ public class SettingsService
     // ============================================================
     // Update SuperAdmin Name (الدالة الأصلية)
     // ============================================================
+    /// <summary>
+    /// Updates the super admin name.
+    /// </summary>
     public async Task UpdateSuperAdminNameAsync(string uid, string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return;

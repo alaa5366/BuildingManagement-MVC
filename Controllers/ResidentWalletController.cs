@@ -9,6 +9,12 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  ResidentWalletController	محفظة الساكن + كشف الحساب + OCR
 // ============================================================
+/// <summary>
+/// Resident wallet: balance, account statement, payment submission and receipt image OCR.
+/// </summary>
+/// <remarks>
+/// Access: requires one of the roles <c>resident</c>.
+/// </remarks>
 [Authorize(Roles = "resident")]
 public class ResidentWalletController : Controller
 {
@@ -16,6 +22,9 @@ public class ResidentWalletController : Controller
     private readonly WalletService _wallet;
     private readonly AuditLogService _audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ResidentWalletController"/> class.
+    /// </summary>
     public ResidentWalletController(BuildingsService buildings, WalletService wallet, AuditLogService audit)
     {
         _buildings = buildings; _wallet = wallet; _audit = audit;
@@ -24,6 +33,12 @@ public class ResidentWalletController : Controller
     private string BuildingId => User.FindFirstValue("buildingId")!;
     private string ApartmentId => User.FindFirstValue("apartmentId")!;
 
+    /// <summary>
+    /// Shows the main page of the resident wallet screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Index(
         string? month,
@@ -148,11 +163,17 @@ public class ResidentWalletController : Controller
     // ============================================================
     // ✅ CreateDeposit
     // ============================================================
+    /// <summary>
+    /// Creates the deposit.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(15 * 1024 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = 15 * 1024 * 1024)]
-    public async Task<IActionResult> CreateDeposit(string month, double amount, string? note,
+    public async Task<IActionResult> CreateDeposit(string month, decimal amount, string? note,
         IFormFile? receiptImage,
         [FromServices] CloudinaryService cloudinary)
     {
@@ -200,6 +221,12 @@ public class ResidentWalletController : Controller
     // ============================================================
     // ✅ ParseReceiptImage (OCR)
     // ============================================================
+    /// <summary>
+    /// Parses the receipt image.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(15 * 1024 * 1024)]

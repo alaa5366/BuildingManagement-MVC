@@ -8,6 +8,12 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  WhatsAppController	رسائل WhatsApp (من قوالب)
 // ============================================================
+/// <summary>
+/// Builds WhatsApp message drafts (welcome, reminders, payment notices) from templates for apartments.
+/// </summary>
+/// <remarks>
+/// Access: requires one of the roles <c>admin</c>.
+/// </remarks>
 [Authorize(Roles = "admin")]
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.UseWhatsApp)]
 public class WhatsAppController : Controller
@@ -15,6 +21,9 @@ public class WhatsAppController : Controller
     private readonly BuildingsService _buildings;
     private readonly WhatsAppTemplateService _templates;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WhatsAppController"/> class.
+    /// </summary>
     public WhatsAppController(BuildingsService buildings, WhatsAppTemplateService templates)
     {
         _buildings = buildings; _templates = templates;
@@ -22,6 +31,12 @@ public class WhatsAppController : Controller
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
 
+    /// <summary>
+    /// Shows the main page of the whats app screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Index()
     {
@@ -32,6 +47,12 @@ public class WhatsAppController : Controller
         return View();
     }
 
+    /// <summary>
+    /// Handles the generate form submission of the whats app screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Generate(string aptId, string templateId, string? amount, string? note, string? share, string? message)

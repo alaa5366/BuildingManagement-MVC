@@ -1,4 +1,10 @@
-﻿@{
+﻿@* =============================================================================
+   View:        Categories/Index
+   Rendered by: CategoriesController.Index
+   Model:       none
+   Purpose:     Main page.
+   ============================================================================= *@
+@{
     ViewData["Title"] = Loc.T("Financial_Categories");
     var building = ViewBag.Building as BuildingManagementMvc.Models.Building;
     var expenseCats = ViewBag.ExpenseCategories as List<BuildingManagementMvc.Models.FinancialCategory> ?? new();

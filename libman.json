@@ -5,6 +5,28 @@
     {
       "library": "bootstrap@5.3.3",
       "destination": "wwwroot/bootstrap/"
+    },
+    {
+      "provider": "jsdelivr",
+      "library": "video.js@8.6.1",
+      "destination": "wwwroot/lib/video.js/",
+      "files": [
+        "dist/video.min.js",
+        "dist/video-js.min.css"
+      ]
+    },
+    {
+      "provider": "jsdelivr",
+      "library": "chart.js@4.4.4",
+      "destination": "wwwroot/lib/chart.js/",
+      "files": [
+        "dist/chart.umd.js"
+      ]
+    },
+    {
+      "provider": "unpkg",
+      "library": "bootstrap-icons@1.13.1",
+      "destination": "wwwroot/lib/bootstrap-icons"
     }
   ]
 }

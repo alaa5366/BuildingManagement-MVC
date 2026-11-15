@@ -1,4 +1,10 @@
-﻿@{
+﻿@* =============================================================================
+   View:        Admins/Create
+   Rendered by: AdminsController.Create
+   Model:       none
+   Purpose:     Add form.
+   ============================================================================= *@
+@{
     ViewData["Title"] = Loc.T("Add_Admin");
     var buildings = ViewBag.Buildings as List<BuildingManagementMvc.Models.Building> ?? new();
     var allPerms = ViewBag.AllPermissions as List<string> ?? new();

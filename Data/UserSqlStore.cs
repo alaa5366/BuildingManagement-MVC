@@ -8,11 +8,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Data;
 
+/// <summary>
+/// Data access for admin and super admin accounts.
+/// </summary>
 public class UserSqlStore
 {
     private readonly IDbContextFactory<AppDbContext> _factory;
     private readonly ILogger<UserSqlStore> _log;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UserSqlStore"/> class.
+    /// </summary>
     public UserSqlStore(IDbContextFactory<AppDbContext> factory, ILogger<UserSqlStore> log)
     {
         _factory = factory;
@@ -22,6 +28,9 @@ public class UserSqlStore
     // =====================================================================
     //  Upsert (كتابة)
     // =====================================================================
+    /// <summary>
+    /// Returns the upsert.
+    /// </summary>
     public virtual async Task<bool> UpsertAsync(AppUserDoc u, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(u.Uid)) return false;
@@ -83,6 +92,9 @@ public class UserSqlStore
     // =====================================================================
     //  قراءة واحدة
     // =====================================================================
+    /// <summary>
+    /// Gets the by user ID.
+    /// </summary>
     public virtual  async Task<UserEntity?> GetByUidAsync(string uid, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(uid)) return null;
@@ -97,6 +109,9 @@ public class UserSqlStore
     // =====================================================================
     //  قراءة الكل
     // =====================================================================
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     public virtual async Task<List<UserEntity>> GetAllAsync(CancellationToken ct = default)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
@@ -110,6 +125,9 @@ public class UserSqlStore
     // =====================================================================
     //  قراءة الأدمنز
     // =====================================================================
+    /// <summary>
+    /// Gets the admins.
+    /// </summary>
     public virtual  async Task<List<UserEntity>> GetAdminsAsync(CancellationToken ct = default)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
@@ -124,6 +142,9 @@ public class UserSqlStore
     // =====================================================================
     //  قراءة أدمنز مبنى معين
     // =====================================================================
+    /// <summary>
+    /// Gets the building admins.
+    /// </summary>
     public virtual async Task<List<UserEntity>> GetBuildingAdminsAsync(string buildingId, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(buildingId)) return new();

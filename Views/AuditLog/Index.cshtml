@@ -1,4 +1,10 @@
-﻿@model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Services.AuditEntryDoc>
+﻿@* =============================================================================
+   View:        AuditLog/Index
+   Rendered by: AuditLogController.Index
+   Model:       BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Services.AuditEntryDoc>
+   Purpose:     Main page.
+   ============================================================================= *@
+@model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Services.AuditEntryDoc>
 @{
     ViewData["Title"] = Loc.T("Log");
     var role = ViewBag.CurrentRole as string ?? "admin";

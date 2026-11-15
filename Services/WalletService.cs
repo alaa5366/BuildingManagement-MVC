@@ -1,17 +1,26 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Services;
 
 // ترجمة حرفية لـ js/core/wallet.js + js/core/deposits.js
+/// <summary>
+/// Core wallet logic: monthly expense/revenue distribution, deposits workflow, carry-over and apartment balances.
+/// </summary>
 public class WalletService
 {
     // -------- Month access (ensureMonth) --------
+    /// <summary>
+    /// Gets the data of a month for a building, creating it (with carry-over) when needed.
+    /// </summary>
     public MonthData GetOrCreateMonth(Building building, string monthKey)
     {
         return EnsureMonth(building, monthKey);
     }
 
+    /// <summary>
+    /// Returns the data of a month, creating it first when it does not exist yet. A new month starts with each apartment's balance carried over from the previous month.
+    /// </summary>
     public MonthData EnsureMonth(Building building, string monthKey)
     {
         building.Months ??= new Dictionary<string, MonthData>();
@@ -28,7 +37,7 @@ public class WalletService
                 }
                 else
                 {
-                    existing.CarryOver = new Dictionary<string, double>();
+                    existing.CarryOver = new Dictionary<string, decimal>();
                     foreach (var apt in building.Apartments)
                         existing.CarryOver[apt.Id] = 0;
                 }
@@ -55,9 +64,15 @@ public class WalletService
         return newMonth;
     }
 
+    /// <summary>
+    /// Returns the current month key.
+    /// </summary>
     public static string CurrentMonthKey() => DateTime.UtcNow.ToString("yyyy-MM");
 
     // -------- Deposits --------
+    /// <summary>
+    /// Returns the next deposit number.
+    /// </summary>
     public string NextDepositNumber(Building building, string monthKey)
     {
         var m = GetOrCreateMonth(building, monthKey);
@@ -70,9 +85,14 @@ public class WalletService
         return "D" + (maxNum + 1).ToString("D3");
     }
 
-    public Deposit CreateDeposit(Building building, string aptId, double amount, string? note,
+    /// <summary>
+    /// Creates a pending deposit (payment) for an apartment. It does not affect the balance until an admin confirms it.
+    /// </summary>
+    public Deposit CreateDeposit(Building building, string aptId, decimal amount, string? note,
      string createdBy, string monthKey, ReceiptData? receipt = null)
     {
+        if (amount <= 0) throw new ArgumentOutOfRangeException(nameof(amount), "Deposit amount must be greater than zero.");
+        if (!building.Apartments.Any(a => a.Id == aptId)) throw new ArgumentException("Apartment not found.", nameof(aptId));
         var m = GetOrCreateMonth(building, monthKey);
         var deposit = new Deposit
         {
@@ -90,22 +110,28 @@ public class WalletService
         return deposit;
     }
 
+    /// <summary>
+    /// Confirms a pending deposit so that it counts toward the apartment's balance. Returns <c>null</c> when the deposit does not exist.
+    /// </summary>
     public Deposit? ConfirmDeposit(Building building, string depositId, string confirmedBy, string monthKey)
     {
         var m = GetOrCreateMonth(building, monthKey);
         var d = m.Deposits.FirstOrDefault(x => x.Id == depositId);
-        if (d == null) return null;
+        if (d == null || !string.Equals(d.Status, "pending", StringComparison.OrdinalIgnoreCase)) return null;
         d.Status = "confirmed";
         d.ConfirmedAt = DateTime.UtcNow.ToString("o");
         d.ConfirmedBy = confirmedBy;
         return d;
     }
 
+    /// <summary>
+    /// Cancels a pending deposit and records the reason. Returns <c>null</c> when the deposit does not exist.
+    /// </summary>
     public Deposit? CancelDeposit(Building building, string depositId, string cancelledBy, string? reason, string monthKey)
     {
         var m = GetOrCreateMonth(building, monthKey);
         var d = m.Deposits.FirstOrDefault(x => x.Id == depositId);
-        if (d == null) return null;
+        if (d == null || !string.Equals(d.Status, "pending", StringComparison.OrdinalIgnoreCase)) return null;
         d.Status = "cancelled";
         d.CancelledAt = DateTime.UtcNow.ToString("o");
         d.CancelledBy = cancelledBy;
@@ -113,11 +139,14 @@ public class WalletService
         return d;
     }
 
+    /// <summary>
+    /// Edits the amount and note of a pending deposit and records the change in its edit history. Throws <see cref="InvalidOperationException"/> for non-pending deposits or non-positive amounts.
+    /// </summary>
     public Deposit? UpdatePendingDeposit(
         Building building,
         string depositId,
         string monthKey,
-        double newAmount,
+        decimal newAmount,
         string newNote,
         string reason,
         string updatedBy)
@@ -155,12 +184,18 @@ public class WalletService
         return d;
     }
 
-    public double TotalConfirmedDeposits(Building building, string aptId, string monthKey)
+    /// <summary>
+    /// Sums the confirmed deposits of an apartment in a month. Pending and cancelled deposits are ignored.
+    /// </summary>
+    public decimal TotalConfirmedDeposits(Building building, string aptId, string monthKey)
     {
         if (!building.Months.TryGetValue(monthKey, out var m)) return 0;
         return m.Deposits.Where(d => d.AptId == aptId && d.Status == "confirmed").Sum(d => d.Amount);
     }
 
+    /// <summary>
+    /// Gets the apartment deposits.
+    /// </summary>
     public List<Deposit> GetApartmentDeposits(Building building, string aptId, string monthKey)
     {
         var m = GetOrCreateMonth(building, monthKey);
@@ -168,6 +203,9 @@ public class WalletService
             .OrderByDescending(d => d.CreatedAt).ToList();
     }
 
+    /// <summary>
+    /// Gets all pending deposits.
+    /// </summary>
     public List<(Apartment Apt, Deposit Deposit)> GetAllPendingDeposits(Building building, string monthKey)
     {
         if (!building.Months.TryGetValue(monthKey, out var m)) return new();
@@ -181,19 +219,21 @@ public class WalletService
     }
 
     // -------- Distribution --------
-    public Dictionary<string, double> RecalculateDistribution(Building building, string monthKey)
+    /// <summary>
+    /// Splits the month's expenses equally between the open apartments (each share rounded to two decimals) and stores the result in the month.
+    /// </summary>
+    public Dictionary<string, decimal> RecalculateDistribution(Building building, string monthKey)
     {
         var m = GetOrCreateMonth(building, monthKey);
         var openApts = building.Apartments.Where(a => !a.Closed).ToList();
         var totalExpenses = m.Expenses.Sum(e => e.Amount);
-        var distribution = new Dictionary<string, double>();
+        var distribution = new Dictionary<string, decimal>();
 
         if (openApts.Count > 0)
         {
             if (totalExpenses > 0)
             {
-                var share = totalExpenses / openApts.Count;
-                foreach (var apt in openApts) distribution[apt.Id] = Math.Round(share, 2);
+                DistributeExactCents(totalExpenses, openApts, distribution);
             }
             else
             {
@@ -209,19 +249,21 @@ public class WalletService
         return distribution;
     }
 
-    public Dictionary<string, double> RecalculateRevenueDistribution(Building building, string monthKey)
+    /// <summary>
+    /// Splits the month's revenues equally between the open apartments and stores the result in the month.
+    /// </summary>
+    public Dictionary<string, decimal> RecalculateRevenueDistribution(Building building, string monthKey)
     {
         var m = GetOrCreateMonth(building, monthKey);
         var openApts = building.Apartments.Where(a => !a.Closed).ToList();
-        var distribution = new Dictionary<string, double>();
+        var distribution = new Dictionary<string, decimal>();
 
         if (openApts.Count > 0)
         {
             var totalRevenues = m.Revenues.Sum(r => r.Amount);
             if (totalRevenues > 0)
             {
-                var share = totalRevenues / openApts.Count;
-                foreach (var apt in openApts) distribution[apt.Id] = Math.Round(share, 2);
+                DistributeExactCents(totalRevenues, openApts, distribution);
             }
             else
             {
@@ -238,13 +280,16 @@ public class WalletService
     }
 
     // -------- Balance --------
-    public double ComputeWalletBalance(Building building, string aptId, string monthKey)
+    /// <summary>
+    /// Computes an apartment's wallet balance for a month: carried-over balance, plus confirmed deposits, minus the monthly fee, minus the expense share, plus the revenue share, plus manual adjustments.
+    /// </summary>
+    public decimal ComputeWalletBalance(Building building, string aptId, string monthKey)
     {
         var apt = building.Apartments.FirstOrDefault(a => a.Id == aptId);
         if (apt == null) return 0;
         if (!building.Months.TryGetValue(monthKey, out var m)) return 0;
 
-        double balance = 0;
+        decimal balance = 0;
 
         if (m.CarryOver != null && m.CarryOver.TryGetValue(aptId, out var carry))
             balance += carry;
@@ -274,7 +319,10 @@ public class WalletService
     }
 
     // -------- Wallet Adjustments --------
-    public WalletAdjustment AddWalletAdjustment(Building building, string aptId, double amount, string? reason, string monthKey, string createdBy)
+    /// <summary>
+    /// Adds a manual adjustment (positive or negative) to an apartment's wallet for a month.
+    /// </summary>
+    public WalletAdjustment AddWalletAdjustment(Building building, string aptId, decimal amount, string? reason, string monthKey, string createdBy)
     {
         building.WalletAdjustments ??= new List<WalletAdjustment>();
         var adj = new WalletAdjustment
@@ -291,12 +339,18 @@ public class WalletService
         return adj;
     }
 
+    /// <summary>
+    /// Gets the apartment adjustments.
+    /// </summary>
     public List<WalletAdjustment> GetApartmentAdjustments(Building building, string aptId) =>
         building.WalletAdjustments.Where(a => a.AptId == aptId).OrderByDescending(a => a.CreatedAt).ToList();
 
     // ============================================================
     // ✅ Unified transactions (لكشف حساب الشقة — شهر واحد)
     // ============================================================
+    /// <summary>
+    /// Gets the unified transactions.
+    /// </summary>
     public List<WalletTransactionVm> GetUnifiedTransactions(Building building, string aptId, string monthKey)
     {
         var txs = new List<WalletTransactionVm>();
@@ -402,6 +456,9 @@ public class WalletService
     //    تُحسب **للشهر الأحدث فقط** (لأن السابق يُلخّص في "الرصيد السابق").
     //    الدفعات والتسويات تُعرض لكل الشهور (تواريخها الفعلية).
     // ============================================================
+    /// <summary>
+    /// Gets all transactions.
+    /// </summary>
     public List<WalletTransactionVm> GetAllTransactions(
         Building building,
         string aptId,
@@ -584,7 +641,7 @@ public class WalletService
     // ============================================================
     // ✅ Building-level totals
     // ============================================================
-    public (double Collected, double Expenses, double Revenues, int OpenCount, int ClosedCount, double Balance, double TotalWallet)
+    public (decimal Collected, decimal Expenses, decimal Revenues, int OpenCount, int ClosedCount, decimal Balance, decimal TotalWallet)
         TotalsOf(Building building, string monthKey)
     {
         var m = GetOrCreateMonth(building, monthKey);
@@ -602,6 +659,9 @@ public class WalletService
     // ============================================================
     // ✅ كل الدفعات المعلقة من كل الشهور
     // ============================================================
+    /// <summary>
+    /// Gets all pending deposits cross month.
+    /// </summary>
     public List<(Apartment Apt, Deposit Deposit, string MonthKey)> GetAllPendingDepositsCrossMonth(
         Building building)
     {
@@ -650,11 +710,14 @@ public class WalletService
     // ============================================================
     // ✅ حساب الرصيد المُرحّل للشهر الجديد
     // ============================================================
-    public Dictionary<string, double> ComputeCarryOverForNextMonth(
+    /// <summary>
+    /// Computes the carry over for next month.
+    /// </summary>
+    public Dictionary<string, decimal> ComputeCarryOverForNextMonth(
         Building building,
         string previousMonthKey)
     {
-        var result = new Dictionary<string, double>();
+        var result = new Dictionary<string, decimal>();
 
         if (!building.Months.TryGetValue(previousMonthKey, out var prevMonth))
         {
@@ -675,6 +738,9 @@ public class WalletService
     // ============================================================
     // ✅ إعادة حساب carryOver من شهر معين لحد النهاية
     // ============================================================
+    /// <summary>
+    /// Recomputes the carry-over of every month after the given month, so later months reflect a change made to an earlier one.
+    /// </summary>
     public void RecomputeCarryOverFrom(Building building, string fromMonthKey)
     {
         if (building.Months == null) return;
@@ -695,8 +761,24 @@ public class WalletService
             }
             else
             {
-                m.CarryOver = building.Apartments.ToDictionary(a => a.Id, a => 0.0);
+                m.CarryOver = building.Apartments.ToDictionary(a => a.Id, a => 0m);
             }
         }
     }
+
+    // Allocate rounded shares while assigning any rounding remainder to the final apartment.
+    private static void DistributeExactCents(decimal total, IReadOnlyList<Apartment> apartments,
+        IDictionary<string, decimal> distribution)
+    {
+        if (apartments.Count == 0) return;
+        var share = Math.Round(total / apartments.Count, 2, MidpointRounding.AwayFromZero);
+        decimal allocated = 0m;
+        for (var i = 0; i < apartments.Count; i++)
+        {
+            var amount = i == apartments.Count - 1 ? total - allocated : share;
+            distribution[apartments[i].Id] = amount;
+            allocated += amount;
+        }
+    }
+
 }

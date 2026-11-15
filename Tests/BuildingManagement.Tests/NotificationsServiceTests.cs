@@ -84,7 +84,7 @@ public class NotificationsServiceTests
         var b = CreateBuilding();
         _service.Push(b, "admin", null, "info", "🔔", "T1", "B");
         var n2 = _service.Push(b, "admin", null, "info", "🔔", "T2", "B");
-        _service.MarkRead(b, n2.Id);
+        _service.MarkRead(b, n2.Id,"admin",null);
 
         Assert.Equal(1, _service.UnreadCountForAdmin(b));
     }
@@ -99,7 +99,7 @@ public class NotificationsServiceTests
         var b = CreateBuilding();
         var n = _service.Push(b, "admin", null, "info", "🔔", "T", "B");
 
-        var result = _service.MarkRead(b, n.Id);
+        var result = _service.MarkRead(b, n.Id, "admin", null);
 
         Assert.True(result);
         Assert.True(n.Read);
@@ -110,7 +110,7 @@ public class NotificationsServiceTests
     public void MarkRead_NonExisting_ReturnsFalse()
     {
         var b = CreateBuilding();
-        Assert.False(_service.MarkRead(b, "ghost"));
+        Assert.False(_service.MarkRead(b, "ghost","owner-1", "owner"));
     }
 
     // ================================================================

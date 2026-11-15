@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -9,6 +9,12 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  QrAccessController	دخول بـ QR مؤقت (بدون PIN)
 // ============================================================
+/// <summary>
+/// Anonymous entry point for scanning stable apartment/admin QR codes.
+/// </summary>
+/// <remarks>
+/// Access: anonymous.
+/// </remarks>
 [AllowAnonymous]
 public class QrAccessController : Controller
 {
@@ -16,13 +22,43 @@ public class QrAccessController : Controller
     private readonly QrTokenStoreService _qrStore;
     private readonly BuildingsService _buildings;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="QrAccessController"/> class.
+    /// </summary>
     public QrAccessController(QrAuthService qrAuth, QrTokenStoreService qrStore, BuildingsService buildings)
     {
         _qrAuth = qrAuth; _qrStore = qrStore; _buildings = buildings;
     }
 
+    /// <summary>
+    /// Enters the QR access data.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
-    public async Task<IActionResult> Enter(string token)
+    public IActionResult Enter(string token)
+    {
+        var (valid, payload, reason) = _qrAuth.ValidateAccessToken(token);
+        if (!valid || payload == null)
+        {
+            ViewBag.Error = MapReason(reason);
+            return View("AccessDenied");
+        }
+
+        // GET must remain side-effect free: link-preview bots must not consume a single-use token.
+        ViewBag.Token = token;
+        return View("AccessConfirm");
+    }
+    /// <summary>
+    /// يؤكد عملية دخول عبر رمز QR ويُسجّلها.
+    /// </summary>
+    /// <param name="token">بيانات طلب التأكيد.</param>
+    /// <returns>نتيجة عملية التأكيد.</returns>
+    [HttpPost]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Confirm(string token)
     {
         var (valid, payload, reason) = _qrAuth.ValidateAccessToken(token);
         if (!valid || payload == null)
@@ -55,10 +91,8 @@ public class QrAccessController : Controller
             new("apartmentId", apartment.Id),
             new("apartmentNumber", apartment.Number.ToString())
         };
-
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
-
         return RedirectToAction("Index", "ResidentHome");
     }
 

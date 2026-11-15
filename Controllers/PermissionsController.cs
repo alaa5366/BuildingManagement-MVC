@@ -10,6 +10,12 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  PermissionsController	مصفوفة الصلاحيات (SuperAdmin فقط)
 // ============================================================
+/// <summary>
+/// Admin permission matrix and permission templates (super admin only).
+/// </summary>
+/// <remarks>
+/// Access: requires one of the roles <c>superadmin</c>.
+/// </remarks>
 [Authorize(Roles = "superadmin")]
 [HasPermission(AdminPermissions.ManageAdmins)]
 public class PermissionsController : Controller
@@ -17,6 +23,9 @@ public class PermissionsController : Controller
     private readonly AdminManagementService _admins;
     private readonly BuildingsService _buildings;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PermissionsController"/> class.
+    /// </summary>
     public PermissionsController(AdminManagementService admins, BuildingsService buildings)
     {
         _admins = admins;
@@ -26,6 +35,9 @@ public class PermissionsController : Controller
     private string CurrentUserId =>
         User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
 
+    /// <summary>
+    /// Shows the main page of the permissions screen.
+    /// </summary>
     public async Task<IActionResult> Index(string? buildingId)
     {
         var admins = await _admins.GetAdminsAsync();
@@ -36,6 +48,12 @@ public class PermissionsController : Controller
         return View(admins);
     }
 
+    /// <summary>
+    /// Handles the toggle form submission of the permissions screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Toggle(string adminId, string permission, bool enabled)
@@ -51,6 +69,12 @@ public class PermissionsController : Controller
         return Json(new { success = true, count = perms.Count });
     }
 
+    /// <summary>
+    /// Applies the template.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ApplyTemplate(string adminId, string template)

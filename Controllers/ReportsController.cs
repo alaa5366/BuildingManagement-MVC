@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Attributes;
+﻿using BuildingManagementMvc.Attributes;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
@@ -9,6 +9,12 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  ReportsController	التقارير المالية (Charts + CSV)
 // ============================================================
+/// <summary>
+/// Financial reports and charts for a building, including CSV export.
+/// </summary>
+/// <remarks>
+/// Access: requires one of the roles <c>admin</c>.
+/// </remarks>
 [Authorize(Roles = "admin")]
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ViewReports)]
 public class ReportsController : Controller
@@ -16,15 +22,24 @@ public class ReportsController : Controller
     private readonly BuildingsService _buildings;
     private readonly ReportsService _reports;
     private readonly WalletService _wallet;
-    private readonly AuditLogService _audit;
+    private readonly IAuditLogger _audit;
 
-    public ReportsController(BuildingsService buildings, ReportsService reports, WalletService wallet, AuditLogService audit)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ReportsController"/> class.
+    /// </summary>
+    public ReportsController(BuildingsService buildings, ReportsService reports, WalletService wallet, IAuditLogger audit)
     {
         _buildings = buildings; _reports = reports; _wallet = wallet; _audit = audit;
     }
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
 
+    /// <summary>
+    /// Shows the main page of the reports screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Index(string? range)
     {
@@ -36,6 +51,12 @@ public class ReportsController : Controller
         return View(vm);
     }
 
+    /// <summary>
+    /// Exports the CSV.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> ExportCsv(string? range)
     {
@@ -48,7 +69,7 @@ public class ReportsController : Controller
 
         var sb = new StringBuilder();
         sb.Append('\uFEFF');
-        void Row(params string[] cells) => sb.AppendLine(string.Join(",", cells.Select(c => $"\"{(c ?? "").Replace("\"", "\"\"")}\"")));
+        void Row(params string[] cells) => sb.AppendLine(string.Join(",", cells.Select(CsvExportSafety.Cell)));
 
         Row(Loc.T("Report_N_N", building.Name, building.BuildingNumber));
         Row(Loc.T("Export_Date_N", DateTime.UtcNow));
@@ -75,8 +96,8 @@ public class ReportsController : Controller
             Row(a.Number.ToString(), a.Owner ?? "", bal.ToString("0.##"));
         }
 
-        _audit.Push(building, "report_export", "CSV", "admin", User.Identity?.Name ?? "admin");
-        await _buildings.SaveFullAsync(building);
+        await _audit.LogAsync("report_export", building.Id, userId: User.Identity?.Name ?? "admin",
+            userRole: "admin", metadata: new { format = "CSV", range = r });
 
         var bytes = Encoding.UTF8.GetBytes(sb.ToString());
         var fileName = $"report-{building.BuildingNumber}-{DateTime.UtcNow:yyyy-MM-dd}.csv";

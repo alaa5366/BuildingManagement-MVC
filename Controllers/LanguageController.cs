@@ -6,6 +6,12 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  LanguageController	   تغيير اللغة (ar/en/fr/de)
 // ============================================================
+/// <summary>
+/// Changes the UI language by writing the culture cookie.
+/// </summary>
+/// <remarks>
+/// Access: anonymous.
+/// </remarks>
 [AllowAnonymous]
 public class LanguageController : Controller
 {
@@ -14,6 +20,12 @@ public class LanguageController : Controller
         "ar", "en", "fr", "de"
     };
 
+    /// <summary>
+    /// Sets the language data.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public IActionResult Set(string lang, string? returnUrl)
     {

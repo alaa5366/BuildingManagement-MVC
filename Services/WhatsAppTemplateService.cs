@@ -5,8 +5,14 @@ namespace BuildingManagementMvc.Services;
 // نسخة مبسطة من js/features/whatsapp-templates.js — نفس القوالب الافتراضية
 // الخمسة، بس بدون تخصيص/حفظ قوالب معدّلة (يمكن إضافتها لاحقًا).
 // الإرسال نفسه بيتم زي الأصل: فتح رابط wa.me جاهز بالنص، والأدمن يدوس إرسال.
+/// <summary>
+/// Renders WhatsApp message templates (welcome, reminders, payment notices) with the apartment and building data.
+/// </summary>
 public class WhatsAppTemplateService
 {
+    /// <summary>
+    /// The templates field.
+    /// </summary>
     public static readonly Dictionary<string, (string Name, string Text)> Templates = new()
     {
         ["reminder"] = ("🔔 تذكير بالدفع",
@@ -49,6 +55,9 @@ public class WhatsAppTemplateService
             "أهلاً بك 🌹"),
     };
 
+    /// <summary>
+    /// Renders the operation on the whats app template.
+    /// </summary>
     public string Render(string templateId, Building building, Apartment apt, Dictionary<string, string> extra)
     {
         if (!Templates.TryGetValue(templateId, out var tpl)) return "";
@@ -92,6 +101,9 @@ public class WhatsAppTemplateService
         return string.Join("\n", parts);
     }
 
+    /// <summary>
+    /// Builds the WhatsApp link.
+    /// </summary>
     public static string BuildWaLink(string phone, string message)
     {
         var digits = new string(phone.Where(char.IsDigit).ToArray());
@@ -99,6 +111,9 @@ public class WhatsAppTemplateService
     }
 
     // ✅ جديد — رابط الدخول اليدوي
+    /// <summary>
+    /// Builds the login URL.
+    /// </summary>
     public static string BuildLoginUrl(string baseUrl) =>
         $"{baseUrl.TrimEnd('/')}/Account/UnifiedLogin";
 }

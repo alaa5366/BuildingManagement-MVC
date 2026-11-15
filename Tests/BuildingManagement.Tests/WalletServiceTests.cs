@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Models;
+﻿using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Xunit;
 
@@ -13,7 +13,7 @@ public class WalletServiceTests
     // ================================================================
     // Helpers
     // ================================================================
-    private static Building BuildingWithApartments(params (string id, bool closed, double fee)[] apts)
+    private static Building BuildingWithApartments(params (string id, bool closed, decimal fee)[] apts)
     {
         var b = new Building { Name = "Test Tower" };
         foreach (var (id, closed, fee) in apts)
@@ -302,9 +302,18 @@ public void EnsureMonth_ExistingMonthWithEmptyCarryOver_DepositEqualsFee_YieldsZ
 
         var result = Svc.ConfirmDeposit(b, d.Id, "m2", Month);
 
-        Assert.NotNull(result);
-        Assert.Equal("confirmed", result!.Status);
-        Assert.Equal("m2", result.ConfirmedBy);  // آخر تأكيد بيفوز
+        Assert.Null(result); // duplicate transition is rejected; original confirmation metadata is preserved
+        Assert.Equal("m1", d.ConfirmedBy);
+    }
+
+    [Fact]
+    public void ConfirmDeposit_CancelledDeposit_IsRejected()
+    {
+        var b = BuildingWithApartments(("a1", false, 100));
+        var d = Svc.CreateDeposit(b, "a1", 100, null, "admin", Month);
+        Svc.CancelDeposit(b, d.Id, "m1", "reason", Month);
+        Assert.Null(Svc.ConfirmDeposit(b, d.Id, "m2", Month));
+        Assert.Equal("cancelled", d.Status);
     }
 
     // ================================================================
@@ -346,6 +355,36 @@ public void EnsureMonth_ExistingMonthWithEmptyCarryOver_DepositEqualsFee_YieldsZ
         var result = Svc.CancelDeposit(b, "nope", "manager", null, Month);
 
         Assert.Null(result);
+    }
+
+    [Fact]
+    public void CancelDeposit_ConfirmedDeposit_IsRejected()
+    {
+        var b = BuildingWithApartments(("a1", false, 100));
+        var d = Svc.CreateDeposit(b, "a1", 100, null, "admin", Month);
+        Svc.ConfirmDeposit(b, d.Id, "m1", Month);
+        Assert.Null(Svc.CancelDeposit(b, d.Id, "m2", "reason", Month));
+        Assert.Equal("confirmed", d.Status);
+    }
+
+    [Fact]
+    public void ExpenseDistribution_AllocatesRoundingRemainderExactly()
+    {
+        var b = BuildingWithApartments(("a1", false, 0), ("a2", false, 0), ("a3", false, 0));
+        var month = Svc.EnsureMonth(b, Month);
+        month.Expenses.Add(new Expense { Id = "e1", Amount = 100m });
+        var distribution = Svc.RecalculateDistribution(b, Month);
+        Assert.Equal(100m, distribution.Values.Sum());
+    }
+
+    [Fact]
+    public void RevenueDistribution_AllocatesRoundingRemainderExactly()
+    {
+        var b = BuildingWithApartments(("a1", false, 0), ("a2", false, 0), ("a3", false, 0));
+        var month = Svc.EnsureMonth(b, Month);
+        month.Revenues.Add(new Revenue { Id = "r1", Amount = 100m });
+        var distribution = Svc.RecalculateRevenueDistribution(b, Month);
+        Assert.Equal(100m, distribution.Values.Sum());
     }
 
     // ================================================================
@@ -412,7 +451,7 @@ public void EnsureMonth_ExistingMonthWithEmptyCarryOver_DepositEqualsFee_YieldsZ
     [InlineData(0)]
     [InlineData(-1)]
     [InlineData(-100)]
-    public void UpdatePendingDeposit_NonPositiveAmount_Throws(double amount)
+    public void UpdatePendingDeposit_NonPositiveAmount_Throws(int amount)
     {
         var b = BuildingWithApartments(("a1", false, 100));
         var d = Svc.CreateDeposit(b, "a1", 100, null, "admin", Month);
@@ -561,12 +600,12 @@ public void EnsureMonth_ExistingMonthWithEmptyCarryOver_DepositEqualsFee_YieldsZ
     {
         var b = BuildingWithApartments(("a1", false, 0));
 
-        var adj = Svc.AddWalletAdjustment(b, "a1", -25.5, "late fee", Month, "admin");
+        var adj = Svc.AddWalletAdjustment(b, "a1", -25.5m, "late fee", Month, "admin");
 
         Assert.NotNull(adj);
         Assert.StartsWith("adj-", adj.Id);
         Assert.Equal("a1", adj.AptId);
-        Assert.Equal(-25.5, adj.Amount);
+        Assert.Equal(-25.5m, adj.Amount);
         Assert.Equal("late fee", adj.Reason);
         Assert.Equal(Month, adj.MonthKey);
         Assert.Equal("admin", adj.CreatedBy);

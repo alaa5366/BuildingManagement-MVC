@@ -164,6 +164,10 @@ namespace BuildingManagementMvc.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ApartmentId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<int?>("AptNumber")
                         .HasColumnType("int");
 
@@ -185,6 +189,13 @@ namespace BuildingManagementMvc.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("info");
+
                     b.Property<string>("SourceId")
                         .HasColumnType("nvarchar(max)");
 
@@ -192,6 +203,8 @@ namespace BuildingManagementMvc.Migrations
                         .HasColumnType("datetime2(0)");
 
                     b.HasKey("AuditId");
+
+                    b.HasIndex("ApartmentId", "Ts");
 
                     b.HasIndex("BuildingId", "Ts");
 
@@ -301,6 +314,12 @@ namespace BuildingManagementMvc.Migrations
                     b.Property<string>("PaymentPhone")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.HasKey("Id");
 

@@ -4,6 +4,9 @@
 // =====================================================================
 namespace BuildingManagementMvc.Data;
 
+/// <summary>
+/// Thread-safe counters describing the health of the SQL persistence layer, shown on the maintenance screens.
+/// </summary>
 public static class SqlMirrorHealth
 {
     private static int _failureCount;
@@ -32,6 +35,9 @@ public static class SqlMirrorHealth
         get { lock (_lock) return _lastSuccessAt; }
     }
 
+    /// <summary>
+    /// Records the failure.
+    /// </summary>
     public static void RecordFailure(string context, Exception ex)
     {
         lock (_lock)
@@ -42,6 +48,9 @@ public static class SqlMirrorHealth
         }
     }
 
+    /// <summary>
+    /// Records the success.
+    /// </summary>
     public static void RecordSuccess()
     {
         lock (_lock)
@@ -50,6 +59,9 @@ public static class SqlMirrorHealth
         }
     }
 
+    /// <summary>
+    /// Resets the operation on the SQL mirror health.
+    /// </summary>
     public static void Reset()
     {
         lock (_lock)

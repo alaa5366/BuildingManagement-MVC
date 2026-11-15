@@ -4,6 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Creates scheduled backups, writes them encrypted to disk and applies the retention policy.
+/// </summary>
 public class ScheduledBackupService
 {
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
@@ -13,6 +16,9 @@ public class ScheduledBackupService
 
     private const string SettingsId = "default";
 
+    /// <summary>
+    /// Gets the backups folder.
+    /// </summary>
     public static string GetBackupsFolder(IWebHostEnvironment env)
     {
         var projectRoot = string.IsNullOrEmpty(env.WebRootPath)
@@ -27,6 +33,9 @@ public class ScheduledBackupService
         return path;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ScheduledBackupService"/> class.
+    /// </summary>
     public ScheduledBackupService(
         IDbContextFactory<AppDbContext> sqlFactory,
         BackupService backup,
@@ -39,6 +48,9 @@ public class ScheduledBackupService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Gets the settings.
+    /// </summary>
     public async Task<ScheduledBackupSettings> GetSettingsAsync()
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
@@ -64,6 +76,9 @@ public class ScheduledBackupService
         };
     }
 
+    /// <summary>
+    /// Saves the settings.
+    /// </summary>
     public async Task SaveSettingsAsync(ScheduledBackupSettings settings, string userId)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
@@ -100,6 +115,9 @@ public class ScheduledBackupService
             severity: "warning");
     }
 
+    /// <summary>
+    /// Determines whether the value should run.
+    /// </summary>
     public async Task<bool> ShouldRunAsync()
     {
         var settings = await GetSettingsAsync();
@@ -135,6 +153,9 @@ public class ScheduledBackupService
         }
     }
 
+    /// <summary>
+    /// Runs the scheduled backup.
+    /// </summary>
     public async Task RunScheduledBackupAsync(IWebHostEnvironment env, bool forceRun = false)
     {
         var settings = await GetSettingsAsync();
@@ -213,6 +234,9 @@ public class ScheduledBackupService
         }
     }
 
+    /// <summary>
+    /// Gets the history.
+    /// </summary>
     public async Task<List<BackupHistoryEntry>> GetHistoryAsync(IWebHostEnvironment env, int limit = 50)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
@@ -258,6 +282,9 @@ public class ScheduledBackupService
         await Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Gets the backup file path.
+    /// </summary>
     public Task<string?> GetBackupFilePathAsync(IWebHostEnvironment env, string fileName)
     {
         if (string.IsNullOrEmpty(fileName) || fileName.Contains("..") ||
@@ -268,6 +295,9 @@ public class ScheduledBackupService
         return Task.FromResult(File.Exists(path) ? path : null);
     }
 
+    /// <summary>
+    /// Deletes the backup.
+    /// </summary>
     public async Task<bool> DeleteBackupAsync(IWebHostEnvironment env, string fileName, string userId)
     {
         try
@@ -294,6 +324,9 @@ public class ScheduledBackupService
         }
     }
 
+    /// <summary>
+    /// Lists the backup files.
+    /// </summary>
     public List<(string FileName, long FileSize, DateTime CreatedAt)> ListBackupFiles(IWebHostEnvironment env)
     {
         var folder = GetBackupsFolder(env);

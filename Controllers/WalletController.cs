@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Attributes;
+﻿using BuildingManagementMvc.Attributes;
 using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -9,6 +9,12 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  WalletController	المحفظة (أرصدة + دفعات معلقة + تعديلات)
 // ============================================================
+/// <summary>
+/// Admin wallet management: apartment balances, confirming/cancelling/editing payments, manual adjustments and WhatsApp messages.
+/// </summary>
+/// <remarks>
+/// Access: requires one of the roles <c>admin</c>.
+/// </remarks>
 [Authorize(Roles = "admin")]
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageWallet)]
 public class WalletController : Controller
@@ -18,6 +24,9 @@ public class WalletController : Controller
     private readonly AuditLogService _audit;
     private readonly NotificationsService _notify;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WalletController"/> class.
+    /// </summary>
     public WalletController(
         BuildingsService buildings,
         WalletService wallet,
@@ -32,6 +41,12 @@ public class WalletController : Controller
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
 
+    /// <summary>
+    /// Shows the main page of the wallet screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Index(string? month, int page = 1, int pageSize = 50)
     {
@@ -51,7 +66,7 @@ public class WalletController : Controller
             .ToList();
 
         // ✅ Pagination للشقق
-        var pagedBalances = PagedResult<(Apartment Apt, double Balance)>
+        var pagedBalances = PagedResult<(Apartment Apt, decimal Balance)>
             .Create(allBalances, page, pageSize);
 
         // ✅ Pagination للدفعات المعلقة (من كل الشهور)
@@ -78,6 +93,12 @@ public class WalletController : Controller
     // ============================================================
     // ✅ تأكيد دفعة
     // ============================================================
+    /// <summary>
+    /// Confirms the deposit.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ConfirmDeposit(string month, string depositId)
@@ -106,6 +127,7 @@ public class WalletController : Controller
             await _buildings.SaveFullAsync(building);
             TempData["Message"] = Loc.T("Deposit_Confirmed_Successfully");
         }
+        else TempData["Error"] = "تعذر تأكيد الدفعة: قد لا تكون معلّقة أو أنها غير موجودة.";
 
         return RedirectToAction("Index", new { month });
     }
@@ -113,6 +135,12 @@ public class WalletController : Controller
     // ============================================================
     // ✅ إلغاء دفعة
     // ============================================================
+    /// <summary>
+    /// Cancels the deposit.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CancelDeposit(string month, string depositId, string? reason)
@@ -141,6 +169,7 @@ public class WalletController : Controller
             await _buildings.SaveFullAsync(building);
             TempData["Message"] = Loc.T("Deposit_Cancelled_Successfully");
         }
+        else TempData["Error"] = "تعذر إلغاء الدفعة: قد لا تكون معلّقة أو أنها غير موجودة.";
 
         return RedirectToAction("Index", new { month });
     }
@@ -148,9 +177,15 @@ public class WalletController : Controller
     // ============================================================
     // ✅ إضافة تسوية يدوية
     // ============================================================
+    /// <summary>
+    /// Adds the adjustment.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddAdjustment(string month, string aptId, double amount, string? reason)
+    public async Task<IActionResult> AddAdjustment(string month, string aptId, decimal amount, string? reason)
     {
         var building = await _buildings.GetByIdAsync(BuildingId);
         if (building == null) return NotFound();
@@ -168,12 +203,18 @@ public class WalletController : Controller
     // ============================================================
     // ✅ Phase 21 — تعديل دفعة معلقة (المبلغ + الملاحظة بس)
     // ============================================================
+    /// <summary>
+    /// Updates the deposit.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateDeposit(
         string month,
         string depositId,
-        double amount,
+        decimal amount,
         string? note,
         string? reason)
     {

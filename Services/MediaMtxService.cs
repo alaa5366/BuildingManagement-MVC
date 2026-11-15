@@ -2,11 +2,17 @@
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Registers camera streams with the MediaMTX media server.
+/// </summary>
 public class MediaMtxService
 {
     private readonly HttpClient _http;
     private readonly ILogger<MediaMtxService> _log;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MediaMtxService"/> class.
+    /// </summary>
     public MediaMtxService(HttpClient http, IConfiguration config, ILogger<MediaMtxService> log)
     {
         _http = http;
@@ -16,6 +22,9 @@ public class MediaMtxService
         _http.BaseAddress = new Uri(baseUrl);
     }
 
+    /// <summary>
+    /// Adds the or update path.
+    /// </summary>
     public async Task<bool> AddOrUpdatePathAsync(string pathName, string rtspUrl)
     {
         try
@@ -41,12 +50,15 @@ public class MediaMtxService
         }
     }
 
+    /// <summary>
+    /// Deletes the path.
+    /// </summary>
     public async Task<bool> DeletePathAsync(string pathName)
     {
         try
         {
             var res = await _http.PostAsync($"v3/config/paths/delete/{pathName}", null);
-            return res.IsSuccessStatusCode;
+            return res.IsSuccessStatusCode || res.StatusCode == System.Net.HttpStatusCode.NotFound;
         }
         catch (Exception ex)
         {
@@ -55,15 +67,23 @@ public class MediaMtxService
         }
     }
 
+    /// <summary>
+    /// Builds the RTSP URL.
+    /// </summary>
     public static string BuildRtspUrl(
         string ip, int port, string username, string password, string rtspPath)
     {
+        if (!DvrNetworkPolicy.IsAllowedEndpoint(ip, port) || !DvrNetworkPolicy.IsSafeRelativeRtspPath(rtspPath))
+            throw new ArgumentException("RTSP source is outside the allowed private-network policy.");
         var userInfo = string.IsNullOrEmpty(username)
             ? ""
             : $"{Uri.EscapeDataString(username)}:{Uri.EscapeDataString(password)}@";
         return $"rtsp://{userInfo}{ip}:{port}/{rtspPath.TrimStart('/')}";
     }
 
+    /// <summary>
+    /// Gets the default RTSP path.
+    /// </summary>
     public static string GetDefaultRtspPath(string brand, int channel)
     {
         return brand?.ToLowerInvariant() switch

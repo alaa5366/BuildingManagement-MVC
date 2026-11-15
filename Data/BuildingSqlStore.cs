@@ -1,7 +1,9 @@
 ﻿// =====================================================================
+//  BuildingSqlStore - بديل Firestore لعمليات الـ aggregate بتاعة BuildingsService.
 //  Singleton (لأن BuildingsService نفسه Singleton) فبيستخدم IDbContextFactory:
 //  كل عملية بتفتح DbContext جديد وتقفله.
 //
+//  Last-write-wins زي Firestore Overwrite الحالي (مفيش optimistic concurrency).
 // =====================================================================
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
@@ -10,17 +12,26 @@ using System.Globalization;
 
 namespace BuildingManagementMvc.Data;
 
+/// <summary>
+/// Loads and saves buildings (the whole aggregate) from SQL Server through EF Core.
+/// </summary>
 public class BuildingSqlStore
 {
     private readonly IDbContextFactory<AppDbContext> _factory;
     private readonly ILogger<BuildingSqlStore> _log;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BuildingSqlStore"/> class.
+    /// </summary>
     public BuildingSqlStore(IDbContextFactory<AppDbContext> factory, ILogger<BuildingSqlStore> log)
     {
         _factory = factory;
         _log = log;
     }
 
+    /// <summary>
+    /// Gets the by ID.
+    /// </summary>
     public virtual async Task<Building?> GetByIdAsync(string id)
     {
         await using var db = await _factory.CreateDbContextAsync();
@@ -29,6 +40,9 @@ public class BuildingSqlStore
 
     // تحذير أداء: 16 استعلام لكل عمارة. للقوائم (اختيار العمارة) الأفضل بعدين
     // استعلام خفيف على Buildings بس.
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     public async Task<List<Building>> GetAllAsync()
     {
         await using var db = await _factory.CreateDbContextAsync();
@@ -47,6 +61,9 @@ public class BuildingSqlStore
     //  GetSummariesAsync — خفيف: Id/Name/BuildingNumber فقط
     //  (لصفحات الدخول والقوائم — استعلام واحد بدل 16×N)
     // =====================================================================
+    /// <summary>
+    /// Gets the summaries.
+    /// </summary>
     public virtual async Task<List<Building>> GetSummariesAsync()
     {
         await using var db = await _factory.CreateDbContextAsync();
@@ -61,12 +78,38 @@ public class BuildingSqlStore
             BuildingNumber = r.BuildingNumber
         }).ToList();
     }
+    /// <summary>
+    /// يسترجع صفحة من ملخصات المباني من قاعدة البيانات.
+    /// </summary>
+    /// <param name="page">رقم الصفحة (يبدأ من 1).</param>
+    /// <param name="pageSize">عدد العناصر في الصفحة.</param>
+    /// <returns>صفحة من ملخصات المباني.</returns>
+    public virtual async Task<BuildingManagementMvc.Models.PagedResult<Building>> GetSummariesPagedAsync(int page, int pageSize)
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 200);
+        var query = db.Buildings.AsNoTracking().OrderBy(b => b.BuildingNumber);
+        var total = await query.CountAsync();
+        var totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
+        page = Math.Min(page, totalPages);
+        var rows = await query.Skip((page - 1) * pageSize).Take(pageSize)
+            .Select(b => new { b.Id, b.Name, b.BuildingNumber }).ToListAsync();
+        return new BuildingManagementMvc.Models.PagedResult<Building>
+        {
+            Items = rows.Select(x => new Building { Id = x.Id, Name = x.Name, BuildingNumber = x.BuildingNumber }).ToList(),
+            CurrentPage = page, PageSize = pageSize, TotalItems = total
+        };
+    }
 
     // =====================================================================
     //  GetSummariesWithCountsAsync — نفس GetSummariesAsync
     //  لكن بترجع كمان عدد الشقق والأدوار (بدون تحميلهم فعلياً).
     //  مفيدة للـ Views اللي بتستخدم @b.Apartments.Count و @b.Floors.Count.
     // =====================================================================
+    /// <summary>
+    /// Gets the summaries with counts.
+    /// </summary>
     public virtual async Task<List<Building>> GetSummariesWithCountsAsync()
     {
         await using var db = await _factory.CreateDbContextAsync();
@@ -89,14 +132,14 @@ public class BuildingSqlStore
             Id = r.Id,
             Name = r.Name,
             BuildingNumber = r.BuildingNumber,
-            // pseudo-objects للعرض فقط — Count هيشتغل عادي
-            Apartments = Enumerable.Range(0, r.ApartmentsCount)
-                .Select(_ => new Apartment()).ToList(),
-            Floors = Enumerable.Range(0, r.FloorsCount)
-                .Select(_ => new Floor()).ToList()
+            ApartmentsCount = r.ApartmentsCount,
+            FloorsCount = r.FloorsCount
         }).ToList();
     }
 
+    /// <summary>
+    /// Finds the building ID by apartment.
+    /// </summary>
     public virtual async Task<string?> FindBuildingIdByApartmentAsync(string apartmentId)
     {
         await using var db = await _factory.CreateDbContextAsync();
@@ -106,6 +149,9 @@ public class BuildingSqlStore
             .FirstOrDefaultAsync();
     }
 
+    /// <summary>
+    /// Saves the full.
+    /// </summary>
     public async Task SaveFullAsync(Building building)
     {
         await using var db = await _factory.CreateDbContextAsync();
@@ -114,6 +160,9 @@ public class BuildingSqlStore
             _log.LogWarning("Building {BuildingId}: {Warning}", building.Id, w);
     }
 
+    /// <summary>
+    /// Deletes the operation on the building SQL.
+    /// </summary>
     public async Task DeleteAsync(string id)
     {
         await using var db = await _factory.CreateDbContextAsync();
@@ -124,6 +173,9 @@ public class BuildingSqlStore
     //  SaveSettingsAsync - نسخ إعدادات المبنى على SQL
     //  (بتستخدمها SettingsService.SaveBuildingAsync لما يكون SQL مفعّل)
     // =====================================================================
+    /// <summary>
+    /// Saves the settings.
+    /// </summary>
     public async Task SaveSettingsAsync(string buildingId, Dictionary<string, object> settings)
     {
         await using var db = await _factory.CreateDbContextAsync();

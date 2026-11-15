@@ -37,3 +37,8 @@ publish/
 # ============ OS ============
 .DS_Store
 Thumbs.db
+
+# ============ Visual Studio upgrade/clutter ============
+UpgradeLog*.htm
+_UpgradeReport_Files/
+*.slnx.user

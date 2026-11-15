@@ -4,6 +4,9 @@ using ClosedXML.Excel;
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Generates the signed Excel template used to import a building.
+/// </summary>
 public class ExcelTemplateService
 {
     private readonly string _secretKey;
@@ -11,12 +14,18 @@ public class ExcelTemplateService
     private const int ValidityDays = 7;
     private const string TemplateId = "tpl_v3";
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ExcelTemplateService"/> class.
+    /// </summary>
     public ExcelTemplateService(IConfiguration config, ILogger<ExcelTemplateService> logger)
     {
         _secretKey = ConfigSecrets.Require(config, "Excel:SecretKey");
         _logger = logger;
     }
 
+    /// <summary>
+    /// Generates the template.
+    /// </summary>
     public byte[] GenerateTemplate(string? buildingId = null, string? issuedBy = null)
     {
         using var workbook = new XLWorkbook();

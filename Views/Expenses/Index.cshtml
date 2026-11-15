@@ -1,3 +1,9 @@
+@* =============================================================================
+   View:        Expenses/Index
+   Rendered by: ExpensesController.Index
+   Model:       BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Expense>
+   Purpose:     Main page.
+   ============================================================================= *@
 @model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Expense>
 @{
     ViewData["Title"] = Loc.T("Expenses");
@@ -53,7 +59,7 @@
 <div class="bg-white rounded shadow-sm p-3">
     <div class="d-flex justify-content-between mb-2">
         <h5>@Loc.T("Expense_Log_N", Model.TotalItems)</h5>
-        <strong>@Loc.T("Total_N_EGP", ((double)ViewBag.Total).ToString("0.##"))</strong>
+        <strong>@Loc.T("Total_N_EGP", ((decimal)ViewBag.Total).ToString("0.##"))</strong>
     </div>
 
     @* ✅ Pagination (فوق) *@

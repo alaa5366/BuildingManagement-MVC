@@ -9,6 +9,12 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  ExpensesController	المصروفات الشهرية
 // ============================================================
+/// <summary>
+/// Monthly expense entry for the current building: list, add and delete.
+/// </summary>
+/// <remarks>
+/// Access: requires one of the roles <c>admin</c>.
+/// </remarks>
 [Authorize(Roles = "admin")]
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageExpenses)]
 public class ExpensesController : Controller
@@ -19,6 +25,9 @@ public class ExpensesController : Controller
     private readonly AuditLogService _audit;
     private readonly ILogger<ExpensesController> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ExpensesController"/> class.
+    /// </summary>
     public ExpensesController(
         BuildingsService buildings,
         WalletService wallet,
@@ -35,6 +44,12 @@ public class ExpensesController : Controller
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
 
+    /// <summary>
+    /// Shows the main page of the expenses screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Index(string? month, int page = 1, int pageSize = 50)
     {
@@ -64,9 +79,15 @@ public class ExpensesController : Controller
         return View(pagedExpenses);
     }
 
+    /// <summary>
+    /// Handles the add form submission of the expenses screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Add(string month, string categoryId, string note, double amount, string date)
+    public async Task<IActionResult> Add(string month, string categoryId, string note, decimal amount, string date)
     {
         var building = await _buildings.GetByIdAsync(BuildingId);
         if (building == null) return NotFound();
@@ -92,6 +113,12 @@ public class ExpensesController : Controller
         return RedirectToAction("Index", new { month = mk });
     }
 
+    /// <summary>
+    /// Handles the delete form submission of the expenses screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string month, string id)

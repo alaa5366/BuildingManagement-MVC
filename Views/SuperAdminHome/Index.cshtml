@@ -1,3 +1,9 @@
+﻿@* =============================================================================
+   View:        SuperAdminHome/Index
+   Rendered by: SuperAdminHomeController.Index
+   Model:       List<Building>
+   Purpose:     Main page.
+   ============================================================================= *@
 @model List<Building>
 @{ ViewData["Title"] = Loc.T("Super_Admin_Dashboard"); }
 
@@ -21,8 +27,8 @@ else
                 <tr>
                     <td>@b.BuildingNumber</td>
                     <td>@b.Name</td>
-                    <td>@b.Floors.Count</td>
-                    <td>@b.Apartments.Count</td>
+                    <td>@b.FloorsCount</td>
+                    <td>@b.ApartmentsCount</td>
                     <td><a asp-controller="Buildings" asp-action="Details" asp-route-id="@b.Id" class="btn btn-sm btn-outline-secondary">@Loc.T("Details")</a></td>
                 </tr>
             }

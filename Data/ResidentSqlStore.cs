@@ -8,11 +8,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Data;
 
+/// <summary>
+/// Data access for resident accounts.
+/// </summary>
 public sealed class ResidentSqlStore
 {
     private readonly IDbContextFactory<AppDbContext> _factory;
     private readonly ILogger<ResidentSqlStore> _log;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ResidentSqlStore"/> class.
+    /// </summary>
     public ResidentSqlStore(
         IDbContextFactory<AppDbContext> factory,
         ILogger<ResidentSqlStore> log)
@@ -25,6 +31,9 @@ public sealed class ResidentSqlStore
     // 1. القراءة
     // ═══════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Gets the by ID.
+    /// </summary>
     public async Task<ResidentEntity?> GetByIdAsync(string id, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(id)) return null;
@@ -34,6 +43,9 @@ public sealed class ResidentSqlStore
             .FirstOrDefaultAsync(r => r.Id == id, ct);
     }
 
+    /// <summary>
+    /// Gets the by user ID.
+    /// </summary>
     public async Task<ResidentEntity?> GetByUidAsync(string uid, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(uid)) return null;
@@ -43,6 +55,9 @@ public sealed class ResidentSqlStore
             .FirstOrDefaultAsync(r => r.Uid == uid, ct);
     }
 
+    /// <summary>
+    /// Gets the by apartment.
+    /// </summary>
     public async Task<List<ResidentEntity>> GetByApartmentAsync(
         string buildingId, string apartmentId, CancellationToken ct = default)
     {
@@ -55,6 +70,9 @@ public sealed class ResidentSqlStore
             .ToListAsync(ct);
     }
 
+    /// <summary>
+    /// Gets the by building.
+    /// </summary>
     public async Task<List<ResidentEntity>> GetByBuildingAsync(
         string buildingId, CancellationToken ct = default)
     {
@@ -68,6 +86,9 @@ public sealed class ResidentSqlStore
             .ToListAsync(ct);
     }
 
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     public async Task<List<ResidentEntity>> GetAllAsync(CancellationToken ct = default)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
@@ -82,6 +103,9 @@ public sealed class ResidentSqlStore
     // 2. البحث
     // ═══════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Finds the by phone.
+    /// </summary>
     public async Task<ResidentEntity?> FindByPhoneAsync(
         string buildingId, string phone, CancellationToken ct = default)
     {
@@ -99,6 +123,9 @@ public sealed class ResidentSqlStore
     // 3. Upsert
     // ═══════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Returns the upsert.
+    /// </summary>
     public async Task<bool> UpsertAsync(ResidentEntity resident, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(resident.Id)) return false;
@@ -142,6 +169,9 @@ public sealed class ResidentSqlStore
     // 4. Bulk Upsert
     // ═══════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Returns the upsert many.
+    /// </summary>
     public async Task<int> UpsertManyAsync(
         IEnumerable<ResidentEntity> residents, CancellationToken ct = default)
     {
@@ -157,6 +187,9 @@ public sealed class ResidentSqlStore
     // 5. حذف
     // ═══════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Deletes the operation on the resident SQL.
+    /// </summary>
     public async Task<bool> DeleteAsync(string id, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(id)) return false;
@@ -169,6 +202,9 @@ public sealed class ResidentSqlStore
     // 6. Update Last Login
     // ═══════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Updates the last login.
+    /// </summary>
     public async Task UpdateLastLoginAsync(string id, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(id)) return;
@@ -182,6 +218,9 @@ public sealed class ResidentSqlStore
     // 7. Count
     // ═══════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Counts the operation on the resident SQL.
+    /// </summary>
     public async Task<int> CountAsync(string? buildingId = null, CancellationToken ct = default)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);

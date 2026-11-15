@@ -11,6 +11,12 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  CategoriesController	الفئات المالية (Expense + Revenue)
 // ============================================================
+/// <summary>
+/// Management of expense and revenue categories (names, colors, order, activation).
+/// </summary>
+/// <remarks>
+/// Access: requires one of the roles <c>superadmin,admin</c>.
+/// </remarks>
 [Authorize(Roles = "superadmin,admin")]
 [HasPermission(AdminPermissions.ManageCategories)]
 public class CategoriesController : Controller
@@ -18,6 +24,9 @@ public class CategoriesController : Controller
     private readonly CategoriesService _categories;
     private readonly BuildingsService _buildings;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CategoriesController"/> class.
+    /// </summary>
     public CategoriesController(CategoriesService categories, BuildingsService buildings)
     {
         _categories = categories;
@@ -35,6 +44,9 @@ public class CategoriesController : Controller
     // ============================================================
     // صفحة الفئات
     // ============================================================
+    /// <summary>
+    /// Shows the main page of the categories screen.
+    /// </summary>
     public async Task<IActionResult> Index()
     {
         if (IsSuperAdmin)
@@ -58,6 +70,12 @@ public class CategoriesController : Controller
     // ============================================================
     // صفحة الفئات لعمارة محددة (Super Admin فقط)
     // ============================================================
+    /// <summary>
+    /// Shows the category management page of a building.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Manage(string id)
     {
@@ -75,6 +93,12 @@ public class CategoriesController : Controller
     // ============================================================
     // إضافة فئة
     // ============================================================
+    /// <summary>
+    /// Handles the add form submission of the categories screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Add(
@@ -99,6 +123,12 @@ public class CategoriesController : Controller
     // ============================================================
     // تعديل فئة
     // ============================================================
+    /// <summary>
+    /// Handles the update form submission of the categories screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Update(
@@ -117,6 +147,12 @@ public class CategoriesController : Controller
     // ============================================================
     // حذف / تعطيل فئة
     // ============================================================
+    /// <summary>
+    /// Handles the delete form submission of the categories screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string buildingId, bool isExpense, string id)
@@ -135,6 +171,12 @@ public class CategoriesController : Controller
     // ============================================================
     // إعادة الترتيب (AJAX)
     // ============================================================
+    /// <summary>
+    /// Saves a new display order for the expense or revenue categories.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Reorder(string buildingId, bool isExpense, List<string> ids)

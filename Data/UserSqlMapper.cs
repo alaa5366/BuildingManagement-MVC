@@ -1,12 +1,19 @@
 ﻿// =====================================================================
+//  UserSqlMapper - تحويل بين AppUserDoc (Firestore) و UserEntity (SQL)
 // =====================================================================
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Data;
 
+/// <summary>
+/// Maps between <see cref="BuildingManagementMvc.Models.AppUserDoc"/> and <see cref="BuildingManagementMvc.Data.Entities.UserEntity"/>.
+/// </summary>
 public static class UserSqlMapper
 {
+    /// <summary>
+    /// Converts to entity.
+    /// </summary>
     public static UserEntity ToEntity(AppUserDoc u)
     {
         return new UserEntity
@@ -30,6 +37,9 @@ public static class UserSqlMapper
         };
     }
 
+    /// <summary>
+    /// Converts to document.
+    /// </summary>
     public static AppUserDoc ToDoc(UserEntity e)
     {
         return new AppUserDoc

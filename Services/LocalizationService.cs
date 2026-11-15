@@ -3,6 +3,9 @@ using System.Resources;
 
 namespace BuildingManagementMvc.Services
 {
+    /// <summary>
+    /// Reads translated strings from the shared resource files for the current UI culture. Returns the key itself when no translation exists.
+    /// </summary>
     public class LocalizationService
     {
         private static ResourceManager? _resourceManager;
@@ -20,6 +23,9 @@ namespace BuildingManagementMvc.Services
             }
         }
 
+        /// <summary>
+        /// Gets the operation on the localization.
+        /// </summary>
         public static string Get(string key)
         {
             try

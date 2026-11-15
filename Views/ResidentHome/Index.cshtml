@@ -1,16 +1,22 @@
+@* =============================================================================
+   View:        ResidentHome/Index
+   Rendered by: ResidentHomeController.Index
+   Model:       Apartment
+   Purpose:     Main page.
+   ============================================================================= *@
 @model Apartment
 @{
     ViewData["Title"] = Loc.T("Resident_Dashboard_Title");
     var building = ViewBag.Building as Building;
     var hasData = ViewBag.HasData as bool? ?? false;
 
-    var balance = (double)(ViewBag.Balance ?? 0.0);
+    var balance = (decimal)(ViewBag.Balance ?? 0m);
     var currentMonth = ViewBag.CurrentMonth as string ?? "";
 
     // Stats
-    var totalPaid = (double)(ViewBag.TotalPaid ?? 0.0);
-    var totalExpenses = (double)(ViewBag.TotalExpenses ?? 0.0);
-    var totalRevenue = (double)(ViewBag.TotalRevenue ?? 0.0);
+    var totalPaid = (decimal)(ViewBag.TotalPaid ?? 0m);
+    var totalExpenses = (decimal)(ViewBag.TotalExpenses ?? 0m);
+    var totalRevenue = (decimal)(ViewBag.TotalRevenue ?? 0m);
     var monthsCount = (int)(ViewBag.MonthsCount ?? 0);
 
     // Lists
@@ -22,11 +28,11 @@
     var unreadCount = (int)(ViewBag.UnreadCount ?? 0);
 
     // Hero
-    var expectedMonthly = (double)(ViewBag.ExpectedMonthly ?? 0.0);
-    var paidThisMonth = (double)(ViewBag.PaidThisMonth ?? 0.0);
-    var totalPaidAllTime = (double)(ViewBag.TotalPaidAllTime ?? 0.0);
+    var expectedMonthly = (decimal)(ViewBag.ExpectedMonthly ?? 0m);
+    var paidThisMonth = (decimal)(ViewBag.PaidThisMonth ?? 0m);
+    var totalPaidAllTime = (decimal)(ViewBag.TotalPaidAllTime ?? 0m);
     var progressPercent = (int)(ViewBag.ProgressPercent ?? 0);
-    var lastDepositAmount = (double)(ViewBag.LastDepositAmount ?? 0.0);
+    var lastDepositAmount = (decimal)(ViewBag.LastDepositAmount ?? 0m);
     var lastDepositDate = ViewBag.LastDepositDate as string ?? "";
 
     var hasPending = pendingDeposits.Any();

@@ -8,6 +8,12 @@ namespace BuildingManagementMvc.Controllers;
 // ============================================================
 //  PollsController	إدارة التصويتات
 // ============================================================
+/// <summary>
+/// Admin side of polls: create, close, reopen, delete and view results.
+/// </summary>
+/// <remarks>
+/// Access: requires one of the roles <c>admin</c>.
+/// </remarks>
 [Authorize(Roles = "admin")]
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManagePolls)]
 public class PollsController : Controller
@@ -16,6 +22,9 @@ public class PollsController : Controller
     private readonly PollsService _polls;
     private readonly AuditLogService _audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PollsController"/> class.
+    /// </summary>
     public PollsController(BuildingsService buildings, PollsService polls, AuditLogService audit)
     {
         _buildings = buildings; _polls = polls; _audit = audit;
@@ -23,6 +32,12 @@ public class PollsController : Controller
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
 
+    /// <summary>
+    /// Shows the main page of the polls screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP GET.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Index(int page = 1, int pageSize = 50)
     {
@@ -42,6 +57,12 @@ public class PollsController : Controller
         return View(paged);
     }
 
+    /// <summary>
+    /// Handles the create form submission of the polls screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(string question, string? description, string? deadline, List<string> options)
@@ -63,6 +84,12 @@ public class PollsController : Controller
         return RedirectToAction("Index");
     }
 
+    /// <summary>
+    /// Handles the close form submission of the polls screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Close(string id)
@@ -77,6 +104,12 @@ public class PollsController : Controller
         return RedirectToAction("Index");
     }
 
+    /// <summary>
+    /// Handles the reopen form submission of the polls screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Reopen(string id)
@@ -91,6 +124,12 @@ public class PollsController : Controller
         return RedirectToAction("Index");
     }
 
+    /// <summary>
+    /// Handles the delete form submission of the polls screen.
+    /// </summary>
+    /// <remarks>
+    /// HTTP POST.
+    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string id)

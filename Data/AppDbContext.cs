@@ -1,4 +1,4 @@
-// =====================================================================
+﻿// =====================================================================
 //  AppDbContext - مطابق لسكربت BuildingManagement-Schema.sql
 // =====================================================================
 using BuildingManagementMvc.Data.Entities;
@@ -6,41 +6,140 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Data;
 
+/// <summary>
+/// Entity Framework Core database context for the building management schema.
+/// </summary>
 public class AppDbContext : DbContext
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AppDbContext"/> class.
+    /// </summary>
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
+    /// <summary>
+    /// Gets the users.
+    /// </summary>
     public DbSet<UserEntity> Users => Set<UserEntity>();
+    /// <summary>
+    /// Gets the user permissions.
+    /// </summary>
     public DbSet<UserPermissionEntity> UserPermissions => Set<UserPermissionEntity>();
+    /// <summary>
+    /// Gets the buildings.
+    /// </summary>
     public DbSet<BuildingEntity> Buildings => Set<BuildingEntity>();
+    /// <summary>
+    /// Gets the building settings.
+    /// </summary>
     public DbSet<BuildingSettingsEntity> BuildingSettings => Set<BuildingSettingsEntity>();
+    /// <summary>
+    /// Gets the building admins.
+    /// </summary>
     public DbSet<BuildingAdminEntity> BuildingAdmins => Set<BuildingAdminEntity>();
+    /// <summary>
+    /// Gets the floors.
+    /// </summary>
     public DbSet<FloorEntity> Floors => Set<FloorEntity>();
+    /// <summary>
+    /// Gets the apartments.
+    /// </summary>
     public DbSet<ApartmentEntity> Apartments => Set<ApartmentEntity>();
+    /// <summary>
+    /// Gets the financial categories.
+    /// </summary>
     public DbSet<FinancialCategoryEntity> FinancialCategories => Set<FinancialCategoryEntity>();
+    /// <summary>
+    /// Gets the expenses.
+    /// </summary>
     public DbSet<ExpenseEntity> Expenses => Set<ExpenseEntity>();
+    /// <summary>
+    /// Gets the revenues.
+    /// </summary>
     public DbSet<RevenueEntity> Revenues => Set<RevenueEntity>();
+    /// <summary>
+    /// Gets the monthly apartment shares.
+    /// </summary>
     public DbSet<MonthlyApartmentShareEntity> MonthlyApartmentShares => Set<MonthlyApartmentShareEntity>();
+    /// <summary>
+    /// Gets the deposits.
+    /// </summary>
     public DbSet<DepositEntity> Deposits => Set<DepositEntity>();
+    /// <summary>
+    /// Gets the deposit edit history.
+    /// </summary>
     public DbSet<DepositEditEntity> DepositEditHistory => Set<DepositEditEntity>();
+    /// <summary>
+    /// Gets the wallet adjustments.
+    /// </summary>
     public DbSet<WalletAdjustmentEntity> WalletAdjustments => Set<WalletAdjustmentEntity>();
     // ❌ محذوف: DbSet<ReceiptEntity> Receipts
+    /// <summary>
+    /// Gets the audit log.
+    /// </summary>
     public DbSet<AuditLogEntity> AuditLog => Set<AuditLogEntity>();
+    /// <summary>
+    /// Gets the notifications.
+    /// </summary>
     public DbSet<NotificationEntity> Notifications => Set<NotificationEntity>();
+    /// <summary>
+    /// Gets the polls.
+    /// </summary>
     public DbSet<PollEntity> Polls => Set<PollEntity>();
+    /// <summary>
+    /// Gets the poll options.
+    /// </summary>
     public DbSet<PollOptionEntity> PollOptions => Set<PollOptionEntity>();
+    /// <summary>
+    /// Gets the poll votes.
+    /// </summary>
     public DbSet<PollVoteEntity> PollVotes => Set<PollVoteEntity>();
+    /// <summary>
+    /// Gets the maintenance records.
+    /// </summary>
     public DbSet<MaintenanceRecordEntity> MaintenanceRecords => Set<MaintenanceRecordEntity>();
+    /// <summary>
+    /// Gets the QR tokens.
+    /// </summary>
     public DbSet<QrTokenEntity> QrTokens => Set<QrTokenEntity>();
+    /// <summary>
+    /// Gets the QR usages.
+    /// </summary>
     public DbSet<QrUsageEntity> QrUsages => Set<QrUsageEntity>();   // ✅ جديد
+    /// <summary>
+    /// Gets the presence.
+    /// </summary>
     public DbSet<PresenceEntity> Presence => Set<PresenceEntity>();
+    /// <summary>
+    /// Gets the global settings.
+    /// </summary>
     public DbSet<GlobalSettingsEntity> GlobalSettings => Set<GlobalSettingsEntity>();
+    /// <summary>
+    /// Gets the scheduled backup settings.
+    /// </summary>
     public DbSet<ScheduledBackupSettingsEntity> ScheduledBackupSettings => Set<ScheduledBackupSettingsEntity>();
+    /// <summary>
+    /// Gets the backup history.
+    /// </summary>
     public DbSet<BackupHistoryEntity> BackupHistory => Set<BackupHistoryEntity>();
+    /// <summary>
+    /// Gets the apartment wallet movements.
+    /// </summary>
     public DbSet<ApartmentWalletMovementsView> ApartmentWalletMovements => Set<ApartmentWalletMovementsView>();
+    /// <summary>
+    /// Gets the sync pending changes.
+    /// </summary>
     public DbSet<SyncPendingChangeEntity> SyncPendingChanges => Set<SyncPendingChangeEntity>();
+    /// <summary>
+    /// Gets the dvrs.
+    /// </summary>
     public DbSet<DvrEntity> Dvrs => Set<DvrEntity>();
+    /// <summary>
+    /// Gets the cameras.
+    /// </summary>
     public DbSet<CameraEntity> Cameras => Set<CameraEntity>();
+    /// <summary>
+    /// Gets the residents.
+    /// </summary>
     public DbSet<ResidentEntity> Residents => Set<ResidentEntity>();
     protected override void ConfigureConventions(ModelConfigurationBuilder cb)
     {
@@ -73,6 +172,7 @@ public class AppDbContext : DbContext
             e.ToTable("Buildings");
             e.HasKey(x => x.Id);
             e.HasIndex(x => x.BuildingNumber).IsUnique();
+            e.Property(x => x.RowVersion).IsRowVersion();
         });
 
         mb.Entity<BuildingSettingsEntity>(e =>
@@ -192,6 +292,9 @@ public class AppDbContext : DbContext
             e.HasOne<BuildingEntity>().WithMany()
                 .HasForeignKey(x => x.BuildingId).OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(x => new { x.BuildingId, x.Ts });
+            e.HasIndex(x => new { x.ApartmentId, x.Ts });
+            e.Property(x => x.ApartmentId).HasMaxLength(64);
+            e.Property(x => x.Severity).HasMaxLength(20).HasDefaultValue("info");
         });
 
         mb.Entity<NotificationEntity>(e =>

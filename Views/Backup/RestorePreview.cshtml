@@ -4,9 +4,29 @@
     var totalDocs = Model.Collections.Sum(c => c.DocCount);
 }
 
+@*
+    ============================================================
+    RestorePreview — معاينة محتوى نسخة احتياطية قبل الاستعادة
+    ============================================================
+    الغرض:
+    - عرض ملخص محتوى الـ ZIP (اسم الملف، الحجم، عدد الجداول، عدد المستندات).
+    - عرض أي تحذيرات أو أخطاء أثناء فك التشفير أو قراءة الـ ZIP.
+    - السماح للمستخدم باختيار الجداول اللي عايز يستعيدها.
+    - تحديد وضع الاستعادة (Overwrite أو Merge).
+    - تأكيد العملية قبل التنفيذ.
+*@
+
 <div class="container">
     <h2>@Loc.T("Restore_Preview_2")</h2>
 
+    @* ============================================================
+       1. ملخص معلومات الملف
+       ============================================================
+       - اسم الملف (مثال: scheduled-2026-11-15-1200.zip).
+       - الحجم بالكيلوبايت.
+       - عدد الجداول (Collections) اللي في الـ ZIP.
+       - إجمالي عدد المستندات (Documents) في كل الجداول.
+    *@
     <div class="card mb-3">
         <div class="card-header bg-info">
             <strong>@Loc.T("File_Information")</strong>
@@ -19,71 +39,115 @@
         </div>
     </div>
 
+    @* ============================================================
+       2. تحذيرات وأخطاء (إن وجدت)
+       ============================================================
+       - لو فيه جداول مش موجودة في الـ ZIP.
+       - لو فيه JSON غير صالح.
+       - لو فيه مشاكل في فك التشفير.
+    *@
     @if (Model.Errors.Count > 0)
     {
         <div class="alert alert-warning">
             <strong>@Loc.T("Warnings")</strong>
-            <ul>@foreach (var err in Model.Errors) {
-                <li>@err</li>
-            }
-        </ul>
-    </div>
-}
+            <ul>
+                @foreach (var err in Model.Errors)
+                {
+                    <li>@err</li>
+                }
+            </ul>
+        </div>
+    }
 
-<form method="post" asp-action="ExecuteRestore">
-    @Html.AntiForgeryToken()
-    <input type="hidden" name="tempFilePath" value="@Model.TempFilePath" />
+    @* ============================================================
+       3. نموذج تنفيذ الاستعادة
+       ============================================================
+       - يرسل RestoreSessionId opaque token (بدون كشف مسار الملف على السيرفر).
+       - يرسل الجداول المختارة.
+       - يرسل overwrite (true/false).
+    *@
+    <form method="post" asp-action="ExecuteRestore">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="restoreSessionId" value="@Model.RestoreSessionId" />
 
-    <div class="card mb-3">
-        <div class="card-header">
-            <strong>@Loc.T("Choose_Collections_To_Restore")</strong>
-            <div class="float-end">
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAll(true)">@Loc.T("Select_All")</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAll(false)">@Loc.T("Clear_All")</button>
+        @* ============================================================
+           3.1 جدول الجداول المتاحة للاستعادة
+           ============================================================
+           - كل صف فيه Checkbox (محدد افتراضياً).
+           - يعرض: اسم الجدول، الوصف، عدد المستندات، الحجم.
+           - أزرار "تحديد الكل" و "إلغاء الكل" (JavaScript).
+        *@
+        <div class="card mb-3">
+            <div class="card-header">
+                <strong>@Loc.T("Choose_Collections_To_Restore")</strong>
+                <div class="float-end">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAll(true)">@Loc.T("Select_All")</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAll(false)">@Loc.T("Clear_All")</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;"></th>
+                            <th>Collection</th>
+                            <th>@Loc.T("Description")</th>
+                            <th>@Loc.T("Document_Count")</th>
+                            <th>@Loc.T("Size")</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in Model.Collections)
+                        {
+                            <tr>
+                                <td><input type="checkbox" name="collections" value="@c.Collection" class="form-check-input col-check" checked /></td>
+                                <td><code>@c.Collection</code></td>
+                                <td>@c.LabelAr</td>
+                                <td><span class="badge bg-secondary">@c.DocCount</span></td>
+                                <td><small>@(c.SizeBytes / 1024) KB</small></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
         </div>
-        <div class="card-body">
-            <table class="table table-sm">
-                <thead>
-                    <tr>
-                        <th style="width: 40px;"></th>
-                        <th>Collection</th>
-                        <th>@Loc.T("Description")</th>
-                        <th>@Loc.T("Document_Count")</th>
-                        <th>@Loc.T("Size")</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var c in Model.Collections)
-                    {
-                        <tr>
-                            <td><input type="checkbox" name="collections" value="@c.Collection" class="form-check-input col-check" checked /></td>
-                            <td><code>@c.Collection</code></td>
-                            <td>@c.LabelAr</td>
-                            <td><span class="badge bg-secondary">@c.DocCount</span></td>
-                            <td><small>@(c.SizeBytes / 1024) KB</small></td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+
+        @* ============================================================
+           3.2 خيار Overwrite
+           ============================================================
+           - لو محدد: هيتمسح كل البيانات الحالية وترجع من الـ ZIP.
+           - لو غير محدد: هيتم إضافة الجديد بس (Skip للموجود).
+           - ⚠️ Overwrite خطر، لازم تأكيد.
+        *@
+        <div class="form-check mb-3">
+            <input type="checkbox" name="overwrite" value="true" class="form-check-input" id="overwrite" />
+            <label class="form-check-label text-danger" for="overwrite">@Html.Raw(Loc.T("Replace_Existing_Documents_Overwrite"))</label>
         </div>
-    </div>
 
-    <div class="form-check mb-3">
-        <input type="checkbox" name="overwrite" value="true" class="form-check-input" id="overwrite" />
-        <label class="form-check-label text-danger" for="overwrite">@Html.Raw(Loc.T("Replace_Existing_Documents_Overwrite"))</label>
-    </div>
-
-    <button type="submit" class="btn btn-danger btn-lg"
-            onclick="return confirm('@Loc.Js("Confirm_The_Restore")');">
-        @Loc.T("Run_Restore")
-    </button>
+        @* ============================================================
+           3.3 أزرار التنفيذ والإلغاء
+           ============================================================
+           - "تنفيذ الاستعادة" (زر أحمر، خطر) — يعرض تأكيد قبل التنفيذ.
+           - "إلغاء" — يرجع لصفحة Backup الرئيسية.
+        *@
+        <button type="submit" class="btn btn-danger btn-lg"
+                onclick="return confirm('@Loc.Js("Confirm_The_Restore")');">
+            @Loc.T("Run_Restore")
+        </button>
         <a asp-action="Index" asp-route-tab="backup" class="btn btn-secondary">@Loc.T("Cancel_2")</a>
     </form>
 </div>
 
+@* ============================================================
+   4. JavaScript للتعامل مع تحديد / إلغاء كل الجداول
+   ============================================================
+*@
 @section Scripts {
     <script>
+                /**
+                 * تحديد أو إلغاء تحديد كل الـ checkboxes.
+                 // param { boolean } checked - true للتحديد، false للإلغاء.
+                 */
         function selectAll(checked) {
             document.querySelectorAll('.col-check').forEach(cb => cb.checked = checked);
         }

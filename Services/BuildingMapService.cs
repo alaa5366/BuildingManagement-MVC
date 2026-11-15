@@ -4,17 +4,26 @@ using BuildingManagementMvc.ViewModels;
 namespace BuildingManagementMvc.Services;
 
 // ✅ Phase 24.2 — Building Map Service
+/// <summary>
+/// Builds the building map view models (floors, apartment cards, statistics and apartment details).
+/// </summary>
 public class BuildingMapService
 {
     private readonly WalletService _wallet;
     private readonly PresenceService _presence;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BuildingMapService"/> class.
+    /// </summary>
     public BuildingMapService(WalletService wallet, PresenceService presence)
     {
         _wallet = wallet;
         _presence = presence;
     }
 
+    /// <summary>
+    /// Builds the operation on the building map.
+    /// </summary>
     public async Task<BuildingMapViewModels> BuildAsync(Building building, string currentMonth)
     {
         var vm = new BuildingMapViewModels
@@ -176,6 +185,9 @@ public class BuildingMapService
     // ============================================================
     // ✅ Phase 24.3 — Apartment Details
     // ============================================================
+    /// <summary>
+    /// Gets the apartment details.
+    /// </summary>
     public async Task<ApartmentDetailsVm?> GetApartmentDetailsAsync(
         Building building,
         string apartmentId,

@@ -2,17 +2,26 @@
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Extracts text from a receipt image with Tesseract.
+/// </summary>
 public class OcrService
 {
     private readonly string _tessDataPath;
     private readonly ILogger<OcrService> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OcrService"/> class.
+    /// </summary>
     public OcrService(IWebHostEnvironment env, ILogger<OcrService> logger)
     {
         _tessDataPath = Path.Combine(env.WebRootPath, "tessdata");
         _logger = logger;
     }
 
+    /// <summary>
+    /// Returns the extract text.
+    /// </summary>
     public string ExtractText(Stream imageStream)
     {
         try

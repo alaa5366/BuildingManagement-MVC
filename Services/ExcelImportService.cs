@@ -6,6 +6,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Reads and validates an Excel building template and turns it into import data.
+/// </summary>
 public class ExcelImportService
 {
     private readonly ExcelTemplateService _templateService;
@@ -13,6 +16,9 @@ public class ExcelImportService
     private readonly ILogger<ExcelImportService> _logger;
     private const string TemplateId = "tpl_v3";
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ExcelImportService"/> class.
+    /// </summary>
     public ExcelImportService(
         ExcelTemplateService templateService,
         IDbContextFactory<AppDbContext> sqlFactory,
@@ -23,6 +29,9 @@ public class ExcelImportService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Validates the file.
+    /// </summary>
     public ImportValidationResult ValidateFile(Stream fileStream)
     {
         try
@@ -69,6 +78,10 @@ public class ExcelImportService
 
             if (data.Apartments.Count == 0)
                 return ImportValidationResult.Fail(Loc.T("There_Are_No_Apartments_In_The"));
+
+            if (data.Apartments.Any(a => !string.IsNullOrWhiteSpace(a.Pin) &&
+                (a.Pin.Length != 4 || !a.Pin.All(char.IsDigit))))
+                return ImportValidationResult.Fail("كل PIN مدخل يجب أن يتكون من 4 أرقام.");
 
             return ImportValidationResult.Success(data);
         }
@@ -134,8 +147,8 @@ public class ExcelImportService
             if (pin.Length != 4)
                 pin = pin.PadRight(4, '0').Substring(0, 4);
 
-            double monthlyFee = 0;
-            if (double.TryParse(monthlyFeeStr, out var mf))
+            decimal monthlyFee = 0;
+            if (decimal.TryParse(monthlyFeeStr, out var mf))
                 monthlyFee = mf;
 
             bool isDisabled = isDisabledStr == "نعم"
@@ -197,6 +210,9 @@ public class ExcelImportService
         return sheet.Cell(row, col).Value.ToString() ?? "";
     }
 
+    /// <summary>
+    /// Generates the building number.
+    /// </summary>
     public async Task<string> GenerateBuildingNumberAsync()
     {
         try
@@ -222,41 +238,119 @@ public class ExcelImportService
     }
 }
 
+/// <summary>
+/// Result of validating an Excel import file: errors, warnings and the parsed data.
+/// </summary>
 public class ImportValidationResult
 {
+    /// <summary>
+    /// Gets or sets a value indicating whether it is success.
+    /// </summary>
     public bool IsSuccess { get; set; }
+    /// <summary>
+    /// Gets or sets the error.
+    /// </summary>
     public string? Error { get; set; }
+    /// <summary>
+    /// Gets or sets the data.
+    /// </summary>
     public BuildingImportData? Data { get; set; }
 
+    /// <summary>
+    /// Returns the success.
+    /// </summary>
     public static ImportValidationResult Success(BuildingImportData data) =>
         new() { IsSuccess = true, Data = data };
 
+    /// <summary>
+    /// Returns the fail.
+    /// </summary>
     public static ImportValidationResult Fail(string error) =>
         new() { IsSuccess = false, Error = error };
 }
 
+/// <summary>
+/// Building information parsed from the Excel template.
+/// </summary>
 public class BuildingImportData
 {
+    /// <summary>
+    /// Gets or sets the display name.
+    /// </summary>
     public string Name { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the building number.
+    /// </summary>
     public string BuildingNumber { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the admin PIN.
+    /// </summary>
     public string AdminPin { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the admin WhatsApp.
+    /// </summary>
     public string AdminWhatsapp { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the logo URL.
+    /// </summary>
     public string LogoUrl { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the apartments.
+    /// </summary>
     public List<ApartmentImportData> Apartments { get; set; } = new();
 }
 
+/// <summary>
+/// One apartment row parsed from the Excel template.
+/// </summary>
 public class ApartmentImportData
 {
+    /// <summary>
+    /// Gets or sets the floor label.
+    /// </summary>
     public string FloorLabel { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the floor order.
+    /// </summary>
     public int FloorOrder { get; set; }
+    /// <summary>
+    /// Gets or sets the apartment number.
+    /// </summary>
     public int AptNumber { get; set; }
+    /// <summary>
+    /// Gets or sets the owner.
+    /// </summary>
     public string Owner { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the whats app.
+    /// </summary>
     public string WhatsApp { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the PIN.
+    /// </summary>
     public string Pin { get; set; } = "";
-    public double MonthlyFee { get; set; }
+    /// <summary>
+    /// Gets or sets the monthly fee.
+    /// </summary>
+    public decimal MonthlyFee { get; set; }
+    /// <summary>
+    /// Gets or sets the apartment label.
+    /// </summary>
     public string AptLabel { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the status.
+    /// </summary>
     public string Status { get; set; } = "open";
+    /// <summary>
+    /// Gets or sets a value indicating whether it is disabled.
+    /// </summary>
     public bool IsDisabled { get; set; } = false;
+    /// <summary>
+    /// Gets or sets the closed reason.
+    /// </summary>
     public string ClosedReason { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the notes.
+    /// </summary>
     public string Notes { get; set; } = "";
 }

@@ -6,8 +6,14 @@ using QuestPDF.Infrastructure;
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Renders sheets of QR codes as PDF documents.
+/// </summary>
 public class QrCodePdfService
 {
+    /// <summary>
+    /// Generates the QR codes PDF.
+    /// </summary>
     public byte[] GenerateQrCodesPdf(Building building, string baseUrl)
     {
         var document = Document.Create(container =>

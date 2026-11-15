@@ -1,4 +1,10 @@
-﻿@model List<BuildingManagementMvc.Data.Entities.DvrEntity>
+﻿@* =============================================================================
+   View:        Dvrs/Index
+   Rendered by: DvrsController.Index
+   Model:       List<BuildingManagementMvc.Data.Entities.DvrEntity>
+   Purpose:     Main page.
+   ============================================================================= *@
+@model List<BuildingManagementMvc.Data.Entities.DvrEntity>
 @{
     ViewData["Title"] = Loc.T("DVRs");
     var building = ViewBag.Building as BuildingManagementMvc.Models.Building;

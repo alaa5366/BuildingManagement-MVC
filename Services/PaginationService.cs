@@ -3,9 +3,15 @@
 namespace BuildingManagementMvc.Services;
 
 // Helper للـ Pagination + بناء الروابط
+/// <summary>
+/// Helpers for reading paging parameters from the query string and building page links.
+/// </summary>
 public static class PaginationService
 {
     // ✅ قراءة الـ Pagination من الـ Query String
+    /// <summary>
+    /// Reads the from query.
+    /// </summary>
     public static PaginationRequest ReadFromQuery(IQueryCollection query)
     {
         var req = new PaginationRequest();
@@ -30,6 +36,9 @@ public static class PaginationService
     }
 
     // ✅ بناء QueryString مع override
+    /// <summary>
+    /// Builds the query.
+    /// </summary>
     public static string BuildQuery(
         IQueryCollection query,
         Dictionary<string, string?> overrides)

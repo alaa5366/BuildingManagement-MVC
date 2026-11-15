@@ -4,11 +4,17 @@ using CloudinaryDotNet.Actions;
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Uploads receipt images to Cloudinary and returns their URLs.
+/// </summary>
 public class CloudinaryService
 {
     private readonly Cloudinary _cloudinary;
     private readonly ILogger<CloudinaryService> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CloudinaryService"/> class.
+    /// </summary>
     public CloudinaryService(IConfiguration config, ILogger<CloudinaryService> logger)
     {
         _logger = logger;

@@ -6,8 +6,14 @@ using QuestPDF.Infrastructure;
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>
+/// Renders an invoice as a PDF document.
+/// </summary>
 public class InvoicePdfService
 {
+    /// <summary>
+    /// Generates the operation on the invoice PDF.
+    /// </summary>
     public byte[] Generate(InvoiceData d)
     {
         byte[] qrPng;

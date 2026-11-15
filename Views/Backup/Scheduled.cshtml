@@ -1,4 +1,10 @@
-﻿@model BuildingManagementMvc.Models.ScheduledBackupSettings
+﻿@* =============================================================================
+   View:        Backup/Scheduled
+   Rendered by: BackupController.Scheduled
+   Model:       BuildingManagementMvc.Models.ScheduledBackupSettings
+   Purpose:     Scheduled page.
+   ============================================================================= *@
+@model BuildingManagementMvc.Models.ScheduledBackupSettings
 @{
     ViewData["Title"] = Loc.T("Scheduled_Backups_2");
     var collections = ViewBag.AvailableCollections as IReadOnlyDictionary<string, string>

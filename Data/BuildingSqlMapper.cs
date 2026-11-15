@@ -9,6 +9,7 @@
 //
 //  السلوك:
 //   - SaveAsync: Upsert بالمقارنة (مش delete-all/insert-all)، جوه Transaction.
+//     أي صف مش موجود في الـ aggregate بيتشال من القاعدة (زي Overwrite في Firestore)،
 //     ما عدا AuditLog: Append-only (بيضيف الجديد بس).
 //   - لو فيه بيانات مش هتعدّي قيود القاعدة (شقة مش موجودة، مبلغ <= 0، حالة غريبة...)
 //     الصف بيتخطّى ويتضاف تحذير في القايمة الراجعة. راجع التحذيرات.
@@ -25,6 +26,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Data;
 
+/// <summary>
+/// Maps between the in-memory <see cref="BuildingManagementMvc.Models.Building"/> aggregate and the EF Core entities, in both directions.
+/// </summary>
 public static class BuildingSqlMapper
 {
     private const int AuditCap = 1000;   // نفس سقف AuditLogService.Push
@@ -69,8 +73,8 @@ public static class BuildingSqlMapper
     private static DateOnly FirstOfMonth(string monthKey) =>
         new(int.Parse(monthKey[..4], Inv), int.Parse(monthKey[5..7], Inv), 1);
 
-    private static decimal Dec(double d) =>
-        double.IsFinite(d) ? Math.Round((decimal)d, 2, MidpointRounding.AwayFromZero) : 0m;
+    private static decimal Dec(decimal d) =>
+        Math.Round(d, 2, MidpointRounding.AwayFromZero);
 
     internal static string Cut(string? s, int max)
     {
@@ -111,6 +115,9 @@ public static class BuildingSqlMapper
     // ==================================================================
     //  LOAD  : SQL -> Models.Building
     // ==================================================================
+    /// <summary>
+    /// Loads the operation on the building SQL.
+    /// </summary>
     public static async Task<Building?> LoadAsync(
         AppDbContext db, string id, CancellationToken ct = default)
     {
@@ -136,7 +143,9 @@ public static class BuildingSqlMapper
         var maint = await db.MaintenanceRecords.AsNoTracking().Where(x => x.BuildingId == id).ToListAsync(ct);
         var admins = await db.BuildingAdmins.AsNoTracking().Where(x => x.BuildingId == id)
             .Select(x => x.AdminUid).ToListAsync(ct);
-        var audit = await db.AuditLog.AsNoTracking().Where(x => x.BuildingId == id)
+        // Only aggregate-originated audit rows are rehydrated into the Building aggregate.
+        // Direct IAuditLogger rows (SourceId == null) are queried independently and must not be re-appended on every SaveFullAsync.
+        var audit = await db.AuditLog.AsNoTracking().Where(x => x.BuildingId == id && x.SourceId != null)
             .OrderByDescending(x => x.Ts).ThenByDescending(x => x.AuditId)
             .Take(AuditCap).ToListAsync(ct);
         audit.Reverse(); // الأقدم الأول، زي AuditLogService.Push
@@ -150,6 +159,7 @@ public static class BuildingSqlMapper
             DataVersion = be.DataVersion,
             LogoUrl = be.LogoUrl,
             AdminWhatsapp = be.AdminWhatsapp,
+            RowVersion = be.RowVersion.ToArray(),
             CreatedAt = FormatTs(be.CreatedAt) ?? "",
             PaymentInfo = new PaymentInfo
             {
@@ -168,7 +178,7 @@ public static class BuildingSqlMapper
                 Number = a.Number,
                 Owner = a.Owner,
                 Phone = a.Phone,
-                MonthlyFee = (double)a.MonthlyFee,
+                MonthlyFee = a.MonthlyFee,
                 Pin = "",
                 Closed = a.IsClosed,
                 Label = a.Label,
@@ -188,7 +198,7 @@ public static class BuildingSqlMapper
             {
                 Id = a.Id,
                 AptId = a.ApartmentId,
-                Amount = (double)a.Amount,
+                Amount = a.Amount,
                 Reason = a.Reason,
                 MonthKey = a.MonthKey,
                 CreatedAt = FormatTs(a.CreatedAt) ?? "",
@@ -214,7 +224,7 @@ public static class BuildingSqlMapper
                     Title = m.Title,
                     Description = m.Description,
                     Date = FormatDate(m.MaintenanceDate) ?? "",
-                    Cost = (double)m.Cost,
+                    Cost = m.Cost,
                     Vendor = m.Vendor,
                     Status = m.Status,
                     CreatedBy = m.CreatedBy,
@@ -233,7 +243,8 @@ public static class BuildingSqlMapper
                 Details = a.Details,
                 Month = a.MonthKey,
                 BuildingNumber = a.BuildingNumber,
-                AptNumber = a.AptNumber
+                AptNumber = a.AptNumber,
+                Severity = a.Severity
             }).ToList()
         };
 
@@ -250,7 +261,7 @@ public static class BuildingSqlMapper
                 Id = e.Id,
                 CategoryId = e.CategoryId ?? "",
                 Note = e.Note,
-                Amount = (double)e.Amount,
+                Amount = e.Amount,
                 Date = FormatDate(e.ExpenseDate) ?? "",
                 Receipt = e.ReceiptUrl
             });
@@ -261,7 +272,7 @@ public static class BuildingSqlMapper
                 Id = r.Id,
                 CategoryId = r.CategoryId ?? "",
                 Note = r.Note,
-                Amount = (double)r.Amount,
+                Amount = r.Amount,
                 Date = FormatDate(r.RevenueDate) ?? ""
             });
 
@@ -269,9 +280,9 @@ public static class BuildingSqlMapper
         foreach (var s in shares)
         {
             var m = Month(s.MonthKey);
-            m.Distribution[s.ApartmentId] = (double)s.ExpenseShare;
-            m.RevenueDistribution[s.ApartmentId] = (double)s.RevenueShare;
-            m.CarryOver[s.ApartmentId] = (double)s.CarryOver;
+            m.Distribution[s.ApartmentId] = s.ExpenseShare;
+            m.RevenueDistribution[s.ApartmentId] = s.RevenueShare;
+            m.CarryOver[s.ApartmentId] = s.CarryOver;
         }
 
         var editsByDep = edits.GroupBy(x => x.DepositId).ToDictionary(g => g.Key, g => g.ToList());
@@ -282,7 +293,7 @@ public static class BuildingSqlMapper
                 Id = d.Id,
                 Number = d.Number,
                 AptId = d.ApartmentId,
-                Amount = (double)d.Amount,
+                Amount = d.Amount,
                 Note = d.Note,
                 Status = d.Status,
                 Receipt = HasReceipt(d)
@@ -312,8 +323,8 @@ public static class BuildingSqlMapper
                         Ts = FormatTs(x.Ts) ?? "",
                         By = x.ByUser,
                         Reason = x.Reason,
-                        OldAmount = (double)x.OldAmount,
-                        NewAmount = (double)x.NewAmount,
+                        OldAmount = x.OldAmount,
+                        NewAmount = x.NewAmount,
                         OldNote = x.OldNote,
                         NewNote = x.NewNote
                     }).ToList()
@@ -376,6 +387,9 @@ public static class BuildingSqlMapper
     // ==================================================================
     //  SAVE  : Models.Building -> SQL      (بيرجّع قايمة تحذيرات)
     // ==================================================================
+    /// <summary>
+    /// Saves the operation on the building SQL.
+    /// </summary>
     public static async Task<List<string>> SaveAsync(
         AppDbContext db, Building src, CancellationToken ct = default)
     {
@@ -393,6 +407,11 @@ public static class BuildingSqlMapper
         {
             be = new BuildingEntity { Id = bid, CreatedAt = ParseTs(src.CreatedAt) ?? NowSec() };
             db.Buildings.Add(be);
+        }
+        else if (src.RowVersion is { Length: > 0 } &&
+                 !System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(src.RowVersion, be.RowVersion))
+        {
+            throw new DbUpdateConcurrencyException("Building data changed after it was loaded. Reload and retry the operation.");
         }
         be.BuildingNumber = Cut(src.BuildingNumber, 50);
         be.Name = Cut(src.Name, 200);
@@ -734,12 +753,17 @@ public static class BuildingSqlMapper
                 Action = Cut(e.Action, 100), Label = Cut(e.Label, 300), Actor = Cut(e.Actor, 200),
                 ActorRole = Cut(e.ActorRole, 20), Details = e.Details ?? "", MonthKey = Cut(e.Month, 7),
                 BuildingNumber = e.BuildingNumber == null ? null : Cut(e.BuildingNumber, 50),
-                AptNumber = e.AptNumber
+                AptNumber = e.AptNumber,
+                ApartmentId = e.AptNumber.HasValue
+                    ? src.Apartments?.FirstOrDefault(a => a.Number == e.AptNumber.Value)?.Id
+                    : null,
+                Severity = string.IsNullOrWhiteSpace(e.Severity) ? "info" : e.Severity
             });
         }
 
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        src.RowVersion = be.RowVersion.ToArray();
         return warn;
     }
 
