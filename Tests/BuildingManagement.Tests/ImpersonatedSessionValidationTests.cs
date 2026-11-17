@@ -74,7 +74,7 @@ public class ImpersonatedSessionValidationTests
         return (validator, db);
     }
 
-    private static ClaimsPrincipal CreateResidentImpersonation(bool includeActorClaims = true)
+    private static ClaimsPrincipal CreateResidentImpersonation(bool includeActorClaims = true, string permissionsJson = "[]")
     {
         var claims = new List<Claim>
         {
@@ -89,7 +89,7 @@ public class ImpersonatedSessionValidationTests
         {
             claims.Add(new Claim("impersonationActorUid", ActorUid));
             claims.Add(new Claim("impersonationActorRole", "admin"));
-            claims.Add(new Claim("impersonationActorPermissions", "[]"));
+            claims.Add(new Claim("impersonationActorPermissions", permissionsJson));
         }
 
         return new ClaimsPrincipal(new ClaimsIdentity(claims, "test"));
@@ -213,6 +213,18 @@ public class ImpersonatedSessionValidationTests
         await using (db)
         {
             var result = await validator.ValidateAsync(CreateResidentImpersonation());
+            Assert.False(result.Valid);
+        }
+    }
+
+    [Fact]
+    public async Task Malformed_initiating_permission_snapshot_is_rejected()
+    {
+        var (validator, db) = await CreateAsync();
+        await using (db)
+        {
+            var result = await validator.ValidateAsync(
+                CreateResidentImpersonation(permissionsJson: "not-json"));
             Assert.False(result.Valid);
         }
     }
