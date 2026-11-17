@@ -183,6 +183,47 @@ public class ImpersonatedSessionValidationTests
         }
     }
 
+
+    [Fact]
+    public async Task Super_admin_session_requires_2FA_proof_after_enrollment()
+    {
+        SqlAuthService.ConfigureSuperAdmins("root@example.test");
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase("superadmin-2fa-" + Guid.NewGuid().ToString("N"))
+            .Options;
+        var factory = new TestDbContextFactory(options);
+        await using (var seed = factory.CreateDbContext())
+        {
+            seed.Users.Add(new UserEntity
+            {
+                Uid = "super-2fa",
+                Email = "root@example.test",
+                Role = "superadmin",
+                IsActive = true,
+                IsDisabled = false,
+                TwoFactorEnabled = true
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var validator = new SessionRevalidator(
+            new UsersService(new TestUserSqlStore(null), NullLogger<UsersService>.Instance),
+            factory,
+            new MemoryCache(new MemoryCacheOptions()),
+            NullLogger<SessionRevalidator>.Instance);
+
+        ClaimsPrincipal Principal(string verified) => new(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "super-2fa"),
+            new Claim(ClaimTypes.Email, "root@example.test"),
+            new Claim(ClaimTypes.Role, "superadmin"),
+            new Claim("twoFactorVerified", verified)
+        }, "test"));
+
+        Assert.False((await validator.ValidateAsync(Principal("false"))).Valid);
+        Assert.True((await validator.ValidateAsync(Principal("true"))).Valid);
+    }
+
     [Fact]
     public async Task Active_admin_can_keep_resident_impersonation_in_assigned_building()
     {
