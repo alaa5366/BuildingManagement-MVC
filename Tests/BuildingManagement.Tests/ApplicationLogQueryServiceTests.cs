@@ -70,7 +70,7 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
         var information = result.Items.Single(x => x.Level == "Information");
 
         Assert.Contains("[REDACTED_PATH]", error.Message, StringComparison.Ordinal);
-        Assert.DoesNotContain(@"D:\\Projects\\Building Management", error.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(@"D:\Projects\Building Management", error.Message, StringComparison.Ordinal);
         Assert.Contains("[REDACTED_PATH]", error.Exception, StringComparison.Ordinal);
         Assert.DoesNotContain("/var/log/building management", error.Exception, StringComparison.Ordinal);
 
