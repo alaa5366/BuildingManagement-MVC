@@ -125,6 +125,7 @@ public class SettingsController : Controller
     /// </remarks>
     [HttpGet]
     [Authorize(Roles = "superadmin,admin")]
+    [AdminPermission(AdminPermissions.ManageSettingsBuilding)]
     public async Task<IActionResult> Building(string? id)
     {
         string? buildingId;
@@ -165,6 +166,7 @@ public class SettingsController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "superadmin,admin")]
+    [AdminPermission(AdminPermissions.ManageSettingsBuilding)]
     public async Task<IActionResult> Building(string buildingId, BuildingSettings model)
     {
         if (!User.IsInRole("superadmin") && CurrentBuildingId != buildingId)
