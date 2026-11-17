@@ -63,4 +63,9 @@ Before implementation is considered:
 
 ## Current outcome
 
-Phase07 is opened as a controlled data-integrity assessment. Implementation decisions remain pending TEST evidence and business-rule confirmation.
+- TEST diagnostics were reviewed and recorded in `Diagnostics/Phase07-TEST-Review.md`. All checks were clean except one RevenueDate/MonthKey difference, which code review confirmed is supported by the separate transaction-date/accounting-month model.
+- A cross-instance optimistic-concurrency gap was found in aggregate saves and corrected in `Data/BuildingSqlMapper.cs`. Details and verification requirements are in `Diagnostics/Phase07-Concurrency-Review.md`.
+- Focused unit tests were added in `Tests/BuildingManagement.Tests/BuildingSqlMapperConcurrencyTests.cs`.
+- No migration, schema change, data repair, or production operation was performed.
+
+Phase07 remains in progress until local build/tests pass and the user confirms the results.
