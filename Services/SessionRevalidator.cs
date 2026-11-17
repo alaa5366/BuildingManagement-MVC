@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using BuildingManagementMvc.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -125,6 +126,7 @@ public class SessionRevalidator
         var actorUid = user.FindFirst("impersonationActorUid")?.Value;
         var actorRole = user.FindFirst("impersonationActorRole")?.Value;
         var actorEmail = user.FindFirst("impersonationActorEmail")?.Value;
+        var actorPermissionsJson = user.FindFirst("impersonationActorPermissions")?.Value;
         var buildingId = user.FindFirst("impersonationTargetBuildingId")?.Value;
         var apartmentId = user.FindFirst("impersonationTargetApartmentId")?.Value;
         var effectiveRole = user.FindFirst(ClaimTypes.Role)?.Value;
@@ -135,6 +137,7 @@ public class SessionRevalidator
             string.IsNullOrWhiteSpace(buildingId) ||
             !string.Equals(impersonatedBy, actorUid, StringComparison.Ordinal) ||
             (actorRole == "superadmin" && string.IsNullOrWhiteSpace(actorEmail)) ||
+            (actorRole == "admin" && string.IsNullOrWhiteSpace(actorPermissionsJson)) ||
             (actorRole != "admin" && actorRole != "superadmin") ||
             (effectiveRole == "resident" && string.IsNullOrWhiteSpace(apartmentId)) ||
             (effectiveRole == "admin" && !string.IsNullOrWhiteSpace(apartmentId)) ||
@@ -159,11 +162,17 @@ public class SessionRevalidator
             else
             {
                 var actor = await _users.GetByUidAsync(actorUid);
+                var capturedPermissions = JsonSerializer.Deserialize<List<string>>(actorPermissionsJson!) ?? new List<string>();
+                var currentPermissions = actor?.Permissions?.Distinct().OrderBy(p => p).ToList() ?? new List<string>();
+                var permissionsMatch = capturedPermissions.Distinct().OrderBy(p => p)
+                    .SequenceEqual(currentPermissions, StringComparer.Ordinal);
+
                 actorValid = actor != null &&
                     actor.Role == "admin" &&
                     !actor.Disabled &&
                     actor.IsActive &&
-                    actor.BuildingIds.Contains(buildingId);
+                    actor.BuildingIds.Contains(buildingId) &&
+                    permissionsMatch;
             }
 
             if (!actorValid)
