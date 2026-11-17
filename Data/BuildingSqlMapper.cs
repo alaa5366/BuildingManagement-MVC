@@ -416,7 +416,7 @@ public static class BuildingSqlMapper
             // so SQL Server would not advance RowVersion and another app instance could pass
             // the same token check. Force a no-op parent update; the rowversion predicate then
             // protects every aggregate save, including changes limited to child tables.
-            db.Entry(be).Property(x => x.DataVersion).IsModified = true;
+            MarkAggregateWrite(db, be);
         }
         be.BuildingNumber = Cut(src.BuildingNumber, 50);
         be.Name = Cut(src.Name, 200);
@@ -770,6 +770,11 @@ public static class BuildingSqlMapper
         await tx.CommitAsync(ct);
         src.RowVersion = be.RowVersion.ToArray();
         return warn;
+    }
+
+    internal static void MarkAggregateWrite(AppDbContext db, BuildingEntity building)
+    {
+        db.Entry(building).Property(x => x.DataVersion).IsModified = true;
     }
 
     internal static void ValidateAggregateConcurrency(byte[]? expected, byte[] current)
