@@ -138,25 +138,56 @@ public sealed class ApplicationLogQueryService
         while (await reader.ReadLineAsync(cancellationToken) is { } line)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
             var match = EventLine.Match(line);
             if (match.Success && TryParseEvent(match, Path.GetFileName(path), out var parsed))
             {
-                if (current is not null && Matches(current, filter)) onMatch(current);
+                if (current is not null && Matches(current, filter))
+                    onMatch(current);
+
                 current = parsed;
+                continue;
             }
-            else if (current is not null && !string.IsNullOrWhiteSpace(line) &&
-                     (current.Exception.Length > 0 || ExceptionStart.IsMatch(line)) &&
-                     current.Exception.Length < MaxExceptionLength)
+
+            if (current is null || string.IsNullOrWhiteSpace(line))
+                continue;
+
+            // Serilog writes structured properties after the final line of
+            // multiline messages (for example, EF Core SQL commands).
+            var (continuation, correlation, source) = SplitProperties(line);
+            var hasContextProperties =
+                !string.IsNullOrWhiteSpace(correlation) ||
+                !string.IsNullOrWhiteSpace(source);
+
+            if (hasContextProperties)
+            {
+                if (string.IsNullOrWhiteSpace(current.CorrelationId))
+                    current.CorrelationId = Limit(Redact(correlation), 100);
+
+                if (string.IsNullOrWhiteSpace(current.SourceContext))
+                    current.SourceContext = Limit(Redact(source), 250);
+
+                // The JSON suffix is event metadata, not message or exception text.
+                continue;
+            }
+
+            // Preserve the original continuation when it is not recognized
+            // as Serilog context metadata.
+            if ((current.Exception.Length > 0 || ExceptionStart.IsMatch(line)) &&
+                current.Exception.Length < MaxExceptionLength)
             {
                 var safe = Redact(line);
                 var remaining = MaxExceptionLength - current.Exception.Length;
                 var fragment = safe[..Math.Min(remaining, safe.Length)];
+
                 current.Exception = current.Exception.Length == 0
-                    ? fragment : current.Exception + Environment.NewLine + fragment;
+                    ? fragment
+                    : current.Exception + Environment.NewLine + fragment;
             }
         }
 
-        if (current is not null && Matches(current, filter)) onMatch(current);
+        if (current is not null && Matches(current, filter))
+            onMatch(current);
     }
 
     private static bool TryParseEvent(Match match, string fileName, out ApplicationLogEntry entry)
