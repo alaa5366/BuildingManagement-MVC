@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BuildingManagementMvc.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261117050000_AddUserTwoFactor")]
+    [Migration("20261117130000_AddUserTwoFactor")]
     partial class AddUserTwoFactor
     {
         /// <inheritdoc />

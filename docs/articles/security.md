@@ -61,3 +61,14 @@ Every controller action must have `[Authorize]` or `[AllowAnonymous]`. `Controll
 3. Run `dotnet libman restore` (or Restore Client-Side Libraries in Visual Studio) so `wwwroot/lib` contains video.js, Chart.js and Bootstrap Icons.
 4. Run `dotnet test Tests/BuildingManagement.Tests`.
 5. Publish, then check: sign-in (resident, admin, super admin), a welcome message with its set-PIN link, a receipt upload, a backup download and restore, the live cameras page and the reports page.
+
+
+## Administrator two-factor authentication
+
+* Admin and super-admin accounts can opt in to TOTP-based two-factor authentication from **Account → Two-factor authentication**. Resident sign-in is unchanged.
+* Enrollment requires a current authenticator code before the setting is enabled. The TOTP secret is encrypted using the existing `Encryption:SecretKey`; the plaintext secret is never stored in the database.
+* Ten one-time recovery codes are generated at enrollment and displayed once. Only SHA-256 hashes are stored. Each recovery code is consumed on successful use.
+* TOTP uses RFC 6238, six digits, a 30-second period, and a ±1 time-step clock-skew window. An accepted time-step cannot be replayed.
+* When enabled, admin/super-admin sign-in does not issue the authentication cookie until the second factor succeeds. The pending sign-in is server-side session state with a five-minute expiry. The challenge is rate limited and protected by anti-forgery validation.
+* Two-factor authentication is opt-in in this release to avoid locking out existing administrators before a managed enrollment rollout. A mandatory policy must be explicitly approved and communicated before deployment.
+* The migration `20261117130000_AddUserTwoFactor` adds the required columns to `Users`. Apply it to TEST and validate before any production planning; no production database was changed by this branch.
