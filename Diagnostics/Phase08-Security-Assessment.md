@@ -1,6 +1,6 @@
 # Phase08 – Security and Authorization Assessment
 
-**Status:** Assessment in progress  
+**Status:** Assessment in progress — single-instance deployment confirmed  
 **Branch:** `development/phase08-security-authorization-review`  
 **Base:** `development/phase07-application-data-integrity`  
 **Database scope:** TEST only; diagnostics are read-only unless separately approved  
@@ -70,21 +70,20 @@ This pairing is important: both custom attributes are intentionally not standalo
 
 **Disposition:** No immediate change yet. Add regression coverage for two-hour expiry, stack integrity, and authorization pairing before modifying this established workflow.
 
-### Login-throttle persistence race
+### Login-throttle persistence ordering and deployment boundary
 
-The current `LoginThrottle.Bump` increments process-local state under a lock, then schedules SQL `MERGE` persistence via fire-and-forget tasks. Consequences:
-- SQL writes can complete out of order and overwrite a newer count with an older snapshot.
-- Different application instances maintain independent in-memory counters; their writes overwrite rather than atomically combine failure counts.
-- The database mirror therefore does not currently provide a reliable distributed enforcement guarantee.
+The deployment is confirmed as **one application instance**. Therefore the in-memory counter and its process-local lock are the live enforcement authority; a distributed cache or distributed atomic counter is not required for the stated topology.
 
-**Disposition:** Confirm deployment topology and intended behavior. If multiple instances are supported, replace snapshot persistence with a database-atomic increment and make the lock decision consult authoritative shared state (or use a supported distributed cache). A simple `MERGE` snapshot is not sufficient. Avoid a partial fix that only changes the SQL statement while leaving stale local decisions authoritative.
+The original implementation queued independent fire-and-forget SQL `MERGE` and DELETE tasks. Even in one process, those operations could finish out of order (for example, a delayed failure snapshot could be written after a successful-login reset). The implementation now appends persistence operations to a single task chain while holding the same lock used for each in-memory state transition. This preserves the order of increments and resets in the SQL recovery mirror.
+
+**Remaining boundary:** SQL persistence is asynchronous best-effort recovery state. A process crash can still lose writes that have not completed; the database copy is not the live lock authority and does not provide distributed enforcement. Multi-instance deployment is not supported by this design and requires a separate architecture change.
 
 ## Phase08 work sequence
 
 1. Inventory authorization attributes and controller/action combinations.
 2. Trace claims issued for resident, admin, super-admin, and impersonated sessions.
 3. Trace impersonation start/exit/expiry and session revalidation.
-4. Verify login-throttle persistence and cross-instance behavior; decide supported deployment topology.
+4. Confirmed single-instance deployment; serialize login-throttle persistence writes and document the restart-recovery boundary.
 5. Add focused regression tests for confirmed defects only.
 6. Update security documentation with verified behavior and operational constraints.
 7. Run local build and full test suite; use TEST-only SQL checks if a database change is justified.
