@@ -78,6 +78,33 @@ The original implementation queued independent fire-and-forget SQL `MERGE` and D
 
 **Remaining boundary:** SQL persistence is asynchronous best-effort recovery state. A process crash can still lose writes that have not completed; the database copy is not the live lock authority and does not provide distributed enforcement. Multi-instance deployment is not supported by this design and requires a separate architecture change.
 
+
+### Request forgery protection and rate limits
+
+- MVC registers a global `AutoValidateAntiforgeryTokenAttribute`, so unsafe MVC requests are protected by default, including anonymous MVC actions.
+- The only repository call site for `IgnoreAntiforgeryToken` found is `PresenceController.Heartbeat`. It requires authentication and only updates the caller's online-presence timestamp using identity claims; it does not perform account, financial, or administrative mutations. A cross-site request could at most cause a victim to appear recently online. This is a low-impact exception, not a general exemption to copy.
+- The `login` fixed-window policy permits 30 requests per minute per observed remote IP; `lookup` permits 120 per minute. Login endpoints also use the account/IP failure throttle. Forwarded client IP handling is restricted to configured known proxies; production proxy configuration must match the actual hosting topology.
+
+### QR token consumption
+
+- Quick QR payloads use AES-GCM authenticated encryption and include an expiry and unique token ID.
+- Validation is deliberately separate from consumption. Consumption uses a conditional SQL update and a unique-row insert fallback so concurrent attempts cannot exceed the configured use limit.
+- The optional `deviceFingerprint` parameter exists in the service but is not supplied by the current controller flow. Device binding must therefore not be treated as an active protection in the current UI.
+- Stable QR signatures use HMAC-SHA256; old v1 quick-token formats are rejected.
+
+### Backup restore boundary
+
+- Restore preview enforces compressed/decrypted archive limits, a maximum entry count and expanded-size limit, and accepts only known top-level JSON collection names.
+- The browser receives an opaque restore-session ID rather than a server file path. The session is bound to the initiating user, expires after 20 minutes, and is removed atomically before restore execution (single use).
+- Restore paths are restricted to the expected generated temporary-file naming pattern. Relational restore operations use a database transaction.
+- Backup controller operations require the super-admin role and anti-forgery validation. Preserve these checks when adding backup actions.
+
+### Configuration and headers
+
+- Required secrets are validated at startup through `ConfigSecrets.Require`; development diagnostics print secret presence/length rather than secret values.
+- Production authentication cookies use Secure and HttpOnly; the authentication cookie is SameSite=Lax. Data Protection keys are persisted to a configured filesystem path and application name is fixed.
+- The CSP currently permits inline scripts/styles and broad HTTP/HTTPS sources for several resource classes. This is a compatibility-oriented policy and remains a hardening opportunity; tightening it requires an asset/inline-script inventory and deployment validation rather than a blind policy change.
+
 ## Phase08 work sequence
 
 1. Inventory authorization attributes and controller/action combinations.
