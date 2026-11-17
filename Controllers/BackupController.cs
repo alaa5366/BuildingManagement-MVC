@@ -234,7 +234,7 @@ public class BackupController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "SaveScheduledSettings failed");
-            TempData["Error"] = Loc.T("Save_Failed_2") + ex.Message;
+            TempData["Error"] = Loc.T("Save_Failed_2");
         }
 
         return RedirectToAction(nameof(Index), new { tab = "scheduled" });
@@ -258,7 +258,7 @@ public class BackupController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "RunNow failed");
-            TempData["Error"] = Loc.T("Failed_5") + ex.Message;
+            TempData["Error"] = Loc.T("Failed_5");
         }
         return RedirectToAction(nameof(Index), new { tab = "scheduled" });
     }
