@@ -23,7 +23,8 @@ internal static class BackupArchiveValidator
         var knownCollections = BackupService.GetKnownCollections();
         var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var previews = new List<RestoreCollectionPreview>();
-        long expandedBytes = 0;
+        long declaredExpandedBytes = 0;
+        long actualExpandedBytes = 0;
 
         foreach (var entry in archive.Entries)
         {
@@ -43,8 +44,8 @@ internal static class BackupArchiveValidator
             if (entry.Length < 0 || entry.Length > MaxEntryBytes)
                 throw new InvalidDataException("The archive contains an oversized entry.");
 
-            expandedBytes = checked(expandedBytes + entry.Length);
-            if (expandedBytes > MaxExpandedBytes)
+            declaredExpandedBytes = checked(declaredExpandedBytes + entry.Length);
+            if (declaredExpandedBytes > MaxExpandedBytes)
                 throw new InvalidDataException("The archive exceeds the expanded size limit.");
 
             if (string.Equals(entry.Name, "README.md", StringComparison.Ordinal))
@@ -62,9 +63,15 @@ internal static class BackupArchiveValidator
                 throw new InvalidDataException("The archive contains an unknown collection.");
 
             await using var stream = entry.Open();
+            using var boundedStream = new BoundedReadStream(
+                stream, Math.Min(MaxEntryBytes, MaxExpandedBytes - actualExpandedBytes));
             using var document = await JsonDocument.ParseAsync(
-                stream,
+                boundedStream,
                 new JsonDocumentOptions { MaxDepth = 64 });
+
+            actualExpandedBytes = checked(actualExpandedBytes + boundedStream.BytesRead);
+            if (boundedStream.BytesRead != entry.Length || actualExpandedBytes > MaxExpandedBytes)
+                throw new InvalidDataException("The archive entry size does not match its declared size.");
 
             if (document.RootElement.ValueKind != JsonValueKind.Array)
                 throw new InvalidDataException($"Collection '{tableName}' must contain a JSON array.");
@@ -100,5 +107,88 @@ internal static class BackupArchiveValidator
             throw new InvalidDataException("The archive contains no recognized collections.");
 
         return previews;
+    }
+
+    /// <summary>
+    /// Counts decompressed bytes while parsing an entry, independent of ZIP central-directory
+    /// size metadata. The underlying entry stream remains owned by the caller.
+    /// </summary>
+    private sealed class BoundedReadStream : Stream
+    {
+        private readonly Stream _inner;
+        private readonly long _maxBytes;
+
+        public BoundedReadStream(Stream inner, long maxBytes)
+        {
+            _inner = inner;
+            _maxBytes = maxBytes;
+        }
+
+        public long BytesRead { get; private set; }
+        public override bool CanRead => _inner.CanRead;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        private void Track(int count)
+        {
+            if (count <= 0) return;
+            if (BytesRead > _maxBytes - count)
+                throw new InvalidDataException("The archive entry exceeds the decompressed size limit.");
+            BytesRead += count;
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            var read = _inner.Read(buffer, offset, count);
+            Track(read);
+            return read;
+        }
+
+        public override int Read(Span<byte> buffer)
+        {
+            var read = _inner.Read(buffer);
+            Track(read);
+            return read;
+        }
+
+        public override async ValueTask<int> ReadAsync(
+            Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            var read = await _inner.ReadAsync(buffer, cancellationToken);
+            Track(read);
+            return read;
+        }
+
+        public override async Task<int> ReadAsync(
+            byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            var read = await _inner.ReadAsync(buffer, offset, count, cancellationToken);
+            Track(read);
+            return read;
+        }
+
+        public override int ReadByte()
+        {
+            var value = _inner.ReadByte();
+            if (value >= 0) Track(1);
+            return value;
+        }
+
+        public override void Flush() => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        protected override void Dispose(bool disposing)
+        {
+            // The caller owns and disposes the underlying ZIP entry stream.
+            base.Dispose(disposing);
+        }
     }
 }
