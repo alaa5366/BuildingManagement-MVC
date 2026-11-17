@@ -57,7 +57,7 @@ try
             rollOnFileSizeLimit: true,
             fileSizeLimitBytes: 10 * 1024 * 1024, // 10 MB/ملف
             shared: true,
-            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}");
+            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}");
     });
 
     if (builder.Environment.IsDevelopment())
@@ -135,9 +135,9 @@ try
 
     // ✅ Health Checks (فحص صحة الداتابيز)
     builder.Services.AddHealthChecks()
-        .AddDbContextCheck<AppDbContext>("Database");
+        .AddDbContextCheck<AppDbContext>("Database", tags: new[] { "ready" });
 
-    Console.WriteLine("[Storage] Provider = Sql");
+    Log.Information("Storage provider configured: {StorageProvider}", "Sql");
 
     builder.Services.AddSingleton<BuildingSqlStore>();
     builder.Services.AddSingleton<UserSqlStore>();
@@ -402,11 +402,11 @@ try
         using var migrationScope = app.Services.CreateScope();
         var pinMigration = migrationScope.ServiceProvider.GetRequiredService<PinMigrationService>();
         var (mUsers, mResidents, mCleared) = await pinMigration.MigrateLegacySecretsAsync();
-        Console.WriteLine($"[Startup] Legacy secrets: users={mUsers}, residents={mResidents}, buildingAdminPinsCleared={mCleared}");
+        Log.Information("Legacy secret migration completed. Users={MigratedUsers}, Residents={MigratedResidents}, BuildingAdminPinsCleared={BuildingAdminPinsCleared}", mUsers, mResidents, mCleared);
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[Startup] Legacy secrets migration FAILED: {ex.Message}");
+        Log.Error(ex, "Legacy secret migration failed during startup");
     }
 
     await app.Services.GetRequiredService<LoginThrottle>().InitializeAsync();
@@ -492,13 +492,13 @@ try
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Startup] FAILED {Path.GetFileName(fontFile)}: {ex.Message}");
+                Log.Warning(ex, "Failed to register font {FontFile}", Path.GetFileName(fontFile));
             }
         }
     }
     else
     {
-        Console.WriteLine("[Startup] ERROR: Fonts directory not found!");
+        Log.Warning("Fonts directory was not found at {FontsDirectory}", fontsDir);
     }
 
     if (!app.Environment.IsDevelopment())
@@ -521,8 +521,20 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
 
-    // ✅ Endpoint لفحص الصحة
-    app.MapHealthChecks("/health");
+    // Liveness checks only that the process can serve requests; readiness checks SQL.
+    var readinessHealthOptions = new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+    {
+        Predicate = check => check.Tags.Contains("ready"),
+        ResponseWriter = HealthCheckResponseWriter.WriteAsync
+    };
+    app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+    {
+        Predicate = _ => false,
+        ResponseWriter = HealthCheckResponseWriter.WriteAsync
+    });
+    app.MapHealthChecks("/health/ready", readinessHealthOptions);
+    // Backward-compatible endpoint: /health continues to mean readiness.
+    app.MapHealthChecks("/health", readinessHealthOptions);
 
     app.MapControllerRoute(
         name: "default",
@@ -533,6 +545,7 @@ try
 catch (Exception ex)
 {
     Log.Fatal(ex, "Application terminated unexpectedly");
+    Environment.ExitCode = 1;
 }
 finally
 {
