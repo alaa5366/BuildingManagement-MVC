@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security.Claims;
 using System.Text.Json;
 using BuildingManagementMvc.Data;
@@ -16,6 +17,8 @@ public class SessionRevalidator
 
     // لو الـ DB وقعت لحظيًا: نكمّل بآخر نتيجة سليمة لحد 15 دقيقة، وبعدها نقفل الجلسة (fail closed)
     private static readonly TimeSpan LastKnownGoodFor = TimeSpan.FromMinutes(15);
+
+    private readonly ConcurrentDictionary<string, long> _permissionVersions = new(StringComparer.Ordinal);
 
     private readonly UsersService _users;
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
@@ -41,6 +44,15 @@ public class SessionRevalidator
     /// Outcome of a session validation: whether the session is still valid and the refreshed permissions of the user.
     /// </summary>
     public sealed record Result(bool Valid, List<string>? Permissions);
+
+    /// <summary>
+    /// Invalidates cached authorization results for an administrator immediately after an account or permission change.
+    /// </summary>
+    public void InvalidateAdmin(string uid)
+    {
+        if (!string.IsNullOrWhiteSpace(uid))
+            _permissionVersions.AddOrUpdate(uid, 1, static (_, version) => checked(version + 1));
+    }
 
     /// <summary>
     /// Validates a signed-in principal against the database. Returns the refreshed permissions for admins, or rejects the session when the account was disabled or removed.
@@ -70,7 +82,8 @@ public class SessionRevalidator
 
         var claimedBuildings = user.FindAll("buildingId").Select(c => c.Value).OrderBy(x => x).ToList();
         var twoFactorClaim = user.FindFirst("twoFactorVerified")?.Value ?? "missing";
-        var cacheKey = "sessval:" + uid + ":" + string.Join(",", claimedBuildings) + ":2fa:" + twoFactorClaim;
+        var permissionVersion = _permissionVersions.GetOrAdd(uid, 0);
+        var cacheKey = "sessval:" + uid + ":v:" + permissionVersion + ":" + string.Join(",", claimedBuildings) + ":2fa:" + twoFactorClaim;
         if (_cache.TryGetValue(cacheKey, out Result? cached) && cached != null)
             return cached;
 
@@ -180,7 +193,8 @@ public class SessionRevalidator
             return new Result(false, null);
         }
 
-        var cacheKey = $"sessval:imp:{actorUid}:{actorRole}:{buildingId}:{apartmentId ?? "-"}:2fa:{actorTwoFactorVerified ?? "missing"}";
+        var actorPermissionVersion = _permissionVersions.GetOrAdd(actorUid, 0);
+        var cacheKey = $"sessval:imp:{actorUid}:v:{actorPermissionVersion}:{actorRole}:{buildingId}:{apartmentId ?? "-"}:2fa:{actorTwoFactorVerified ?? "missing"}";
         if (_cache.TryGetValue(cacheKey, out Result? cached) && cached != null)
             return cached;
 
