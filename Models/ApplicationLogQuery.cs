@@ -9,6 +9,7 @@ public sealed class ApplicationLogQuery
     public string? Search { get; set; }
     public string? CorrelationId { get; set; }
     public string? Source { get; set; }
+    public string? ComponentType { get; set; }
     public bool? HasException { get; set; }
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 25;
