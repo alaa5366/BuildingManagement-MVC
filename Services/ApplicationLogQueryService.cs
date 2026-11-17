@@ -35,6 +35,9 @@ public sealed class ApplicationLogQueryService
     private static readonly Regex PhoneNumber = new(
         @"(?<!\w)\+?\d[\d\s().-]{8,}\d(?!\w)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex IpAddress = new(
+        @"\b(?:\d{1,3}\.){3}\d{1,3}\b",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private readonly string _directory;
     private readonly ILogger<ApplicationLogQueryService> _logger;
@@ -232,7 +235,8 @@ public sealed class ApplicationLogQueryService
         safe = BearerToken.Replace(safe, "Bearer [REDACTED]");
         safe = JwtToken.Replace(safe, "[REDACTED_TOKEN]");
         safe = EmailAddress.Replace(safe, "[REDACTED_EMAIL]");
-        return PhoneNumber.Replace(safe, "[REDACTED_PHONE]");
+        safe = PhoneNumber.Replace(safe, "[REDACTED_PHONE]");
+        return IpAddress.Replace(safe, "[REDACTED_IP]");
     }
 
     private static string Limit(string? value, int length) =>
