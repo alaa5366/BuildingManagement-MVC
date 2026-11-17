@@ -54,25 +54,10 @@ public class SessionRevalidator
         if (user.HasClaim("impersonated", "true"))
             return await ValidateImpersonatedAsync(user);
 
-        // ✅ SuperAdmin — تحقق من الإيميل
-        if (role == "superadmin")
-        {
-            var ok = SqlAuthService.IsSuperAdminEmail(user.FindFirst(ClaimTypes.Email)?.Value);
-            return new Result(ok, null);
-        }
-
-        // ✅ لو كان SuperAdmin (في حالة Impersonation Exit)
-        // بنتحقق من الإيميل + originalRole
         var email = user.FindFirst(ClaimTypes.Email)?.Value;
-        if (SqlAuthService.IsSuperAdminEmail(email))
-        {
-            return new Result(true, null);
-        }
-
-        if (user.HasClaim("originalRole", "superadmin"))
-        {
-            return new Result(true, null);
-        }
+        if (role == "superadmin" || SqlAuthService.IsSuperAdminEmail(email)
+            || user.HasClaim("originalRole", "superadmin"))
+            return await ValidateSuperAdminPrincipalAsync(user);
 
         // ✅ الساكن (دخول عادي أو QR): لازم لسه موجود ونشط وغير معطّل
         if (role == "resident")
@@ -84,7 +69,8 @@ public class SessionRevalidator
         if (string.IsNullOrEmpty(uid)) return new Result(false, null);
 
         var claimedBuildings = user.FindAll("buildingId").Select(c => c.Value).OrderBy(x => x).ToList();
-        var cacheKey = "sessval:" + uid + ":" + string.Join(",", claimedBuildings);
+        var twoFactorClaim = user.FindFirst("twoFactorVerified")?.Value ?? "missing";
+        var cacheKey = "sessval:" + uid + ":" + string.Join(",", claimedBuildings) + ":2fa:" + twoFactorClaim;
         if (_cache.TryGetValue(cacheKey, out Result? cached) && cached != null)
             return cached;
 
@@ -92,16 +78,28 @@ public class SessionRevalidator
         {
             var doc = await _users.GetByUidAsync(uid);
 
-            // ✅ لو Uid ده SuperAdmin (حتى لو Role=admin)
-            if (doc != null && doc.Role == "superadmin")
+            // 2FA status is checked separately: database errors must fail closed rather than
+            // reusing a last-known-good result that predates an enrollment change.
+            bool twoFactorEnabled;
+            try
             {
-                var superResult = new Result(true, null);
-                _cache.Set(cacheKey, superResult, CacheFor);
-                return superResult;
+                await using var securityDb = await _sqlFactory.CreateDbContextAsync();
+                twoFactorEnabled = await securityDb.Users.AsNoTracking()
+                    .Where(x => x.Uid == uid)
+                    .Select(x => x.TwoFactorEnabled)
+                    .FirstOrDefaultAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[SessionRevalidator] two-factor status lookup failed for {Uid}; rejecting session", uid);
+                return new Result(false, null);
             }
 
-            // الأدمن لازم يكون لسه عضو في العمارة اللي الجلسة مربوطة بيها
-            var valid = doc != null && doc.Role == "admin" && !doc.Disabled && doc.IsActive
+            if (doc != null && doc.Role == "superadmin")
+                return await ValidateSuperAdminPrincipalAsync(user);
+
+            var twoFactorValid = !twoFactorEnabled || user.HasClaim("twoFactorVerified", "true");
+            var valid = twoFactorValid && doc != null && doc.Role == "admin" && !doc.Disabled && doc.IsActive
                         && claimedBuildings.All(b => doc.BuildingIds.Contains(b));
             var result = new Result(valid, valid ? doc!.Permissions ?? new List<string>() : null);
             _cache.Set(cacheKey, result, CacheFor);
@@ -121,12 +119,39 @@ public class SessionRevalidator
         }
     }
 
+    private async Task<Result> ValidateSuperAdminPrincipalAsync(ClaimsPrincipal user)
+    {
+        var uid = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var email = user.FindFirst(ClaimTypes.Email)?.Value;
+        if (string.IsNullOrWhiteSpace(uid) || !SqlAuthService.IsSuperAdminEmail(email))
+            return new Result(false, null);
+
+        try
+        {
+            await using var db = await _sqlFactory.CreateDbContextAsync();
+            var account = await db.Users.AsNoTracking()
+                .Where(x => x.Uid == uid && x.Email == email && x.Role == "superadmin")
+                .Select(x => new { x.IsActive, x.IsDisabled, x.TwoFactorEnabled })
+                .FirstOrDefaultAsync();
+
+            var valid = account != null && account.IsActive && !account.IsDisabled
+                && (!account.TwoFactorEnabled || user.HasClaim("twoFactorVerified", "true"));
+            return new Result(valid, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[SessionRevalidator] super-admin validation failed for {Uid}; rejecting session", uid);
+            return new Result(false, null);
+        }
+    }
+
     private async Task<Result> ValidateImpersonatedAsync(ClaimsPrincipal user)
     {
         var actorUid = user.FindFirst("impersonationActorUid")?.Value;
         var actorRole = user.FindFirst("impersonationActorRole")?.Value;
         var actorEmail = user.FindFirst("impersonationActorEmail")?.Value;
         var actorPermissionsJson = user.FindFirst("impersonationActorPermissions")?.Value;
+        var actorTwoFactorVerified = user.FindFirst("impersonationActorTwoFactorVerified")?.Value;
         var buildingId = user.FindFirst("impersonationTargetBuildingId")?.Value;
         var apartmentId = user.FindFirst("impersonationTargetApartmentId")?.Value;
         var effectiveRole = user.FindFirst(ClaimTypes.Role)?.Value;
@@ -147,7 +172,7 @@ public class SessionRevalidator
             return new Result(false, null);
         }
 
-        var cacheKey = $"sessval:imp:{actorUid}:{actorRole}:{buildingId}:{apartmentId ?? "-"}";
+        var cacheKey = $"sessval:imp:{actorUid}:{actorRole}:{buildingId}:{apartmentId ?? "-"}:2fa:{actorTwoFactorVerified ?? "missing"}";
         if (_cache.TryGetValue(cacheKey, out Result? cached) && cached != null)
             return cached;
 
@@ -183,15 +208,18 @@ public class SessionRevalidator
             }
 
             await using var db = await _sqlFactory.CreateDbContextAsync();
+            var actorSecurity = await db.Users.AsNoTracking()
+                .Where(u => u.Uid == actorUid && u.Role == actorRole)
+                .Select(u => new { u.Email, u.IsActive, u.IsDisabled, u.TwoFactorEnabled })
+                .FirstOrDefaultAsync();
+
+            actorValid = actorValid && actorSecurity != null
+                && actorSecurity.IsActive && !actorSecurity.IsDisabled;
             if (actorRole == "superadmin")
-            {
-                actorValid = actorValid && await db.Users.AsNoTracking().AnyAsync(u =>
-                    u.Uid == actorUid &&
-                    u.Email == actorEmail &&
-                    u.Role == "superadmin" &&
-                    u.IsActive &&
-                    !u.IsDisabled);
-            }
+                actorValid = actorValid && actorSecurity?.Email == actorEmail
+                    && SqlAuthService.IsSuperAdminEmail(actorEmail);
+            if (actorSecurity?.TwoFactorEnabled == true && actorTwoFactorVerified != "true")
+                actorValid = false;
 
             if (!actorValid)
             {

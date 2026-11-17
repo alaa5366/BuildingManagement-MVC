@@ -241,6 +241,10 @@ public class ImpersonationController : Controller
             ImpersonationActorRole = User.FindFirst("impersonationActorRole")?.Value ?? "",
             ImpersonationActorEmail = User.FindFirst("impersonationActorEmail")?.Value ?? "",
             ImpersonationActorPermissions = User.FindFirst("impersonationActorPermissions")?.Value ?? "",
+            ImpersonationActorTwoFactorVerified = User.FindFirst("impersonationActorTwoFactorVerified")?.Value
+                ?? (User.HasClaim("twoFactorVerified", "true") ? "true" : "false"),
+            TwoFactorVerified = User.HasClaim("twoFactorVerified", "true")
+                || User.HasClaim("impersonationActorTwoFactorVerified", "true"),
             StartedAt = DateTime.UtcNow.ToString("o")
         };
 
@@ -302,6 +306,9 @@ public class ImpersonationController : Controller
         var actorPermissions = User.HasClaim("impersonated", "true")
             ? User.FindFirst("impersonationActorPermissions")?.Value
             : JsonSerializer.Serialize(User.FindAll("perm").Select(c => c.Value).Distinct().OrderBy(p => p).ToList());
+        var actorTwoFactorVerified = User.HasClaim("impersonated", "true")
+            ? User.FindFirst("impersonationActorTwoFactorVerified")?.Value
+            : (User.HasClaim("twoFactorVerified", "true") ? "true" : "false");
 
         if (!string.IsNullOrWhiteSpace(actorUid))
             claims.Add(new Claim("impersonationActorUid", actorUid));
@@ -311,6 +318,8 @@ public class ImpersonationController : Controller
             claims.Add(new Claim("impersonationActorEmail", actorEmail));
         if (!string.IsNullOrWhiteSpace(actorPermissions))
             claims.Add(new Claim("impersonationActorPermissions", actorPermissions));
+        if (!string.IsNullOrWhiteSpace(actorTwoFactorVerified))
+            claims.Add(new Claim("impersonationActorTwoFactorVerified", actorTwoFactorVerified));
 
         claims.Add(new Claim("impersonationTargetBuildingId", buildingId));
         if (!string.IsNullOrWhiteSpace(apartmentId))
@@ -328,6 +337,9 @@ public class ImpersonationController : Controller
             new(ClaimTypes.Email, backup.Email),
             new(ClaimTypes.Role, isSuperAdmin ? "superadmin" : backup.Role)
         };
+
+        if (backup.Role is "admin" or "superadmin")
+            claims.Add(new Claim("twoFactorVerified", backup.TwoFactorVerified ? "true" : "false"));
 
         if (isSuperAdmin || SqlAuthService.IsSuperAdminEmail(backup.Email))
         {
@@ -349,6 +361,8 @@ public class ImpersonationController : Controller
                 claims.Add(new Claim("impersonationActorEmail", backup.ImpersonationActorEmail));
             if (!string.IsNullOrWhiteSpace(backup.ImpersonationActorPermissions))
                 claims.Add(new Claim("impersonationActorPermissions", backup.ImpersonationActorPermissions));
+            if (!string.IsNullOrWhiteSpace(backup.ImpersonationActorTwoFactorVerified))
+                claims.Add(new Claim("impersonationActorTwoFactorVerified", backup.ImpersonationActorTwoFactorVerified));
             if (!string.IsNullOrWhiteSpace(backup.BuildingId))
                 claims.Add(new Claim("impersonationTargetBuildingId", backup.BuildingId));
         }

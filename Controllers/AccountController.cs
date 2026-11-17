@@ -450,7 +450,7 @@ public class AccountController : Controller
 
         HttpContext.Session.Remove("2fa_pending");
         _throttle.Reset(throttleKey);
-        await SignInCookieAsync(pending.Result);
+        await SignInCookieAsync(pending.Result, twoFactorVerified: true);
         return RedirectBasedOnRole(pending.Result.Role!);
     }
 
@@ -639,7 +639,7 @@ public class AccountController : Controller
         _ => RedirectToAction("UnifiedLogin")
     };
 
-    private async Task SignInCookieAsync(AuthResult res)
+    private async Task SignInCookieAsync(AuthResult res, bool twoFactorVerified = false)
     {
 
         HttpContext.Session.Clear();
@@ -657,6 +657,9 @@ public class AccountController : Controller
 
         if (res.ApartmentId != null) claims.Add(new Claim("apartmentId", res.ApartmentId));
         if (res.ApartmentNumber != null) claims.Add(new Claim("apartmentNumber", res.ApartmentNumber.Value.ToString()));
+
+        if (res.Role is "admin" or "superadmin")
+            claims.Add(new Claim("twoFactorVerified", twoFactorVerified ? "true" : "false"));
 
         if (res.Role == "superadmin")
         {
