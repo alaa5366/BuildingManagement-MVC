@@ -251,6 +251,110 @@ public class BackupServiceTests
         }
     }
 
+    [Fact]
+    public async Task PreviewRestoreAsync_DuplicateCollectionEntries_AreRejected()
+    {
+        using var ms = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, true))
+        {
+            foreach (var _ in Enumerable.Range(0, 2))
+            {
+                var entry = zip.CreateEntry("buildings.json");
+                using var writer = new StreamWriter(entry.Open());
+                await writer.WriteAsync("[]");
+            }
+        }
+        ms.Position = 0;
+
+        var preview = await _service.PreviewRestoreAsync(ms, "duplicate.zip", "phase10-duplicate");
+
+        Assert.False(preview.Success);
+        Assert.NotEmpty(preview.Errors);
+        Assert.Null(preview.RestoreSessionId);
+    }
+
+    [Fact]
+    public async Task PreviewRestoreAsync_PathBearingEntry_IsRejected()
+    {
+        using var ms = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, true))
+        {
+            var entry = zip.CreateEntry("../buildings.json");
+            using var writer = new StreamWriter(entry.Open());
+            await writer.WriteAsync("[]");
+        }
+        ms.Position = 0;
+
+        var preview = await _service.PreviewRestoreAsync(ms, "path-entry.zip", "phase10-path");
+
+        Assert.False(preview.Success);
+        Assert.NotEmpty(preview.Errors);
+    }
+
+    [Fact]
+    public async Task PreviewRestoreAsync_InvalidRowEnvelope_IsRejected()
+    {
+        using var ms = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, true))
+        {
+            var entry = zip.CreateEntry("buildings.json");
+            using var writer = new StreamWriter(entry.Open());
+            await writer.WriteAsync("[{\\"id\\":\\"b1\\",\\"data\\":null}]");
+        }
+        ms.Position = 0;
+
+        var preview = await _service.PreviewRestoreAsync(ms, "invalid-row.zip", "phase10-invalid-row");
+
+        Assert.False(preview.Success);
+        Assert.NotEmpty(preview.Errors);
+    }
+
+    [Fact]
+    public async Task RestoreSession_ModifiedArchive_IsRejectedBeforeRestore()
+    {
+        _db.Buildings.Add(new BuildingEntity { Id = "phase10-original", Name = "Original", BuildingNumber = "BLD-910" });
+        await _db.SaveChangesAsync();
+
+        var (bytes, _) = await _service.CreateBackupAsync(new() { "buildings" }, "phase10-tamper");
+        using var upload = new MemoryStream(bytes);
+        var preview = await _service.PreviewRestoreAsync(upload, "tamper.zip", "phase10-tamper");
+        Assert.True(preview.Success);
+        Assert.NotNull(preview.TempFilePath);
+
+        await File.WriteAllBytesAsync(preview.TempFilePath!, new byte[] { 1, 2, 3, 4 });
+
+        var result = await _service.RestoreSessionAsync(
+            preview.RestoreSessionId!, new() { "buildings" }, overwrite: true, "phase10-tamper");
+
+        Assert.False(result.Success);
+        Assert.NotEmpty(result.Errors);
+        Assert.False(File.Exists(preview.TempFilePath));
+        Assert.True(await _db.Buildings.AnyAsync(x => x.Id == "phase10-original"));
+    }
+
+    [Fact]
+    public async Task PreviewRestoreAsync_EnforcesPerUserActiveSessionLimit()
+    {
+        var (bytes, _) = await _service.CreateBackupAsync(new() { "buildings" }, "phase10-session-cap");
+        var userId = "phase10-session-cap-" + Guid.NewGuid().ToString("N");
+
+        using var firstUpload = new MemoryStream(bytes);
+        var first = await _service.PreviewRestoreAsync(firstUpload, "first.zip", userId);
+        using var secondUpload = new MemoryStream(bytes);
+        var second = await _service.PreviewRestoreAsync(secondUpload, "second.zip", userId);
+        using var thirdUpload = new MemoryStream(bytes);
+        var third = await _service.PreviewRestoreAsync(thirdUpload, "third.zip", userId);
+
+        Assert.True(first.Success);
+        Assert.True(second.Success);
+        Assert.False(third.Success);
+
+        var firstRestore = await _service.RestoreSessionAsync(first.RestoreSessionId!, new() { "buildings" }, false, userId);
+        var secondRestore = await _service.RestoreSessionAsync(second.RestoreSessionId!, new() { "buildings" }, false, userId);
+        Assert.True(firstRestore.Success);
+        Assert.True(secondRestore.Success);
+    }
+
     // ================================================================
     // KnownTables
     // ================================================================
