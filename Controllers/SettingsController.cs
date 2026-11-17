@@ -24,6 +24,7 @@ public class SettingsController : Controller
     private readonly SettingsService _settings;
     private readonly BuildingsService _buildings;
     private readonly UsersService _users;
+    private readonly TwoFactorService _twoFactor;
     private readonly ILogger<SettingsController> _logger;
 
     /// <summary>
@@ -33,11 +34,13 @@ public class SettingsController : Controller
         SettingsService settings,
         BuildingsService buildings,
         UsersService users,
+        TwoFactorService twoFactor,
         ILogger<SettingsController> logger)
     {
         _settings = settings;
         _buildings = buildings;
         _users = users;
+        _twoFactor = twoFactor;
         _logger = logger;
     }
 
@@ -242,6 +245,11 @@ public class SettingsController : Controller
                 }
                 ViewBag.IsResident = false;
             }
+
+            ViewBag.TwoFactorEnabled =
+                (CurrentRole == "admin" || CurrentRole == "superadmin")
+                && !User.HasClaim("impersonated", "true")
+                && await _twoFactor.IsEnabledAsync(CurrentUserId);
 
             return View(settings);
         }
