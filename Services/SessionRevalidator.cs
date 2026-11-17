@@ -11,6 +11,7 @@ namespace BuildingManagementMvc.Services;
 public class SessionRevalidator
 {
     private static readonly TimeSpan CacheFor = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan ImpersonationCacheFor = TimeSpan.FromSeconds(30);
 
     // لو الـ DB وقعت لحظيًا: نكمّل بآخر نتيجة سليمة لحد 15 دقيقة، وبعدها نقفل الجلسة (fail closed)
     private static readonly TimeSpan LastKnownGoodFor = TimeSpan.FromMinutes(15);
@@ -47,11 +48,10 @@ public class SessionRevalidator
     {
         var role = user.FindFirst(ClaimTypes.Role)?.Value;
 
-        // ✅ جلسات Impersonation — دايماً Valid (التحقق بيتعمل عند الدخول)
+        // Impersonated principals are validated against the initiating account and target scope.
+        // Synthetic resident identities must never be treated as ordinary resident database users.
         if (user.HasClaim("impersonated", "true"))
-        {
-            return new Result(true, null);
-        }
+            return await ValidateImpersonatedAsync(user);
 
         // ✅ SuperAdmin — تحقق من الإيميل
         if (role == "superadmin")
@@ -116,6 +116,80 @@ public class SessionRevalidator
             }
 
             _logger.LogError(ex, "[SessionRevalidator] lookup failed for {Uid}; rejecting session", uid);
+            return new Result(false, null);
+        }
+    }
+
+    private async Task<Result> ValidateImpersonatedAsync(ClaimsPrincipal user)
+    {
+        var actorUid = user.FindFirst("impersonationActorUid")?.Value;
+        var actorRole = user.FindFirst("impersonationActorRole")?.Value;
+        var actorEmail = user.FindFirst("impersonationActorEmail")?.Value;
+        var buildingId = user.FindFirst("impersonationTargetBuildingId")?.Value;
+        var apartmentId = user.FindFirst("impersonationTargetApartmentId")?.Value;
+
+        if (string.IsNullOrWhiteSpace(actorUid) ||
+            string.IsNullOrWhiteSpace(actorRole) ||
+            string.IsNullOrWhiteSpace(buildingId) ||
+            (actorRole == "superadmin" && string.IsNullOrWhiteSpace(actorEmail)) ||
+            (actorRole != "admin" && actorRole != "superadmin"))
+        {
+            _logger.LogWarning("[SessionRevalidator] Rejecting impersonation with incomplete actor/target claims");
+            return new Result(false, null);
+        }
+
+        var cacheKey = $"sessval:imp:{actorUid}:{actorRole}:{buildingId}:{apartmentId ?? "-"}";
+        if (_cache.TryGetValue(cacheKey, out Result? cached) && cached != null)
+            return cached;
+
+        try
+        {
+            bool actorValid;
+            if (actorRole == "superadmin")
+            {
+                // Super-admin eligibility is currently governed by the configured allow-list.
+                actorValid = SqlAuthService.IsSuperAdminEmail(actorEmail);
+            }
+            else
+            {
+                var actor = await _users.GetByUidAsync(actorUid);
+                actorValid = actor != null &&
+                    actor.Role == "admin" &&
+                    !actor.Disabled &&
+                    actor.IsActive &&
+                    actor.BuildingIds.Contains(buildingId);
+            }
+
+            if (!actorValid)
+            {
+                var rejected = new Result(false, null);
+                _cache.Set(cacheKey, rejected, ImpersonationCacheFor);
+                return rejected;
+            }
+
+            await using var db = await _sqlFactory.CreateDbContextAsync();
+            var buildingExists = await db.Buildings.AsNoTracking()
+                .AnyAsync(b => b.Id == buildingId);
+            if (!buildingExists)
+            {
+                var rejected = new Result(false, null);
+                _cache.Set(cacheKey, rejected, ImpersonationCacheFor);
+                return rejected;
+            }
+
+            var targetExists = string.IsNullOrWhiteSpace(apartmentId) ||
+                await db.Apartments.AsNoTracking()
+                    .AnyAsync(a => a.BuildingId == buildingId && a.Id == apartmentId);
+
+            var result = new Result(targetExists, null);
+            _cache.Set(cacheKey, result, ImpersonationCacheFor);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            // No last-known-good fallback for impersonation: an unavailable authority source
+            // must not silently preserve elevated access.
+            _logger.LogError(ex, "[SessionRevalidator] Impersonation validation failed for actor {ActorUid}", actorUid);
             return new Result(false, null);
         }
     }
