@@ -1024,11 +1024,6 @@ namespace BuildingManagementMvc.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
-                    b.Property<bool>("TwoFactorEnabled").HasColumnType("bit");
-                    b.Property<string>("TwoFactorSecretEncrypted").HasMaxLength(512).HasColumnType("nvarchar(512)");
-                    b.Property<string>("TwoFactorRecoveryCodesJson").HasMaxLength(4000).HasColumnType("nvarchar(4000)");
-                    b.Property<long?>("TwoFactorLastUsedStep").HasColumnType("bigint");
-
                     b.Property<string>("ApartmentId")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
@@ -1364,6 +1359,11 @@ namespace BuildingManagementMvc.Migrations
                     b.Property<string>("Uid")
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
+
+                    b.Property<bool>("TwoFactorEnabled").HasColumnType("bit");
+                    b.Property<string>("TwoFactorSecretEncrypted").HasMaxLength(512).HasColumnType("nvarchar(512)");
+                    b.Property<string>("TwoFactorRecoveryCodesJson").HasMaxLength(4000).HasColumnType("nvarchar(4000)");
+                    b.Property<long?>("TwoFactorLastUsedStep").HasColumnType("bigint");
 
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime2(0)");
