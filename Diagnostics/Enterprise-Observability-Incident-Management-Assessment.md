@@ -1,7 +1,7 @@
 # Enterprise Observability & Incident Management Center
 ## Unified Phase Assessment and Implementation Specification
 
-**Status:** Approved scope; implementation in progress  
+**Status:** Approved scope; implementation in progress (unified assessment committed; first evidence-based component filter implemented)  
 **Working branch:** `development/phase14-enterprise-logs-azure-ui`  
 **UI direction:** Azure Portal-inspired Light Enterprise, Arabic RTL and English LTR  
 **Primary rule:** All observability, diagnostics, monitoring, incident-management, and related fixes are delivered in this one phase and this one branch. Do not create separate phases or branches for sub-features.
@@ -240,7 +240,7 @@ A workstream may be reordered based on dependencies, but it remains in this same
 | Paging, cancellation, bounded retained-file scan | Present |
 | Sensitive-data/path sanitization | Present; continue security testing |
 | Request path/method/status/duration | Not yet in current entry/query contract |
-| Component type/name filters | Not yet implemented |
+| Component type filter | Implemented from explicit SourceContext classification (Controller, Service, View, Middleware, Repository, Database, Background Job, External Dependency, Other); unknown metadata is not guessed |
 | Event detail/correlation timeline | Not yet implemented as a dedicated investigation experience |
 | Monitoring overview aggregates/charts | Not yet implemented |
 | Existing database health check | Registered; dashboard integration/expansion pending |
@@ -256,7 +256,7 @@ A workstream may be reordered based on dependencies, but it remains in this same
 2. Run build and the complete test suite; fix any regressions before expanding.
 3. Inspect the remainder of `ApplicationLogQueryService`, Serilog configuration, middleware pipeline, health checks, AuditLog query model, and hosted services.
 4. Produce a code-backed telemetry inventory: which fields are already emitted, parsed, masked, and queryable.
-5. Implement the telemetry contract and Code-Level Investigation only after the inventory, with no placeholder filters.
+5. Extend Code-Level Investigation from the implemented SourceContext-based component filter; add request/method/line-level attribution only after reliable instrumentation is designed.
 6. Update this same assessment as decisions, gaps, implementation status, and test evidence change.
 
 ---
