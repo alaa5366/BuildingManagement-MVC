@@ -184,3 +184,26 @@
     .log-center .log-pagination { align-items: flex-start; flex-direction: column; padding: .85rem 1rem; }
     .log-center .log-pagination .pagination { flex-wrap: wrap; }
 }
+
+
+/* Component attribution is intentionally subtle: it is supporting metadata,
+   not a severity badge. */
+.log-center .log-component-kind {
+    display: inline-flex;
+    width: fit-content;
+    margin-bottom: .25rem;
+    padding: .12rem .42rem;
+    border: 1px solid #dce8f3;
+    border-radius: 5px;
+    background: #f3f7fb;
+    color: #496783;
+    font-size: .66rem;
+    font-weight: 700;
+    letter-spacing: .01em;
+}
+.log-center .log-source-cell {
+    min-width: 180px;
+}
+.log-center .log-source-cell > span {
+    display: block;
+}
