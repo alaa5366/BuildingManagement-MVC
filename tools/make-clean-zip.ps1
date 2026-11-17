@@ -4,7 +4,7 @@
   Usage (from the project folder):  powershell -File 
   To Run
   1-	Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
-  2-	tools\make-clean-zip.ps1 [-Output ..\BuildingManagement-clean.zip]
+  2-	tools\make-clean-zip.ps1 BuildingManagement-clean.zip
 #>
 param([string]$Output = "..\BuildingManagement-clean.zip")
 
