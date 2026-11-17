@@ -465,15 +465,15 @@ By: {userId}
     public async Task<RestoreResult> RestoreSessionAsync(
         string restoreSessionId, List<string> selectedTables, bool overwrite, string userId)
     {
-        CleanupExpiredRestoreSessions(DateTime.UtcNow);
-
         RestoreSession? consumedSession = null;
+        var nowUtc = DateTime.UtcNow;
         lock (RestoreSessionsLock)
         {
+            CleanupExpiredRestoreSessionsUnderLock(nowUtc);
             if (string.IsNullOrWhiteSpace(restoreSessionId) ||
                 !RestoreSessions.TryGetValue(restoreSessionId, out var session) ||
                 !string.Equals(session.UserId, userId, StringComparison.Ordinal) ||
-                session.ExpiresAtUtc <= DateTime.UtcNow ||
+                session.ExpiresAtUtc <= nowUtc ||
                 !RestoreSessions.TryRemove(restoreSessionId, out consumedSession))
             {
                 consumedSession = null;
