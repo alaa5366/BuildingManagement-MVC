@@ -73,6 +73,17 @@ public class ImpersonatedSessionValidationTests
             }
         };
 
+        db.Users.Add(new UserEntity
+        {
+            Uid = actor.Uid,
+            Email = actor.Email,
+            Role = actor.Role,
+            IsActive = actor.IsActive,
+            IsDisabled = actor.IsDisabled,
+            TwoFactorEnabled = actor.TwoFactorEnabled
+        });
+        await db.SaveChangesAsync();
+
         var store = new TestUserSqlStore(actor);
         var users = new UsersService(store, NullLogger<UsersService>.Instance);
         var validator = new SessionRevalidator(
@@ -83,7 +94,10 @@ public class ImpersonatedSessionValidationTests
         return (validator, db);
     }
 
-    private static ClaimsPrincipal CreateResidentImpersonation(bool includeActorClaims = true, string permissionsJson = "[]")
+    private static ClaimsPrincipal CreateResidentImpersonation(
+        bool includeActorClaims = true,
+        string permissionsJson = "[]",
+        string? actorTwoFactorVerified = null)
     {
         var claims = new List<Claim>
         {
@@ -99,6 +113,8 @@ public class ImpersonatedSessionValidationTests
             claims.Add(new Claim("impersonationActorUid", ActorUid));
             claims.Add(new Claim("impersonationActorRole", "admin"));
             claims.Add(new Claim("impersonationActorPermissions", permissionsJson));
+            if (actorTwoFactorVerified != null)
+                claims.Add(new Claim("impersonationActorTwoFactorVerified", actorTwoFactorVerified));
         }
 
         return new ClaimsPrincipal(new ClaimsIdentity(claims, "test"));
@@ -251,6 +267,112 @@ public class ImpersonatedSessionValidationTests
 
         var result = await validator.ValidateAsync(CreateResidentImpersonation());
         Assert.False(result.Valid);
+    }
+
+
+    [Fact]
+    public async Task Admin_impersonation_is_rejected_when_actor_has_2FA_but_claim_is_missing()
+    {
+        var enabled = new UserEntity
+        {
+            Uid = ActorUid,
+            Role = "admin",
+            IsActive = true,
+            IsDisabled = false,
+            TwoFactorEnabled = true,
+            BuildingAdmins = new List<BuildingAdminEntity>
+            {
+                new() { AdminUid = ActorUid, BuildingId = BuildingId }
+            }
+        };
+        var (validator, db) = await CreateAsync(actor: enabled);
+        await using (db)
+        {
+            Assert.False((await validator.ValidateAsync(CreateResidentImpersonation())).Valid);
+        }
+    }
+
+    [Fact]
+    public async Task Admin_impersonation_is_valid_when_actor_2FA_claim_is_verified()
+    {
+        var enabled = new UserEntity
+        {
+            Uid = ActorUid,
+            Role = "admin",
+            IsActive = true,
+            IsDisabled = false,
+            TwoFactorEnabled = true,
+            BuildingAdmins = new List<BuildingAdminEntity>
+            {
+                new() { AdminUid = ActorUid, BuildingId = BuildingId }
+            }
+        };
+        var (validator, db) = await CreateAsync(actor: enabled);
+        await using (db)
+        {
+            Assert.True((await validator.ValidateAsync(
+                CreateResidentImpersonation(actorTwoFactorVerified: "true"))).Valid);
+        }
+    }
+
+    [Fact]
+    public async Task Existing_admin_cookie_without_2FA_proof_is_rejected_after_enrollment()
+    {
+        var enabled = new UserEntity
+        {
+            Uid = ActorUid,
+            Role = "admin",
+            IsActive = true,
+            IsDisabled = false,
+            TwoFactorEnabled = true,
+            BuildingAdmins = new List<BuildingAdminEntity>
+            {
+                new() { AdminUid = ActorUid, BuildingId = BuildingId }
+            }
+        };
+        var (validator, db) = await CreateAsync(actor: enabled);
+        await using (db)
+        {
+            var principal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, ActorUid),
+                new Claim(ClaimTypes.Role, "admin"),
+                new Claim(ClaimTypes.Email, "admin@example.test"),
+                new Claim("buildingId", BuildingId),
+                new Claim("twoFactorVerified", "false")
+            }, "test"));
+            Assert.False((await validator.ValidateAsync(principal)).Valid);
+        }
+    }
+
+    [Fact]
+    public async Task Admin_cookie_with_verified_2FA_is_valid_after_enrollment()
+    {
+        var enabled = new UserEntity
+        {
+            Uid = ActorUid,
+            Role = "admin",
+            IsActive = true,
+            IsDisabled = false,
+            TwoFactorEnabled = true,
+            BuildingAdmins = new List<BuildingAdminEntity>
+            {
+                new() { AdminUid = ActorUid, BuildingId = BuildingId }
+            }
+        };
+        var (validator, db) = await CreateAsync(actor: enabled);
+        await using (db)
+        {
+            var principal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, ActorUid),
+                new Claim(ClaimTypes.Role, "admin"),
+                new Claim(ClaimTypes.Email, "admin@example.test"),
+                new Claim("buildingId", BuildingId),
+                new Claim("twoFactorVerified", "true")
+            }, "test"));
+            Assert.True((await validator.ValidateAsync(principal)).Valid);
+        }
     }
 
     [Fact]
