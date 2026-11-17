@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Controllers;
@@ -22,14 +23,19 @@ public class AuditLogController : Controller
 {
     private readonly AuditLogQueryService _audit;
     private readonly BuildingsService _buildings;
+    private readonly ILogger<AuditLogController> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AuditLogController"/> class.
     /// </summary>
-    public AuditLogController(AuditLogQueryService audit, BuildingsService buildings)
+    public AuditLogController(
+        AuditLogQueryService audit,
+        BuildingsService buildings,
+        ILogger<AuditLogController> logger)
     {
         _audit = audit;
         _buildings = buildings;
+        _logger = logger;
     }
 
     private string? CurrentBuildingId => User.FindFirst("buildingId")?.Value;
@@ -50,6 +56,8 @@ public class AuditLogController : Controller
     string? actionFilter, string? severity, string? from, string? to,
     int page = 1, int pageSize = 50)
     {
+        var actionTimer = Stopwatch.StartNew();
+
         if ((IsResident && (string.IsNullOrWhiteSpace(CurrentBuildingId) || string.IsNullOrWhiteSpace(CurrentApartmentId))) ||
             (IsAdmin && string.IsNullOrWhiteSpace(CurrentBuildingId))) return Forbid();
         page = Math.Max(1, page);
@@ -80,6 +88,7 @@ public class AuditLogController : Controller
             ViewBag.CanFilterByApartment = true;
         }
 
+        var queryTimer = Stopwatch.StartNew();
         var pagedResult = await _audit.QueryPageAsync(
             buildingId: qBuildingId,
             apartmentId: qApartmentId,
@@ -87,12 +96,21 @@ public class AuditLogController : Controller
             action: string.IsNullOrWhiteSpace(actionFilter) ? null : actionFilter,
             severity: string.IsNullOrWhiteSpace(severity) ? null : severity,
             from: ParseDate(from), to: ParseDate(to), page: page, pageSize: pageSize);
+        queryTimer.Stop();
         page = pagedResult.CurrentPage;
         pageSize = pagedResult.PageSize;
 
+        var buildingsTimer = Stopwatch.StartNew();
         ViewBag.Buildings = IsSuperAdmin
             ? await _buildings.GetSummariesAsync()
             : new List<Building>();
+        buildingsTimer.Stop();
+
+        _logger.LogInformation(
+            "AUDIT PERF: Role={Role} QueryPage={QueryMs}ms Buildings={BuildingsMs}ms",
+            IsSuperAdmin ? "superadmin" : IsAdmin ? "admin" : "resident",
+            queryTimer.ElapsedMilliseconds,
+            buildingsTimer.ElapsedMilliseconds);
 
         ViewBag.CurrentRole = IsSuperAdmin ? "superadmin" : (IsAdmin ? "admin" : "resident");
         ViewBag.KnownActions = AuditLogQueryService.KnownActions;
@@ -117,6 +135,11 @@ public class AuditLogController : Controller
             ["to"] = to,
             ["pageSize"] = pageSize.ToString()
         };
+
+        actionTimer.Stop();
+        _logger.LogInformation(
+            "AUDIT PERF: Index action completed in {ActionMs}ms; TotalItems={TotalItems}; PageSize={PageSize}",
+            actionTimer.ElapsedMilliseconds, pagedResult.TotalItems, pagedResult.PageSize);
 
         return View(pagedResult);
     }
