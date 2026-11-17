@@ -22,7 +22,7 @@
 - Serilog request completion events explicitly include the same `CorrelationId` property.
 - `AppDbContext` rejects tracked audit-row updates and deletes through normal EF Core SaveChanges paths; inserts remain supported for normal events and backup restore.
 - Background operations without an active HTTP correlation continue to serialize metadata as before.
-- Added tests for server ownership, uniqueness, response header behavior, and audit metadata correlation.
+- Added five focused tests: server-owned response IDs, per-request uniqueness, audit metadata correlation, rejection of tracked audit updates, and rejection of tracked audit deletes.
 
 ## Guardrails
 
