@@ -22,7 +22,7 @@ public sealed class ApplicationLogQueryService
         @"(?i)[""']?(password|passwd|pwd|token|access_token|refresh_token|client_secret|api[_-]?key|authorization|cookie|set-cookie|secret)[""']?(\s*[:=]\s*)(""[^""]*""|'[^']*'|[^\s,;]+)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex ConnectionString = new(
-        @"(?i)\b(server|data source)\s*=\s*[^;\r\n]+(?:;[^;\r\n]*)*",
+        @"(?i)\b(server|data source)\s*=\s*[^;\s]+",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex BearerToken = new(
         @"(?i)\bBearer\s+[A-Za-z0-9._~+/-]+=*", RegexOptions.Compiled | RegexOptions.CultureInvariant);
