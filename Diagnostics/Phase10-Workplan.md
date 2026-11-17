@@ -49,9 +49,10 @@ Harden the backup restore workflow so the archive reviewed by a super-admin is e
 
 - Existing valid and legacy plaintext ZIP previews continue to work.
 - Duplicate entries, path entries, unknown entries, malformed row envelopes, and invalid JSON are rejected.
-- Session remains bound to its user, expires, and is single-use.
-- Per-user/global session admission limits are enforced and expired sessions are cleaned.
+- Session remains bound to its user and is single-use; the existing 20-minute expiry is preserved.
+- Per-user admission limit is covered by a focused test; the global bound and expired-session cleanup are implemented in the shared locked admission/cleanup path.
 - Modified temp archive is rejected before any database write.
+- Invalid scheduled frequency/hour/day/retention and unknown collection settings are rejected; normalized settings persist correctly.
 - Existing restore transaction, overwrite/merge behavior, and full regression tests remain green.
 
 ## Guardrails
@@ -71,7 +72,7 @@ Harden the backup restore workflow so the archive reviewed by a super-admin is e
 - Validated scheduled backup settings server-side and protected rotation from invalid retention values.
 - Preserved 20-minute expiry and single-use user binding; added limits of 2 active sessions per user and 10 process-wide, with expired-session cleanup.
 - Sanitized backup create/preview/restore and scheduled-settings exception responses while retaining server-side diagnostic logging.
-- Added regression tests for duplicate entries, path-bearing entries, malformed row envelopes, archive tampering, and per-user session limits.
+- Added regression tests for duplicate entries, path-bearing entries, malformed row envelopes, archive tampering, per-user session limits, and scheduled frequency/day/hour/retention/collection validation.
 - Updated the security architecture documentation.
 
 ## Validation record
