@@ -12,11 +12,11 @@ Review authentication, authorization, session revalidation, login throttling, QR
 
 ## Initial code-review findings
 
-### 1. LoginThrottle is not distributed across application instances
+### 1. LoginThrottle is process-local by design for the confirmed single-instance deployment
 
-`Services/LoginThrottle.cs` uses a process-local lock and `IMemoryCache` for increments and lock decisions. It asynchronously mirrors counters to SQL with a `MERGE`; its own XML remarks explicitly state that multi-instance synchronization is unsupported and each instance loads state at startup. This means simultaneous failures handled by different instances can race, and a newly incremented counter is not guaranteed to be visible to another instance before its next decision.
+`Services/LoginThrottle.cs` uses a process-local lock and `IMemoryCache` for live increments and lock decisions. SQL stores a recovery mirror restored at startup. The deployment is confirmed as one instance, so distributed enforcement is not required. The former independent fire-and-forget persistence tasks have been replaced with an ordered task chain, and reads now synchronize with writes through the same lock.
 
-**Disposition:** High-priority investigation. Determine whether deployment is single-instance by design. If multi-instance operation is supported, design a database-atomic increment/lock implementation and tests before changing behavior.
+**Disposition:** The single-instance implementation is retained. SQL persistence remains best-effort recovery state; abrupt process termination can lose queued writes. Multi-instance deployment requires a separate distributed design.
 
 ### 2. Session revalidation has intentional staleness windows
 
