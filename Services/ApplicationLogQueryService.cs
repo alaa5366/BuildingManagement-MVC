@@ -235,8 +235,8 @@ public sealed class ApplicationLogQueryService
         safe = BearerToken.Replace(safe, "Bearer [REDACTED]");
         safe = JwtToken.Replace(safe, "[REDACTED_TOKEN]");
         safe = EmailAddress.Replace(safe, "[REDACTED_EMAIL]");
-        safe = PhoneNumber.Replace(safe, "[REDACTED_PHONE]");
-        return IpAddress.Replace(safe, "[REDACTED_IP]");
+        safe = IpAddress.Replace(safe, "[REDACTED_IP]");
+        return PhoneNumber.Replace(safe, "[REDACTED_PHONE]");
     }
 
     private static string Limit(string? value, int length) =>

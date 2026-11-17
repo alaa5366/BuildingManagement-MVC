@@ -35,7 +35,7 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
     public async Task QueryPageAsync_RedactsSecretsAndCollectsExceptionContinuation()
     {
         WriteLog(
-            "2026-11-17 10:00:00.000 +00:00 [ERR] Login failed password=super-secret user=alaa@example.com apiKey=api-secret Server=prod-db;Password=db-secret client payload {\"SourceContext\":\"Tests.Auth\"}",
+            "2026-11-17 10:00:00.000 +00:00 [ERR] Login failed password=super-secret user=alaa@example.com apiKey=api-secret Server=prod-db;Password=db-secret client payload ip=192.168.10.20 {\"SourceContext\":\"Tests.Auth\"}",
             "System.InvalidOperationException: eyJabcdefghijk.eyJabcdefghijk.eyJabcdefghijk",
             "   at Tests.Auth.Run()");
 
@@ -46,6 +46,8 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
         Assert.DoesNotContain("api-secret", item.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("prod-db", item.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("db-secret", item.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("192.168.10.20", item.Message, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED_IP]", item.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("eyJabcdefghijk", item.Exception, StringComparison.Ordinal);
         Assert.Contains("[REDACTED]", item.Message, StringComparison.Ordinal);
         Assert.Contains("[REDACTED_TOKEN]", item.Exception, StringComparison.Ordinal);

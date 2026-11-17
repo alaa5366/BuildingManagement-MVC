@@ -5,11 +5,13 @@ using BuildingManagementMvc.Services;
 using BuildingManagementMvc.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace BuildingManagementMvc.Controllers;
 
 [Authorize(Roles = "superadmin,admin")]
 [AdminPermission(AdminPermissions.ViewApplicationLogs)]
+[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public sealed class ApplicationLogsController : Controller
 {
     private readonly ApplicationLogQueryService _logs;
@@ -17,6 +19,7 @@ public sealed class ApplicationLogsController : Controller
     public ApplicationLogsController(ApplicationLogQueryService logs) => _logs = logs;
 
     [HttpGet]
+    [EnableRateLimiting("lookup")]
     public async Task<IActionResult> Index(
         string? from, string? to, string? level, string? search,
         string? correlationId, string? source, bool? hasException,
@@ -37,7 +40,18 @@ public sealed class ApplicationLogsController : Controller
 
         if (query.FromUtc.HasValue && query.ToUtc.HasValue &&
             query.FromUtc.Value > query.ToUtc.Value)
+        {
             ModelState.AddModelError(nameof(from), Loc.T("Invalid_Date_Range"));
+            return View(new ApplicationLogsViewModel
+            {
+                Query = query,
+                Results = new PagedResult<ApplicationLogEntry>
+                {
+                    CurrentPage = query.Page,
+                    PageSize = query.PageSize
+                }
+            });
+        }
 
         var results = await _logs.QueryPageAsync(query, HttpContext.RequestAborted);
         return View(new ApplicationLogsViewModel { Results = results, Query = query });
