@@ -54,3 +54,20 @@ These decisions affect security and availability and must be resolved in impleme
 ## Conclusion
 
 This is a concrete, high-priority session-lifecycle gap, but a blind removal of the bypass would break synthetic resident impersonation. Phase09 is therefore scoped around an explicit initiating-identity model and tested revocation, not a superficial change to the early return.
+
+## Implementation update
+
+The first implementation is now committed on the Phase09 branch:
+
+- The unconditional bypass has been removed.
+- Every new impersonated principal is bound to the initiating UID/role and the intended target.
+- Admin initiators are checked for active status, current admin role, current membership in the target building, and an unchanged permission snapshot.
+- Super-admin initiators are checked against the configured allow-list and a matching active, enabled super-admin database row.
+- The target building and, for resident impersonation, target apartment are checked on validation.
+- Validation cache lifetime is 30 seconds. Unlike normal admin/resident validation, impersonation does not use last-known-good authorization during a database outage.
+- Nested restoration preserves the original actor metadata and permission snapshot.
+- Old impersonation cookies without the new actor metadata are rejected. Users with such a cookie must sign in again.
+
+Focused tests have been added for active and disabled initiators, changed permissions, removed building membership, missing/malformed metadata, deleted target apartments, and super-admin account status.
+
+**Not yet accepted:** the local .NET build and complete test suite have not been run by the user. Nested controller/cookie round-trip behavior still requires end-to-end verification before Phase09 can be marked complete.
