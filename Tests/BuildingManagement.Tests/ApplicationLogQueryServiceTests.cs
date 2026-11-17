@@ -55,6 +55,33 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task QueryPageAsync_RedactsWindowsAndUnixPathsFromAllDisplayedFields()
+    {
+        WriteLog(
+            "2026-11-17 10:00:00.000 +00:00 [ERR] Physical path: 'D:\\Projects\\Building Management\\wwwroot\\logs\\app.txt' {}",
+            "System.IO.IOException: Failed to open /var/log/building management/app.log",
+            "2026-11-17 10:01:00.000 +00:00 [INF] Resolved file: /opt/building management/data/file.db",
+            "Additional detail: /home/alaa/building data/config.json {\\"SourceContext\\":\\"/srv/building management/Logger\\"}");
+
+        var result = await CreateService().QueryPageAsync(new ApplicationLogQuery());
+
+        Assert.Equal(2, result.Items.Count);
+        var error = result.Items.Single(x => x.Level == "Error");
+        var information = result.Items.Single(x => x.Level == "Information");
+
+        Assert.Contains("[REDACTED_PATH]", error.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(@"D:\\Projects\\Building Management", error.Message, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED_PATH]", error.Exception, StringComparison.Ordinal);
+        Assert.DoesNotContain("/var/log/building management", error.Exception, StringComparison.Ordinal);
+
+        Assert.Contains("[REDACTED_PATH]", information.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("/opt/building management", information.Message, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED_PATH]", information.Details, StringComparison.Ordinal);
+        Assert.DoesNotContain("/home/alaa/building data", information.Details, StringComparison.Ordinal);
+        Assert.Equal("[REDACTED_PATH]", information.SourceContext);
+    }
+
+    [Fact]
     public async Task QueryPageAsync_AppliesCorrelationAndExceptionFilters()
     {
         WriteLog(
