@@ -1,6 +1,6 @@
 # Original Roadmap Phase10 — System Functions Review Workplan
 
-**Status:** IMPLEMENTED — validation pending  
+**Status:** IMPLEMENTED — core build, automated tests, and targeted TEST smoke checks passed; extended smoke checks remain  
 **Branch:** `development/roadmap-phase10-system-functions-review`  
 **Base:** `development/roadmap-phase09-logging-monitoring` (`16b870a137ffb90e163571b4ca63612e59bccc66`)  
 **Database:** No schema/data changes authorized  
@@ -39,7 +39,14 @@ dotnet build
 dotnet test Tests/BuildingManagement.Tests
 ```
 
-After changing admin permissions in TEST, sign out and sign back in before testing the new permission because permissions are carried in the authenticated claims.
+After changing admin permissions in TEST, verify the change on the next authenticated request without signing out or back in. The session revalidator refreshes permission claims and renews the cookie when they differ. This immediate invalidation is process-local; multi-instance deployments need a distributed invalidation mechanism.
+
+## Validation record
+
+- Local build passed.
+- Full automated suite passed: 468/468, zero failures, zero skipped.
+- User-reported TEST checks passed for resident-management, building-settings, camera permission grant/revoke, Audit Log permissions/scope, resident login with an allow-listed e-mail, and the removed Resident Debug endpoint (HTTP 404).
+- Controlled error-response checks and the broader regression smoke list in the TEST checklist were not all individually reported as executed; they remain unverified.
 
 ## Not in scope
 
