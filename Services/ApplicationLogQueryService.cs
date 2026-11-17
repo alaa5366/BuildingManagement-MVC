@@ -278,6 +278,7 @@ public sealed class ApplicationLogQueryService
         if (query.HasException.HasValue && entry.HasException != query.HasException.Value) return false;
         if (!string.IsNullOrWhiteSpace(query.Search) &&
             !entry.Message.Contains(query.Search, StringComparison.OrdinalIgnoreCase) &&
+            !entry.Details.Contains(query.Search, StringComparison.OrdinalIgnoreCase) &&
             !entry.Exception.Contains(query.Search, StringComparison.OrdinalIgnoreCase) &&
             !entry.SourceContext.Contains(query.Search, StringComparison.OrdinalIgnoreCase)) return false;
         return true;
