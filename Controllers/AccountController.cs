@@ -534,6 +534,7 @@ public class AccountController : Controller
 
         HttpContext.Session.Remove("2fa_setup_secret");
         HttpContext.Session.Remove("2fa_setup_expires");
+        await RefreshTwoFactorVerifiedCookieAsync();
         TempData["TwoFactorRecoveryCodes"] = System.Text.Json.JsonSerializer.Serialize(codes);
         return RedirectToAction(nameof(TwoFactorRecoveryCodes));
     }
@@ -638,6 +639,25 @@ public class AccountController : Controller
         "resident" => RedirectToAction("Index", "ResidentHome"),
         _ => RedirectToAction("UnifiedLogin")
     };
+
+    private async Task RefreshTwoFactorVerifiedCookieAsync()
+    {
+        var claims = User.Claims
+            .Where(c => c.Type != "twoFactorVerified")
+            .ToList();
+        claims.Add(new Claim("twoFactorVerified", "true"));
+
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var properties = new AuthenticationProperties
+        {
+            ExpiresUtc = DateTimeOffset.UtcNow.AddHours(12),
+            AllowRefresh = false
+        };
+        await HttpContext.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            new ClaimsPrincipal(identity),
+            properties);
+    }
 
     private async Task SignInCookieAsync(AuthResult res, bool twoFactorVerified = false)
     {

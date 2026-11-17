@@ -49,7 +49,8 @@ public sealed class TwoFactorService
         using var gate = await KeyedLock.AcquireAsync("2fa:" + uid, cancellationToken);
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
         var user = await db.Users.FirstOrDefaultAsync(x => x.Uid == uid, cancellationToken);
-        if (user == null || user.Role is not ("admin" or "superadmin") || user.TwoFactorEnabled)
+        if (user == null || user.Role is not ("admin" or "superadmin")
+            || !user.IsActive || user.IsDisabled || user.TwoFactorEnabled)
             return null;
 
         long acceptedStep;
@@ -73,6 +74,7 @@ public sealed class TwoFactorService
         user.TwoFactorRecoveryCodesJson = JsonSerializer.Serialize(recoveryCodes.Select(HashRecoveryCode));
         user.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation("Two-factor authentication enabled for administrator {Uid}", uid);
         return recoveryCodes;
     }
 
@@ -107,12 +109,14 @@ public sealed class TwoFactorService
         user.TwoFactorLastUsedStep = null;
         user.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation("Two-factor authentication disabled for administrator {Uid}", uid);
         return true;
     }
 
     private bool TryConsumeCode(UserEntity user, string code)
     {
-        if (!user.TwoFactorEnabled || string.IsNullOrWhiteSpace(user.TwoFactorSecretEncrypted))
+        if (!user.IsActive || user.IsDisabled || user.Role is not ("admin" or "superadmin")
+            || !user.TwoFactorEnabled || string.IsNullOrWhiteSpace(user.TwoFactorSecretEncrypted))
             return false;
 
         string secret;
