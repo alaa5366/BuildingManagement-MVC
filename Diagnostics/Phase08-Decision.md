@@ -2,7 +2,7 @@
 
 **Branch:** `development/phase08-security-authorization-review`  
 **Base:** `development/phase07-application-data-integrity`  
-**Status:** Code review and targeted code changes committed; final local build/test validation pending  
+**Status:** ACCEPTED — local build and full test suite passed  
 **Database:** No schema or data changes  
 **Production:** Not accessed
 
@@ -28,13 +28,13 @@
 5. CSP permits inline scripts/styles and broad resource sources. Tightening requires a separate compatibility review.
 6. Forwarded-header trust must be configured for the actual production proxy addresses.
 
-## Validation still required
+## Validation completed
 
-Run locally on the Phase08 branch:
+User-confirmed local validation on the Phase08 branch:
 
-```powershell
-dotnet build
-dotnet test Tests/BuildingManagement.Tests
-```
+- `dotnet build`: succeeded.
+- `dotnet test Tests/BuildingManagement.Tests`: 408 passed, 0 failed, 0 skipped.
+- No EF migration or SQL script was required.
+- Production database and deployment were not accessed.
 
-The Phase08 code changes are not considered fully validated until both commands pass. No EF migration or SQL script is required for this phase.
+**Decision:** Phase08 is accepted and closed.
