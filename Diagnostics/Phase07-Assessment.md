@@ -1,6 +1,6 @@
 # Phase07 – Application Data Integrity & Concurrency Assessment
 
-**Status:** In progress – diagnostics only  
+**Status:** Accepted  
 **Branch:** `development/phase07-application-data-integrity`  
 **Baseline:** Accepted Phase05 schema/index cleanup and Phase06 read-only index assessment  
 **Database scope:** TEST only (`BuildingManagement_RestoreTest`)  
@@ -66,6 +66,9 @@ Before implementation is considered:
 - TEST diagnostics were reviewed and recorded in `Diagnostics/Phase07-TEST-Review.md`. All checks were clean except one RevenueDate/MonthKey difference, which code review confirmed is supported by the separate transaction-date/accounting-month model.
 - A cross-instance optimistic-concurrency gap was found in aggregate saves and corrected in `Data/BuildingSqlMapper.cs`. Details and verification requirements are in `Diagnostics/Phase07-Concurrency-Review.md`.
 - Focused unit tests were added in `Tests/BuildingManagement.Tests/BuildingSqlMapperConcurrencyTests.cs`.
-- No migration, schema change, data repair, or production operation was performed.
+- Local `dotnet build` succeeded.
+- Local test suite passed: 407 passed, 0 failed, 0 skipped.
+- `Diagnostics/Phase07-RowVersion-EngineSmokeTest.sql` returned PASS on `BuildingManagement_RestoreTest`: winning update affected 1 row, stale update affected 0 rows, and transaction rollback was confirmed.
+- No migration, schema change, persistent data repair, or production operation was performed.
 
-Phase07 remains in progress until local build/tests pass and the user confirms the results.
+**Decision: Phase07 accepted** within the TEST/code-review boundary documented in `Diagnostics/Phase07-Decision.md`.
