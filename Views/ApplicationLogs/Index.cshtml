@@ -14,6 +14,7 @@
     var errorCount = visibleItems.Count(x => x.Level is "Error" or "Fatal");
     var warningCount = visibleItems.Count(x => x.Level == "Warning");
     var informationCount = visibleItems.Count(x => x.Level == "Information");
+    var isArabic = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ar";
 }
 @section Styles {
     <link rel="stylesheet" href="~/css/application-logs.css" asp-append-version="true" />
@@ -133,9 +134,25 @@
                 </div>
             </div>
 
-            <details class="log-advanced-filters" open="@( !string.IsNullOrWhiteSpace(query.Source) || !string.IsNullOrWhiteSpace(query.CorrelationId) || query.HasException.HasValue )">
+            <details class="log-advanced-filters" open="@( !string.IsNullOrWhiteSpace(query.Source) || !string.IsNullOrWhiteSpace(query.CorrelationId) || !string.IsNullOrWhiteSpace(query.ComponentType) || query.HasException.HasValue )">
                 <summary><i class="bi bi-sliders"></i> @Loc.T("Log_Advanced_Filters")</summary>
                 <div class="log-advanced-grid">
+                    <div class="log-field">
+                        <label for="componentType">@(isArabic ? "نوع المكوّن" : "Component type")</label>
+                        <select class="form-select" id="componentType" name="componentType">
+                            <option value="">@(isArabic ? "كل المكونات" : "All components")</option>
+                            <option value="Controller" selected="@(query.ComponentType == "Controller")">Controller</option>
+                            <option value="Service" selected="@(query.ComponentType == "Service")">Service</option>
+                            <option value="View" selected="@(query.ComponentType == "View")">View</option>
+                            <option value="Middleware" selected="@(query.ComponentType == "Middleware")">Middleware</option>
+                            <option value="Repository" selected="@(query.ComponentType == "Repository")">Repository / Data</option>
+                            <option value="Database" selected="@(query.ComponentType == "Database")">Database</option>
+                            <option value="BackgroundJob" selected="@(query.ComponentType == "BackgroundJob")">Background Job</option>
+                            <option value="ExternalDependency" selected="@(query.ComponentType == "ExternalDependency")">External Dependency</option>
+                            <option value="Other" selected="@(query.ComponentType == "Other")">@(isArabic ? "أخرى / غير محدد" : "Other / unknown")</option>
+                        </select>
+                        <small class="text-muted">@(isArabic ? "يُصنّف حسب SourceContext المسجل؛ السجلات التي لا تحتوي على مصدر واضح تظهر ضمن أخرى." : "Classified from recorded SourceContext; events without clear source metadata appear under Other.")</small>
+                    </div>
                     <div class="log-field">
                         <label for="source">@Loc.T("Source_Context")</label>
                         <input class="form-control" id="source" name="source" value="@query.Source" maxlength="200"
@@ -297,7 +314,7 @@
                         <a class="page-link" asp-action="Index" asp-route-from="@fromValue" asp-route-to="@toValue"
                            asp-route-level="@query.Level" asp-route-search="@query.Search"
                            asp-route-correlationId="@query.CorrelationId" asp-route-source="@query.Source"
-                           asp-route-hasException="@query.HasException" asp-route-page="@(result.CurrentPage - 1)"
+                           asp-route-componentType="@query.ComponentType" asp-route-hasException="@query.HasException" asp-route-page="@(result.CurrentPage - 1)"
                            asp-route-pageSize="@result.PageSize"><i class="bi bi-chevron-right"></i> @Loc.T("Previous")</a>
                     </li>
                     <li class="page-item disabled"><span class="page-link">@result.CurrentPage / @Math.Max(1, result.TotalPages)</span></li>
@@ -305,7 +322,7 @@
                         <a class="page-link" asp-action="Index" asp-route-from="@fromValue" asp-route-to="@toValue"
                            asp-route-level="@query.Level" asp-route-search="@query.Search"
                            asp-route-correlationId="@query.CorrelationId" asp-route-source="@query.Source"
-                           asp-route-hasException="@query.HasException" asp-route-page="@(result.CurrentPage + 1)"
+                           asp-route-componentType="@query.ComponentType" asp-route-hasException="@query.HasException" asp-route-page="@(result.CurrentPage + 1)"
                            asp-route-pageSize="@result.PageSize">@Loc.T("Next") <i class="bi bi-chevron-left"></i></a>
                     </li>
                 </ul>
