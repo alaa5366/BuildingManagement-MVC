@@ -127,12 +127,18 @@ public class SessionRevalidator
         var actorEmail = user.FindFirst("impersonationActorEmail")?.Value;
         var buildingId = user.FindFirst("impersonationTargetBuildingId")?.Value;
         var apartmentId = user.FindFirst("impersonationTargetApartmentId")?.Value;
+        var effectiveRole = user.FindFirst(ClaimTypes.Role)?.Value;
+        var impersonatedBy = user.FindFirst("impersonatedBy")?.Value;
 
         if (string.IsNullOrWhiteSpace(actorUid) ||
             string.IsNullOrWhiteSpace(actorRole) ||
             string.IsNullOrWhiteSpace(buildingId) ||
+            !string.Equals(impersonatedBy, actorUid, StringComparison.Ordinal) ||
             (actorRole == "superadmin" && string.IsNullOrWhiteSpace(actorEmail)) ||
-            (actorRole != "admin" && actorRole != "superadmin"))
+            (actorRole != "admin" && actorRole != "superadmin") ||
+            (effectiveRole == "resident" && string.IsNullOrWhiteSpace(apartmentId)) ||
+            (effectiveRole == "admin" && !string.IsNullOrWhiteSpace(apartmentId)) ||
+            (effectiveRole != "resident" && effectiveRole != "admin"))
         {
             _logger.LogWarning("[SessionRevalidator] Rejecting impersonation with incomplete actor/target claims");
             return new Result(false, null);
