@@ -1,6 +1,6 @@
 # Phase07 – Concurrency Review
 
-**Status:** Implementation added; local build and unit tests passed (407/407); SQL Server engine smoke test added  
+**Status:** Verified – local build passed, 407/407 tests passed, SQL Server rowversion smoke test PASS  
 **Branch:** `development/phase07-application-data-integrity`  
 **Database changes:** None  
 **Migration:** None  
@@ -50,19 +50,13 @@ Local verification reported by the user on 2026-11-17: `dotnet build` succeeded 
 
 Direct store/service paths that bypass the MVC filter remain protected when they use `BuildingSqlMapper.SaveAsync` with a valid aggregate token.
 
-## Required verification
+## Verification results
 
-Run locally on the development branch:
-
-```powershell
-dotnet build
-dotnet test Tests/BuildingManagement.Tests
-```
-
-Expected: build succeeds and all existing plus new tests pass. No database migration or TEST database modification is required for this code change.
-
-Run `Diagnostics/Phase07-RowVersion-EngineSmokeTest.sql` against `BuildingManagement_RestoreTest`. It performs two conditional updates against one real `Buildings` row using the same original rowversion; the first must affect one row, the stale second update must affect zero rows, and the transaction is rolled back. This validates SQL Server's real rowversion predicate behavior without persisting changes. It is an engine smoke test, not a full EF Core two-context aggregate integration test; that remains a possible higher-confidence follow-up.
+- User-reported local `dotnet build`: succeeded.
+- User-reported `dotnet test Tests/BuildingManagement.Tests`: 407 passed, 0 failed, 0 skipped.
+- User-reported execution of `Diagnostics/Phase07-RowVersion-EngineSmokeTest.sql` against `BuildingManagement_RestoreTest`: PASS. Winning update rows = 1; stale update rows = 0; transaction rolled back = 1.
+- This confirms SQL Server's real rowversion predicate behavior without persisting changes. It is an engine smoke test, not a full EF Core two-context aggregate integration test; that remains a possible higher-confidence follow-up.
 
 ## Decision boundary
 
-The concurrency correction is implemented; local build and all 407 unit tests passed. Phase07 remains pending the TEST-database rowversion smoke test and final review. No production change is authorized.
+The concurrency correction is implemented; local build and all 407 unit tests passed. The implementation and TEST verification are accepted for Phase07. A full EF Core two-context aggregate integration test remains a future hardening opportunity, not an outstanding acceptance blocker. No production change is authorized.
