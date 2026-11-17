@@ -73,6 +73,32 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task QueryPageAsync_DoesNotTreatOrdinaryContinuationLinesAsExceptions()
+    {
+        WriteLog(
+            "2026-11-17 10:00:00.000 +00:00 [INF] Executed DbCommand (1ms) {}",
+            "CommandType='Text', CommandTimeout='30'");
+
+        var item = Assert.Single((await CreateService().QueryPageAsync(new ApplicationLogQuery())).Items);
+
+        Assert.False(item.HasException);
+        Assert.Empty(item.Exception);
+    }
+
+    [Fact]
+    public async Task QueryPageAsync_PreservesAssemblyVersionsAndRedactsValidIpAddresses()
+    {
+        WriteLog(
+            "2026-11-17 10:00:00.000 +00:00 [INF] Runtime Version=8.0.34.0 ClientIp=192.168.10.20 {}");
+
+        var item = Assert.Single((await CreateService().QueryPageAsync(new ApplicationLogQuery())).Items);
+
+        Assert.Contains("Version=8.0.34.0", item.Message, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED_IP]", item.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("192.168.10.20", item.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task QueryPageAsync_ClampsPagingAndIgnoresFilesOutsideLogDirectory()
     {
         WriteLog("2026-11-17 10:00:00.000 +00:00 [INF] Safe event {}");
