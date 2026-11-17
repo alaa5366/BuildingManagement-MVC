@@ -20,21 +20,11 @@ public sealed class ApplicationLogsController : Controller
     public ApplicationLogsController(ApplicationLogQueryService logs) => _logs = logs;
 
     /// <summary>Displays a filtered page of sanitized application log events.</summary>
-    /// <param name="from">Optional inclusive start date in ISO date format.</param>
-    /// <param name="to">Optional inclusive end date in ISO date format.</param>
-    /// <param name="level">Optional minimum event-level selection.</param>
-    /// <param name="search">Optional text searched across message, details, exception, and source.</param>
-    /// <param name="correlationId">Optional correlation identifier filter.</param>
-    /// <param name="source">Optional source-context filter.</param>
-    /// <param name="hasException">Whether to include only events with or without exceptions.</param>
-    /// <param name="page">Requested page number.</param>
-    /// <param name="pageSize">Number of events per page.</param>
-    /// <returns>The logs view populated with the matching page.</returns>
     [HttpGet]
     [EnableRateLimiting("lookup")]
     public async Task<IActionResult> Index(
         string? from, string? to, string? level, string? search,
-        string? correlationId, string? source, bool? hasException,
+        string? correlationId, string? source, string? componentType, bool? hasException,
         int page = 1, int pageSize = 25)
     {
         var query = new ApplicationLogQuery
@@ -45,6 +35,7 @@ public sealed class ApplicationLogsController : Controller
             Search = search,
             CorrelationId = correlationId,
             Source = source,
+            ComponentType = componentType,
             HasException = hasException,
             Page = Math.Clamp(page, 1, 100),
             PageSize = Math.Clamp(pageSize, 10, 100)
