@@ -161,6 +161,7 @@ try
     builder.Services.AddSingleton<QrSecurityService>();
     builder.Services.AddSingleton<QrAuthService>();
     builder.Services.AddSingleton<LoginThrottle>();
+    builder.Services.AddSingleton<TwoFactorService>();
     builder.Services.AddSingleton<SessionRevalidator>();
     builder.Services.AddSingleton<QrCodePdfService>();
     builder.Services.AddSingleton<QrGeneratorService>();

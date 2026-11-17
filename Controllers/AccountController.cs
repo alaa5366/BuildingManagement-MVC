@@ -25,6 +25,8 @@ public class AccountController : Controller
     private readonly ResidentsService _residents;
     private readonly UsersService _users;
     private readonly LoginThrottle _throttle;
+    private readonly TwoFactorService _twoFactor;
+    private readonly QrGeneratorService _qrGenerator;
     private readonly ILogger<AccountController> _log;
     private string? ClientIp => HttpContext.Connection.RemoteIpAddress?.ToString();
     // مفتاح قفل موحّد لكل طرق الدخول: الرقم بعد التطبيع (0100.. = +20100.. = 20100..) أو الإيميل
@@ -47,6 +49,8 @@ public class AccountController : Controller
         UsersService users,
         ResidentsService residents,
         LoginThrottle throttle,
+        TwoFactorService twoFactor,
+        QrGeneratorService qrGenerator,
         ILogger<AccountController> logger)
     {
         _sqlAuth = sqlAuth;
@@ -54,6 +58,8 @@ public class AccountController : Controller
         _users = users;
         _residents = residents;
         _throttle = throttle;
+        _twoFactor = twoFactor;
+        _qrGenerator = qrGenerator;
         _log = logger;
     }
 
@@ -170,9 +176,7 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        _throttle.Reset(throttleKey);
-        await SignInCookieAsync(res);
-        return RedirectToAction("Index", "AdminHome");
+        return await CompleteSignInAsync(res, throttleKey);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -216,9 +220,7 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        _throttle.Reset(throttleKey);
-        await SignInCookieAsync(res);
-        return RedirectToAction("Index", "SuperAdminHome");
+        return await CompleteSignInAsync(res, throttleKey);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -269,8 +271,6 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        _throttle.Reset(throttleKey);
-
         if (contexts.Count == 1)
         {
             var res = await _sqlAuth.SignInFromContextAsync(contexts[0]);
@@ -280,8 +280,7 @@ public class AccountController : Controller
                 return View(vm);
             }
 
-            await SignInCookieAsync(res);
-            return RedirectBasedOnRole(res.Role!);
+            return await CompleteSignInAsync(res, throttleKey);
         }
 
         // ✅ تحسين رسالة الترحيب
@@ -289,7 +288,7 @@ public class AccountController : Controller
             ? Loc.T("Accounts_Linked_To_Number", identifier)
             : (contexts.FirstOrDefault()?.Name ?? identifier);
 
-        var token = StoreContextsInSession(contexts, fullName);
+        var token = StoreContextsInSession(contexts, fullName, throttleKey);
 
         return RedirectToAction("ChooseContext", new { token });
     }
@@ -306,7 +305,7 @@ public class AccountController : Controller
     [HttpGet]
     public IActionResult ChooseContext(string token)
     {
-        var (contexts, fullName) = GetContextsFromSession(token);
+        var (contexts, fullName, _) = GetContextsFromSession(token);
 
         if (contexts == null)
         {
@@ -335,7 +334,7 @@ public class AccountController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ChooseContext(string sessionToken, string contextId)
     {
-        var (contexts, _) = GetContextsFromSession(sessionToken);
+        var (contexts, _, throttleKey) = GetContextsFromSession(sessionToken);
 
         if (contexts == null)
         {
@@ -358,8 +357,206 @@ public class AccountController : Controller
         }
 
         HttpContext.Session.Remove("ctx_" + sessionToken);
-        await SignInCookieAsync(res);
-        return RedirectBasedOnRole(res.Role!);
+        return await CompleteSignInAsync(res, throttleKey);
+    }
+
+    private sealed class PendingTwoFactorSignIn
+    {
+        public AuthResult Result { get; set; } = new();
+        public string? ThrottleKey { get; set; }
+        public DateTimeOffset ExpiresAt { get; set; }
+    }
+
+    private PendingTwoFactorSignIn? GetPendingTwoFactorSignIn()
+    {
+        var json = HttpContext.Session.GetString("2fa_pending");
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            var pending = System.Text.Json.JsonSerializer.Deserialize<PendingTwoFactorSignIn>(json);
+            if (pending == null || pending.ExpiresAt <= DateTimeOffset.UtcNow)
+            {
+                HttpContext.Session.Remove("2fa_pending");
+                return null;
+            }
+            return pending;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            HttpContext.Session.Remove("2fa_pending");
+            return null;
+        }
+    }
+
+    private async Task<IActionResult> CompleteSignInAsync(AuthResult result, string? throttleKey)
+    {
+        if (result.Role is "admin" or "superadmin"
+            && await _twoFactor.IsEnabledAsync(result.Uid!))
+        {
+            var pending = new PendingTwoFactorSignIn
+            {
+                Result = result,
+                ThrottleKey = throttleKey ?? AcctKey(result.Email ?? result.Uid),
+                ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(5)
+            };
+            HttpContext.Session.SetString("2fa_pending", System.Text.Json.JsonSerializer.Serialize(pending));
+            return RedirectToAction(nameof(VerifyTwoFactor));
+        }
+
+        if (!string.IsNullOrWhiteSpace(throttleKey)) _throttle.Reset(throttleKey);
+        await SignInCookieAsync(result);
+        return RedirectBasedOnRole(result.Role!);
+    }
+
+    /// <summary>Displays the second-factor challenge after primary credentials have been verified.</summary>
+    [HttpGet]
+    [AllowAnonymous]
+    public IActionResult VerifyTwoFactor()
+    {
+        var pending = GetPendingTwoFactorSignIn();
+        if (pending == null) return RedirectToAction(nameof(UnifiedLogin));
+        return View("TwoFactorVerify", new TwoFactorVerifyVm());
+    }
+
+    /// <summary>Completes sign-in using a TOTP value or one-time recovery code.</summary>
+    [HttpPost]
+    [AllowAnonymous]
+    [EnableRateLimiting("login")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> VerifyTwoFactor(TwoFactorVerifyVm vm)
+    {
+        var pending = GetPendingTwoFactorSignIn();
+        if (pending == null) return RedirectToAction(nameof(UnifiedLogin));
+        var throttleKey = pending.ThrottleKey ?? AcctKey(pending.Result.Email ?? pending.Result.Uid);
+        if (_throttle.IsLocked(throttleKey, ClientIp))
+        {
+            ViewBag.Error = LockedMsg;
+            return View("TwoFactorVerify", vm);
+        }
+        if (!ModelState.IsValid || !await _twoFactor.VerifyAndConsumeAsync(pending.Result.Uid!, vm.Code))
+        {
+            _throttle.RegisterFailure(throttleKey, ClientIp);
+            ViewBag.Error = "The verification code is invalid or has already been used.";
+            return View("TwoFactorVerify", vm);
+        }
+
+        HttpContext.Session.Remove("2fa_pending");
+        _throttle.Reset(throttleKey);
+        await SignInCookieAsync(pending.Result);
+        return RedirectBasedOnRole(pending.Result.Role!);
+    }
+
+    [HttpGet]
+    [Authorize(Roles = "admin,superadmin")]
+    public async Task<IActionResult> TwoFactorSettings()
+    {
+        ViewBag.Enabled = await _twoFactor.IsEnabledAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        return View();
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "admin,superadmin")]
+    [EnableRateLimiting("login")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> BeginTwoFactorSetup()
+    {
+        var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        if (await _twoFactor.IsEnabledAsync(uid))
+        {
+            TempData["Error"] = "Two-factor authentication is already enabled.";
+            return RedirectToAction(nameof(TwoFactorSettings));
+        }
+        HttpContext.Session.SetString("2fa_setup_secret", TwoFactorService.CreateSecret());
+        HttpContext.Session.SetString("2fa_setup_expires", DateTimeOffset.UtcNow.AddMinutes(10).ToUnixTimeSeconds().ToString());
+        return RedirectToAction(nameof(TwoFactorSetup));
+    }
+
+    [HttpGet]
+    [Authorize(Roles = "admin,superadmin")]
+    public IActionResult TwoFactorSetup()
+    {
+        var secret = HttpContext.Session.GetString("2fa_setup_secret");
+        var expiresText = HttpContext.Session.GetString("2fa_setup_expires");
+        if (string.IsNullOrWhiteSpace(secret)
+            || !long.TryParse(expiresText, out var expires)
+            || expires <= DateTimeOffset.UtcNow.ToUnixTimeSeconds())
+        {
+            HttpContext.Session.Remove("2fa_setup_secret");
+            HttpContext.Session.Remove("2fa_setup_expires");
+            return RedirectToAction(nameof(TwoFactorSettings));
+        }
+
+        var account = User.FindFirstValue(ClaimTypes.Email);
+        if (string.IsNullOrWhiteSpace(account)) account = User.FindFirstValue(ClaimTypes.Name) ?? "administrator";
+        var uri = TwoFactorService.CreateProvisioningUri(secret, account);
+        ViewBag.Secret = secret;
+        ViewBag.QrDataUri = "data:image/png;base64," + Convert.ToBase64String(_qrGenerator.GeneratePng(uri));
+        return View();
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "admin,superadmin")]
+    [EnableRateLimiting("login")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EnableTwoFactor(TwoFactorVerifyVm vm)
+    {
+        var secret = HttpContext.Session.GetString("2fa_setup_secret");
+        var expiresText = HttpContext.Session.GetString("2fa_setup_expires");
+        if (string.IsNullOrWhiteSpace(secret)
+            || !long.TryParse(expiresText, out var expires)
+            || expires <= DateTimeOffset.UtcNow.ToUnixTimeSeconds())
+        {
+            TempData["Error"] = "The setup session has expired. Start again.";
+            return RedirectToAction(nameof(TwoFactorSettings));
+        }
+
+        var codes = await _twoFactor.EnableAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!, secret, vm.Code);
+        if (codes == null)
+        {
+            ViewBag.Error = "The code could not be verified. Check your authenticator app and try again.";
+            var uri = TwoFactorService.CreateProvisioningUri(secret, User.FindFirstValue(ClaimTypes.Email) ?? "administrator");
+            ViewBag.Secret = secret;
+            ViewBag.QrDataUri = "data:image/png;base64," + Convert.ToBase64String(_qrGenerator.GeneratePng(uri));
+            return View("TwoFactorSetup", vm);
+        }
+
+        HttpContext.Session.Remove("2fa_setup_secret");
+        HttpContext.Session.Remove("2fa_setup_expires");
+        TempData["TwoFactorRecoveryCodes"] = System.Text.Json.JsonSerializer.Serialize(codes);
+        return RedirectToAction(nameof(TwoFactorRecoveryCodes));
+    }
+
+    [HttpGet]
+    [Authorize(Roles = "admin,superadmin")]
+    public IActionResult TwoFactorRecoveryCodes()
+    {
+        var json = TempData["TwoFactorRecoveryCodes"] as string;
+        if (string.IsNullOrWhiteSpace(json)) return RedirectToAction(nameof(TwoFactorSettings));
+        try
+        {
+            ViewBag.Codes = System.Text.Json.JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+            return View();
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return RedirectToAction(nameof(TwoFactorSettings));
+        }
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "admin,superadmin")]
+    [EnableRateLimiting("login")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DisableTwoFactor(TwoFactorVerifyVm vm)
+    {
+        var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        if (!await _twoFactor.DisableAsync(uid, vm.Code))
+        {
+            TempData["Error"] = "The verification code is invalid. Two-factor authentication remains enabled.";
+            return RedirectToAction(nameof(TwoFactorSettings));
+        }
+        TempData["Message"] = "Two-factor authentication has been disabled.";
+        return RedirectToAction(nameof(TwoFactorSettings));
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -383,22 +580,23 @@ public class AccountController : Controller
     // ═══════════════════════════════════════════════════════════
     // Helpers
     // ═══════════════════════════════════════════════════════════
-    private string StoreContextsInSession(List<UserContext> contexts, string fullName)
+    private string StoreContextsInSession(List<UserContext> contexts, string fullName, string throttleKey)
     {
         var token = Guid.NewGuid().ToString("N");
         var data = System.Text.Json.JsonSerializer.Serialize(new
         {
             Contexts = contexts,
-            FullName = fullName
+            FullName = fullName,
+            ThrottleKey = throttleKey
         });
         HttpContext.Session.SetString("ctx_" + token, data);
         return token;
     }
 
-    private (List<UserContext>?, string?) GetContextsFromSession(string token)
+    private (List<UserContext>?, string?, string?) GetContextsFromSession(string token)
     {
         var json = HttpContext.Session.GetString("ctx_" + token);
-        if (string.IsNullOrEmpty(json)) return (null, null);
+        if (string.IsNullOrEmpty(json)) return (null, null, null);
 
         try
         {
@@ -409,12 +607,13 @@ public class AccountController : Controller
             var contexts = System.Text.Json.JsonSerializer.Deserialize<List<UserContext>>(contextsJson);
 
             var fullName = root.TryGetProperty("FullName", out var fn) ? fn.GetString() : null;
+            var throttleKey = root.TryGetProperty("ThrottleKey", out var tk) ? tk.GetString() : null;
 
-            return (contexts, fullName);
+            return (contexts, fullName, throttleKey);
         }
         catch
         {
-            return (null, null);
+            return (null, null, null);
         }
     }
 
