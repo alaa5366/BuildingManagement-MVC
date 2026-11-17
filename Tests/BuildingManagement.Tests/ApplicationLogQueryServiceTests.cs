@@ -105,11 +105,11 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
         const string sourceContext = "Microsoft.EntityFrameworkCore.Database.Command";
 
         WriteLog(
-            "2026-11-17 10:00:00.000 +00:00 [INF] Executed DbCommand (4ms) [Parameters=[], CommandType='\\"Text\\"', CommandTimeout='30']",
+            "2026-11-17 10:00:00.000 +00:00 [INF] Executed DbCommand (4ms) [Parameters=[], CommandType='\"Text\"', CommandTimeout='30']",
             "SET IMPLICIT_TRANSACTIONS OFF;",
             "UPDATE [Presence] SET [LastSeen] = @p0",
-            "WHERE [Uid] = @p1; {\\"EventId\\":{\\"Id\\":20101},\\"SourceContext\\":\\"" + sourceContext +
-            "\\",\\"CorrelationId\\":\\"" + correlationId + "\\"}");
+            "WHERE [Uid] = @p1; {\"EventId\":{\"Id\":20101},\"SourceContext\":\"" + sourceContext +
+            "\",\"CorrelationId\":\"" + correlationId + "\"}");
 
         var result = await CreateService().QueryPageAsync(new ApplicationLogQuery
         {
@@ -119,7 +119,7 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
         var item = Assert.Single(result.Items);
 
         Assert.Equal(1, result.TotalItems);
-        Assert.Equal("Executed DbCommand (4ms) [Parameters=[], CommandType='\\"Text\\"', CommandTimeout='30']", item.Message);
+        Assert.Equal("Executed DbCommand (4ms) [Parameters=[], CommandType='\"Text\"', CommandTimeout='30']", item.Message);
         Assert.Equal(correlationId, item.CorrelationId);
         Assert.Equal(sourceContext, item.SourceContext);
         Assert.False(item.HasException);
