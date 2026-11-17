@@ -36,6 +36,7 @@ This page records the decisions behind the security code so they survive comment
 * Tables are restored parents first and saved table by table inside one database transaction. If anything fails, the whole restore is rolled back.
 * "Overwrite" updates existing rows in place. It never deletes rows first, because the database cascades deletes to child rows (floors, apartments, expenses, deposits...) that may not be part of the restore.
 * Detailed exceptions are written to server logs; browser responses use generic restore errors.
+* Scheduled-backup settings are validated server-side (frequency/day/hour, known collections, and retention 1–30); rotation clamps retention defensively so invalid stored values cannot purge every scheduled backup.
 * Identity columns (audit log, deposit edit history) get new values on restore; the audit log is append-only.
 * Restoring an old backup that still holds plain-text PINs: the startup migration hashes them at the next start, so those users can sign in again after a restart.
 
