@@ -1204,10 +1204,6 @@ namespace BuildingManagementMvc.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ApartmentId");
-
-                    b.HasIndex("BuildingId");
-
                     b.HasIndex("Phone");
 
                     b.HasIndex("Uid")
