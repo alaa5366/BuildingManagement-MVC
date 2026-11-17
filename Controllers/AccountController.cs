@@ -236,6 +236,7 @@ public class AccountController : Controller
     public IActionResult UnifiedLogin(string? returnUrl = null)
     {
         ViewBag.ReturnUrl = returnUrl;
+        ViewBag.TwoFactorStep = GetPendingTwoFactorSignIn() != null;
         return View(new UnifiedLoginVm());
     }
 
@@ -250,6 +251,11 @@ public class AccountController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UnifiedLogin(UnifiedLoginVm vm)
     {
+        // Once primary credentials have been accepted, every POST in this session must
+        // complete the pending second factor; it cannot fall back to primary login.
+        if (GetPendingTwoFactorSignIn() != null)
+            return await CompleteTwoFactorVerificationAsync(vm.TwoFactorCode);
+
         if (!ModelState.IsValid) return View(vm);
 
         var identifier = vm.Identifier.Trim();
@@ -408,7 +414,7 @@ public class AccountController : Controller
                 ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(5)
             };
             HttpContext.Session.SetString("2fa_pending", System.Text.Json.JsonSerializer.Serialize(pending));
-            return RedirectToAction(nameof(VerifyTwoFactor));
+            return RedirectToAction(nameof(UnifiedLogin));
         }
 
         if (!string.IsNullOrWhiteSpace(throttleKey)) _throttle.Reset(throttleKey);
@@ -416,37 +422,50 @@ public class AccountController : Controller
         return RedirectBasedOnRole(result.Role!);
     }
 
-    /// <summary>Displays the second-factor challenge after primary credentials have been verified.</summary>
+    /// <summary>Legacy route retained for compatibility; the challenge is rendered by UnifiedLogin.</summary>
     [HttpGet]
     [AllowAnonymous]
-    public IActionResult VerifyTwoFactor()
-    {
-        var pending = GetPendingTwoFactorSignIn();
-        if (pending == null) return RedirectToAction(nameof(UnifiedLogin));
-        return View("TwoFactorVerify", new TwoFactorVerifyVm());
-    }
+    public IActionResult VerifyTwoFactor() => RedirectToAction(nameof(UnifiedLogin));
 
-    /// <summary>Completes sign-in using a TOTP value or one-time recovery code.</summary>
+    /// <summary>Legacy POST route retained for compatibility with the unified login challenge.</summary>
     [HttpPost]
     [AllowAnonymous]
     [EnableRateLimiting("login")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> VerifyTwoFactor(TwoFactorVerifyVm vm)
+    public Task<IActionResult> VerifyTwoFactor(TwoFactorVerifyVm vm)
+        => CompleteTwoFactorVerificationAsync(vm.Code);
+
+    /// <summary>Clears an unfinished second-factor challenge and returns to the normal login form.</summary>
+    [HttpPost]
+    [AllowAnonymous]
+    [ValidateAntiForgeryToken]
+    public IActionResult CancelTwoFactor()
+    {
+        HttpContext.Session.Remove("2fa_pending");
+        return RedirectToAction(nameof(UnifiedLogin));
+    }
+
+    private async Task<IActionResult> CompleteTwoFactorVerificationAsync(string? code)
     {
         var pending = GetPendingTwoFactorSignIn();
         if (pending == null) return RedirectToAction(nameof(UnifiedLogin));
+
         var throttleKey = pending.ThrottleKey ?? AcctKey(pending.Result.Email ?? pending.Result.Uid);
+        ViewBag.TwoFactorStep = true;
+
         if (_throttle.IsLocked(throttleKey, ClientIp))
         {
             ViewBag.Error = LockedMsg;
-            return View("TwoFactorVerify", vm);
+            return View("UnifiedLogin", new UnifiedLoginVm());
         }
-        if (!ModelState.IsValid || !await _twoFactor.VerifyAndConsumeAsync(pending.Result.Uid!, vm.Code))
+
+        if (string.IsNullOrWhiteSpace(code)
+            || !await _twoFactor.VerifyAndConsumeAsync(pending.Result.Uid!, code.Trim()))
         {
             _log.LogWarning("Two-factor verification failed for account {Uid}", pending.Result.Uid);
             _throttle.RegisterFailure(throttleKey, ClientIp);
             ViewBag.Error = "The verification code is invalid or has already been used.";
-            return View("TwoFactorVerify", vm);
+            return View("UnifiedLogin", new UnifiedLoginVm());
         }
 
         _log.LogInformation("Two-factor verification succeeded for account {Uid}", pending.Result.Uid);
@@ -458,12 +477,11 @@ public class AccountController : Controller
 
     /// <summary>Displays two-factor authentication settings for the signed-in administrator.</summary>
     [HttpGet]
-    public async Task<IActionResult> TwoFactorSettings()
+    public IActionResult TwoFactorSettings()
     {
         var access = EnsureAdministratorTwoFactorAccess();
         if (access != null) return access;
-        ViewBag.Enabled = await _twoFactor.IsEnabledAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        return View();
+        return RedirectToAction("Own", "Settings");
     }
 
     /// <summary>Starts a time-limited two-factor setup session and generates a new authenticator secret.</summary>
@@ -478,7 +496,7 @@ public class AccountController : Controller
         if (await _twoFactor.IsEnabledAsync(uid))
         {
             TempData["Error"] = "Two-factor authentication is already enabled.";
-            return RedirectToAction(nameof(TwoFactorSettings));
+            return RedirectToAction("Own", "Settings");
         }
         HttpContext.Session.SetString("2fa_setup_secret", TwoFactorService.CreateSecret());
         HttpContext.Session.SetString("2fa_setup_expires", DateTimeOffset.UtcNow.AddMinutes(10).ToUnixTimeSeconds().ToString());
@@ -499,7 +517,7 @@ public class AccountController : Controller
         {
             HttpContext.Session.Remove("2fa_setup_secret");
             HttpContext.Session.Remove("2fa_setup_expires");
-            return RedirectToAction(nameof(TwoFactorSettings));
+            return RedirectToAction("Own", "Settings");
         }
 
         var account = User.FindFirstValue(ClaimTypes.Email);
@@ -526,7 +544,7 @@ public class AccountController : Controller
             || expires <= DateTimeOffset.UtcNow.ToUnixTimeSeconds())
         {
             TempData["Error"] = "The setup session has expired. Start again.";
-            return RedirectToAction(nameof(TwoFactorSettings));
+            return RedirectToAction("Own", "Settings");
         }
 
         var codes = await _twoFactor.EnableAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!, secret, vm.Code);
@@ -553,7 +571,7 @@ public class AccountController : Controller
         var access = EnsureAdministratorTwoFactorAccess();
         if (access != null) return access;
         var json = TempData["TwoFactorRecoveryCodes"] as string;
-        if (string.IsNullOrWhiteSpace(json)) return RedirectToAction(nameof(TwoFactorSettings));
+        if (string.IsNullOrWhiteSpace(json)) return RedirectToAction("Own", "Settings");
         try
         {
             ViewBag.Codes = System.Text.Json.JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
@@ -561,7 +579,7 @@ public class AccountController : Controller
         }
         catch (System.Text.Json.JsonException)
         {
-            return RedirectToAction(nameof(TwoFactorSettings));
+            return RedirectToAction("Own", "Settings");
         }
     }
 
@@ -578,10 +596,10 @@ public class AccountController : Controller
         if (!await _twoFactor.DisableAsync(uid, vm.Code))
         {
             TempData["Error"] = "The verification code is invalid. Two-factor authentication remains enabled.";
-            return RedirectToAction(nameof(TwoFactorSettings));
+            return RedirectToAction("Own", "Settings");
         }
         TempData["Message"] = "Two-factor authentication has been disabled.";
-        return RedirectToAction(nameof(TwoFactorSettings));
+        return RedirectToAction("Own", "Settings");
     }
 
     // ═══════════════════════════════════════════════════════════

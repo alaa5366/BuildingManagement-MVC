@@ -3,5 +3,5 @@
  <h2>Save your recovery codes</h2>
  <div class="alert alert-warning">These codes are shown only once. Store them somewhere safe. Each code can be used one time.</div>
  <div class="card card-body"><div class="row row-cols-2 g-2">@foreach(var code in codes){<div class="col"><code>@code</code></div>}</div></div>
- <a asp-action="TwoFactorSettings" class="btn btn-primary mt-3">Done</a>
+ <a asp-controller="Settings" asp-action="Own" class="btn btn-primary mt-3">Done</a>
 </div>
