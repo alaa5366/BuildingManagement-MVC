@@ -17,6 +17,7 @@ namespace BuildingManagementMvc.Controllers;
 /// Access: any signed-in user (roles are checked per action).
 /// </remarks>
 [Authorize]
+[AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ViewCameras)]
 public class CamerasController : Controller
 {
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;

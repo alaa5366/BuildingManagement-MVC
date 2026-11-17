@@ -79,3 +79,10 @@ public class ResidentLoginVm
     [Required, DataType(DataType.Password)]
     public string Pin { get; set; } = "";
 }
+/// <summary>Form model for a six-digit authenticator code or one-time recovery code.</summary>
+public class TwoFactorVerifyVm
+{
+    [Required]
+    [StringLength(32, MinimumLength = 6)]
+    public string Code { get; set; } = "";
+}

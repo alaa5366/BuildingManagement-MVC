@@ -269,4 +269,24 @@ public class AdminBackupData
     /// Gets or sets the identifier of the building.
     /// </summary>
     public string BuildingId { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the original initiating identity UID for nested impersonation restoration.
+    /// </summary>
+    public string ImpersonationActorUid { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the original initiating identity role for nested impersonation restoration.
+    /// </summary>
+    public string ImpersonationActorRole { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the original initiating identity email for nested impersonation restoration.
+    /// </summary>
+    public string ImpersonationActorEmail { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the serialized permissions of the initiating identity for nested impersonation restoration.
+    /// </summary>
+    public string ImpersonationActorPermissions { get; set; } = "";
+    /// <summary>Whether the original actor completed their required second factor.</summary>
+    public bool TwoFactorVerified { get; set; }
+    /// <summary>Second-factor state of the original actor for nested impersonation.</summary>
+    public string ImpersonationActorTwoFactorVerified { get; set; } = "false";
 }

@@ -57,7 +57,7 @@ try
             rollOnFileSizeLimit: true,
             fileSizeLimitBytes: 10 * 1024 * 1024, // 10 MB/ملف
             shared: true,
-            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}");
+            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}");
     });
 
     if (builder.Environment.IsDevelopment())
@@ -135,9 +135,9 @@ try
 
     // ✅ Health Checks (فحص صحة الداتابيز)
     builder.Services.AddHealthChecks()
-        .AddDbContextCheck<AppDbContext>("Database");
+        .AddDbContextCheck<AppDbContext>("Database", tags: new[] { "ready" });
 
-    Console.WriteLine("[Storage] Provider = Sql");
+    Log.Information("Storage provider configured: {StorageProvider}", "Sql");
 
     builder.Services.AddSingleton<BuildingSqlStore>();
     builder.Services.AddSingleton<UserSqlStore>();
@@ -161,6 +161,7 @@ try
     builder.Services.AddSingleton<QrSecurityService>();
     builder.Services.AddSingleton<QrAuthService>();
     builder.Services.AddSingleton<LoginThrottle>();
+    builder.Services.AddSingleton<TwoFactorService>();
     builder.Services.AddSingleton<SessionRevalidator>();
     builder.Services.AddSingleton<QrCodePdfService>();
     builder.Services.AddSingleton<QrGeneratorService>();
@@ -181,6 +182,7 @@ try
     builder.Services.AddHostedService<BackupScheduler>();
 
     builder.Services.AddScoped<AuditLogQueryService>();
+    builder.Services.AddScoped<ApplicationLogQueryService>();
     builder.Services.AddScoped<CategoriesService>();
 
     builder.Services.AddSingleton<IAuditLogger, AuditLogger>();
@@ -260,7 +262,9 @@ try
                     catch (Exception ex)
                     {
                         var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                        logger.LogWarning(ex, "[SessionRevalidator] Failed to validate principal");
+                        logger.LogError(ex, "[SessionRevalidator] Failed to validate principal; rejecting the session");
+                        ctx.RejectPrincipal();
+                        await ctx.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                         return;
                     }
 
@@ -401,11 +405,11 @@ try
         using var migrationScope = app.Services.CreateScope();
         var pinMigration = migrationScope.ServiceProvider.GetRequiredService<PinMigrationService>();
         var (mUsers, mResidents, mCleared) = await pinMigration.MigrateLegacySecretsAsync();
-        Console.WriteLine($"[Startup] Legacy secrets: users={mUsers}, residents={mResidents}, buildingAdminPinsCleared={mCleared}");
+        Log.Information("Legacy secret migration completed. Users={MigratedUsers}, Residents={MigratedResidents}, BuildingAdminPinsCleared={BuildingAdminPinsCleared}", mUsers, mResidents, mCleared);
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[Startup] Legacy secrets migration FAILED: {ex.Message}");
+        Log.Error(ex, "Legacy secret migration failed during startup");
     }
 
     await app.Services.GetRequiredService<LoginThrottle>().InitializeAsync();
@@ -414,6 +418,7 @@ try
     // Middleware
     // ============================================================
     app.UseForwardedHeaders();
+    app.UseMiddleware<CorrelationIdMiddleware>();
 
     // ✅ Serilog request logging (بعد ForwardedHeaders، قبل الاستثناءات)
     app.UseSerilogRequestLogging(options =>
@@ -427,6 +432,7 @@ try
         };
         options.EnrichDiagnosticContext = (diag, ctx) =>
         {
+            diag.Set("CorrelationId", ctx.TraceIdentifier);
             diag.Set("RequestHost", ctx.Request.Host.Value ?? "");
             diag.Set("RequestScheme", ctx.Request.Scheme);
             diag.Set("RemoteIp", ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown");
@@ -489,13 +495,13 @@ try
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Startup] FAILED {Path.GetFileName(fontFile)}: {ex.Message}");
+                Log.Warning(ex, "Failed to register font {FontFile}", Path.GetFileName(fontFile));
             }
         }
     }
     else
     {
-        Console.WriteLine("[Startup] ERROR: Fonts directory not found!");
+        Log.Warning("Fonts directory was not found at {FontsDirectory}", fontsDir);
     }
 
     if (!app.Environment.IsDevelopment())
@@ -518,8 +524,20 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
 
-    // ✅ Endpoint لفحص الصحة
-    app.MapHealthChecks("/health");
+    // Liveness checks only that the process can serve requests; readiness checks SQL.
+    var readinessHealthOptions = new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+    {
+        Predicate = check => check.Tags.Contains("ready"),
+        ResponseWriter = HealthCheckResponseWriter.WriteAsync
+    };
+    app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+    {
+        Predicate = _ => false,
+        ResponseWriter = HealthCheckResponseWriter.WriteAsync
+    });
+    app.MapHealthChecks("/health/ready", readinessHealthOptions);
+    // Backward-compatible endpoint: /health continues to mean readiness.
+    app.MapHealthChecks("/health", readinessHealthOptions);
 
     app.MapControllerRoute(
         name: "default",
@@ -530,6 +548,7 @@ try
 catch (Exception ex)
 {
     Log.Fatal(ex, "Application terminated unexpectedly");
+    Environment.ExitCode = 1;
 }
 finally
 {

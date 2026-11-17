@@ -408,10 +408,15 @@ public static class BuildingSqlMapper
             be = new BuildingEntity { Id = bid, CreatedAt = ParseTs(src.CreatedAt) ?? NowSec() };
             db.Buildings.Add(be);
         }
-        else if (src.RowVersion is { Length: > 0 } &&
-                 !System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(src.RowVersion, be.RowVersion))
+        else
         {
-            throw new DbUpdateConcurrencyException("Building data changed after it was loaded. Reload and retry the operation.");
+            ValidateAggregateConcurrency(src.RowVersion, be.RowVersion);
+
+            // A child-only aggregate change would otherwise leave the Buildings row untouched,
+            // so SQL Server would not advance RowVersion and another app instance could pass
+            // the same token check. Force a no-op parent update; the rowversion predicate then
+            // protects every aggregate save, including changes limited to child tables.
+            MarkAggregateWrite(db, be);
         }
         be.BuildingNumber = Cut(src.BuildingNumber, 50);
         be.Name = Cut(src.Name, 200);
@@ -765,6 +770,22 @@ public static class BuildingSqlMapper
         await tx.CommitAsync(ct);
         src.RowVersion = be.RowVersion.ToArray();
         return warn;
+    }
+
+    internal static void MarkAggregateWrite(AppDbContext db, BuildingEntity building)
+    {
+        db.Entry(building).Property(x => x.DataVersion).IsModified = true;
+    }
+
+    internal static void ValidateAggregateConcurrency(byte[]? expected, byte[] current)
+    {
+        if (expected is not { Length: 8 } || current is not { Length: 8 })
+            throw new DbUpdateConcurrencyException(
+                "Building concurrency token is missing. Reload the building before saving.");
+
+        if (!CryptographicOperations.FixedTimeEquals(expected, current))
+            throw new DbUpdateConcurrencyException(
+                "Building data changed after it was loaded. Reload and retry the operation.");
     }
 
     private static bool SameEdits(List<DepositEditEntity> a, List<DepositEditEntity> b)

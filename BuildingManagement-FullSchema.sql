@@ -978,28 +978,23 @@ CREATE NONCLUSTERED INDEX [IX_QrUsages_TokenId] ON [dbo].[QrUsages]
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [IX_Residents_ApartmentId]    Script Date: 16/11/2026 01:14:39 PM ******/
-CREATE NONCLUSTERED INDEX [IX_Residents_ApartmentId] ON [dbo].[Residents]
-(
-	[ApartmentId] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [IX_Residents_Building_Phone]    Script Date: 16/11/2026 01:14:39 PM ******/
-CREATE NONCLUSTERED INDEX [IX_Residents_Building_Phone] ON [dbo].[Residents]
+/****** Object:  Index [IX_Residents_BuildingId_Phone]    Script Date: 16/11/2026 01:14:39 PM ******/
+CREATE NONCLUSTERED INDEX [IX_Residents_BuildingId_Phone] ON [dbo].[Residents]
 (
 	[BuildingId] ASC,
 	[Phone] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-SET ANSI_PADDING ON
-GO
-/****** Object:  Index [IX_Residents_BuildingId]    Script Date: 16/11/2026 01:14:39 PM ******/
-CREATE NONCLUSTERED INDEX [IX_Residents_BuildingId] ON [dbo].[Residents]
+/****** Object:  Index [IX_Residents_BuildingId_ApartmentId] ******/
+CREATE NONCLUSTERED INDEX [IX_Residents_BuildingId_ApartmentId] ON [dbo].[Residents]
 (
-	[BuildingId] ASC
+	[BuildingId] ASC,
+	[ApartmentId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
 GO
 SET ANSI_PADDING ON
 GO

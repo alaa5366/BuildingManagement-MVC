@@ -12,6 +12,11 @@ public class AdminPermissionAttribute : Attribute, IAuthorizationFilter
     private readonly string _permission;
 
     /// <summary>
+    /// Gets the permission key enforced by this attribute.
+    /// </summary>
+    public string Permission => _permission;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="AdminPermissionAttribute"/> class.
     /// </summary>
     public AdminPermissionAttribute(string permission) => _permission = permission;

@@ -16,6 +16,37 @@ public class AppDbContext : DbContext
     /// </summary>
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
+    private void EnsureAuditLogIsAppendOnly()
+    {
+        ChangeTracker.DetectChanges();
+        if (ChangeTracker.Entries<AuditLogEntity>()
+            .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
+        {
+            throw new InvalidOperationException(
+                "Audit log entries are append-only and cannot be updated or deleted by the application.");
+        }
+    }
+
+    /// <summary>
+    /// Saves changes while enforcing append-only audit records.
+    /// </summary>
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        EnsureAuditLogIsAppendOnly();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    /// <summary>
+    /// Saves changes asynchronously while enforcing append-only audit records.
+    /// </summary>
+    public override Task<int> SaveChangesAsync(
+        bool acceptAllChangesOnSuccess,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureAuditLogIsAppendOnly();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
     /// <summary>
     /// Gets the users.
     /// </summary>
@@ -151,6 +182,112 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
+        // -----------------------------------------------------------------
+        // Phase 04: Explicit SQL Server lengths for PK/FK and key columns.
+        // Keep every FK component aligned with its principal key column.
+        // -----------------------------------------------------------------
+        mb.Entity<UserEntity>().Property(x => x.Uid).HasMaxLength(128);
+        mb.Entity<UserEntity>().Property(x => x.TwoFactorEnabled).HasDefaultValue(false);
+        mb.Entity<UserEntity>().Property(x => x.TwoFactorSecretEncrypted).HasMaxLength(512);
+        mb.Entity<UserEntity>().Property(x => x.TwoFactorRecoveryCodesJson).HasMaxLength(4000);
+
+        mb.Entity<UserPermissionEntity>().Property(x => x.Uid).HasMaxLength(128);
+        mb.Entity<UserPermissionEntity>().Property(x => x.Permission).HasMaxLength(60);
+
+        mb.Entity<BuildingEntity>().Property(x => x.Id).HasMaxLength(64);
+        mb.Entity<BuildingSettingsEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<BuildingAdminEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<BuildingAdminEntity>().Property(x => x.AdminUid).HasMaxLength(128);
+
+        mb.Entity<FloorEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<FloorEntity>().Property(x => x.Id).HasMaxLength(64);
+
+        mb.Entity<ApartmentEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<ApartmentEntity>().Property(x => x.Id).HasMaxLength(64);
+        mb.Entity<ApartmentEntity>().Property(x => x.FloorId).HasMaxLength(64);
+
+        mb.Entity<FinancialCategoryEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<FinancialCategoryEntity>().Property(x => x.Id).HasMaxLength(64);
+        mb.Entity<FinancialCategoryEntity>().Property(x => x.Kind).HasMaxLength(10);
+
+        mb.Entity<ExpenseEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<ExpenseEntity>().Property(x => x.Id).HasMaxLength(64);
+        mb.Entity<ExpenseEntity>().Property(x => x.CategoryId).HasMaxLength(64);
+        mb.Entity<ExpenseEntity>().Property(x => x.CategoryKind).HasMaxLength(10);
+        mb.Entity<ExpenseEntity>().Property(x => x.MonthKey).HasColumnType("char(7)").HasMaxLength(7);
+
+        mb.Entity<RevenueEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<RevenueEntity>().Property(x => x.Id).HasMaxLength(64);
+        mb.Entity<RevenueEntity>().Property(x => x.CategoryId).HasMaxLength(64);
+        mb.Entity<RevenueEntity>().Property(x => x.CategoryKind).HasMaxLength(10);
+        mb.Entity<RevenueEntity>().Property(x => x.MonthKey).HasColumnType("char(7)").HasMaxLength(7);
+
+        mb.Entity<MonthlyApartmentShareEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<MonthlyApartmentShareEntity>().Property(x => x.ApartmentId).HasMaxLength(64);
+        mb.Entity<MonthlyApartmentShareEntity>().Property(x => x.MonthKey).HasColumnType("char(7)").HasMaxLength(7);
+
+        mb.Entity<DepositEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<DepositEntity>().Property(x => x.Id).HasMaxLength(64);
+        mb.Entity<DepositEntity>().Property(x => x.ApartmentId).HasMaxLength(64);
+        mb.Entity<DepositEntity>().Property(x => x.MonthKey).HasColumnType("char(7)").HasMaxLength(7);
+
+        mb.Entity<DepositEditEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<DepositEditEntity>().Property(x => x.DepositId).HasMaxLength(64);
+
+        mb.Entity<WalletAdjustmentEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<WalletAdjustmentEntity>().Property(x => x.Id).HasMaxLength(64);
+        mb.Entity<WalletAdjustmentEntity>().Property(x => x.ApartmentId).HasMaxLength(64);
+        mb.Entity<WalletAdjustmentEntity>().Property(x => x.MonthKey).HasColumnType("char(7)").HasMaxLength(7);
+
+        mb.Entity<AuditLogEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<AuditLogEntity>().Property(x => x.ApartmentId).HasMaxLength(64);
+        mb.Entity<AuditLogEntity>().Property(x => x.MonthKey).HasMaxLength(7);
+
+        mb.Entity<NotificationEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<NotificationEntity>().Property(x => x.Id).HasMaxLength(64);
+        mb.Entity<NotificationEntity>().Property(x => x.RecipientApartmentId).HasMaxLength(64);
+
+        mb.Entity<PollEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<PollEntity>().Property(x => x.Id).HasMaxLength(64);
+
+        mb.Entity<PollOptionEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<PollOptionEntity>().Property(x => x.PollId).HasMaxLength(64);
+        mb.Entity<PollOptionEntity>().Property(x => x.Id).HasMaxLength(64);
+
+        mb.Entity<PollVoteEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<PollVoteEntity>().Property(x => x.PollId).HasMaxLength(64);
+        mb.Entity<PollVoteEntity>().Property(x => x.ApartmentId).HasMaxLength(64);
+        mb.Entity<PollVoteEntity>().Property(x => x.OptionId).HasMaxLength(64);
+
+        mb.Entity<MaintenanceRecordEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<MaintenanceRecordEntity>().Property(x => x.Id).HasMaxLength(64);
+
+        mb.Entity<QrTokenEntity>().Property(x => x.Uid).HasMaxLength(128);
+        mb.Entity<QrTokenEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<QrTokenEntity>().Property(x => x.ApartmentId).HasMaxLength(64);
+
+        mb.Entity<QrUsageEntity>().Property(x => x.Id).HasMaxLength(128);
+        mb.Entity<QrUsageEntity>().Property(x => x.TokenId).HasMaxLength(128);
+
+        mb.Entity<PresenceEntity>().Property(x => x.Uid).HasMaxLength(128);
+        mb.Entity<PresenceEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<PresenceEntity>().Property(x => x.ApartmentId).HasMaxLength(64);
+
+        mb.Entity<GlobalSettingsEntity>().Property(x => x.Id).HasMaxLength(20);
+        mb.Entity<ScheduledBackupSettingsEntity>().Property(x => x.Id).HasMaxLength(20);
+        mb.Entity<BackupHistoryEntity>().Property(x => x.Id).HasMaxLength(64);
+
+        mb.Entity<DvrEntity>().Property(x => x.Id).HasMaxLength(64);
+        mb.Entity<DvrEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<CameraEntity>().Property(x => x.Id).HasMaxLength(64);
+        mb.Entity<CameraEntity>().Property(x => x.DvrId).HasMaxLength(64);
+        mb.Entity<CameraEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+
+        mb.Entity<ResidentEntity>().Property(x => x.Id).HasMaxLength(64);
+        mb.Entity<ResidentEntity>().Property(x => x.Uid).HasMaxLength(128);
+        mb.Entity<ResidentEntity>().Property(x => x.BuildingId).HasMaxLength(64);
+        mb.Entity<ResidentEntity>().Property(x => x.ApartmentId).HasMaxLength(64);
+
         // ---------------- المستخدمين ----------------
         mb.Entity<UserEntity>(e =>
         {
@@ -440,8 +577,8 @@ public class AppDbContext : DbContext
             e.ToTable("Residents");
             e.HasKey(x => x.Id);
 
-            e.HasIndex(x => x.BuildingId);
-            e.HasIndex(x => x.ApartmentId);
+            // BuildingId is already the leading key in the composite indexes below.
+            // Keep indexes aligned with actual query patterns; avoid redundant single-column indexes.
             e.HasIndex(x => x.Phone);
             e.HasIndex(x => x.Uid).IsUnique();
             e.HasIndex(x => new { x.BuildingId, x.Phone });

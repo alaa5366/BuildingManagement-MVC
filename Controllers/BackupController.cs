@@ -124,7 +124,7 @@ public class BackupController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Backup create failed");
-            TempData["Error"] = Loc.T("Creation_Failed") + ex.Message;
+            TempData["Error"] = Loc.T("Creation_Failed");
             return RedirectToAction(nameof(Index), new { tab = "backup" });
         }
     }
@@ -163,7 +163,7 @@ public class BackupController : Controller
 
             if (!preview.Success)
             {
-                TempData["Error"] = Loc.T("Failed_To_Read_The_File") + string.Join(Loc.T("Text_8a78cc"), preview.Errors);
+                TempData["Error"] = Loc.T("Failed_To_Read_The_File");
                 return RedirectToAction(nameof(Index), new { tab = "restore" });
             }
 
@@ -172,7 +172,7 @@ public class BackupController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Backup preview failed");
-            TempData["Error"] = Loc.T("Failed_5") + ex.Message;
+            TempData["Error"] = Loc.T("Failed_5");
             return RedirectToAction(nameof(Index), new { tab = "restore" });
         }
     }
@@ -202,7 +202,7 @@ public class BackupController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Restore failed");
-            TempData["Error"] = Loc.T("Failed_5") + ex.Message;
+            TempData["Error"] = Loc.T("Failed_5");
             return RedirectToAction(nameof(Index), new { tab = "restore" });
         }
     }
@@ -234,7 +234,7 @@ public class BackupController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "SaveScheduledSettings failed");
-            TempData["Error"] = Loc.T("Save_Failed_2") + ex.Message;
+            TempData["Error"] = Loc.T("Save_Failed_2");
         }
 
         return RedirectToAction(nameof(Index), new { tab = "scheduled" });
@@ -258,7 +258,7 @@ public class BackupController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "RunNow failed");
-            TempData["Error"] = Loc.T("Failed_5") + ex.Message;
+            TempData["Error"] = Loc.T("Failed_5");
         }
         return RedirectToAction(nameof(Index), new { tab = "scheduled" });
     }
@@ -319,7 +319,7 @@ public class BackupController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "[Backup] DownloadTemplate failed");
-            TempData["Error"] = Loc.T("Failed_To_Download_The_Template") + ex.Message;
+            TempData["Error"] = Loc.T("Failed_To_Download_The_Template");
             return RedirectToAction(nameof(Index), new { tab = "import" });
         }
     }
@@ -368,7 +368,7 @@ public class BackupController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "[Backup] UploadExcel failed");
-            TempData["Error"] = Loc.T("Failed_To_Read_The_File") + ex.Message;
+            TempData["Error"] = Loc.T("Failed_To_Read_The_File");
             return RedirectToAction(nameof(Index), new { tab = "import" });
         }
     }
@@ -491,7 +491,7 @@ public class BackupController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "[Backup] ConfirmImport failed");
-            TempData["Error"] = Loc.T("Import_Failed") + ex.Message;
+            TempData["Error"] = Loc.T("Import_Failed");
             return RedirectToAction(nameof(Index), new { tab = "import" });
         }
     }

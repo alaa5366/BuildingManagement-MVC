@@ -4640,4 +4640,23 @@
   <data name="Backup_Collection_cameras" xml:space="preserve"><value>الكاميرات</value></data>
   <data name="Backup_Collection_qrTokens" xml:space="preserve"><value>رموز QR</value></data>
   <data name="Backup_Collection_qrUsages" xml:space="preserve"><value>استخدام رموز QR</value></data>
+
+  <data name="Application_Logs" xml:space="preserve"><value>سجلات التطبيق</value></data>
+  <data name="Application_Logs_Description" xml:space="preserve"><value>استعراض سجلات التشغيل والأخطاء والبحث بمعرّف الترابط.</value></data>
+  <data name="View_Application_Logs" xml:space="preserve"><value>عرض سجلات التطبيق</value></data>
+  <data name="View_Application_Logs_Desc" xml:space="preserve"><value>الوصول إلى سجلات التطبيق المنقحة ومعلومات التشخيص.</value></data>
+  <data name="Events" xml:space="preserve"><value>حدث</value></data>
+  <data name="Correlation_ID" xml:space="preserve"><value>معرّف الترابط</value></data>
+  <data name="Source_Context" xml:space="preserve"><value>المصدر</value></data>
+  <data name="Level" xml:space="preserve"><value>المستوى</value></data>
+  <data name="All_Levels" xml:space="preserve"><value>كل المستويات</value></data>
+  <data name="From_Date_UTC" xml:space="preserve"><value>من تاريخ (UTC)</value></data>
+  <data name="To_Date_UTC" xml:space="preserve"><value>إلى تاريخ (UTC)</value></data>
+  <data name="All_Events" xml:space="preserve"><value>كل الأحداث</value></data>
+  <data name="With_Exception" xml:space="preserve"><value>بها استثناء</value></data>
+  <data name="Without_Exception" xml:space="preserve"><value>بدون استثناء</value></data>
+  <data name="Log_Dates_Are_UTC_And_Redacted" xml:space="preserve"><value>التواريخ بتوقيت UTC، ويتم إخفاء القيم الحساسة قبل العرض.</value></data>
+  <data name="No_Log_Events_Found" xml:space="preserve"><value>لا توجد سجلات مطابقة لمعايير البحث.</value></data>
+  <data name="Invalid_Date_Range" xml:space="preserve"><value>تاريخ البداية يجب ألا يتجاوز تاريخ النهاية.</value></data>
+  <data name="Message" xml:space="preserve"><value>الرسالة</value></data>
 </root>

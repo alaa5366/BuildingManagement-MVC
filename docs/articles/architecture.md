@@ -31,15 +31,20 @@ cancelled deposits never count.
 
 ## Writes
 
-`BuildingSqlStore.SaveFullAsync` saves the whole building aggregate (last writer wins). To avoid lost
-updates, `BuildingWriteLockFilter` runs write requests for the same building one at a time. This is
-correct for a single application instance; running several instances would need a row-version column.
+`BuildingSqlStore.SaveFullAsync` saves the whole building aggregate in a transaction. The MVC
+`BuildingWriteLockFilter` serializes write requests for the same building inside one application
+instance. Cross-instance protection is provided by SQL Server `Buildings.RowVersion`: every existing
+aggregate save forces a parent-row update, so child-only changes also advance the token. A stale or
+missing token is rejected with `DbUpdateConcurrencyException`; callers must reload and retry rather
+than silently overwriting another writer.
 
 ## Main flows
+
+* **Request correlation** — each HTTP request receives a server-generated 32-character correlation ID. It is returned in `X-Correlation-ID`, included in Serilog request events and the structured logging scope, and attached to audit JSON details for events written during that request. Incoming client correlation headers are ignored. Normal tracked EF Core writes reject audit-row updates and deletes; database-level permissions remain a separate hardening layer.
 
 * **Unified login** – one form for e-mail/phone plus password/PIN. When several accounts match, the user
   chooses one (`ChooseContext`).
 * **Welcome message** – contains a one-time *set your PIN* link (`/Account/SetPin`). PINs are never sent or stored in clear text.
 * **Quick QR login** – the link opens a confirmation page; only the button (POST) consumes the token.
-* **Impersonation** – a protected cookie keeps a stack of identities so super admins and admins can return to their own account. Sessions are limited to two hours.
+* **Impersonation** – a protected cookie keeps a stack of identities so super admins and admins can return to their own account. Sessions are limited to two hours. Each impersonated request revalidates the initiating account, its building membership and (for admins) its permission snapshot, as well as the target building/apartment. Validation is cached for at most 30 seconds and fails closed if the authority store is unavailable; nested restoration preserves the original initiating identity.
 * **Backups** – scheduled backups are encrypted on disk; the Backup page downloads them as normal ZIP files.

@@ -3,7 +3,7 @@
 //  Singleton (لأن BuildingsService نفسه Singleton) فبيستخدم IDbContextFactory:
 //  كل عملية بتفتح DbContext جديد وتقفله.
 //
-//  Last-write-wins زي Firestore Overwrite الحالي (مفيش optimistic concurrency).
+//  Optimistic concurrency is enforced by Buildings.RowVersion for every aggregate save.
 // =====================================================================
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;

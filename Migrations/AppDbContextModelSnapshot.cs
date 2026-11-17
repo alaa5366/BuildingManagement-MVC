@@ -25,10 +25,12 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.ApartmentEntity", b =>
                 {
                     b.Property<string>("BuildingId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<DateOnly?>("CloseDate")
                         .HasColumnType("date");
@@ -43,7 +45,8 @@ namespace BuildingManagementMvc.Migrations
 
                     b.Property<string>("FloorId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<bool>("IsClosed")
                         .HasColumnType("bit");
@@ -172,7 +175,8 @@ namespace BuildingManagementMvc.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("BuildingId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("BuildingNumber")
                         .HasColumnType("nvarchar(max)");
@@ -187,7 +191,8 @@ namespace BuildingManagementMvc.Migrations
 
                     b.Property<string>("MonthKey")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)");
 
                     b.Property<string>("Severity")
                         .IsRequired()
@@ -214,7 +219,8 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.BackupHistoryEntity", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("CollectionsJson")
                         .IsRequired()
@@ -255,10 +261,12 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.BuildingAdminEntity", b =>
                 {
                     b.Property<string>("BuildingId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("AdminUid")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.HasKey("BuildingId", "AdminUid");
 
@@ -270,7 +278,8 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.BuildingEntity", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("AdminPin")
                         .IsRequired()
@@ -332,7 +341,8 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.BuildingSettingsEntity", b =>
                 {
                     b.Property<string>("BuildingId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Address")
                         .IsRequired()
@@ -374,11 +384,13 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.CameraEntity", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("BuildingId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<int>("Channel")
                         .HasColumnType("int");
@@ -388,7 +400,8 @@ namespace BuildingManagementMvc.Migrations
 
                     b.Property<string>("DvrId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("HlsUrl")
                         .IsRequired()
@@ -425,7 +438,8 @@ namespace BuildingManagementMvc.Migrations
 
                     b.Property<string>("BuildingId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("ByUser")
                         .IsRequired()
@@ -433,7 +447,8 @@ namespace BuildingManagementMvc.Migrations
 
                     b.Property<string>("DepositId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("NewAmount")
                         .HasPrecision(18, 2)
@@ -468,10 +483,12 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.DepositEntity", b =>
                 {
                     b.Property<string>("BuildingId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
@@ -479,7 +496,8 @@ namespace BuildingManagementMvc.Migrations
 
                     b.Property<string>("ApartmentId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<DateTime?>("CancelledAt")
                         .HasColumnType("datetime2(0)");
@@ -505,7 +523,8 @@ namespace BuildingManagementMvc.Migrations
 
                     b.Property<string>("MonthKey")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(7)
+                        .HasColumnType("char(7)");
 
                     b.Property<string>("Note")
                         .IsRequired()
@@ -556,7 +575,8 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.DvrEntity", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Brand")
                         .IsRequired()
@@ -564,7 +584,8 @@ namespace BuildingManagementMvc.Migrations
 
                     b.Property<string>("BuildingId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2(0)");
@@ -604,28 +625,33 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.ExpenseEntity", b =>
                 {
                     b.Property<string>("BuildingId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("CategoryId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("CategoryKind")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<DateOnly>("ExpenseDate")
                         .HasColumnType("date");
 
                     b.Property<string>("MonthKey")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(7)
+                        .HasColumnType("char(7)");
 
                     b.Property<string>("Note")
                         .IsRequired()
@@ -644,13 +670,16 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialCategoryEntity", b =>
                 {
                     b.Property<string>("BuildingId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Kind")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Color")
                         .IsRequired()
@@ -674,10 +703,12 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FloorEntity", b =>
                 {
                     b.Property<string>("BuildingId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Label")
                         .IsRequired()
@@ -694,7 +725,8 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.GlobalSettingsEntity", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("AppName")
                         .IsRequired()
@@ -759,10 +791,12 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MaintenanceRecordEntity", b =>
                 {
                     b.Property<string>("BuildingId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<bool>("AddedToExpense")
                         .HasColumnType("bit");
@@ -808,13 +842,16 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MonthlyApartmentShareEntity", b =>
                 {
                     b.Property<string>("BuildingId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("MonthKey")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(7)
+                        .HasColumnType("char(7)");
 
                     b.Property<string>("ApartmentId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("CarryOver")
                         .HasPrecision(18, 2)
@@ -838,10 +875,12 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.NotificationEntity", b =>
                 {
                     b.Property<string>("BuildingId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Body")
                         .IsRequired()
@@ -858,7 +897,8 @@ namespace BuildingManagementMvc.Migrations
                         .HasColumnType("datetime2(0)");
 
                     b.Property<string>("RecipientApartmentId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("RecipientType")
                         .IsRequired()
@@ -885,10 +925,12 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollEntity", b =>
                 {
                     b.Property<string>("BuildingId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2(0)");
@@ -919,13 +961,16 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollOptionEntity", b =>
                 {
                     b.Property<string>("BuildingId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("PollId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
@@ -942,17 +987,21 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollVoteEntity", b =>
                 {
                     b.Property<string>("BuildingId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("PollId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("ApartmentId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("OptionId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<DateTime>("VotedAt")
                         .HasColumnType("datetime2(0)");
@@ -969,13 +1018,16 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PresenceEntity", b =>
                 {
                     b.Property<string>("Uid")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<string>("ApartmentId")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("BuildingId")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<DateTime>("LastSeen")
                         .HasColumnType("datetime2(3)");
@@ -988,15 +1040,18 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.QrTokenEntity", b =>
                 {
                     b.Property<string>("Uid")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<string>("ApartmentId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("BuildingId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2(0)");
@@ -1071,15 +1126,18 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.ResidentEntity", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("ApartmentId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("BuildingId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2(0)");
@@ -1131,7 +1189,8 @@ namespace BuildingManagementMvc.Migrations
 
                     b.Property<string>("Uid")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2(0)");
@@ -1144,10 +1203,6 @@ namespace BuildingManagementMvc.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ApartmentId");
-
-                    b.HasIndex("BuildingId");
 
                     b.HasIndex("Phone");
 
@@ -1164,25 +1219,30 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.RevenueEntity", b =>
                 {
                     b.Property<string>("BuildingId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("CategoryId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("CategoryKind")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("MonthKey")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(7)
+                        .HasColumnType("char(7)");
 
                     b.Property<string>("Note")
                         .IsRequired()
@@ -1201,7 +1261,8 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.ScheduledBackupSettingsEntity", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("CollectionsJson")
                         .IsRequired()
@@ -1293,7 +1354,16 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.UserEntity", b =>
                 {
                     b.Property<string>("Uid")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<bool>("TwoFactorEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+                    b.Property<string>("TwoFactorSecretEncrypted").HasMaxLength(512).HasColumnType("nvarchar(512)");
+                    b.Property<string>("TwoFactorRecoveryCodesJson").HasMaxLength(4000).HasColumnType("nvarchar(4000)");
+                    b.Property<long?>("TwoFactorLastUsedStep").HasColumnType("bigint");
 
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime2(0)");
@@ -1356,10 +1426,12 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.UserPermissionEntity", b =>
                 {
                     b.Property<string>("Uid")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<string>("Permission")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
 
                     b.HasKey("Uid", "Permission");
 
@@ -1369,10 +1441,12 @@ namespace BuildingManagementMvc.Migrations
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.WalletAdjustmentEntity", b =>
                 {
                     b.Property<string>("BuildingId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
@@ -1380,7 +1454,8 @@ namespace BuildingManagementMvc.Migrations
 
                     b.Property<string>("ApartmentId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2(0)");
@@ -1391,7 +1466,8 @@ namespace BuildingManagementMvc.Migrations
 
                     b.Property<string>("MonthKey")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(7)
+                        .HasColumnType("char(7)");
 
                     b.Property<string>("Reason")
                         .IsRequired()
