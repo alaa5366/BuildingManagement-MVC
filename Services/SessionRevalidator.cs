@@ -183,6 +183,23 @@ public class SessionRevalidator
             }
 
             await using var db = await _sqlFactory.CreateDbContextAsync();
+            if (actorRole == "superadmin")
+            {
+                actorValid = actorValid && await db.Users.AsNoTracking().AnyAsync(u =>
+                    u.Uid == actorUid &&
+                    u.Email == actorEmail &&
+                    u.Role == "superadmin" &&
+                    u.IsActive &&
+                    !u.IsDisabled);
+            }
+
+            if (!actorValid)
+            {
+                var rejected = new Result(false, null);
+                _cache.Set(cacheKey, rejected, ImpersonationCacheFor);
+                return rejected;
+            }
+
             var buildingExists = await db.Buildings.AsNoTracking()
                 .AnyAsync(b => b.Id == buildingId);
             if (!buildingExists)
