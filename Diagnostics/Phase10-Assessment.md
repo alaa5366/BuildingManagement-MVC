@@ -49,6 +49,12 @@ The controller appends exception messages to user-visible TempData, and preview 
 - No distributed restore-session store or multi-instance architecture change.
 - No change to collection ordering, overwrite semantics, or existing backup file format.
 
+### F10-05 — Scheduled-backup settings are not server-validated
+
+The scheduled settings form constrains retention to 1–30 and hour to 0–23 in HTML, but `SaveSettingsAsync` previously trusted posted values. A crafted request or invalid persisted setting could set retention to zero/negative, and `RotateBackupsAsync` would then remove all scheduled backup files.
+
+**Required direction:** Validate frequency, hour, weekly/monthly day, selected collection names, and retention on the server. Deduplicate collections and clamp retention defensively during rotation so invalid legacy values cannot delete every backup.
+
 ## Conclusion
 
 The implementation already has useful safeguards. Phase10 should strengthen the boundary between preview and execution, bound temporary restore state, validate the archive consistently, and avoid leaking internal exception details without changing the backup format or restore business behavior.
@@ -64,3 +70,10 @@ The Phase10 branch now includes the first hardening implementation:
 - Regression coverage was added for duplicate ZIP entries, path-bearing entries, malformed row envelopes, archive replacement, and session admission limits.
 
 **Still pending:** user-run local build and complete test suite. This branch is not accepted until those results are confirmed.
+
+## Additional implementation update — scheduled backups
+
+- Scheduled settings now validate frequency, UTC hour, weekly/monthly day ranges, known collection names, and retention between 1 and 30.
+- Duplicate collection selections are normalized.
+- Scheduled execution rejects unknown persisted collection names, and rotation defensively clamps retention to 1–30 so a legacy or tampered zero/negative value cannot delete every scheduled backup.
+- Added focused tests for invalid retention/hour, unknown collections, and normalization.
