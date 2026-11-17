@@ -131,6 +131,12 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
         Assert.DoesNotContain("SourceContext", item.Details, StringComparison.Ordinal);
         Assert.False(item.HasException);
         Assert.Empty(item.Exception);
+
+        var searched = await CreateService().QueryPageAsync(new ApplicationLogQuery
+        {
+            Search = "UPDATE [Presence]"
+        });
+        Assert.Single(searched.Items);
     }
 
     [Fact]
