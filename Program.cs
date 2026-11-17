@@ -428,6 +428,7 @@ try
         };
         options.EnrichDiagnosticContext = (diag, ctx) =>
         {
+            diag.Set("CorrelationId", ctx.TraceIdentifier);
             diag.Set("RequestHost", ctx.Request.Host.Value ?? "");
             diag.Set("RequestScheme", ctx.Request.Scheme);
             diag.Set("RemoteIp", ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown");
