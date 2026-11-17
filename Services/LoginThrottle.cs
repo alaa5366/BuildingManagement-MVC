@@ -18,8 +18,8 @@ namespace BuildingManagementMvc.Services;
 ///   <item>20 محاولة غلط من نفس الـ IP ⇒ قفل 15 دقيقة.</item>
 /// </list>
 /// <para>
-/// <b>التخزين:</b> العدّاد شغّال في <see cref="IMemoryCache"/> (سريع)، ومتسجّل كمان
-/// في جدول <c>dbo.LoginThrottle</c>، فبيفضل شغال بعد أي restart.
+/// <b>التخزين:</b> العدّاد الحي في <see cref="IMemoryCache"/>، وتُحفظ نسخة استرداد
+/// في جدول <c>dbo.LoginThrottle</c>. آخر عمليات الحفظ غير المكتملة قد تُفقد عند توقف مفاجئ.
 /// </para>
 /// <para>
 /// <b>التشغيل:</b> مصمم لـ instance واحدة. العدّادات الحية في الذاكرة، وعمليات
@@ -137,8 +137,11 @@ DELETE FROM dbo.LoginThrottle WHERE ExpiresAt < SYSUTCDATETIME();");
         return "lf:" + Convert.ToHexString(hash, 0, 16);
     }
 
-    private int Get(string key) =>
-        _cache.TryGetValue(K(key), out Counter? c) && c != null ? c.Count : 0;
+    private int Get(string key)
+    {
+        lock (_lock)
+            return _cache.TryGetValue(K(key), out Counter? c) && c != null ? c.Count : 0;
+    }
 
     /// <summary>
     /// بيتحقق لو الحساب أو الـ IP مقفول.
