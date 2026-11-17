@@ -106,11 +106,20 @@
                             <td class="small text-break">@item.SourceContext</td>
                             <td class="small font-monospace text-break">@item.CorrelationId</td>
                             <td>
-                                @if (item.HasException)
+                                @if (item.HasException || !string.IsNullOrWhiteSpace(item.Details))
                                 {
                                     <details>
-                                        <summary class="text-danger">@Loc.T("Exception")</summary>
-                                        <pre class="small text-wrap mt-2 mb-0">@item.Exception</pre>
+                                        <summary class="@(item.HasException ? "text-danger" : "text-primary")">
+                                            @(item.HasException ? Loc.T("Exception") : Loc.T("Details"))
+                                        </summary>
+                                        @if (!string.IsNullOrWhiteSpace(item.Details))
+                                        {
+                                            <pre class="small text-wrap mt-2 mb-0">@item.Details</pre>
+                                        }
+                                        @if (item.HasException)
+                                        {
+                                            <pre class="small text-wrap mt-2 mb-0">@item.Exception</pre>
+                                        }
                                     </details>
                                 }
                                 else { <span class="text-muted">—</span> }
