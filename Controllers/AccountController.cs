@@ -398,7 +398,7 @@ public class AccountController : Controller
 
     private async Task<IActionResult> CompleteSignInAsync(AuthResult result, string? throttleKey)
     {
-        if (result.Role is "admin" or "superadmin"
+        if ((result.Role is "admin" or "superadmin")
             && await _twoFactor.IsEnabledAsync(result.Uid!))
         {
             var pending = new PendingTwoFactorSignIn
@@ -502,7 +502,7 @@ public class AccountController : Controller
         var uri = TwoFactorService.CreateProvisioningUri(secret, account);
         ViewBag.Secret = secret;
         ViewBag.QrDataUri = "data:image/png;base64," + Convert.ToBase64String(_qrGenerator.GeneratePng(uri));
-        return View();
+        return View(new TwoFactorVerifyVm());
     }
 
     [HttpPost]
