@@ -23,7 +23,7 @@ public sealed class ApplicationLogsController : Controller
     /// <param name="from">Optional inclusive start date in ISO date format.</param>
     /// <param name="to">Optional inclusive end date in ISO date format.</param>
     /// <param name="level">Optional minimum event-level selection.</param>
-    /// <param name="search">Optional text searched across message, exception, and source.</param>
+    /// <param name="search">Optional text searched across message, details, exception, and source.</param>
     /// <param name="correlationId">Optional correlation identifier filter.</param>
     /// <param name="source">Optional source-context filter.</param>
     /// <param name="hasException">Whether to include only events with or without exceptions.</param>
