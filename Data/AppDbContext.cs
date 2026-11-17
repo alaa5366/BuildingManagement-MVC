@@ -543,8 +543,8 @@ public class AppDbContext : DbContext
             e.ToTable("Residents");
             e.HasKey(x => x.Id);
 
-            e.HasIndex(x => x.BuildingId);
-            e.HasIndex(x => x.ApartmentId);
+            // BuildingId is already the leading key in the composite indexes below.
+            // Keep indexes aligned with actual query patterns; avoid redundant single-column indexes.
             e.HasIndex(x => x.Phone);
             e.HasIndex(x => x.Uid).IsUnique();
             e.HasIndex(x => new { x.BuildingId, x.Phone });
