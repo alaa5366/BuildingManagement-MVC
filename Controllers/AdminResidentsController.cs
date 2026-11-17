@@ -18,6 +18,7 @@ namespace BuildingManagementMvc.Controllers;
 /// Access: requires one of the roles <c>admin,superadmin</c>.
 /// </remarks>
 [Authorize(Roles = "admin,superadmin")]
+[AdminPermission(AdminPermissions.ManageResidents)]
 public class AdminResidentsController : Controller
 {
     private readonly ResidentsService _residents;
