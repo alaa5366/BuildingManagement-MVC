@@ -1,6 +1,6 @@
 # Original Roadmap Phase10 — System Functions Review Workplan
 
-**Status:** IMPLEMENTED — core build, automated tests, and targeted TEST smoke checks passed; extended smoke checks remain  
+**Status:** IMPLEMENTED — core build, automated tests, and targeted TEST smoke checks passed; extended smoke checks remain outstanding  
 **Branch:** `development/roadmap-phase10-system-functions-review`  
 **Base:** `development/roadmap-phase09-logging-monitoring` (`16b870a137ffb90e163571b4ca63612e59bccc66`)  
 **Database:** No schema/data changes authorized  
