@@ -188,9 +188,9 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
     public async Task QueryPageAsync_FiltersByComponentTypeUsingExplicitSourceContext()
     {
         WriteLog(
-            "2026-11-17 10:00:00.000 +00:00 [ERR] Controller failure {\\"SourceContext\\":\\"BuildingManagementMvc.Controllers.BuildingsController\\"}",
-            "2026-11-17 10:01:00.000 +00:00 [ERR] Service failure {\\"SourceContext\\":\\"BuildingManagementMvc.Services.PresenceService\\"}",
-            "2026-11-17 10:02:00.000 +00:00 [ERR] Database failure {\\"SourceContext\\":\\"Microsoft.EntityFrameworkCore.Database.Command\\"}",
+            "2026-11-17 10:00:00.000 +00:00 [ERR] Controller failure {\"SourceContext\":\"BuildingManagementMvc.Controllers.BuildingsController\"}",
+            "2026-11-17 10:01:00.000 +00:00 [ERR] Service failure {\"SourceContext\":\"BuildingManagementMvc.Services.PresenceService\"}",
+            "2026-11-17 10:02:00.000 +00:00 [ERR] Database failure {\"SourceContext\":\"Microsoft.EntityFrameworkCore.Database.Command\"}",
             "2026-11-17 10:03:00.000 +00:00 [ERR] Unknown source {}");
 
         var controllers = await CreateService().QueryPageAsync(new ApplicationLogQuery
