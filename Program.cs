@@ -414,6 +414,7 @@ try
     // Middleware
     // ============================================================
     app.UseForwardedHeaders();
+    app.UseMiddleware<CorrelationIdMiddleware>();
 
     // ✅ Serilog request logging (بعد ForwardedHeaders، قبل الاستثناءات)
     app.UseSerilogRequestLogging(options =>
