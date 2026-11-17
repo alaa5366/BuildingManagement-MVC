@@ -2,6 +2,7 @@
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 
 namespace BuildingManagementMvc.Services;
 
@@ -45,11 +46,24 @@ public class PresenceService
         if (string.IsNullOrEmpty(uid)) return;
 
         var docId = BuildDocId(uid, aptId, buildingId);
+        var totalTimer = Stopwatch.StartNew();
+        long contextCreateMs = 0;
+        long selectMs = 0;
+        long saveChangesMs = 0;
+        var stage = "ContextCreate";
 
         try
         {
+            var stageTimer = Stopwatch.StartNew();
             await using var db = await _sqlFactory.CreateDbContextAsync();
+            stageTimer.Stop();
+            contextCreateMs = stageTimer.ElapsedMilliseconds;
+
+            stage = "Select";
+            stageTimer.Restart();
             var existing = await db.Presence.FirstOrDefaultAsync(p => p.Uid == docId);
+            stageTimer.Stop();
+            selectMs = stageTimer.ElapsedMilliseconds;
 
             if (existing == null)
             {
@@ -68,11 +82,35 @@ public class PresenceService
                 existing.ApartmentId = aptId ?? existing.ApartmentId;
             }
 
+            stage = "SaveChanges";
+            stageTimer.Restart();
             await db.SaveChangesAsync();
+            stageTimer.Stop();
+            saveChangesMs = stageTimer.ElapsedMilliseconds;
+
+            totalTimer.Stop();
+            if (totalTimer.ElapsedMilliseconds >= 100)
+            {
+                _logger.LogWarning(
+                    "[Presence PERF] Heartbeat service slow: Total={TotalMs}ms ContextCreate={ContextMs}ms Select={SelectMs}ms SaveChanges={SaveMs}ms",
+                    totalTimer.ElapsedMilliseconds,
+                    contextCreateMs,
+                    selectMs,
+                    saveChangesMs);
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "[Presence] Heartbeat failed for {DocId}", docId);
+            totalTimer.Stop();
+            _logger.LogWarning(
+                ex,
+                "[Presence] Heartbeat failed at {Stage} for {DocId}; Total={TotalMs}ms ContextCreate={ContextMs}ms Select={SelectMs}ms SaveChanges={SaveMs}ms",
+                stage,
+                docId,
+                totalTimer.ElapsedMilliseconds,
+                contextCreateMs,
+                selectMs,
+                saveChangesMs);
         }
     }
 
