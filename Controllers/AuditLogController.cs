@@ -38,6 +38,11 @@ public class AuditLogController : Controller
     private bool IsAdmin => User.IsInRole("admin");
     private bool IsResident => User.IsInRole("resident");
 
+    private bool HasAuditLogPermission =>
+        IsSuperAdmin ||
+        (IsAdmin && User.HasClaim("perm", AdminPermissions.ViewAuditLogBuilding)) ||
+        (IsResident && User.HasClaim("perm", AdminPermissions.ViewAuditLogOwn));
+
     /// <summary>
     /// Shows the main page of the audit log screen.
     /// </summary>
@@ -50,6 +55,7 @@ public class AuditLogController : Controller
     string? actionFilter, string? severity, string? from, string? to,
     int page = 1, int pageSize = 50)
     {
+        if (!HasAuditLogPermission) return Forbid();
         if ((IsResident && (string.IsNullOrWhiteSpace(CurrentBuildingId) || string.IsNullOrWhiteSpace(CurrentApartmentId))) ||
             (IsAdmin && string.IsNullOrWhiteSpace(CurrentBuildingId))) return Forbid();
         page = Math.Max(1, page);
@@ -132,6 +138,7 @@ public class AuditLogController : Controller
     string? buildingId, string? apartmentId, string? userId,
     string? actionFilter, string? severity, string? from, string? to)
     {
+        if (!HasAuditLogPermission) return Forbid();
         if ((IsResident && (string.IsNullOrWhiteSpace(CurrentBuildingId) || string.IsNullOrWhiteSpace(CurrentApartmentId))) ||
             (IsAdmin && string.IsNullOrWhiteSpace(CurrentBuildingId))) return Forbid();
         string? qBuildingId = null;
