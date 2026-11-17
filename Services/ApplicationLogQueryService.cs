@@ -154,7 +154,7 @@ public sealed class ApplicationLogQueryService
 
             // Serilog writes structured properties after the final line of
             // multiline messages (for example, EF Core SQL commands).
-            var (continuation, correlation, source) = SplitProperties(line);
+            var (_, correlation, source) = SplitProperties(line);
             var hasContextProperties =
                 !string.IsNullOrWhiteSpace(correlation) ||
                 !string.IsNullOrWhiteSpace(source);
