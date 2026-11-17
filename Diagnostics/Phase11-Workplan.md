@@ -19,6 +19,8 @@
 - The middleware deliberately ignores incoming `X-Correlation-ID` values to prevent client-controlled identifiers from being treated as trusted server trace IDs.
 - The identifier is set on `HttpContext.TraceIdentifier`, the current `Activity` tag `correlation.id`, and a logging scope property `CorrelationId`.
 - `AuditLogger` adds the active request correlation ID to the JSON details object. Existing metadata properties remain at the root; scalar/array metadata is retained under `value`.
+- Serilog request completion events explicitly include the same `CorrelationId` property.
+- `AppDbContext` rejects tracked audit-row updates and deletes through normal EF Core SaveChanges paths; inserts remain supported for normal events and backup restore.
 - Background operations without an active HTTP correlation continue to serialize metadata as before.
 - Added tests for server ownership, uniqueness, response header behavior, and audit metadata correlation.
 
@@ -26,6 +28,7 @@
 
 - No database migration or SQL script.
 - No changes to audit table structure, query filtering, tenant scoping, or existing action names.
+- The append-only guard is application-layer protection for tracked EF Core writes, not a substitute for restrictive SQL permissions. Direct SQL, bulk operations that bypass SaveChanges, and the existing building foreign-key SET NULL action remain outside this guard.
 - No client IP, user-agent, credentials, cookies, or request body added to audit metadata.
 - No production access or changes.
 
