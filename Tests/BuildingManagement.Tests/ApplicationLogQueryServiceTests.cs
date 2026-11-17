@@ -61,7 +61,7 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
             "2026-11-17 10:00:00.000 +00:00 [ERR] Physical path: 'D:\\Projects\\Building Management\\wwwroot\\logs\\app.txt' {}",
             "System.IO.IOException: Failed to open /var/log/building management/app.log",
             "2026-11-17 10:01:00.000 +00:00 [INF] Resolved file: /opt/building management/data/file.db",
-            "Additional detail: /home/alaa/building data/config.json {\\"SourceContext\\":\\"/srv/building management/Logger\\"}");
+            "Additional detail: /home/alaa/building data/config.json {\"SourceContext\":\"/srv/building management/Logger\"}");
 
         var result = await CreateService().QueryPageAsync(new ApplicationLogQuery());
 
