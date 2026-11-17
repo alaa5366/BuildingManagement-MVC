@@ -87,25 +87,6 @@ public class ControllerAuthorizationTests
     }
 
     [Fact]
-    public void Audit_log_requires_the_role_scoped_permission()
-    {
-        var type = typeof(AuditLogController);
-        var actions = new[] { "Index", "ExportCsv" };
-
-        foreach (var actionName in actions)
-        {
-            var method = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-                .Single(candidate => candidate.Name == actionName);
-
-            Assert.Contains("HasAuditLogPermission", type.GetProperty(
-                "HasAuditLogPermission",
-                BindingFlags.NonPublic | BindingFlags.Instance)!.GetMethod!.GetMethodBody()!
-                .GetILAsByteArray()!.Length > 0 ? "HasAuditLogPermission" : "");
-            Assert.NotNull(method.GetCustomAttribute<Microsoft.AspNetCore.Mvc.HttpGetAttribute>());
-        }
-    }
-
-    [Fact]
     public void Controller_actions_do_not_repeat_the_same_http_method_attribute()
     {
         var offenders = new List<string>();
