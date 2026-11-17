@@ -360,6 +360,14 @@ public class AccountController : Controller
         return await CompleteSignInAsync(res, throttleKey);
     }
 
+    private IActionResult? EnsureAdministratorTwoFactorAccess()
+    {
+        if (User.Identity?.IsAuthenticated != true) return Challenge();
+        if (!User.IsInRole("admin") && !User.IsInRole("superadmin")) return Forbid();
+        if (User.HasClaim("impersonated", "true")) return Forbid();
+        return null;
+    }
+
     private sealed class PendingTwoFactorSignIn
     {
         public AuthResult Result { get; set; } = new();
@@ -447,19 +455,21 @@ public class AccountController : Controller
     }
 
     [HttpGet]
-    [Authorize(Roles = "admin,superadmin")]
     public async Task<IActionResult> TwoFactorSettings()
     {
+        var access = EnsureAdministratorTwoFactorAccess();
+        if (access != null) return access;
         ViewBag.Enabled = await _twoFactor.IsEnabledAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         return View();
     }
 
     [HttpPost]
-    [Authorize(Roles = "admin,superadmin")]
     [EnableRateLimiting("login")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> BeginTwoFactorSetup()
     {
+        var access = EnsureAdministratorTwoFactorAccess();
+        if (access != null) return access;
         var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         if (await _twoFactor.IsEnabledAsync(uid))
         {
@@ -472,9 +482,10 @@ public class AccountController : Controller
     }
 
     [HttpGet]
-    [Authorize(Roles = "admin,superadmin")]
     public IActionResult TwoFactorSetup()
     {
+        var access = EnsureAdministratorTwoFactorAccess();
+        if (access != null) return access;
         var secret = HttpContext.Session.GetString("2fa_setup_secret");
         var expiresText = HttpContext.Session.GetString("2fa_setup_expires");
         if (string.IsNullOrWhiteSpace(secret)
@@ -495,11 +506,12 @@ public class AccountController : Controller
     }
 
     [HttpPost]
-    [Authorize(Roles = "admin,superadmin")]
     [EnableRateLimiting("login")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EnableTwoFactor(TwoFactorVerifyVm vm)
     {
+        var access = EnsureAdministratorTwoFactorAccess();
+        if (access != null) return access;
         var secret = HttpContext.Session.GetString("2fa_setup_secret");
         var expiresText = HttpContext.Session.GetString("2fa_setup_expires");
         if (string.IsNullOrWhiteSpace(secret)
@@ -527,9 +539,10 @@ public class AccountController : Controller
     }
 
     [HttpGet]
-    [Authorize(Roles = "admin,superadmin")]
     public IActionResult TwoFactorRecoveryCodes()
     {
+        var access = EnsureAdministratorTwoFactorAccess();
+        if (access != null) return access;
         var json = TempData["TwoFactorRecoveryCodes"] as string;
         if (string.IsNullOrWhiteSpace(json)) return RedirectToAction(nameof(TwoFactorSettings));
         try
@@ -544,11 +557,12 @@ public class AccountController : Controller
     }
 
     [HttpPost]
-    [Authorize(Roles = "admin,superadmin")]
     [EnableRateLimiting("login")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DisableTwoFactor(TwoFactorVerifyVm vm)
     {
+        var access = EnsureAdministratorTwoFactorAccess();
+        if (access != null) return access;
         var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         if (!await _twoFactor.DisableAsync(uid, vm.Code))
         {
