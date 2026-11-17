@@ -299,7 +299,7 @@ public class BackupServiceTests
         {
             var entry = zip.CreateEntry("buildings.json");
             using var writer = new StreamWriter(entry.Open());
-            await writer.WriteAsync("[{\\"id\\":\\"b1\\",\\"data\\":null}]");
+            await writer.WriteAsync("[{\"id\":\"b1\",\"data\":null}]");
         }
         ms.Position = 0;
 
