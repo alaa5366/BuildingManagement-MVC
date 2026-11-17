@@ -161,11 +161,23 @@ public sealed class ApplicationLogQueryService
 
             if (hasContextProperties)
             {
-                if (string.IsNullOrWhiteSpace(current.CorrelationId))
-                    current.CorrelationId = Limit(Redact(correlation), 100);
-
-                if (string.IsNullOrWhiteSpace(current.SourceContext))
-                    current.SourceContext = Limit(Redact(source), 250);
+                // ApplicationLogEntry exposes init-only context properties.
+                // Rebuild the entry with the newly discovered metadata rather
+                // than mutating those properties after initialization.
+                current = new ApplicationLogEntry
+                {
+                    Timestamp = current.Timestamp,
+                    Level = current.Level,
+                    Message = current.Message,
+                    CorrelationId = string.IsNullOrWhiteSpace(current.CorrelationId)
+                        ? Limit(Redact(correlation), 100)
+                        : current.CorrelationId,
+                    SourceContext = string.IsNullOrWhiteSpace(current.SourceContext)
+                        ? Limit(Redact(source), 250)
+                        : current.SourceContext,
+                    Exception = current.Exception,
+                    FileName = current.FileName
+                };
 
                 // The JSON suffix is event metadata, not message or exception text.
                 continue;
