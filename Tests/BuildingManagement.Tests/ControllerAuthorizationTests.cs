@@ -1,7 +1,11 @@
 using System.Reflection;
+using BuildingManagementMvc.Attributes;
+using BuildingManagementMvc.Controllers;
+using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Routing;
 using Xunit;
 
 namespace BuildingManagement.Tests;
@@ -59,4 +63,76 @@ public class ControllerAuthorizationTests
 
         Assert.Contains(expectedRole, roles);
     }
+    [Fact]
+    public void Sensitive_admin_features_enforce_their_declared_permissions()
+    {
+        Assert.Equal(
+            AdminPermissions.ManageResidents,
+            typeof(AdminResidentsController).GetCustomAttribute<AdminPermissionAttribute>()?.Permission);
+
+        Assert.Equal(
+            AdminPermissions.ViewCameras,
+            typeof(CamerasController).GetCustomAttribute<AdminPermissionAttribute>()?.Permission);
+
+        var buildingSettingsActions = typeof(SettingsController)
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Where(method => method.Name == "Building")
+            .ToList();
+
+        Assert.Equal(2, buildingSettingsActions.Count);
+        Assert.All(buildingSettingsActions, method =>
+            Assert.Equal(
+                AdminPermissions.ManageSettingsBuilding,
+                method.GetCustomAttribute<AdminPermissionAttribute>()?.Permission));
+    }
+
+    [Fact]
+    public void Audit_log_requires_the_role_scoped_permission()
+    {
+        var type = typeof(AuditLogController);
+        var actions = new[] { "Index", "ExportCsv" };
+
+        foreach (var actionName in actions)
+        {
+            var method = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                .Single(candidate => candidate.Name == actionName);
+
+            Assert.Contains("HasAuditLogPermission", type.GetProperty(
+                "HasAuditLogPermission",
+                BindingFlags.NonPublic | BindingFlags.Instance)!.GetMethod!.GetMethodBody()!
+                .GetILAsByteArray()!.Length > 0 ? "HasAuditLogPermission" : "");
+            Assert.NotNull(method.GetCustomAttribute<Microsoft.AspNetCore.Mvc.HttpGetAttribute>());
+        }
+    }
+
+    [Fact]
+    public void Controller_actions_do_not_repeat_the_same_http_method_attribute()
+    {
+        var offenders = new List<string>();
+
+        foreach (var controller in ControllerTypes())
+        {
+            foreach (var method in controller.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            {
+                var duplicateVerbs = method.GetCustomAttributes<HttpMethodAttribute>(true)
+                    .SelectMany(attribute => attribute.HttpMethods)
+                    .GroupBy(verb => verb, StringComparer.OrdinalIgnoreCase)
+                    .Where(group => group.Count() > 1)
+                    .Select(group => group.Key);
+
+                offenders.AddRange(duplicateVerbs.Select(verb => $"{controller.Name}.{method.Name} [{verb}]"));
+            }
+        }
+
+        Assert.Empty(offenders);
+    }
+
+    [Fact]
+    public void Resident_dashboard_does_not_expose_claim_diagnostics()
+    {
+        Assert.DoesNotContain(
+            typeof(ResidentHomeController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly),
+            method => method.Name == "Debug");
+    }
+
 }
