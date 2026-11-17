@@ -31,7 +31,6 @@ public class BackupService
     private const int MaxActiveRestoreSessions = 10;
     private const int MaxActiveRestoreSessionsPerUser = 2;
     private const long MaxArchiveBytes = 100L * 1024 * 1024;
-    private const long MaxExpandedBytes = 500L * 1024 * 1024;
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly IAuditLogger _audit;
     private readonly ILogger<BackupService> _log;
@@ -1282,11 +1281,10 @@ By: {userId}
     /// Previews the restore.
     /// </summary>
     /// <remarks>
-    /// The uploaded stream is first copied into a temporary file, then decrypted via
-    /// <see cref="BackupFileProtector.Unprotect"/>, then opened as a ZIP. Every JSON entry
-    /// whose name matches a known collection is counted and added to the preview. The
-    /// An opaque, single-use session identifier is returned so the browser never receives
-    /// the server-side temporary file path.
+    /// The uploaded stream is size-limited, decrypted, and validated as a ZIP using the
+    /// shared strict archive validator. A bounded, user-bound, single-use session stores
+    /// the archive digest so the exact reviewed bytes are required at restore time. The
+    /// browser never receives the server-side temporary file path.
     /// </remarks>
     /// <param name="zipStream">The uploaded ZIP stream (may be encrypted).</param>
     /// <param name="fileName">The original file name (shown in the preview).</param>
