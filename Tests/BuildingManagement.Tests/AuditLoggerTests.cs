@@ -55,6 +55,6 @@ public class AuditLoggerTests
         var entry = await db.AuditLog.SingleAsync();
         var details = JObject.Parse(entry.Details);
         Assert.Equal("0123456789abcdef0123456789abcdef", details["correlationId"]?.Value<string>());
-        Assert.Equal("success", details["result"]?["result"]?.Value<string>() ?? details["result"]?.Value<string>());
+        Assert.Equal("success", details["result"]?.Value<string>());
     }
 }
