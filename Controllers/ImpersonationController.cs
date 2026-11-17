@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using System.Text.Json;
 using BuildingManagementMvc.Attributes;
 using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
@@ -239,6 +240,7 @@ public class ImpersonationController : Controller
             ImpersonationActorUid = User.FindFirst("impersonationActorUid")?.Value ?? "",
             ImpersonationActorRole = User.FindFirst("impersonationActorRole")?.Value ?? "",
             ImpersonationActorEmail = User.FindFirst("impersonationActorEmail")?.Value ?? "",
+            ImpersonationActorPermissions = User.FindFirst("impersonationActorPermissions")?.Value ?? "",
             StartedAt = DateTime.UtcNow.ToString("o")
         };
 
@@ -297,6 +299,9 @@ public class ImpersonationController : Controller
         var actorEmail = User.HasClaim("impersonated", "true")
             ? User.FindFirst("impersonationActorEmail")?.Value
             : CurrentEmail;
+        var actorPermissions = User.HasClaim("impersonated", "true")
+            ? User.FindFirst("impersonationActorPermissions")?.Value
+            : JsonSerializer.Serialize(User.FindAll("perm").Select(c => c.Value).Distinct().OrderBy(p => p).ToList());
 
         if (!string.IsNullOrWhiteSpace(actorUid))
             claims.Add(new Claim("impersonationActorUid", actorUid));
@@ -304,6 +309,8 @@ public class ImpersonationController : Controller
             claims.Add(new Claim("impersonationActorRole", actorRole));
         if (!string.IsNullOrWhiteSpace(actorEmail))
             claims.Add(new Claim("impersonationActorEmail", actorEmail));
+        if (!string.IsNullOrWhiteSpace(actorPermissions))
+            claims.Add(new Claim("impersonationActorPermissions", actorPermissions));
 
         claims.Add(new Claim("impersonationTargetBuildingId", buildingId));
         if (!string.IsNullOrWhiteSpace(apartmentId))
@@ -340,6 +347,8 @@ public class ImpersonationController : Controller
                 claims.Add(new Claim("impersonationActorRole", backup.ImpersonationActorRole));
             if (!string.IsNullOrWhiteSpace(backup.ImpersonationActorEmail))
                 claims.Add(new Claim("impersonationActorEmail", backup.ImpersonationActorEmail));
+            if (!string.IsNullOrWhiteSpace(backup.ImpersonationActorPermissions))
+                claims.Add(new Claim("impersonationActorPermissions", backup.ImpersonationActorPermissions));
             if (!string.IsNullOrWhiteSpace(backup.BuildingId))
                 claims.Add(new Claim("impersonationTargetBuildingId", backup.BuildingId));
         }
