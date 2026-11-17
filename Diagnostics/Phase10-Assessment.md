@@ -2,7 +2,7 @@
 
 **Review baseline:** `development/phase09-session-revocation-hardening`  
 **Current branch:** `development/phase10-backup-restore-security`  
-**Review type:** Read-only source inspection before implementation  
+**Review type:** Source assessment with implementation update  
 **Production / database:** Not accessed
 
 ## Existing protections confirmed
@@ -52,3 +52,15 @@ The controller appends exception messages to user-visible TempData, and preview 
 ## Conclusion
 
 The implementation already has useful safeguards. Phase10 should strengthen the boundary between preview and execution, bound temporary restore state, validate the archive consistently, and avoid leaking internal exception details without changing the backup format or restore business behavior.
+
+## Implementation update
+
+The Phase10 branch now includes the first hardening implementation:
+
+- A shared archive validator is applied during both preview and restore.
+- Restore sessions retain the SHA-256 digest of the reviewed archive; restore verifies it in fixed time on the same open file handle used to read the ZIP.
+- Active sessions are capped at two per user and ten per process; expired sessions and their files are cleaned during preview/restore activity.
+- Browser-facing backup create/preview/restore errors no longer append raw exception messages.
+- Regression coverage was added for duplicate ZIP entries, path-bearing entries, malformed row envelopes, archive replacement, and session admission limits.
+
+**Still pending:** user-run local build and complete test suite. This branch is not accepted until those results are confirmed.
