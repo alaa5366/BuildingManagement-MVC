@@ -29,9 +29,13 @@ This page records the decisions behind the security code so they survive comment
 
 ## Backup restore
 
-* A restore only accepts the temporary file created by the preview step (`restore-<32 hex digits>.zip` directly in the temp folder). Any other path is rejected and the file is not touched, so the form field cannot be used to read or delete arbitrary files.
+* A restore only accepts the temporary file created by the preview step (`restore-<32 hex digits>.zip` directly in the temp folder). Any other path is rejected.
+* The browser receives only an opaque restore-session ID. The session is bound to the previewing user, expires after 20 minutes, is single-use, and is limited to 2 active sessions per user / 10 process-wide.
+* The server stores a SHA-256 digest of the reviewed archive. Restore verifies it in fixed time while holding the same read handle used to process the ZIP, so replacing the temporary file after preview is rejected.
+* ZIP validation rejects duplicate entries, directories and path-bearing names, unknown files/collections, oversized archives, and JSON rows that do not contain a non-empty string `id` and object `data`. The accepted format remains the application's root-level `README.md` and known `<collection>.json` files.
 * Tables are restored parents first and saved table by table inside one database transaction. If anything fails, the whole restore is rolled back.
 * "Overwrite" updates existing rows in place. It never deletes rows first, because the database cascades deletes to child rows (floors, apartments, expenses, deposits...) that may not be part of the restore.
+* Detailed exceptions are written to server logs; browser responses use generic restore errors.
 * Identity columns (audit log, deposit edit history) get new values on restore; the audit log is append-only.
 * Restoring an old backup that still holds plain-text PINs: the startup migration hashes them at the next start, so those users can sign in again after a restart.
 
