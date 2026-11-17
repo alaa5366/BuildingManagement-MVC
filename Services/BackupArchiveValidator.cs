@@ -14,6 +14,12 @@ internal static class BackupArchiveValidator
     private const long MaxReadmeBytes = 1024 * 1024;
     private const long MaxExpandedBytes = 500L * 1024 * 1024;
 
+    /// <summary>
+    /// Validates archive entry names, sizes, collection identities, and JSON row envelopes.
+    /// </summary>
+    /// <param name="archive">The ZIP archive to validate.</param>
+    /// <returns>A preview of each recognized collection and its record count.</returns>
+    /// <exception cref="InvalidDataException">The archive does not match the supported backup format.</exception>
     public static async Task<List<RestoreCollectionPreview>> ValidateAsync(ZipArchive archive)
     {
         if (archive.Entries.Count == 0 || archive.Entries.Count > MaxEntries)
