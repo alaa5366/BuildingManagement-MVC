@@ -35,10 +35,10 @@
                     <input asp-for="TwoFactorCode"
                            class="form-control form-control-lg auth-code-input"
                            autocomplete="one-time-code"
-                           inputmode="numeric"
+                           inputmode="text"
                            maxlength="64"
                            autofocus
-                           placeholder="000000"
+                           placeholder="123456 / recovery code"
                            aria-describedby="twoFactorHelp" />
                     <span asp-validation-for="TwoFactorCode" class="text-danger small"></span>
                     <div id="twoFactorHelp" class="form-text">Enter your current six-digit code or one unused recovery code.</div>
