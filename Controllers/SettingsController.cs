@@ -112,7 +112,7 @@ public class SettingsController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "SaveGlobal failed");
-            TempData["Error"] = Loc.T("Save_Failed_2") + ex.Message;
+            TempData["Error"] = Loc.T("Save_Failed_2");
         }
         return RedirectToAction(nameof(Global));
     }
@@ -128,6 +128,7 @@ public class SettingsController : Controller
     /// </remarks>
     [HttpGet]
     [Authorize(Roles = "superadmin,admin")]
+    [AdminPermission(AdminPermissions.ManageSettingsBuilding)]
     public async Task<IActionResult> Building(string? id)
     {
         string? buildingId;
@@ -168,6 +169,7 @@ public class SettingsController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "superadmin,admin")]
+    [AdminPermission(AdminPermissions.ManageSettingsBuilding)]
     public async Task<IActionResult> Building(string buildingId, BuildingSettings model)
     {
         if (!User.IsInRole("superadmin") && CurrentBuildingId != buildingId)
@@ -181,7 +183,7 @@ public class SettingsController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "SaveBuilding failed");
-            TempData["Error"] = Loc.T("Save_Failed_2") + ex.Message;
+            TempData["Error"] = Loc.T("Save_Failed_2");
         }
 
         return RedirectToAction(nameof(Building), new { id = buildingId });
@@ -256,7 +258,7 @@ public class SettingsController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Own GET failed");
-            TempData["Error"] = Loc.T("Error_2") + ex.Message;
+            TempData["Error"] = Loc.T("An_Unexpected_Error_Occurred");
             return View(new OwnSettings());
         }
     }
@@ -295,7 +297,7 @@ public class SettingsController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "SaveOwn (settings) failed");
-            saveErrors.Add(Loc.T("Preferences_2") + ex.Message);
+            saveErrors.Add(Loc.T("Preferences_2"));
         }
 
         // ============================================================
@@ -344,7 +346,7 @@ public class SettingsController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "SaveOwn (profile) failed");
-            saveErrors.Add(ex.Message);
+            saveErrors.Add(Loc.T("An_Unexpected_Error_Occurred"));
         }
 
         // ============================================================

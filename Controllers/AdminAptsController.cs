@@ -480,9 +480,9 @@ public class AdminAptsController : Controller
 
             TempData["Message"] = Loc.T("Updated");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            TempData["Error"] = Loc.T("Update_Failed") + ex.Message;
+            TempData["Error"] = Loc.T("Update_Failed");
         }
 
         return RedirectToAction(nameof(Edit), new { aptId });

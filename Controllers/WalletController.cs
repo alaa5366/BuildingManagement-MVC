@@ -280,9 +280,9 @@ public class WalletController : Controller
         {
             TempData["Error"] = ex.Message;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            TempData["Error"] = Loc.T("Update_Failed_2") + ex.Message;
+            TempData["Error"] = Loc.T("Update_Failed_2");
         }
 
         return RedirectToAction("Index", new { month = mk });

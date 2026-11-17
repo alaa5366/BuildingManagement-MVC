@@ -1,7 +1,12 @@
 using System.Reflection;
+using System.Security.Claims;
+using BuildingManagementMvc.Attributes;
+using BuildingManagementMvc.Controllers;
+using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Routing;
 using Xunit;
 
 namespace BuildingManagement.Tests;
@@ -59,4 +64,76 @@ public class ControllerAuthorizationTests
 
         Assert.Contains(expectedRole, roles);
     }
+    [Fact]
+    public void Sensitive_admin_features_enforce_their_declared_permissions()
+    {
+        Assert.Equal(
+            AdminPermissions.ManageResidents,
+            typeof(AdminResidentsController).GetCustomAttribute<AdminPermissionAttribute>()?.Permission);
+
+        Assert.Equal(
+            AdminPermissions.ViewCameras,
+            typeof(CamerasController).GetCustomAttribute<AdminPermissionAttribute>()?.Permission);
+
+        var buildingSettingsActions = typeof(SettingsController)
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Where(method => method.Name == "Building")
+            .ToList();
+
+        Assert.Equal(2, buildingSettingsActions.Count);
+        Assert.All(buildingSettingsActions, method =>
+            Assert.Equal(
+                AdminPermissions.ManageSettingsBuilding,
+                method.GetCustomAttribute<AdminPermissionAttribute>()?.Permission));
+    }
+
+    [Fact]
+    public void Controller_actions_do_not_repeat_the_same_http_method_attribute()
+    {
+        var offenders = new List<string>();
+
+        foreach (var controller in ControllerTypes())
+        {
+            foreach (var method in controller.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            {
+                var duplicateVerbs = method.GetCustomAttributes<HttpMethodAttribute>(true)
+                    .SelectMany(attribute => attribute.HttpMethods)
+                    .GroupBy(verb => verb, StringComparer.OrdinalIgnoreCase)
+                    .Where(group => group.Count() > 1)
+                    .Select(group => group.Key);
+
+                offenders.AddRange(duplicateVerbs.Select(verb => $"{controller.Name}.{method.Name} [{verb}]"));
+            }
+        }
+
+        Assert.Empty(offenders);
+    }
+
+    [Fact]
+    public void Resident_dashboard_does_not_expose_claim_diagnostics()
+    {
+        Assert.DoesNotContain(
+            typeof(ResidentHomeController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly),
+            method => method.Name == "Debug");
+    }
+
+    [Theory]
+    [InlineData("resident", AdminPermissions.ViewAuditLogOwn, true)]
+    [InlineData("resident", AdminPermissions.ViewAuditLogBuilding, false)]
+    [InlineData("admin", AdminPermissions.ViewAuditLogBuilding, true)]
+    [InlineData("admin", AdminPermissions.ViewAuditLogOwn, false)]
+    [InlineData("superadmin", "any-permission", true)]
+    [InlineData("unknown", AdminPermissions.ViewAuditLogOwn, false)]
+    public void Audit_log_access_uses_the_role_scoped_permission(string role, string permission, bool expected)
+    {
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.Role, role),
+            new Claim("perm", permission)
+        };
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "test"));
+
+        Assert.Equal(expected, AuditLogController.HasPermissionForUser(principal));
+    }
+
 }

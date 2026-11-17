@@ -283,9 +283,9 @@ public class ResidentWalletController : Controller
                 note = BuildNote(parsed)
             });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return Json(new { success = false, error = Loc.T("Error_Reading_The_Image") + ex.Message });
+            return Json(new { success = false, error = Loc.T("Error_Reading_The_Image") });
         }
     }
 

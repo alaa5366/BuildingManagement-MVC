@@ -18,6 +18,7 @@ namespace BuildingManagementMvc.Controllers;
 /// Access: requires one of the roles <c>admin,superadmin</c>.
 /// </remarks>
 [Authorize(Roles = "admin,superadmin")]
+[AdminPermission(AdminPermissions.ManageResidents)]
 public class AdminResidentsController : Controller
 {
     private readonly ResidentsService _residents;
@@ -181,9 +182,9 @@ public class AdminResidentsController : Controller
             TempData["Message"] = Loc.T("Resident_Created_Successfully");
             return RedirectToAction(nameof(Index), new { buildingId });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            TempData["Error"] = Loc.T("Creation_Failed") + ex.Message;
+            TempData["Error"] = Loc.T("Creation_Failed");
 
             var building = await _buildings.GetByIdAsync(buildingId);
             ViewBag.Building = building;
@@ -256,9 +257,9 @@ public class AdminResidentsController : Controller
             TempData["Message"] = Loc.T("Resident_Updated_Successfully");
             return RedirectToAction(nameof(Index), new { buildingId = resident.BuildingId });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            TempData["Error"] = Loc.T("Update_Failed") + ex.Message;
+            TempData["Error"] = Loc.T("Update_Failed");
 
             var building = await _buildings.GetByIdAsync(resident.BuildingId);
             var apt = building?.Apartments.FirstOrDefault(a => a.Id == resident.ApartmentId);
@@ -294,9 +295,9 @@ public class AdminResidentsController : Controller
             await _residents.ChangePinAsync(id, newPin, CurrentUserId);
             TempData["Message"] = Loc.T("PIN_Changed");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            TempData["Error"] = Loc.T("PIN_Change_Failed") + ex.Message;
+            TempData["Error"] = Loc.T("PIN_Change_Failed");
         }
 
         return RedirectToAction(nameof(Edit), new { id });
@@ -437,9 +438,9 @@ public class AdminResidentsController : Controller
             // ✅ ارجع لصفحة Sync
             return RedirectToAction("Index", "Sync");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            TempData["Error"] = Loc.T("Migration_Failed") + ex.Message;
+            TempData["Error"] = Loc.T("Migration_Failed");
             return RedirectToAction("Index", "Sync");
         }
     }

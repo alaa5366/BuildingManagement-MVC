@@ -261,7 +261,9 @@ try
                     catch (Exception ex)
                     {
                         var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                        logger.LogWarning(ex, "[SessionRevalidator] Failed to validate principal");
+                        logger.LogError(ex, "[SessionRevalidator] Failed to validate principal; rejecting the session");
+                        ctx.RejectPrincipal();
+                        await ctx.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                         return;
                     }
 

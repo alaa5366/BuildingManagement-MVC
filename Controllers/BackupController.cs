@@ -319,7 +319,7 @@ public class BackupController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "[Backup] DownloadTemplate failed");
-            TempData["Error"] = Loc.T("Failed_To_Download_The_Template") + ex.Message;
+            TempData["Error"] = Loc.T("Failed_To_Download_The_Template");
             return RedirectToAction(nameof(Index), new { tab = "import" });
         }
     }
@@ -368,7 +368,7 @@ public class BackupController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "[Backup] UploadExcel failed");
-            TempData["Error"] = Loc.T("Failed_To_Read_The_File") + ex.Message;
+            TempData["Error"] = Loc.T("Failed_To_Read_The_File");
             return RedirectToAction(nameof(Index), new { tab = "import" });
         }
     }
@@ -491,7 +491,7 @@ public class BackupController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "[Backup] ConfirmImport failed");
-            TempData["Error"] = Loc.T("Import_Failed") + ex.Message;
+            TempData["Error"] = Loc.T("Import_Failed");
             return RedirectToAction(nameof(Index), new { tab = "import" });
         }
     }

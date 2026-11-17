@@ -96,9 +96,9 @@ public class AdminsController : Controller
             TempData["Message"] = Loc.T("Admin_Created_Successfully");
             return RedirectToAction(nameof(Index));
         }
-        catch (System.Exception ex)
+        catch (System.Exception)
         {
-            TempData["Error"] = Loc.T("Creation_Failed") + ex.Message;
+            TempData["Error"] = Loc.T("Creation_Failed");
             ViewBag.Buildings = await _buildings.GetSummariesAsync();
             ViewBag.AllPermissions = AdminPermissions.All;
             return View();
@@ -139,9 +139,9 @@ public class AdminsController : Controller
             TempData["Message"] = Loc.T("Updated");
             return RedirectToAction(nameof(Index));
         }
-        catch (System.Exception ex)
+        catch (System.Exception)
         {
-            TempData["Error"] = Loc.T("Update_Failed") + ex.Message;
+            TempData["Error"] = Loc.T("Update_Failed");
             var admin = await _admins.GetAdminAsync(id);
             ViewBag.Buildings = await _buildings.GetSummariesAsync();
             ViewBag.AllPermissions = AdminPermissions.All;
@@ -164,9 +164,9 @@ public class AdminsController : Controller
             await _admins.ChangePinAsync(id, newPin, CurrentUserId);
             TempData["Message"] = Loc.T("PIN_Changed");
         }
-        catch (System.Exception ex)
+        catch (System.Exception)
         {
-            TempData["Error"] = Loc.T("PIN_Change_Failed") + ex.Message;
+            TempData["Error"] = Loc.T("PIN_Change_Failed");
         }
         return RedirectToAction(nameof(Edit), new { id });
     }
@@ -182,7 +182,7 @@ public class AdminsController : Controller
     public async Task<IActionResult> Deactivate(string id)
     {
         try { await _admins.DeactivateAsync(id, CurrentUserId); TempData["Message"] = Loc.T("Disabled_4"); }
-        catch (System.Exception ex) { TempData["Error"] = ex.Message; }
+        catch (System.Exception) { TempData["Error"] = Loc.T("An_Unexpected_Error_Occurred"); }
         return RedirectToAction(nameof(Index));
     }
 
@@ -197,7 +197,7 @@ public class AdminsController : Controller
     public async Task<IActionResult> Activate(string id)
     {
         try { await _admins.ActivateAsync(id, CurrentUserId); TempData["Message"] = Loc.T("Activated"); }
-        catch (System.Exception ex) { TempData["Error"] = ex.Message; }
+        catch (System.Exception) { TempData["Error"] = Loc.T("An_Unexpected_Error_Occurred"); }
         return RedirectToAction(nameof(Index));
     }
 
@@ -212,7 +212,7 @@ public class AdminsController : Controller
     public async Task<IActionResult> Delete(string id)
     {
         try { await _admins.DeleteAsync(id, CurrentUserId); TempData["Message"] = Loc.T("Deleted"); }
-        catch (System.Exception ex) { TempData["Error"] = ex.Message; }
+        catch (System.Exception) { TempData["Error"] = Loc.T("An_Unexpected_Error_Occurred"); }
         return RedirectToAction(nameof(Index));
     }
 }

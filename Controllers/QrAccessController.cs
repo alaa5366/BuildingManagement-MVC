@@ -56,7 +56,6 @@ public class QrAccessController : Controller
     /// <param name="token">بيانات طلب التأكيد.</param>
     /// <returns>نتيجة عملية التأكيد.</returns>
     [HttpPost]
-    [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Confirm(string token)
     {
