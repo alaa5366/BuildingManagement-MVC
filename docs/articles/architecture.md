@@ -40,7 +40,7 @@ than silently overwriting another writer.
 
 ## Main flows
 
-* **Request correlation** — each HTTP request receives a server-generated 32-character correlation ID. It is returned in `X-Correlation-ID`, included in structured logging scope, and attached to audit JSON details for events written during that request. Incoming client correlation headers are ignored.
+* **Request correlation** — each HTTP request receives a server-generated 32-character correlation ID. It is returned in `X-Correlation-ID`, included in Serilog request events and the structured logging scope, and attached to audit JSON details for events written during that request. Incoming client correlation headers are ignored. Normal tracked EF Core writes reject audit-row updates and deletes; database-level permissions remain a separate hardening layer.
 
 * **Unified login** – one form for e-mail/phone plus password/PIN. When several accounts match, the user
   chooses one (`ChooseContext`).
