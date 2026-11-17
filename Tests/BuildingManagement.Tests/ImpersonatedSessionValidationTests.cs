@@ -89,6 +89,7 @@ public class ImpersonatedSessionValidationTests
         {
             claims.Add(new Claim("impersonationActorUid", ActorUid));
             claims.Add(new Claim("impersonationActorRole", "admin"));
+            claims.Add(new Claim("impersonationActorPermissions", "[]"));
         }
 
         return new ClaimsPrincipal(new ClaimsIdentity(claims, "test"));
@@ -120,6 +121,32 @@ public class ImpersonatedSessionValidationTests
             }
         };
         var (validator, db) = await CreateAsync(actor: disabled);
+        await using (db)
+        {
+            var result = await validator.ValidateAsync(CreateResidentImpersonation());
+            Assert.False(result.Valid);
+        }
+    }
+
+    [Fact]
+    public async Task Changed_initiating_admin_permissions_revoke_impersonation()
+    {
+        var changed = new UserEntity
+        {
+            Uid = ActorUid,
+            Role = "admin",
+            IsActive = true,
+            IsDisabled = false,
+            BuildingAdmins = new List<BuildingAdminEntity>
+            {
+                new() { AdminUid = ActorUid, BuildingId = BuildingId }
+            },
+            Permissions = new List<UserPermissionEntity>
+            {
+                new() { Uid = ActorUid, Permission = "finance.manage" }
+            }
+        };
+        var (validator, db) = await CreateAsync(actor: changed);
         await using (db)
         {
             var result = await validator.ValidateAsync(CreateResidentImpersonation());
