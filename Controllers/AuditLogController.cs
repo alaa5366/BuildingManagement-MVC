@@ -40,6 +40,11 @@ public class AuditLogController : Controller
 
     private bool HasAuditLogPermission => HasPermissionForUser(User);
 
+    /// <summary>
+    /// Determines whether the specified user can access audit-log data based on their role and permission claim.
+    /// </summary>
+    /// <param name="user">The authenticated user whose audit-log access is being evaluated.</param>
+    /// <returns><see langword="true"/> when the user has the role-scoped audit-log permission; otherwise, <see langword="false"/>.</returns>
     public static bool HasPermissionForUser(System.Security.Claims.ClaimsPrincipal user) =>
         user.IsInRole("superadmin") ||
         (user.IsInRole("admin") && user.HasClaim("perm", AdminPermissions.ViewAuditLogBuilding)) ||
