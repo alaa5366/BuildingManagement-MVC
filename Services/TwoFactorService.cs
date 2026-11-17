@@ -116,7 +116,28 @@ public sealed class TwoFactorService
     private bool TryConsumeCode(UserEntity user, string code)
     {
         if (!user.IsActive || user.IsDisabled || user.Role is not ("admin" or "superadmin")
-            || !user.TwoFactorEnabled || string.IsNullOrWhiteSpace(user.TwoFactorSecretEncrypted))
+            || !user.TwoFactorEnabled)
+            return false;
+
+        // Recovery codes are independent of the encrypted TOTP secret so they still
+        // provide a recovery path if the encryption key is rotated or ciphertext is damaged.
+        var hashes = DeserializeRecoveryHashes(user.TwoFactorRecoveryCodesJson);
+        var candidate = HashRecoveryCode(code);
+        var matchedIndex = -1;
+        for (var i = 0; i < hashes.Count; i++)
+        {
+            if (FixedEquals(hashes[i], candidate))
+                matchedIndex = i;
+        }
+
+        if (matchedIndex >= 0)
+        {
+            hashes.RemoveAt(matchedIndex);
+            user.TwoFactorRecoveryCodesJson = JsonSerializer.Serialize(hashes);
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(user.TwoFactorSecretEncrypted))
             return false;
 
         string secret;
@@ -132,34 +153,19 @@ public sealed class TwoFactorService
 
         try
         {
-            if (TotpAuthenticator.TryVerify(secret, code, DateTimeOffset.UtcNow, out var acceptedStep))
-            {
-                if (user.TwoFactorLastUsedStep.HasValue && acceptedStep <= user.TwoFactorLastUsedStep.Value)
-                    return false;
+            if (!TotpAuthenticator.TryVerify(secret, code, DateTimeOffset.UtcNow, out var acceptedStep))
+                return false;
+            if (user.TwoFactorLastUsedStep.HasValue && acceptedStep <= user.TwoFactorLastUsedStep.Value)
+                return false;
 
-                user.TwoFactorLastUsedStep = acceptedStep;
-                return true;
-            }
+            user.TwoFactorLastUsedStep = acceptedStep;
+            return true;
         }
         catch (FormatException ex)
         {
             _logger.LogError(ex, "Stored two-factor secret is malformed for user {Uid}", user.Uid);
             return false;
         }
-
-        var hashes = DeserializeRecoveryHashes(user.TwoFactorRecoveryCodesJson);
-        var candidate = HashRecoveryCode(code);
-        var matchedIndex = -1;
-        for (var i = 0; i < hashes.Count; i++)
-        {
-            if (FixedEquals(hashes[i], candidate))
-                matchedIndex = i;
-        }
-
-        if (matchedIndex < 0) return false;
-        hashes.RemoveAt(matchedIndex);
-        user.TwoFactorRecoveryCodesJson = JsonSerializer.Serialize(hashes);
-        return true;
     }
 
     private static List<string> DeserializeRecoveryHashes(string? json)

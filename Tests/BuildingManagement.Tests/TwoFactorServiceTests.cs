@@ -107,6 +107,27 @@ public sealed class TwoFactorServiceTests
         Assert.False(await service.VerifyAndConsumeAsync("admin-1", recovery[0]));
     }
 
+
+    [Fact]
+    public async Task Recovery_code_can_disable_2FA_if_encrypted_secret_is_unreadable()
+    {
+        var (service, factory) = await CreateAsync();
+        var secret = TwoFactorService.CreateSecret();
+        var code = TotpAuthenticator.GenerateCode(secret, DateTimeOffset.UtcNow);
+        var recovery = await service.EnableAsync("admin-1", secret, code);
+        Assert.NotNull(recovery);
+
+        await using (var db = factory.CreateDbContext())
+        {
+            var user = await db.Users.SingleAsync(x => x.Uid == "admin-1");
+            user.TwoFactorSecretEncrypted = "damaged-ciphertext";
+            await db.SaveChangesAsync();
+        }
+
+        Assert.True(await service.DisableAsync("admin-1", recovery![0]));
+        Assert.False(await service.IsEnabledAsync("admin-1"));
+    }
+
     [Fact]
     public async Task Disable_requires_second_factor_and_clears_secret()
     {
