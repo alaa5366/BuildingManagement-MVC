@@ -43,7 +43,7 @@ FROM sys.dm_os_sys_info;
 ),
 PartitionRows AS
 (
-    SELECT object_id, index_id, SUM(row_count) AS RowCount
+    SELECT object_id, index_id, SUM(row_count) AS RowCountValue
     FROM sys.dm_db_partition_stats
     GROUP BY object_id, index_id
 )
@@ -59,7 +59,7 @@ SELECT
     i.filter_definition AS FilterDefinition,
     ic.KeyColumns,
     ic.IncludedColumns,
-    COALESCE(pr.RowCount, 0) AS RowCount,
+    COALESCE(pr.RowCountValue, 0) AS RowCountValue,
     COALESCE(us.user_seeks, 0) AS UserSeeks,
     COALESCE(us.user_scans, 0) AS UserScans,
     COALESCE(us.user_lookups, 0) AS UserLookups,
@@ -146,7 +146,7 @@ ORDER BY (migs.user_seeks + migs.user_scans) * migs.avg_total_user_cost * (migs.
 SELECT
     s.name AS SchemaName,
     t.name AS TableName,
-    SUM(ps.row_count) AS RowCount
+    SUM(ps.row_count) AS RowCountValue
 FROM sys.tables t
 INNER JOIN sys.schemas s ON s.schema_id = t.schema_id
 INNER JOIN sys.dm_db_partition_stats ps ON ps.object_id = t.object_id
