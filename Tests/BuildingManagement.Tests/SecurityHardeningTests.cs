@@ -88,6 +88,14 @@ public class LoginThrottleTests
     }
 
     [Fact]
+    public void Concurrent_failures_preserve_the_account_lock_threshold()
+    {
+        var t = Create();
+        Parallel.For(0, 100, _ => t.RegisterFailure("parallel-account", null));
+        Assert.True(t.IsLocked("parallel-account", null));
+    }
+
+    [Fact]
     public void Reset_clears_the_lock()
     {
         var t = Create();
