@@ -284,6 +284,8 @@ public sealed class ApplicationLogQueryService
             !entry.CorrelationId.Contains(query.CorrelationId, StringComparison.OrdinalIgnoreCase)) return false;
         if (!string.IsNullOrWhiteSpace(query.Source) &&
             !entry.SourceContext.Contains(query.Source, StringComparison.OrdinalIgnoreCase)) return false;
+        if (!string.IsNullOrWhiteSpace(query.ComponentType) &&
+            !entry.ComponentType.Equals(query.ComponentType, StringComparison.OrdinalIgnoreCase)) return false;
         if (query.HasException.HasValue && entry.HasException != query.HasException.Value) return false;
         if (!string.IsNullOrWhiteSpace(query.Search) &&
             !entry.Message.Contains(query.Search, StringComparison.OrdinalIgnoreCase) &&
@@ -302,6 +304,8 @@ public sealed class ApplicationLogQueryService
         Search = Limit(query.Search?.Trim(), 200),
         CorrelationId = Limit(query.CorrelationId?.Trim(), 100),
         Source = Limit(query.Source?.Trim(), 200),
+        ComponentType = new[] { "Controller", "Service", "View", "Middleware", "Repository", "Database", "BackgroundJob", "ExternalDependency", "Other" }
+            .FirstOrDefault(x => x.Equals(query.ComponentType?.Trim(), StringComparison.OrdinalIgnoreCase)),
         HasException = query.HasException
     };
 
