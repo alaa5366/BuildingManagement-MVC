@@ -281,4 +281,8 @@ public class AdminBackupData
     /// Gets or sets the original initiating identity email for nested impersonation restoration.
     /// </summary>
     public string ImpersonationActorEmail { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the serialized permissions of the initiating identity for nested impersonation restoration.
+    /// </summary>
+    public string ImpersonationActorPermissions { get; set; } = "";
 }
