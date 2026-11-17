@@ -13,6 +13,7 @@ public class AdminManagementService
     private readonly UsersService _users;
     private readonly IAuditLogger _audit;
     private readonly ILogger<AdminManagementService> _log;
+    private readonly SessionRevalidator? _sessionRevalidator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AdminManagementService"/> class.
@@ -21,12 +22,14 @@ public class AdminManagementService
         IDbContextFactory<AppDbContext> sqlFactory,
         UsersService users,
         IAuditLogger audit,
-        ILogger<AdminManagementService>? log = null)
+        ILogger<AdminManagementService>? log = null,
+        SessionRevalidator? sessionRevalidator = null)
     {
         _sqlFactory = sqlFactory;
         _users = users;
         _audit = audit;
         _log = log ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<AdminManagementService>.Instance;
+        _sessionRevalidator = sessionRevalidator;
     }
 
     /// <summary>
@@ -115,6 +118,7 @@ public class AdminManagementService
             ["updatedAt"] = DateTime.UtcNow.ToString("o"),
             ["updatedBy"] = updatedBy
         });
+        _sessionRevalidator?.InvalidateAdmin(uid);
 
         await _audit.LogAsync(
             action: "admin.update",
@@ -164,6 +168,7 @@ public class AdminManagementService
             ["updatedAt"] = DateTime.UtcNow.ToString("o"),
             ["updatedBy"] = updatedBy
         });
+        _sessionRevalidator?.InvalidateAdmin(uid);
 
         await _audit.LogAsync(
             action: "admin.deactivate",
@@ -189,6 +194,7 @@ public class AdminManagementService
             ["updatedAt"] = DateTime.UtcNow.ToString("o"),
             ["updatedBy"] = updatedBy
         });
+        _sessionRevalidator?.InvalidateAdmin(uid);
 
         await _audit.LogAsync(
             action: "admin.activate",
@@ -216,6 +222,7 @@ public class AdminManagementService
         await db.BuildingAdmins.Where(ba => ba.AdminUid == uid).ExecuteDeleteAsync();
         await db.UserPermissions.Where(p => p.Uid == uid).ExecuteDeleteAsync();
         await db.Users.Where(u => u.Uid == uid).ExecuteDeleteAsync();
+        _sessionRevalidator?.InvalidateAdmin(uid);
 
         await _audit.LogAsync(
             action: "admin.delete",
@@ -240,6 +247,7 @@ public class AdminManagementService
             ["updatedAt"] = DateTime.UtcNow.ToString("o"),
             ["updatedBy"] = updatedBy
         });
+        _sessionRevalidator?.InvalidateAdmin(uid);
 
         await _audit.LogAsync(
             action: "admin.sync_permissions",
