@@ -21,24 +21,34 @@ SELECT
 FROM sys.dm_os_sys_info;
 
 -- 1. Existing indexes, key/include columns, row counts, and usage counters.
-;WITH IndexColumns AS
+;WITH IndexKeyColumns AS
 (
     SELECT
         ic.object_id,
         ic.index_id,
         STRING_AGG(
-            CASE WHEN ic.is_included_column = 0
-                 THEN QUOTENAME(c.name) + CASE WHEN ic.is_descending_key = 1 THEN ' DESC' ELSE ' ASC' END
-            END, ', '
-        ) WITHIN GROUP (ORDER BY ic.key_ordinal) AS KeyColumns,
-        STRING_AGG(
-            CASE WHEN ic.is_included_column = 1 THEN QUOTENAME(c.name) END,
+            QUOTENAME(c.name) + CASE WHEN ic.is_descending_key = 1 THEN ' DESC' ELSE ' ASC' END,
             ', '
-        ) WITHIN GROUP (ORDER BY ic.index_column_id) AS IncludedColumns
+        ) WITHIN GROUP (ORDER BY ic.key_ordinal) AS KeyColumns
     FROM sys.index_columns AS ic
     INNER JOIN sys.columns AS c
         ON c.object_id = ic.object_id
        AND c.column_id = ic.column_id
+    WHERE ic.is_included_column = 0
+    GROUP BY ic.object_id, ic.index_id
+),
+IndexIncludedColumns AS
+(
+    SELECT
+        ic.object_id,
+        ic.index_id,
+        STRING_AGG(QUOTENAME(c.name), ', ')
+            WITHIN GROUP (ORDER BY ic.index_column_id) AS IncludedColumns
+    FROM sys.index_columns AS ic
+    INNER JOIN sys.columns AS c
+        ON c.object_id = ic.object_id
+       AND c.column_id = ic.column_id
+    WHERE ic.is_included_column = 1
     GROUP BY ic.object_id, ic.index_id
 ),
 PartitionRows AS
@@ -57,8 +67,8 @@ SELECT
     i.is_disabled AS IsDisabled,
     i.has_filter AS HasFilter,
     i.filter_definition AS FilterDefinition,
-    ic.KeyColumns,
-    ic.IncludedColumns,
+    ik.KeyColumns,
+    ii.IncludedColumns,
     COALESCE(pr.RowCountValue, 0) AS RowCountValue,
     COALESCE(us.user_seeks, 0) AS UserSeeks,
     COALESCE(us.user_scans, 0) AS UserScans,
@@ -71,8 +81,10 @@ SELECT
 FROM sys.tables AS t
 INNER JOIN sys.schemas AS s ON s.schema_id = t.schema_id
 INNER JOIN sys.indexes AS i ON i.object_id = t.object_id
-LEFT JOIN IndexColumns AS ic
-    ON ic.object_id = i.object_id AND ic.index_id = i.index_id
+LEFT JOIN IndexKeyColumns AS ik
+    ON ik.object_id = i.object_id AND ik.index_id = i.index_id
+LEFT JOIN IndexIncludedColumns AS ii
+    ON ii.object_id = i.object_id AND ii.index_id = i.index_id
 LEFT JOIN PartitionRows AS pr
     ON pr.object_id = i.object_id AND pr.index_id = i.index_id
 LEFT JOIN sys.dm_db_index_usage_stats AS us
