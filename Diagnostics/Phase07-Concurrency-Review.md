@@ -1,6 +1,6 @@
 # Phase07 – Concurrency Review
 
-**Status:** Implementation added; local build/test verification pending  
+**Status:** Implementation added; local build and unit tests passed (407/407); SQL Server engine smoke test added  
 **Branch:** `development/phase07-application-data-integrity`  
 **Database changes:** None  
 **Migration:** None  
@@ -42,7 +42,7 @@ No schema change is required because `Buildings.RowVersion` already exists in th
 - stale rowversion rejected;
 - child-only save path forces the parent entity into Modified state.
 
-The test suite must be run locally. The in-memory test verifies the forced-update state; an end-to-end multi-instance race still requires SQL Server integration testing to validate the database-generated rowversion behavior.
+Local verification reported by the user on 2026-11-17: `dotnet build` succeeded and `dotnet test Tests/BuildingManagement.Tests` passed all 407 tests (0 failed, 0 skipped). The in-memory test verifies the forced-update state; SQL Server engine behavior is checked separately by `Diagnostics/Phase07-RowVersion-EngineSmokeTest.sql`.
 
 ## Locking boundary
 
@@ -61,8 +61,8 @@ dotnet test Tests/BuildingManagement.Tests
 
 Expected: build succeeds and all existing plus new tests pass. No database migration or TEST database modification is required for this code change.
 
-For full integration confidence, run a two-context/two-process SQL Server test: load the same building twice, save a child-only change from the first context, then attempt to save the stale aggregate from the second. The second save must throw `DbUpdateConcurrencyException`, and its child changes must be rolled back.
+Run `Diagnostics/Phase07-RowVersion-EngineSmokeTest.sql` against `BuildingManagement_RestoreTest`. It performs two conditional updates against one real `Buildings` row using the same original rowversion; the first must affect one row, the stale second update must affect zero rows, and the transaction is rolled back. This validates SQL Server's real rowversion predicate behavior without persisting changes. It is an engine smoke test, not a full EF Core two-context aggregate integration test; that remains a possible higher-confidence follow-up.
 
 ## Decision boundary
 
-The concurrency correction is implemented in source and documented, but Phase07 remains pending until the user runs build/tests and reports the result. No production change is authorized.
+The concurrency correction is implemented; local build and all 407 unit tests passed. Phase07 remains pending the TEST-database rowversion smoke test and final review. No production change is authorized.
