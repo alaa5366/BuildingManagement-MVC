@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 namespace BuildingManagementMvc.Services;
 
 /// <summary>Streams the retained Serilog files and returns only sanitized, filtered events.</summary>
+/// <summary>Reads retained Serilog files and returns sanitized, filtered application log events.</summary>
 public sealed class ApplicationLogQueryService
 {
     private const int MaxPage = 100;
@@ -48,6 +49,10 @@ public sealed class ApplicationLogQueryService
         _logger = logger;
     }
 
+    /// <summary>Queries the retained log files and returns the requested bounded result page.</summary>
+    /// <param name="query">Date, level, text, source, correlation, and exception filters with paging options.</param>
+    /// <param name="cancellationToken">Token used to cancel file enumeration and reading.</param>
+    /// <returns>A page of matching sanitized events and the total matching event count.</returns>
     public async Task<PagedResult<ApplicationLogEntry>> QueryPageAsync(
         ApplicationLogQuery query, CancellationToken cancellationToken = default)
     {

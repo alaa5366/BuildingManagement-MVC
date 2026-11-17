@@ -1,5 +1,6 @@
 namespace BuildingManagementMvc.Models;
 
+/// <summary>Represents one sanitized application log event displayed in the log explorer.</summary>
 public sealed class ApplicationLogEntry
 {
     public DateTimeOffset Timestamp { get; init; }

@@ -1,5 +1,6 @@
 namespace BuildingManagementMvc.Models;
 
+/// <summary>Defines the filters and paging parameters for an application log search.</summary>
 public sealed class ApplicationLogQuery
 {
     public DateTimeOffset? FromUtc { get; set; }

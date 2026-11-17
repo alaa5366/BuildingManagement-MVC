@@ -12,12 +12,24 @@ namespace BuildingManagementMvc.Controllers;
 [Authorize(Roles = "superadmin,admin")]
 [AdminPermission(AdminPermissions.ViewApplicationLogs)]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+/// <summary>Provides an authorized, read-only interface for searching retained application logs.</summary>
 public sealed class ApplicationLogsController : Controller
 {
     private readonly ApplicationLogQueryService _logs;
 
     public ApplicationLogsController(ApplicationLogQueryService logs) => _logs = logs;
 
+    /// <summary>Displays a filtered page of sanitized application log events.</summary>
+    /// <param name="from">Optional inclusive start date in ISO date format.</param>
+    /// <param name="to">Optional inclusive end date in ISO date format.</param>
+    /// <param name="level">Optional minimum event-level selection.</param>
+    /// <param name="search">Optional text searched across message, exception, and source.</param>
+    /// <param name="correlationId">Optional correlation identifier filter.</param>
+    /// <param name="source">Optional source-context filter.</param>
+    /// <param name="hasException">Whether to include only events with or without exceptions.</param>
+    /// <param name="page">Requested page number.</param>
+    /// <param name="pageSize">Number of events per page.</param>
+    /// <returns>The logs view populated with the matching page.</returns>
     [HttpGet]
     [EnableRateLimiting("lookup")]
     public async Task<IActionResult> Index(
