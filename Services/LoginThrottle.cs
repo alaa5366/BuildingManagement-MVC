@@ -22,8 +22,10 @@ namespace BuildingManagementMvc.Services;
 /// في جدول <c>dbo.LoginThrottle</c>، فبيفضل شغال بعد أي restart.
 /// </para>
 /// <para>
-/// <b>⚠️ التزامن:</b> التزامن بين أكتر من instance مش مدعوم (كل instance بيقرا
-/// الحالة وقت الإقلاع).
+/// <b>التشغيل:</b> مصمم لـ instance واحدة. العدّادات الحية في الذاكرة، وعمليات
+/// الحفظ والحذف في قاعدة البيانات تُنفّذ بالتتابع للحفاظ على ترتيب تغييرات نفس العملية.
+/// التخزين الدائم نسخة استرداد عند إعادة التشغيل، وليس مخزنًا موزعًا أو ضمانًا ضد
+/// فقد آخر تغييرات لم تكتمل كتابتها عند توقف العملية بشكل مفاجئ.
 /// </para>
 /// </remarks>
 /// <seealso cref="InitializeAsync"/>
@@ -60,6 +62,7 @@ public class LoginThrottle
     private readonly IDbContextFactory<AppDbContext>? _sqlFactory;
     private readonly ILogger<LoginThrottle>? _log;
     private readonly object _lock = new();
+    private Task _persistTail = Task.CompletedTask;
     private volatile bool _persist;
 
     /// <summary>
@@ -167,15 +170,17 @@ DELETE FROM dbo.LoginThrottle WHERE ExpiresAt < SYSUTCDATETIME();");
     public void Reset(string accountKey)
     {
         var k = K(accountKey);
-        _cache.Remove(k);
-        if (_persist) FireAndForget(() => DeleteAsync(k));
+        lock (_lock)
+        {
+            _cache.Remove(k);
+            if (_persist)
+                QueuePersistLocked(() => DeleteAsync(k));
+        }
     }
 
     private void Bump(string key)
     {
         var k = K(key);
-        int count;
-        DateTimeOffset exp;
 
         lock (_lock)
         {
@@ -184,20 +189,31 @@ DELETE FROM dbo.LoginThrottle WHERE ExpiresAt < SYSUTCDATETIME();");
                 c = new Counter { ExpiresAt = DateTimeOffset.UtcNow + Window };
                 _cache.Set(k, c, c.ExpiresAt);
             }
-            c.Count++;
-            count = c.Count;
-            exp = c.ExpiresAt;
-        }
 
-        if (_persist) FireAndForget(() => UpsertAsync(k, count, exp));
+            c.Count++;
+            if (_persist)
+            {
+                var count = c.Count;
+                var exp = c.ExpiresAt;
+                QueuePersistLocked(() => UpsertAsync(k, count, exp));
+            }
+        }
     }
 
-    private void FireAndForget(Func<Task> work) =>
-        _ = Task.Run(async () =>
-        {
-            try { await work(); }
-            catch (Exception ex) { _log?.LogWarning(ex, "[LoginThrottle] persist failed"); }
-        });
+    // Called only while holding _lock, so persistence operations are queued in the
+    // same order as their corresponding in-memory state transitions.
+    private void QueuePersistLocked(Func<Task> work)
+    {
+        _persistTail = _persistTail.ContinueWith(
+            async _ =>
+            {
+                try { await work(); }
+                catch (Exception ex) { _log?.LogWarning(ex, "[LoginThrottle] persist failed"); }
+            },
+            CancellationToken.None,
+            TaskContinuationOptions.None,
+            TaskScheduler.Default).Unwrap();
+    }
 
     private async Task UpsertAsync(string k, int count, DateTimeOffset exp)
     {
