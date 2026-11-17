@@ -172,7 +172,7 @@ public class BackupController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Backup preview failed");
-            TempData["Error"] = Loc.T("Failed_5") + ex.Message;
+            TempData["Error"] = Loc.T("Failed_5");
             return RedirectToAction(nameof(Index), new { tab = "restore" });
         }
     }
