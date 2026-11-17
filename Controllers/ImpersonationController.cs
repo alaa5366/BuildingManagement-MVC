@@ -236,6 +236,9 @@ public class ImpersonationController : Controller
             BuildingIds = User.FindAll("buildingId").Select(c => c.Value).ToList(),
             Permissions = User.FindAll("perm").Select(c => c.Value).ToList(),
             BuildingId = buildingId,
+            ImpersonationActorUid = User.FindFirst("impersonationActorUid")?.Value ?? "",
+            ImpersonationActorRole = User.FindFirst("impersonationActorRole")?.Value ?? "",
+            ImpersonationActorEmail = User.FindFirst("impersonationActorEmail")?.Value ?? "",
             StartedAt = DateTime.UtcNow.ToString("o")
         };
 
@@ -328,6 +331,14 @@ public class ImpersonationController : Controller
         if (stillImpersonating)
         {
             claims.Add(new Claim("impersonated", "true"));
+            if (!string.IsNullOrWhiteSpace(backup.ImpersonationActorUid))
+                claims.Add(new Claim("impersonationActorUid", backup.ImpersonationActorUid));
+            if (!string.IsNullOrWhiteSpace(backup.ImpersonationActorRole))
+                claims.Add(new Claim("impersonationActorRole", backup.ImpersonationActorRole));
+            if (!string.IsNullOrWhiteSpace(backup.ImpersonationActorEmail))
+                claims.Add(new Claim("impersonationActorEmail", backup.ImpersonationActorEmail));
+            if (!string.IsNullOrWhiteSpace(backup.BuildingId))
+                claims.Add(new Claim("impersonationTargetBuildingId", backup.BuildingId));
         }
 
         foreach (var bId in backup.BuildingIds)
