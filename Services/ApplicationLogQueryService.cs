@@ -40,10 +40,10 @@ public sealed class ApplicationLogQueryService
     // Windows drive/UNC paths stop at a quote or line boundary; common Unix root
     // directories are recognized while ordinary URL routes remain untouched.
     private static readonly Regex WindowsFileSystemPath = new(
-        @"(?i)(?<![A-Za-z0-9])(?:[A-Z]:\\\\|\\\\\\\\[^\\\\\s]+\\\\)[^""'<>|\\r\\n]*",
+        @"(?i)(?<![A-Za-z0-9])(?:[A-Z]:\\|\\\\[^\\\s]+\\)[^""'<>|\r\n]*",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex UnixFileSystemPath = new(
-        @"(?<![\\w:])/(?:var|opt|home|etc|usr|tmp|mnt|app|root|product|srv|data|workspace|lib|bin|sbin|boot|dev|proc|sys|run|media|storage|Users|Volumes)(?:/[^""'<>|\\r\\n]*)?",
+        @"(?<![\w:])/(?:var|opt|home|etc|usr|tmp|mnt|app|root|product|srv|data|workspace|lib|bin|sbin|boot|dev|proc|sys|run|media|storage|Users|Volumes)(?:/[^""'<>|\r\n]*)?",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex VersionAssignment = new(
         @"\b(?:Version|AssemblyVersion|FileVersion)\s*=\s*\d+(?:\.\d+){1,3}",
