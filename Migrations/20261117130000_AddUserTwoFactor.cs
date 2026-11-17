@@ -1,11 +1,6 @@
-using BuildingManagementMvc.Data;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 #nullable disable
 namespace BuildingManagementMvc.Migrations;
-[DbContext(typeof(AppDbContext))]
-[Migration("20261117130000_AddUserTwoFactor")]
 public partial class AddUserTwoFactor : Migration
 {
  protected override void Up(MigrationBuilder migrationBuilder)
