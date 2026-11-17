@@ -2,6 +2,7 @@
 using BuildingManagementMvc.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using System.Diagnostics;
 
 namespace BuildingManagementMvc.Services;
 
@@ -160,14 +161,59 @@ public class AuditLogger : IAuditLogger
 
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 200);
+        var countTimer = Stopwatch.StartNew();
         var total = await query.CountAsync();
+        countTimer.Stop();
+
         var totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
         page = Math.Min(page, totalPages);
-        var rows = await query.OrderByDescending(x => x.Ts).ThenByDescending(x => x.AuditId)
-            .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+
+        // The AuditLog page does not display Details (the potentially large JSON payload).
+        // Project only the columns required by the list to avoid transferring nvarchar(max)
+        // data for every row.
+        var pageTimer = Stopwatch.StartNew();
+        var rows = await query
+            .OrderByDescending(x => x.Ts).ThenByDescending(x => x.AuditId)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => new
+            {
+                x.SourceId,
+                x.AuditId,
+                x.Action,
+                x.BuildingId,
+                x.ApartmentId,
+                x.AptNumber,
+                x.Actor,
+                x.ActorRole,
+                x.Severity,
+                x.Ts
+            })
+            .ToListAsync();
+        pageTimer.Stop();
+
+        if (countTimer.ElapsedMilliseconds >= 250 || pageTimer.ElapsedMilliseconds >= 250)
+        {
+            _log.LogWarning(
+                "AUDIT PERF: Count={CountMs}ms PageQuery={PageMs}ms Rows={RowCount} Total={Total}",
+                countTimer.ElapsedMilliseconds, pageTimer.ElapsedMilliseconds, rows.Count, total);
+        }
+
+        var items = rows.Select(x => new AuditEntryDoc
+        {
+            Id = x.SourceId ?? x.AuditId.ToString(),
+            Action = x.Action,
+            BuildingId = x.BuildingId,
+            ApartmentId = x.ApartmentId ?? x.AptNumber?.ToString(),
+            UserId = x.Actor,
+            UserRole = x.ActorRole,
+            Severity = string.IsNullOrWhiteSpace(x.Severity) ? "info" : x.Severity,
+            CreatedAt = DateTime.SpecifyKind(x.Ts, DateTimeKind.Utc)
+        }).ToList();
+
         return new BuildingManagementMvc.Models.PagedResult<AuditEntryDoc>
         {
-            Items = rows.Select(ToDoc).ToList(), CurrentPage = page, PageSize = pageSize, TotalItems = total
+            Items = items, CurrentPage = page, PageSize = pageSize, TotalItems = total
         };
     }
 
