@@ -108,9 +108,17 @@ public class SessionRevalidator
         }
         catch (Exception ex)
         {
+            // A principal without a verified second factor must not use a stale result
+            // when the account's current 2FA policy cannot be checked.
+            if (!user.HasClaim("twoFactorVerified", "true"))
+            {
+                _logger.LogError(ex, "[SessionRevalidator] lookup failed for {Uid} without verified 2FA; rejecting session", uid);
+                return new Result(false, null);
+            }
+
             if (_cache.TryGetValue(cacheKey + ":lkg", out Result? lkg) && lkg != null)
             {
-                _logger.LogWarning(ex, "[SessionRevalidator] lookup failed for {Uid}; using last known result", uid);
+                _logger.LogWarning(ex, "[SessionRevalidator] lookup failed for {Uid}; using last known result for a 2FA-verified session", uid);
                 return lkg;
             }
 
