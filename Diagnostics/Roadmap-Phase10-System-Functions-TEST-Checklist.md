@@ -79,3 +79,24 @@ Use controlled invalid inputs in TEST only:
 - Automated regression tests cover the per-admin permission-cache version invalidation.
 - A resident account whose e-mail is also present in `Auth:SuperAdminEmails` must retain the `resident` session role and must not be routed through super-admin session validation.
 - A genuine `superadmin` role and an explicit `originalRole=superadmin` principal must continue to use super-admin validation.
+
+
+## Execution record — 2026-11-17
+
+### Confirmed PASS (user-reported)
+
+- Build: dotnet build succeeded.
+- Automated tests: 468 passed, 0 failed, 0 skipped.
+- Test 2: residents.manage checks passed.
+- Test 3: settings.manage.building checks passed.
+- Test 4: camera permission grant and revoke took effect on the next authenticated request without logout/login.
+- Test 5: Audit Log role permissions and scope checks passed for Admin and SuperAdmin.
+- Test 6 (diagnostic endpoint): Resident login succeeded even though the resident e-mail is also listed in Auth:SuperAdminEmails; /ResidentHome/Debug returned HTTP 404.
+
+### Not yet confirmed as completed
+
+- Section 7 controlled safe-error-response checks.
+- Remaining section 6 checks for resident polls and one-time QR access.
+- Broader section 8 regression smoke checks (2FA/recovery, impersonation enter/exit, quick login, financial workflows, reports, invoices, maintenance, notifications, and backup/restore).
+
+Do not interpret an unreported check as PASS. Run outstanding checks only against local/TEST; never use Production.
