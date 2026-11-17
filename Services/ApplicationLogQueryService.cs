@@ -61,7 +61,7 @@ public sealed class ApplicationLogQueryService
         try
         {
             files = Directory.EnumerateFiles(_directory, "serilog-*.txt", SearchOption.TopDirectoryOnly)
-                .OrderByDescending(path => SafeLastWriteTime(path)).ToArray();
+                .OrderByDescending(path => SafeLastWriteTime(path)).Take(14).ToArray();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -211,8 +211,9 @@ public sealed class ApplicationLogQueryService
     private static ApplicationLogQuery Normalize(ApplicationLogQuery query) => new()
     {
         FromUtc = query.FromUtc, ToUtc = query.ToUtc,
-        Level = new[] { "Verbose", "Debug", "Information", "Warning", "Error", "Fatal" }
-            .FirstOrDefault(x => x.Equals(query.Level?.Trim(), StringComparison.OrdinalIgnoreCase)),
+        Level = string.IsNullOrWhiteSpace(query.Level) ? null :
+            new[] { "Verbose", "Debug", "Information", "Warning", "Error", "Fatal" }
+                .FirstOrDefault(x => x.Equals(query.Level.Trim(), StringComparison.OrdinalIgnoreCase)) ?? "__invalid__",
         Search = Limit(query.Search?.Trim(), 200),
         CorrelationId = Limit(query.CorrelationId?.Trim(), 100),
         Source = Limit(query.Source?.Trim(), 200),
