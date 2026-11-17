@@ -82,35 +82,45 @@ LEFT JOIN sys.dm_db_index_usage_stats AS us
 WHERE i.index_id > 0
 ORDER BY s.name, t.name, i.index_id;
 
--- 2. Foreign-key columns and whether SQL Server has a supporting leading index.
+-- 2. Foreign-key columns and whether an index starts with the first FK column.
+;WITH ForeignKeySummary AS
+(
+    SELECT
+        fk.parent_object_id,
+        fk.name AS ForeignKeyName,
+        MIN(fkc.parent_column_id) AS FirstParentColumnId,
+        STRING_AGG(QUOTENAME(pc.name), ', ')
+            WITHIN GROUP (ORDER BY fkc.constraint_column_id) AS ForeignKeyColumns
+    FROM sys.foreign_keys AS fk
+    INNER JOIN sys.foreign_key_columns AS fkc
+        ON fkc.constraint_object_id = fk.object_id
+    INNER JOIN sys.columns AS pc
+        ON pc.object_id = fkc.parent_object_id
+       AND pc.column_id = fkc.parent_column_id
+    GROUP BY fk.parent_object_id, fk.name
+)
 SELECT
-    OBJECT_SCHEMA_NAME(fk.parent_object_id) AS SchemaName,
-    OBJECT_NAME(fk.parent_object_id) AS TableName,
-    fk.name AS ForeignKeyName,
-    STRING_AGG(QUOTENAME(pc.name), ', ') WITHIN GROUP (ORDER BY fkc.constraint_column_id) AS ForeignKeyColumns,
+    OBJECT_SCHEMA_NAME(fks.parent_object_id) AS SchemaName,
+    OBJECT_NAME(fks.parent_object_id) AS TableName,
+    fks.ForeignKeyName,
+    fks.ForeignKeyColumns,
     CASE WHEN EXISTS
     (
         SELECT 1
-        FROM sys.indexes ix
-        INNER JOIN sys.index_columns first_ic
+        FROM sys.indexes AS ix
+        INNER JOIN sys.index_columns AS first_ic
             ON first_ic.object_id = ix.object_id
            AND first_ic.index_id = ix.index_id
            AND first_ic.key_ordinal = 1
-        WHERE ix.object_id = fk.parent_object_id
-          AND first_ic.column_id = MIN(fkc.parent_column_id)
+        WHERE ix.object_id = fks.parent_object_id
+          AND first_ic.column_id = fks.FirstParentColumnId
           AND ix.is_disabled = 0
           AND ix.index_id > 0
     ) THEN 'At least one index starts with first FK column'
       ELSE 'Review: no index starts with first FK column'
     END AS LeadingColumnCoverage
-FROM sys.foreign_keys fk
-INNER JOIN sys.foreign_key_columns fkc
-    ON fkc.constraint_object_id = fk.object_id
-INNER JOIN sys.columns pc
-    ON pc.object_id = fkc.parent_object_id
-   AND pc.column_id = fkc.parent_column_id
-GROUP BY fk.parent_object_id, fk.name
-ORDER BY SchemaName, TableName, fk.name;
+FROM ForeignKeySummary AS fks
+ORDER BY SchemaName, TableName, fks.ForeignKeyName;
 
 -- 3. Missing-index suggestions for this database (advisory only).
 SELECT TOP (100)
