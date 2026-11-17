@@ -456,6 +456,7 @@ public class AccountController : Controller
         return RedirectBasedOnRole(pending.Result.Role!);
     }
 
+    /// <summary>Displays two-factor authentication settings for the signed-in administrator.</summary>
     [HttpGet]
     public async Task<IActionResult> TwoFactorSettings()
     {
@@ -465,6 +466,7 @@ public class AccountController : Controller
         return View();
     }
 
+    /// <summary>Starts a time-limited two-factor setup session and generates a new authenticator secret.</summary>
     [HttpPost]
     [EnableRateLimiting("login")]
     [ValidateAntiForgeryToken]
@@ -483,6 +485,7 @@ public class AccountController : Controller
         return RedirectToAction(nameof(TwoFactorSetup));
     }
 
+    /// <summary>Displays the authenticator provisioning details for the current setup session.</summary>
     [HttpGet]
     public IActionResult TwoFactorSetup()
     {
@@ -507,6 +510,8 @@ public class AccountController : Controller
         return View(new TwoFactorVerifyVm());
     }
 
+    /// <summary>Validates the first authenticator code and enables two-factor authentication.</summary>
+    /// <param name="vm">The verification code submitted by the administrator.</param>
     [HttpPost]
     [EnableRateLimiting("login")]
     [ValidateAntiForgeryToken]
@@ -541,6 +546,7 @@ public class AccountController : Controller
         return RedirectToAction(nameof(TwoFactorRecoveryCodes));
     }
 
+    /// <summary>Displays the one-time recovery codes generated when two-factor authentication was enabled.</summary>
     [HttpGet]
     public IActionResult TwoFactorRecoveryCodes()
     {
@@ -559,6 +565,8 @@ public class AccountController : Controller
         }
     }
 
+    /// <summary>Disables two-factor authentication after validating a current authenticator or recovery code.</summary>
+    /// <param name="vm">The verification code submitted by the administrator.</param>
     [HttpPost]
     [EnableRateLimiting("login")]
     [ValidateAntiForgeryToken]
