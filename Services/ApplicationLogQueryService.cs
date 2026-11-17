@@ -36,6 +36,15 @@ public sealed class ApplicationLogQueryService
     private static readonly Regex PhoneNumber = new(
         @"(?<!\w)\+?\d[\d\s().-]{8,}\d(?!\w)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    // Redact absolute filesystem paths before any log field is returned to the UI.
+    // Windows drive/UNC paths stop at a quote or line boundary; common Unix root
+    // directories are recognized while ordinary URL routes remain untouched.
+    private static readonly Regex WindowsFileSystemPath = new(
+        @"(?i)(?<![A-Za-z0-9])(?:[A-Z]:\\\\|\\\\\\\\[^\\\\\s]+\\\\)[^""'<>|\\r\\n]*",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex UnixFileSystemPath = new(
+        @"(?<![\\w:])/(?:var|opt|home|etc|usr|tmp|mnt|app|root|product|srv|data|workspace|lib|bin|sbin|boot|dev|proc|sys|run|media|storage|Users|Volumes)(?:/[^""'<>|\\r\\n]*)?",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex VersionAssignment = new(
         @"\b(?:Version|AssemblyVersion|FileVersion)\s*=\s*\d+(?:\.\d+){1,3}",
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
@@ -307,6 +316,8 @@ public sealed class ApplicationLogQueryService
             return marker;
         });
 
+        safe = WindowsFileSystemPath.Replace(safe, "[REDACTED_PATH]");
+        safe = UnixFileSystemPath.Replace(safe, "[REDACTED_PATH]");
         safe = ConnectionString.Replace(safe, "[REDACTED_CONNECTION_STRING]");
         safe = SecretAssignment.Replace(safe, "$1$2[REDACTED]");
         safe = BearerToken.Replace(safe, "Bearer [REDACTED]");
