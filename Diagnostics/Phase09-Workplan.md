@@ -56,7 +56,7 @@ Reduce the time during which a disabled, removed, or de-authorized account can c
 - Super-admin initiators are rechecked against both the configured email allow-list and an active, enabled `Users` row with matching UID/email/role.
 - Target building and (for resident impersonation) target apartment must still exist.
 - Impersonation validation is cached for at most 30 seconds. It has no last-known-good fallback; database/authority lookup failure rejects the impersonated session.
-- Added focused tests for active admin access, disabled admin, removed building membership, changed permissions, missing actor claims, deleted apartment, and super-admin lifecycle.
+- Added focused tests for active admin access, disabled admin, removed building membership, changed permissions, missing/malformed actor claims, deleted apartment, super-admin lifecycle, and fail-closed behavior during database outage.
 - Existing impersonation cookies issued before these claims were introduced will fail closed and require the user to sign in again; the two-hour session lifetime bounds this compatibility impact.
 
 ## Non-goals
