@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Security.Claims;
 using BuildingManagementMvc.Attributes;
 using BuildingManagementMvc.Controllers;
 using BuildingManagementMvc.Models;
@@ -114,6 +115,25 @@ public class ControllerAuthorizationTests
         Assert.DoesNotContain(
             typeof(ResidentHomeController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly),
             method => method.Name == "Debug");
+    }
+
+    [Theory]
+    [InlineData("resident", AdminPermissions.ViewAuditLogOwn, true)]
+    [InlineData("resident", AdminPermissions.ViewAuditLogBuilding, false)]
+    [InlineData("admin", AdminPermissions.ViewAuditLogBuilding, true)]
+    [InlineData("admin", AdminPermissions.ViewAuditLogOwn, false)]
+    [InlineData("superadmin", "any-permission", true)]
+    [InlineData("unknown", AdminPermissions.ViewAuditLogOwn, false)]
+    public void Audit_log_access_uses_the_role_scoped_permission(string role, string permission, bool expected)
+    {
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.Role, role),
+            new Claim("perm", permission)
+        };
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "test"));
+
+        Assert.Equal(expected, AuditLogController.HasPermissionForUser(principal));
     }
 
 }
