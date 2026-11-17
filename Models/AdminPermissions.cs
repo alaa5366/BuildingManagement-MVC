@@ -108,6 +108,8 @@ public static class AdminPermissions
     /// The view audit log own constant.
     /// </summary>
     public const string ViewAuditLogOwn = "audit.view.own";
+    /// <summary>Permission to view sanitized application log events.</summary>
+    public const string ViewApplicationLogs = "system.logs.view";
 
     // ============================================================
     // الإعدادات
@@ -158,7 +160,7 @@ public static class AdminPermissions
         ManageDvrs, ViewCameras, ManageCameras,
         ManageWallet, ManageExpenses, ManageRevenues, ManageCategories, ViewReports,
         ManagePolls, ManageMaintenance, SendNotifications, UseWhatsApp,
-        ViewAuditLogAll, ViewAuditLogBuilding, ViewAuditLogOwn,
+        ViewAuditLogAll, ViewAuditLogBuilding, ViewAuditLogOwn, ViewApplicationLogs,
         ManageSettingsGlobal, ManageSettingsBuilding, ManageSettingsOwn,
         ManageTools, ManageBackup, ManageSync, SecretAccess
     };
@@ -252,6 +254,7 @@ public static class AdminPermissions
         ViewAuditLogAll => Loc.T("Full_Log"),
         ViewAuditLogBuilding => Loc.T("Building_Log"),
         ViewAuditLogOwn => Loc.T("My_Log_Only"),
+        ViewApplicationLogs => Loc.T("View_Application_Logs"),
         ManageSettingsGlobal => Loc.T("Global_Settings"),
         ManageSettingsBuilding => Loc.T("Building_Settings"),
         ManageSettingsOwn => Loc.T("My_Settings"),
@@ -286,7 +289,7 @@ public static class AdminPermissions
             => PermissionCategory.Financial,
         ManagePolls or ManageMaintenance or SendNotifications or UseWhatsApp
             => PermissionCategory.Services,
-        ViewAuditLogAll or ViewAuditLogBuilding or ViewAuditLogOwn
+        ViewAuditLogAll or ViewAuditLogBuilding or ViewAuditLogOwn or ViewApplicationLogs
             => PermissionCategory.System,
         ManageSettingsGlobal or ManageSettingsBuilding or ManageSettingsOwn
             => PermissionCategory.System,
@@ -329,6 +332,7 @@ public static class AdminPermissions
         ManageMaintenance => Loc.T("Add_Edit_Delete_Maintenance_Records_Add"),
         SendNotifications => Loc.T("Send_In_App_Notifications_To_Admins"),
         UseWhatsApp => Loc.T("Generate_WhatsApp_Messages_From_Templates_Open"),
+        ViewApplicationLogs => Loc.T("View_Application_Logs_Desc"),
         ViewAuditLogAll => Loc.T("View_All_Records_Across_All_Buildings"),
         ViewAuditLogBuilding => Loc.T("View_The_Building_Log_Only_Admin"),
         ViewAuditLogOwn => Loc.T("View_My_Apartment_S_Log_Only"),

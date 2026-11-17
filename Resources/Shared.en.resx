@@ -277,4 +277,27 @@
   <data name="Minutes" xml:space="preserve">
     <value>minutes &amp;nbsp;|&amp;nbsp; 🔢</value>
 </data>
+
+  <data name="Application_Logs" xml:space="preserve"><value>Application Logs</value></data>
+  <data name="Application_Logs_Description" xml:space="preserve"><value>Explore runtime events and errors, search messages, and correlate requests.</value></data>
+  <data name="View_Application_Logs" xml:space="preserve"><value>View Application Logs</value></data>
+  <data name="View_Application_Logs_Desc" xml:space="preserve"><value>Access sanitized application logs and diagnostic information.</value></data>
+  <data name="Events" xml:space="preserve"><value>events</value></data>
+  <data name="Correlation_ID" xml:space="preserve"><value>Correlation ID</value></data>
+  <data name="Source_Context" xml:space="preserve"><value>Source</value></data>
+  <data name="Level" xml:space="preserve"><value>Level</value></data>
+  <data name="All_Levels" xml:space="preserve"><value>All levels</value></data>
+  <data name="From_Date_UTC" xml:space="preserve"><value>From date (UTC)</value></data>
+  <data name="To_Date_UTC" xml:space="preserve"><value>To date (UTC)</value></data>
+  <data name="All_Events" xml:space="preserve"><value>All events</value></data>
+  <data name="With_Exception" xml:space="preserve"><value>With exception</value></data>
+  <data name="Without_Exception" xml:space="preserve"><value>Without exception</value></data>
+  <data name="Log_Dates_Are_UTC_And_Redacted" xml:space="preserve"><value>Dates use UTC. Sensitive values are automatically redacted before display.</value></data>
+  <data name="No_Log_Events_Found" xml:space="preserve"><value>No log events match the selected filters.</value></data>
+  <data name="Details" xml:space="preserve"><value>Details</value></data>
+  <data name="Invalid_Date_Range" xml:space="preserve"><value>The start date must not be later than the end date.</value></data>
+  <data name="Previous" xml:space="preserve"><value>Previous</value></data>
+  <data name="Next" xml:space="preserve"><value>Next</value></data>
+  <data name="Reset" xml:space="preserve"><value>Reset</value></data>
+  <data name="Message" xml:space="preserve"><value>Message</value></data>
 </root>

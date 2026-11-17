@@ -182,6 +182,7 @@ try
     builder.Services.AddHostedService<BackupScheduler>();
 
     builder.Services.AddScoped<AuditLogQueryService>();
+    builder.Services.AddScoped<ApplicationLogQueryService>();
     builder.Services.AddScoped<CategoriesService>();
 
     builder.Services.AddSingleton<IAuditLogger, AuditLogger>();

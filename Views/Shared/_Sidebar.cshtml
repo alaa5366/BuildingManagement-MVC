@@ -200,6 +200,10 @@
                 <div class="nav-section-title">@Loc.T("System")</div>
                 <ul class="nav-list">
                     <li><a asp-controller="AuditLog" asp-action="Index" class="nav-link @Active("AuditLog")"><i class="bi bi-journal-text"></i><span>@Loc.T("Nav_AuditLog")</span></a></li>
+                    @if (Has("system.logs.view"))
+                    {
+                        <li><a asp-controller="ApplicationLogs" asp-action="Index" class="nav-link @Active("ApplicationLogs")"><i class="bi bi-file-earmark-text"></i><span>@Loc.T("Application_Logs")</span></a></li>
+                    }
                     <li><a asp-controller="Settings" asp-action="Index" class="nav-link @Active("Settings")"><i class="bi bi-sliders"></i><span>@Loc.T("Nav_Settings")</span></a></li>
                 </ul>
             </div>
@@ -246,6 +250,7 @@
                 <div class="nav-section-title">@Loc.T("System")</div>
                 <ul class="nav-list">
                     <li><a asp-controller="AuditLog" asp-action="Index" class="nav-link @Active("AuditLog")"><i class="bi bi-journal-text"></i><span>@Loc.T("Nav_AuditLog")</span></a></li>
+                    <li><a asp-controller="ApplicationLogs" asp-action="Index" class="nav-link @Active("ApplicationLogs")"><i class="bi bi-file-earmark-text"></i><span>@Loc.T("Application_Logs")</span></a></li>
                     <li><a asp-controller="Settings" asp-action="Index" class="nav-link @Active("Settings")"><i class="bi bi-sliders"></i><span>@Loc.T("Nav_Settings")</span></a></li>
                 </ul>
             </div>
