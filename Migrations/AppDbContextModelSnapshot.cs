@@ -1357,7 +1357,10 @@ namespace BuildingManagementMvc.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
-                    b.Property<bool>("TwoFactorEnabled").HasColumnType("bit");
+                    b.Property<bool>("TwoFactorEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
                     b.Property<string>("TwoFactorSecretEncrypted").HasMaxLength(512).HasColumnType("nvarchar(512)");
                     b.Property<string>("TwoFactorRecoveryCodesJson").HasMaxLength(4000).HasColumnType("nvarchar(4000)");
                     b.Property<long?>("TwoFactorLastUsedStep").HasColumnType("bigint");
