@@ -57,4 +57,41 @@ public class AuditLoggerTests
         Assert.Equal("0123456789abcdef0123456789abcdef", details["correlationId"]?.Value<string>());
         Assert.Equal("success", details["result"]?.Value<string>());
     }
+
+    [Fact]
+    public async Task SaveChangesAsync_RejectsAuditLogUpdates()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.AuditLog.Add(new AuditLogEntity { Action = "original", Ts = DateTime.UtcNow });
+            await seed.SaveChangesAsync();
+        }
+
+        await using var db = new AppDbContext(options);
+        var entry = await db.AuditLog.SingleAsync();
+        entry.Action = "tampered";
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => db.SaveChangesAsync());
+        Assert.Contains("append-only", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SaveChangesAsync_RejectsAuditLogDeletes()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.AuditLog.Add(new AuditLogEntity { Action = "keep", Ts = DateTime.UtcNow });
+            await seed.SaveChangesAsync();
+        }
+
+        await using var db = new AppDbContext(options);
+        var entry = await db.AuditLog.SingleAsync();
+        db.AuditLog.Remove(entry);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => db.SaveChangesAsync());
+    }
 }
