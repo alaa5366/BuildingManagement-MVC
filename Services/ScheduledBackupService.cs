@@ -81,6 +81,30 @@ public class ScheduledBackupService
     /// </summary>
     public async Task SaveSettingsAsync(ScheduledBackupSettings settings, string userId)
     {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        var frequency = (settings.Frequency ?? "daily").Trim().ToLowerInvariant();
+        if (frequency is not ("daily" or "weekly" or "monthly"))
+            throw new ArgumentException("Backup frequency is invalid.", nameof(settings));
+        if (settings.Hour is < 0 or > 23)
+            throw new ArgumentOutOfRangeException(nameof(settings.Hour), "Backup hour must be between 0 and 23.");
+        if (frequency == "weekly" && (settings.DayOfWeek is null or < 0 or > 6))
+            throw new ArgumentOutOfRangeException(nameof(settings.DayOfWeek), "Weekly backup day must be between 0 and 6.");
+        if (frequency == "monthly" && (settings.DayOfMonth is null or < 1 or > 31))
+            throw new ArgumentOutOfRangeException(nameof(settings.DayOfMonth), "Monthly backup day must be between 1 and 31.");
+        if (settings.MaxBackupsToKeep is < 1 or > 30)
+            throw new ArgumentOutOfRangeException(nameof(settings.MaxBackupsToKeep), "Backup retention must be between 1 and 30.");
+
+        var collections = (settings.Collections ?? new List<string>())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        var knownCollections = BackupService.GetKnownCollections();
+        if (collections.Any(x => !knownCollections.ContainsKey(x)))
+            throw new ArgumentException("One or more backup collections are invalid.", nameof(settings));
+        if (settings.Enabled && collections.Count == 0)
+            throw new ArgumentException("At least one backup collection is required when scheduling is enabled.", nameof(settings));
+
         await using var db = await _sqlFactory.CreateDbContextAsync();
         var entity = await db.ScheduledBackupSettings.FirstOrDefaultAsync(x => x.Id == SettingsId);
         if (entity == null)
@@ -90,11 +114,11 @@ public class ScheduledBackupService
         }
 
         entity.Enabled = settings.Enabled;
-        entity.Frequency = settings.Frequency ?? "daily";
+        entity.Frequency = frequency;
         entity.Hour = settings.Hour;
         entity.DayOfWeek = settings.DayOfWeek;
         entity.DayOfMonth = settings.DayOfMonth;
-        entity.CollectionsJson = System.Text.Json.JsonSerializer.Serialize(settings.Collections ?? new());
+        entity.CollectionsJson = System.Text.Json.JsonSerializer.Serialize(collections);
         entity.MaxBackupsToKeep = settings.MaxBackupsToKeep;
         entity.UpdatedAt = DateTime.UtcNow;
         entity.UpdatedBy = userId;
@@ -110,7 +134,7 @@ public class ScheduledBackupService
                 enabled = settings.Enabled,
                 frequency = settings.Frequency,
                 hour = settings.Hour,
-                collections = settings.Collections
+                collections
             },
             severity: "warning");
     }
@@ -121,7 +145,9 @@ public class ScheduledBackupService
     public async Task<bool> ShouldRunAsync()
     {
         var settings = await GetSettingsAsync();
-        if (!settings.Enabled) return false;
+        if (!settings.Enabled || settings.Hour is < 0 or > 23 ||
+            settings.MaxBackupsToKeep is < 1 or > 30)
+            return false;
         if (string.IsNullOrEmpty(settings.LastRunAt)) return true;
         if (!DateTime.TryParse(settings.LastRunAt, out var lastRun)) return true;
 
@@ -135,14 +161,14 @@ public class ScheduledBackupService
                 return now >= todayTarget;
 
             case "weekly":
-                if (!settings.DayOfWeek.HasValue) return false;
+                if (settings.DayOfWeek is null or < 0 or > 6) return false;
                 if ((int)now.DayOfWeek != settings.DayOfWeek.Value) return false;
                 var weekTarget = new DateTime(now.Year, now.Month, now.Day, settings.Hour, 0, 0, DateTimeKind.Utc);
                 if (lastRun.Date == now.Date) return false;
                 return now >= weekTarget;
 
             case "monthly":
-                if (!settings.DayOfMonth.HasValue) return false;
+                if (settings.DayOfMonth is null or < 1 or > 31) return false;
                 if (now.Day != settings.DayOfMonth.Value) return false;
                 var monthTarget = new DateTime(now.Year, now.Month, now.Day, settings.Hour, 0, 0, DateTimeKind.Utc);
                 if (lastRun.Date == now.Date) return false;
@@ -166,7 +192,12 @@ public class ScheduledBackupService
 
         try
         {
-            var (bytes, result) = await _backup.CreateBackupAsync(settings.Collections, "system-scheduler");
+            var collections = settings.Collections.Distinct(StringComparer.Ordinal).ToList();
+            var knownCollections = BackupService.GetKnownCollections();
+            if (collections.Any(x => !knownCollections.ContainsKey(x)))
+                throw new InvalidOperationException("Scheduled backup contains an unknown collection.");
+
+            var (bytes, result) = await _backup.CreateBackupAsync(collections, "system-scheduler");
 
             var folder = GetBackupsFolder(env);
             var fileName = $"scheduled-{DateTime.UtcNow:yyyy-MM-dd-HHmm}.zip";
@@ -265,6 +296,8 @@ public class ScheduledBackupService
 
     private async Task RotateBackupsAsync(IWebHostEnvironment env, int keep)
     {
+        // Defensive clamp protects existing persisted settings as well as newly validated input.
+        keep = Math.Clamp(keep, 1, 30);
         var folder = GetBackupsFolder(env);
         var files = Directory.GetFiles(folder, "scheduled-*.zip")
             .Select(f => new FileInfo(f))
