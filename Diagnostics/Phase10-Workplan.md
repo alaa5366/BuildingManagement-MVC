@@ -60,7 +60,7 @@ Harden the backup restore workflow so the archive reviewed by a super-admin is e
 ## Implementation delivered
 
 - Added strict archive validation shared by preview and restore.
-- Rejected duplicate entries, path-bearing names, directory entries, unknown files/collections, invalid JSON roots, and malformed row envelopes.
+- Rejected duplicate entries, path-bearing names, directory entries, unknown files/collections, invalid JSON roots, and malformed row envelopes; enforced actual decompressed-byte limits while parsing, not only ZIP metadata.
 - Bound each restore session to the SHA-256 digest of the reviewed archive and verify it in fixed time using the same open file handle used for restore.
 - Preserved 20-minute expiry and single-use user binding; added limits of 2 active sessions per user and 10 process-wide, with expired-session cleanup.
 - Sanitized backup create/preview/restore exception responses while retaining server-side diagnostic logging.
