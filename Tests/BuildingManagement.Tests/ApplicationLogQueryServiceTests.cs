@@ -73,7 +73,7 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task QueryPageAsync_DoesNotTreatOrdinaryContinuationLinesAsExceptions()
+    public async Task QueryPageAsync_CapturesOrdinaryContinuationAsDetailsWithoutTreatingItAsException()
     {
         WriteLog(
             "2026-11-17 10:00:00.000 +00:00 [INF] Executed DbCommand (1ms) {}",
@@ -83,6 +83,8 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
 
         Assert.False(item.HasException);
         Assert.Empty(item.Exception);
+        Assert.Empty(item.CorrelationId);
+        Assert.Contains("CommandType='Text'", item.Details, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -122,6 +124,11 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
         Assert.Equal("Executed DbCommand (4ms) [Parameters=[], CommandType='\"Text\"', CommandTimeout='30']", item.Message);
         Assert.Equal(correlationId, item.CorrelationId);
         Assert.Equal(sourceContext, item.SourceContext);
+        Assert.Contains("SET IMPLICIT_TRANSACTIONS OFF;", item.Details, StringComparison.Ordinal);
+        Assert.Contains("UPDATE [Presence]", item.Details, StringComparison.Ordinal);
+        Assert.Contains("WHERE [Uid] = @p1;", item.Details, StringComparison.Ordinal);
+        Assert.DoesNotContain("CorrelationId", item.Details, StringComparison.Ordinal);
+        Assert.DoesNotContain("SourceContext", item.Details, StringComparison.Ordinal);
         Assert.False(item.HasException);
         Assert.Empty(item.Exception);
     }
