@@ -31,9 +31,12 @@ cancelled deposits never count.
 
 ## Writes
 
-`BuildingSqlStore.SaveFullAsync` saves the whole building aggregate (last writer wins). To avoid lost
-updates, `BuildingWriteLockFilter` runs write requests for the same building one at a time. This is
-correct for a single application instance; running several instances would need a row-version column.
+`BuildingSqlStore.SaveFullAsync` saves the whole building aggregate in a transaction. The MVC
+`BuildingWriteLockFilter` serializes write requests for the same building inside one application
+instance. Cross-instance protection is provided by SQL Server `Buildings.RowVersion`: every existing
+aggregate save forces a parent-row update, so child-only changes also advance the token. A stale or
+missing token is rejected with `DbUpdateConcurrencyException`; callers must reload and retry rather
+than silently overwriting another writer.
 
 ## Main flows
 

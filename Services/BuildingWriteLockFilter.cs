@@ -3,11 +3,9 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace BuildingManagementMvc.Services;
 
-// بيسلسل كل طلبات الكتابة (POST/PUT/PATCH/DELETE) على نفس العمارة.
-// السبب: BuildingsService.SaveFullAsync بيكتب العمارة كلها (آخر كاتب يكسب)،
-// فلو ساكن سجّل دفعة وأدمن أكّد دفعة في نفس اللحظة واحدة منهم كانت بتضيع.
-// ملاحظة: القفل داخل نفس العملية (instance واحدة). لو شغّلت أكتر من instance
-// محتاج RowVersion في الـ DB (مرحلة لاحقة بتحتاج Migration).
+// بيسلسل طلبات MVC الكتابية على نفس العمارة داخل نفس الـ process.
+// الحماية عبر أكثر من application instance تتم بشكل مستقل عن طريق Buildings.RowVersion
+// داخل BuildingSqlMapper، بما يشمل عمليات الحفظ التي تعدّل جداول الأبناء فقط.
 /// <summary>
 /// Global MVC filter that serializes write requests (POST/PUT/PATCH/DELETE) per building so two writers cannot overwrite each other's changes.
 /// </summary>
