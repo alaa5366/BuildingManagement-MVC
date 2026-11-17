@@ -1,7 +1,6 @@
 using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Xunit;
 
 namespace BuildingManagement.Tests;
