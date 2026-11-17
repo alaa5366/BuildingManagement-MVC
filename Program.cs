@@ -137,7 +137,7 @@ try
     builder.Services.AddHealthChecks()
         .AddDbContextCheck<AppDbContext>("Database", tags: new[] { "ready" });
 
-    Console.WriteLine("[Storage] Provider = Sql");
+    Log.Information("Storage provider configured: {StorageProvider}", "Sql");
 
     builder.Services.AddSingleton<BuildingSqlStore>();
     builder.Services.AddSingleton<UserSqlStore>();
@@ -402,11 +402,11 @@ try
         using var migrationScope = app.Services.CreateScope();
         var pinMigration = migrationScope.ServiceProvider.GetRequiredService<PinMigrationService>();
         var (mUsers, mResidents, mCleared) = await pinMigration.MigrateLegacySecretsAsync();
-        Console.WriteLine($"[Startup] Legacy secrets: users={mUsers}, residents={mResidents}, buildingAdminPinsCleared={mCleared}");
+        Log.Information("Legacy secret migration completed. Users={MigratedUsers}, Residents={MigratedResidents}, BuildingAdminPinsCleared={BuildingAdminPinsCleared}", mUsers, mResidents, mCleared);
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[Startup] Legacy secrets migration FAILED: {ex.Message}");
+        Log.Error(ex, "Legacy secret migration failed during startup");
     }
 
     await app.Services.GetRequiredService<LoginThrottle>().InitializeAsync();
@@ -492,13 +492,13 @@ try
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Startup] FAILED {Path.GetFileName(fontFile)}: {ex.Message}");
+                Log.Warning(ex, "Failed to register font {FontFile}", Path.GetFileName(fontFile));
             }
         }
     }
     else
     {
-        Console.WriteLine("[Startup] ERROR: Fonts directory not found!");
+        Log.Warning("Fonts directory was not found at {FontsDirectory}", fontsDir);
     }
 
     if (!app.Environment.IsDevelopment())
