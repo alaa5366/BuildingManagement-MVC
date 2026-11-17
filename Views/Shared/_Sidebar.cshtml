@@ -266,7 +266,7 @@
                 <li><a asp-controller="Help" asp-action="Index" class="nav-link @Active("Help")"><i class="bi bi-question-circle"></i><span>@Loc.T("Nav_Help")</span></a></li>
             </ul>
         </div>
-        @if (isAdmin || isSuperAdmin)
+        @if ((isAdmin || isSuperAdmin) && !User.HasClaim("impersonated", "true"))
         {
             <div class="nav-section">
                 <div class="nav-section-title">Security</div>

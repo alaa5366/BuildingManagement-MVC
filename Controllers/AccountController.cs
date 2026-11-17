@@ -443,11 +443,13 @@ public class AccountController : Controller
         }
         if (!ModelState.IsValid || !await _twoFactor.VerifyAndConsumeAsync(pending.Result.Uid!, vm.Code))
         {
+            _log.LogWarning("Two-factor verification failed for account {Uid}", pending.Result.Uid);
             _throttle.RegisterFailure(throttleKey, ClientIp);
             ViewBag.Error = "The verification code is invalid or has already been used.";
             return View("TwoFactorVerify", vm);
         }
 
+        _log.LogInformation("Two-factor verification succeeded for account {Uid}", pending.Result.Uid);
         HttpContext.Session.Remove("2fa_pending");
         _throttle.Reset(throttleKey);
         await SignInCookieAsync(pending.Result, twoFactorVerified: true);

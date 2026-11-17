@@ -11,6 +11,7 @@
 - [x] Preserve resident and QR resident login behavior.
 - [x] Add settings, setup, challenge, and recovery-code views.
 - [x] Add EF migration and update the model snapshot.
+- [x] Add RFC 6238, replay, recovery-code, session-revalidation, and impersonation enforcement tests.
 - [ ] Local build and full test suite.
 - [ ] TEST-only migration and manual end-to-end validation.
 - [ ] User acceptance.

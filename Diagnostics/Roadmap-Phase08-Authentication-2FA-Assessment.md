@@ -23,6 +23,10 @@
 - Enrollment, verification, recovery-code display, and disable workflows for admins and super-admins.
 - Second-factor challenge integrated with direct admin/super-admin login and unified/multi-context login.
 - Authentication cookie is issued only after successful second-factor verification.
+- Session cookies carry an explicit second-factor proof claim; old administrator sessions are rejected after 2FA enrollment (within the existing two-minute admin validation cache).
+- Super-admin session validation checks active/disabled state and 2FA proof against the database.
+- Original actor 2FA proof is preserved and revalidated across impersonation and nested impersonation restoration.
+- Successful enrollment refreshes the current cookie with verified 2FA proof so the recovery-code page remains accessible.
 - Residents and QR resident quick-login remain unchanged.
 - Sidebar access to two-factor settings.
 - EF migration adds four nullable/defaulted fields to the Users table.
