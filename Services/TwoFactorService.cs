@@ -24,14 +24,24 @@ public sealed class TwoFactorService
         _logger = logger;
     }
 
+    /// <summary>Generates a cryptographically random Base32 secret for an authenticator application.</summary>
     public static string CreateSecret() => TotpAuthenticator.GenerateSecret();
 
+    /// <summary>Creates an otpauth provisioning URI that can be encoded as an authenticator QR code.</summary>
+    /// <param name="secret">The Base32 shared secret.</param>
+    /// <param name="accountName">The account label displayed by the authenticator.</param>
+    /// <param name="issuer">The issuer displayed by the authenticator.</param>
+    /// <returns>The URI used to provision a TOTP authenticator.</returns>
     public static string CreateProvisioningUri(string secret, string accountName, string issuer = "BuildingManagement")
     {
         var label = Uri.EscapeDataString(issuer + ":" + accountName);
         return $"otpauth://totp/{label}?secret={Uri.EscapeDataString(secret)}&issuer={Uri.EscapeDataString(issuer)}&algorithm=SHA1&digits=6&period=30";
     }
 
+    /// <summary>Determines whether an active administrator account has two-factor authentication enabled.</summary>
+    /// <param name="uid">The unique user identifier.</param>
+    /// <param name="cancellationToken">A token used to cancel the database operation.</param>
+    /// <returns><see langword="true"/> when two-factor authentication is enabled; otherwise, <see langword="false"/>.</returns>
     public async Task<bool> IsEnabledAsync(string uid, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(uid)) return false;
@@ -41,6 +51,12 @@ public sealed class TwoFactorService
             cancellationToken);
     }
 
+    /// <summary>Enables two-factor authentication after validating the initial TOTP code and creates one-time recovery codes.</summary>
+    /// <param name="uid">The unique administrator identifier.</param>
+    /// <param name="secret">The Base32 secret generated for the setup session.</param>
+    /// <param name="code">The authenticator code proving possession of the secret.</param>
+    /// <param name="cancellationToken">A token used to cancel the database operation.</param>
+    /// <returns>The plaintext recovery codes to show once, or <see langword="null"/> when setup cannot be completed.</returns>
     public async Task<IReadOnlyList<string>?> EnableAsync(
         string uid, string secret, string code, CancellationToken cancellationToken = default)
     {
@@ -93,6 +109,11 @@ public sealed class TwoFactorService
         return true;
     }
 
+    /// <summary>Disables two-factor authentication after consuming a valid TOTP or recovery code.</summary>
+    /// <param name="uid">The unique administrator identifier.</param>
+    /// <param name="code">A current authenticator code or unused recovery code.</param>
+    /// <param name="cancellationToken">A token used to cancel the database operation.</param>
+    /// <returns><see langword="true"/> when two-factor authentication was disabled; otherwise, <see langword="false"/>.</returns>
     public async Task<bool> DisableAsync(
         string uid, string code, CancellationToken cancellationToken = default)
     {
