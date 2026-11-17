@@ -38,7 +38,6 @@ public class ResidentPollsController : Controller
     /// HTTP GET.
     /// </remarks>
     [HttpGet]
-    [HttpGet]
     public async Task<IActionResult> Index(int page = 1, int pageSize = 50)
     {
         var building = await _buildings.GetByIdAsync(BuildingId);
