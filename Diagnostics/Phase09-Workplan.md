@@ -1,6 +1,6 @@
 # Phase09 – Session Revocation and Impersonation Hardening
 
-**Status:** IN PROGRESS — code review and implementation plan committed  
+**Status:** IMPLEMENTATION IN PROGRESS — first security implementation and focused tests committed; local validation pending  
 **Branch:** `development/phase09-session-revocation-hardening`  
 **Base:** `development/phase08-security-authorization-review`  
 **Database:** No schema or data changes authorized  
@@ -47,6 +47,18 @@ Reduce the time during which a disabled, removed, or de-authorized account can c
 - Database outage follows the documented fail-open/fail-closed boundary.
 - Existing authorization, cookie, anti-forgery, and impersonation tests remain green.
 
+## Implementation delivered so far
+
+- Replaced the unconditional `impersonated=true` bypass with a dedicated validation path.
+- New impersonation principals carry the initiating UID, role, email (when applicable), serialized admin permission snapshot, and target building/apartment.
+- Nested impersonation preserves the original initiating identity and permission snapshot in the protected restoration stack.
+- Admin initiators are rechecked for existence, active status, admin role, current building membership, and an unchanged permission set.
+- Super-admin initiators are rechecked against both the configured email allow-list and an active, enabled `Users` row with matching UID/email/role.
+- Target building and (for resident impersonation) target apartment must still exist.
+- Impersonation validation is cached for at most 30 seconds. It has no last-known-good fallback; database/authority lookup failure rejects the impersonated session.
+- Added focused tests for active admin access, disabled admin, removed building membership, changed permissions, missing actor claims, deleted apartment, and super-admin lifecycle.
+- Existing impersonation cookies issued before these claims were introduced will fail closed and require the user to sign in again; the two-hour session lifetime bounds this compatibility impact.
+
 ## Non-goals
 
 - No distributed session store or multi-instance deployment redesign.
@@ -66,7 +78,7 @@ Reduce the time during which a disabled, removed, or de-authorized account can c
 
 ## Validation record
 
-No implementation or runtime validation has been claimed in this initial planning commit. The next implementation commit must include focused regression tests. User-confirmed local build/test results will be recorded only after they are supplied.
+Implementation and focused regression tests have been committed. The assistant has not run the local .NET build or test suite. User-confirmed local build/test results will be recorded only after they are supplied.
 
 ## Acceptance criteria
 
