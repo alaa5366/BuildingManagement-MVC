@@ -96,6 +96,69 @@ public class ImpersonatedSessionValidationTests
     }
 
     [Fact]
+    public async Task Super_admin_impersonation_requires_allow_list_and_active_database_account()
+    {
+        SqlAuthService.ConfigureSuperAdmins("root@example.test");
+        var (validator, db) = await CreateAsync();
+        await using (db)
+        {
+            db.Users.Add(new UserEntity
+            {
+                Uid = "super-1",
+                Email = "root@example.test",
+                Role = "superadmin",
+                IsActive = true,
+                IsDisabled = false
+            });
+            await db.SaveChangesAsync();
+
+            var principal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, "super-1"),
+                new Claim(ClaimTypes.Role, "admin"),
+                new Claim(ClaimTypes.Email, "root@example.test"),
+                new Claim("impersonated", "true"),
+                new Claim("impersonatedBy", "super-1"),
+                new Claim("impersonationActorUid", "super-1"),
+                new Claim("impersonationActorRole", "superadmin"),
+                new Claim("impersonationActorEmail", "root@example.test"),
+                new Claim("impersonationTargetBuildingId", BuildingId)
+            }, "test"));
+
+            Assert.True((await validator.ValidateAsync(principal)).Valid);
+
+            var super = await db.Users.SingleAsync(u => u.Uid == "super-1");
+            super.IsDisabled = true;
+            await db.SaveChangesAsync();
+
+            // Use a fresh cache to ensure this assertion tests the database state, not the 30-second cache.
+            var options = new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase("superadmin-disabled-" + Guid.NewGuid().ToString("N"))
+                .Options;
+            var factory = new TestDbContextFactory(options);
+            await using (var seed = factory.CreateDbContext())
+            {
+                seed.Buildings.Add(new BuildingEntity { Id = BuildingId, Name = "Test", BuildingNumber = "T-1" });
+                seed.Users.Add(new UserEntity
+                {
+                    Uid = "super-1",
+                    Email = "root@example.test",
+                    Role = "superadmin",
+                    IsActive = true,
+                    IsDisabled = true
+                });
+                await seed.SaveChangesAsync();
+            }
+            var disabledValidator = new SessionRevalidator(
+                new UsersService(new TestUserSqlStore(null), NullLogger<UsersService>.Instance),
+                factory,
+                new MemoryCache(new MemoryCacheOptions()),
+                NullLogger<SessionRevalidator>.Instance);
+            Assert.False((await disabledValidator.ValidateAsync(principal)).Valid);
+        }
+    }
+
+    [Fact]
     public async Task Active_admin_can_keep_resident_impersonation_in_assigned_building()
     {
         var (validator, db) = await CreateAsync();
