@@ -145,6 +145,8 @@ public class ImpersonationController : Controller
             new("originalRole", "superadmin")
         };
 
+        AddImpersonationActorClaims(claims, building.Id, apartmentId: null);
+
         foreach (var p in AdminPermissions.TemplateAdminSuper)
             claims.Add(new Claim("perm", p));
 
@@ -271,10 +273,38 @@ public class ImpersonationController : Controller
             new("impersonatedBy", impersonatedBy)
         };
 
+        AddImpersonationActorClaims(claims, building.Id, apt.Id);
+
         foreach (var p in AdminPermissions.ResidentBasic)
             claims.Add(new Claim("perm", p));
 
         return claims;
+    }
+
+    private void AddImpersonationActorClaims(List<Claim> claims, string buildingId, string? apartmentId)
+    {
+        // Nested impersonation keeps the original initiating identity; it must not
+        // replace it with the synthetic/intermediate principal.
+        var actorUid = User.HasClaim("impersonated", "true")
+            ? User.FindFirst("impersonationActorUid")?.Value
+            : CurrentUid;
+        var actorRole = User.HasClaim("impersonated", "true")
+            ? User.FindFirst("impersonationActorRole")?.Value
+            : CurrentRole;
+        var actorEmail = User.HasClaim("impersonated", "true")
+            ? User.FindFirst("impersonationActorEmail")?.Value
+            : CurrentEmail;
+
+        if (!string.IsNullOrWhiteSpace(actorUid))
+            claims.Add(new Claim("impersonationActorUid", actorUid));
+        if (!string.IsNullOrWhiteSpace(actorRole))
+            claims.Add(new Claim("impersonationActorRole", actorRole));
+        if (!string.IsNullOrWhiteSpace(actorEmail))
+            claims.Add(new Claim("impersonationActorEmail", actorEmail));
+
+        claims.Add(new Claim("impersonationTargetBuildingId", buildingId));
+        if (!string.IsNullOrWhiteSpace(apartmentId))
+            claims.Add(new Claim("impersonationTargetApartmentId", apartmentId));
     }
 
     private List<Claim> BuildBackupClaims(AdminBackupData backup, bool stillImpersonating)
