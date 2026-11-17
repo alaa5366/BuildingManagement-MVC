@@ -35,8 +35,14 @@ public sealed class ApplicationLogQueryService
     private static readonly Regex PhoneNumber = new(
         @"(?<!\w)\+?\d[\d\s().-]{8,}\d(?!\w)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex VersionAssignment = new(
+        @"\b(?:Version|AssemblyVersion|FileVersion)\s*=\s*\d+(?:\.\d+){1,3}",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex IpAddress = new(
-        @"\b(?:\d{1,3}\.){3}\d{1,3}\b",
+        @"(?<![\d.])(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?![\d.])",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex ExceptionStart = new(
+        @"^\s*(?:[A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*)?(?:Exception|Error|Fault)(?:\s*\([^)]*\))?:",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private readonly string _directory;
@@ -139,6 +145,7 @@ public sealed class ApplicationLogQueryService
                 current = parsed;
             }
             else if (current is not null && !string.IsNullOrWhiteSpace(line) &&
+                     (current.Exception.Length > 0 || ExceptionStart.IsMatch(line)) &&
                      current.Exception.Length < MaxExceptionLength)
             {
                 var safe = Redact(line);
@@ -234,13 +241,26 @@ public sealed class ApplicationLogQueryService
     private static string Redact(string? value)
     {
         if (string.IsNullOrEmpty(value)) return "";
-        var safe = ConnectionString.Replace(value, "[REDACTED_CONNECTION_STRING]");
+        var versions = new List<string>();
+        var safe = VersionAssignment.Replace(value, match =>
+        {
+            var marker = $"__BM_VERSION_{versions.Count}__";
+            versions.Add(match.Value);
+            return marker;
+        });
+
+        safe = ConnectionString.Replace(safe, "[REDACTED_CONNECTION_STRING]");
         safe = SecretAssignment.Replace(safe, "$1$2[REDACTED]");
         safe = BearerToken.Replace(safe, "Bearer [REDACTED]");
         safe = JwtToken.Replace(safe, "[REDACTED_TOKEN]");
         safe = EmailAddress.Replace(safe, "[REDACTED_EMAIL]");
         safe = IpAddress.Replace(safe, "[REDACTED_IP]");
-        return PhoneNumber.Replace(safe, "[REDACTED_PHONE]");
+        safe = PhoneNumber.Replace(safe, "[REDACTED_PHONE]");
+
+        for (var i = 0; i < versions.Count; i++)
+            safe = safe.Replace($"__BM_VERSION_{i}__", versions[i], StringComparison.Ordinal);
+
+        return safe;
     }
 
     private static string Limit(string? value, int length) =>
