@@ -77,3 +77,5 @@ Use controlled invalid inputs in TEST only:
 - Verify the same behavior for `residents.manage` and `settings.manage.building`.
 - If session-principal validation throws unexpectedly, the cookie must be rejected rather than continuing with stale claims.
 - Automated regression tests cover the per-admin permission-cache version invalidation.
+- A resident account whose e-mail is also present in `Auth:SuperAdminEmails` must retain the `resident` session role and must not be routed through super-admin session validation.
+- A genuine `superadmin` role and an explicit `originalRole=superadmin` principal must continue to use super-admin validation.
