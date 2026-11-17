@@ -1,6 +1,6 @@
 # Phase08 – Security and Authorization Review
 
-**Status:** Code review and targeted changes committed; awaiting local build/test validation  
+**Status:** ACCEPTED — build and 408 tests passed  
 **Branch:** `development/phase08-security-authorization-review`
 
 ## Scope
@@ -22,10 +22,10 @@ A code-first security review of authorization policy consistency, authentication
 
 The application is deployed as **one instance**. `LoginThrottle` therefore continues to use its process-local cache as the live enforcement authority. Persistence operations are now serialized in the same order as in-memory increments and resets. The SQL copy is restart-recovery state only; it is not distributed enforcement and can lose pending writes if the process stops abruptly.
 
-## Remaining validation
+## Validation completed
 
-1. Pull this branch locally.
-2. Run `dotnet build`.
-3. Run `dotnet test Tests/BuildingManagement.Tests`.
-4. Confirm the new concurrent login-throttle test passes and report the final totals.
-5. No SQL migration or database operation is required for Phase08 changes.
+- `dotnet build`: succeeded.
+- `dotnet test Tests/BuildingManagement.Tests`: 408 passed, 0 failed, 0 skipped.
+- No SQL migration or database operation was required.
+
+Phase08 is accepted and closed.
