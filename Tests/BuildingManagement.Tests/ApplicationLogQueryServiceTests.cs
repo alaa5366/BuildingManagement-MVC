@@ -184,6 +184,41 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
         Assert.Single(result.Items);
     }
 
+    [Fact]
+    public async Task QueryPageAsync_FiltersByComponentTypeUsingExplicitSourceContext()
+    {
+        WriteLog(
+            "2026-11-17 10:00:00.000 +00:00 [ERR] Controller failure {\\"SourceContext\\":\\"BuildingManagementMvc.Controllers.BuildingsController\\"}",
+            "2026-11-17 10:01:00.000 +00:00 [ERR] Service failure {\\"SourceContext\\":\\"BuildingManagementMvc.Services.PresenceService\\"}",
+            "2026-11-17 10:02:00.000 +00:00 [ERR] Database failure {\\"SourceContext\\":\\"Microsoft.EntityFrameworkCore.Database.Command\\"}",
+            "2026-11-17 10:03:00.000 +00:00 [ERR] Unknown source {}");
+
+        var controllers = await CreateService().QueryPageAsync(new ApplicationLogQuery
+        {
+            ComponentType = "Controller"
+        });
+        var services = await CreateService().QueryPageAsync(new ApplicationLogQuery
+        {
+            ComponentType = "Service"
+        });
+        var databases = await CreateService().QueryPageAsync(new ApplicationLogQuery
+        {
+            ComponentType = "Database"
+        });
+        var other = await CreateService().QueryPageAsync(new ApplicationLogQuery
+        {
+            ComponentType = "Other"
+        });
+
+        var controller = Assert.Single(controllers.Items);
+        Assert.Equal("BuildingManagementMvc.Controllers.BuildingsController", controller.SourceContext);
+        Assert.Equal("BuildingsController", controller.ComponentName);
+        Assert.Equal("Controller", controller.ComponentType);
+        Assert.Equal("PresenceService", Assert.Single(services.Items).ComponentName);
+        Assert.Equal("Microsoft.EntityFrameworkCore.Database.Command", Assert.Single(databases.Items).SourceContext);
+        Assert.Equal("Unknown source", Assert.Single(other.Items).Message);
+    }
+
     private ApplicationLogQueryService CreateService() =>
         new(new TestHostEnvironment { ContentRootPath = _root },
             NullLogger<ApplicationLogQueryService>.Instance);
