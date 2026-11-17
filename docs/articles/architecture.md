@@ -40,6 +40,8 @@ than silently overwriting another writer.
 
 ## Main flows
 
+* **Request correlation** — each HTTP request receives a server-generated 32-character correlation ID. It is returned in `X-Correlation-ID`, included in structured logging scope, and attached to audit JSON details for events written during that request. Incoming client correlation headers are ignored.
+
 * **Unified login** – one form for e-mail/phone plus password/PIN. When several accounts match, the user
   chooses one (`ChooseContext`).
 * **Welcome message** – contains a one-time *set your PIN* link (`/Account/SetPin`). PINs are never sent or stored in clear text.
