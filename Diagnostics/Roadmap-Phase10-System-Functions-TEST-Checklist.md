@@ -72,4 +72,8 @@ Use controlled invalid inputs in TEST only:
 - Do not change Production.
 - Do not apply migrations or SQL scripts for this phase.
 - Do not manipulate Production accounts, payments, or backup files.
-- Permission changes in TEST may require a fresh login so the cookie contains the current permission claims.
+- Permission grants/revocations must be reflected on the next authenticated request without requiring logout/login.
+- Verify both directions: grant `cameras.view` and confirm access becomes available; revoke it and confirm the next request returns 403.
+- Verify the same behavior for `residents.manage` and `settings.manage.building`.
+- If session-principal validation throws unexpectedly, the cookie must be rejected rather than continuing with stale claims.
+- Automated regression tests cover the per-admin permission-cache version invalidation.
