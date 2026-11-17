@@ -1,6 +1,6 @@
 # Phase10 – Backup and Restore Security Hardening
 
-**Status:** IMPLEMENTATION IN PROGRESS — assessment completed; implementation and local validation pending  
+**Status:** IMPLEMENTED — local build/test validation pending  
 **Branch:** `development/phase10-backup-restore-security`  
 **Base:** `development/phase09-session-revocation-hardening`  
 **Database:** No schema or data changes authorized  
@@ -57,6 +57,16 @@ Harden the backup restore workflow so the archive reviewed by a super-admin is e
 - Keep Phase09 and earlier accepted branches unchanged.
 - Run the complete .NET build and test suite locally before Phase10 acceptance.
 
+## Implementation delivered
+
+- Added strict archive validation shared by preview and restore.
+- Rejected duplicate entries, path-bearing names, directory entries, unknown files/collections, invalid JSON roots, and malformed row envelopes.
+- Bound each restore session to the SHA-256 digest of the reviewed archive and verify it in fixed time using the same open file handle used for restore.
+- Preserved 20-minute expiry and single-use user binding; added limits of 2 active sessions per user and 10 process-wide, with expired-session cleanup.
+- Sanitized backup create/preview/restore exception responses while retaining server-side diagnostic logging.
+- Added regression tests for duplicate entries, path-bearing entries, malformed row envelopes, archive tampering, and per-user session limits.
+- Updated the security architecture documentation.
+
 ## Validation record
 
-Implementation and user-confirmed local validation will be recorded here. No local build/test or production operation is claimed by the assistant.
+The assistant has not run the local .NET build or test suite. User-confirmed local results are pending. No database or production operation was performed.
