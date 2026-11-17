@@ -16,6 +16,37 @@ public class AppDbContext : DbContext
     /// </summary>
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
+    private void EnsureAuditLogIsAppendOnly()
+    {
+        ChangeTracker.DetectChanges();
+        if (ChangeTracker.Entries<AuditLogEntity>()
+            .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
+        {
+            throw new InvalidOperationException(
+                "Audit log entries are append-only and cannot be updated or deleted by the application.");
+        }
+    }
+
+    /// <summary>
+    /// Saves changes while enforcing append-only audit records.
+    /// </summary>
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        EnsureAuditLogIsAppendOnly();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    /// <summary>
+    /// Saves changes asynchronously while enforcing append-only audit records.
+    /// </summary>
+    public override Task<int> SaveChangesAsync(
+        bool acceptAllChangesOnSuccess,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureAuditLogIsAppendOnly();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
     /// <summary>
     /// Gets the users.
     /// </summary>
@@ -156,6 +187,9 @@ public class AppDbContext : DbContext
         // Keep every FK component aligned with its principal key column.
         // -----------------------------------------------------------------
         mb.Entity<UserEntity>().Property(x => x.Uid).HasMaxLength(128);
+        mb.Entity<UserEntity>().Property(x => x.TwoFactorEnabled).HasDefaultValue(false);
+        mb.Entity<UserEntity>().Property(x => x.TwoFactorSecretEncrypted).HasMaxLength(512);
+        mb.Entity<UserEntity>().Property(x => x.TwoFactorRecoveryCodesJson).HasMaxLength(4000);
 
         mb.Entity<UserPermissionEntity>().Property(x => x.Uid).HasMaxLength(128);
         mb.Entity<UserPermissionEntity>().Property(x => x.Permission).HasMaxLength(60);

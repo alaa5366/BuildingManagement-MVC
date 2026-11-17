@@ -2,6 +2,8 @@
 using BuildingManagementMvc.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System.Diagnostics;
 
 namespace BuildingManagementMvc.Services;
 
@@ -45,9 +47,7 @@ public class AuditLogger : IAuditLogger
                 if (!exists) effectiveBuildingId = null;
             }
 
-            var metadataJson = metadata == null
-                ? null
-                : JsonConvert.SerializeObject(metadata);
+            var metadataJson = SerializeMetadataWithCorrelation(metadata);
 
             int? apartmentNumber = null;
             if (!string.IsNullOrWhiteSpace(effectiveBuildingId) && !string.IsNullOrWhiteSpace(apartmentId))
@@ -183,6 +183,18 @@ public class AuditLogger : IAuditLogger
         Details = e.Details,
         CreatedAt = DateTime.SpecifyKind(e.Ts, DateTimeKind.Utc)
     };
+
+    private static string? SerializeMetadataWithCorrelation(object? metadata)
+    {
+        var correlationId = Activity.Current?.GetTagItem(CorrelationIdMiddleware.ActivityTagName)?.ToString();
+        if (string.IsNullOrWhiteSpace(correlationId))
+            return metadata == null ? null : JsonConvert.SerializeObject(metadata);
+
+        var token = metadata == null ? new JObject() : JToken.FromObject(metadata);
+        var envelope = token as JObject ?? new JObject { ["value"] = token };
+        envelope["correlationId"] = correlationId;
+        return envelope.ToString(Formatting.None);
+    }
 
     private static string Cut(string? s, int max)
     {

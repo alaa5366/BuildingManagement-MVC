@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
 
 namespace BuildingManagementMvc.Services;
 
@@ -23,11 +24,13 @@ namespace BuildingManagementMvc.Services;
 /// </remarks>
 public class BackupService
 {
-    private sealed record RestoreSession(string Path, string UserId, DateTime ExpiresAtUtc);
+    private sealed record RestoreSession(string Path, string UserId, DateTime ExpiresAtUtc, string Sha256);
     private static readonly ConcurrentDictionary<string, RestoreSession> RestoreSessions = new();
+    private static readonly object RestoreSessionsLock = new();
     private static readonly TimeSpan RestoreSessionLifetime = TimeSpan.FromMinutes(20);
+    private const int MaxActiveRestoreSessions = 10;
+    private const int MaxActiveRestoreSessionsPerUser = 2;
     private const long MaxArchiveBytes = 100L * 1024 * 1024;
-    private const long MaxExpandedBytes = 500L * 1024 * 1024;
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly IAuditLogger _audit;
     private readonly ILogger<BackupService> _log;
@@ -461,18 +464,26 @@ By: {userId}
     public async Task<RestoreResult> RestoreSessionAsync(
         string restoreSessionId, List<string> selectedTables, bool overwrite, string userId)
     {
-        if (string.IsNullOrWhiteSpace(restoreSessionId) || !RestoreSessions.TryGetValue(restoreSessionId, out var session))
-            return new RestoreResult { Success = false, Errors = { Loc.T("The_Temporary_File_Does_Not_Exist") } };
-        if (!string.Equals(session.UserId, userId, StringComparison.Ordinal))
-            return new RestoreResult { Success = false, Errors = { Loc.T("The_Temporary_File_Does_Not_Exist") } };
-        if (session.ExpiresAtUtc < DateTime.UtcNow)
+        RestoreSession? consumedSession = null;
+        var nowUtc = DateTime.UtcNow;
+        lock (RestoreSessionsLock)
         {
-            if (RestoreSessions.TryRemove(restoreSessionId, out var expired)) { try { File.Delete(expired.Path); } catch { } }
-            return new RestoreResult { Success = false, Errors = { Loc.T("The_Temporary_File_Does_Not_Exist") } };
+            CleanupExpiredRestoreSessionsUnderLock(nowUtc);
+            if (string.IsNullOrWhiteSpace(restoreSessionId) ||
+                !RestoreSessions.TryGetValue(restoreSessionId, out var session) ||
+                !string.Equals(session.UserId, userId, StringComparison.Ordinal) ||
+                session.ExpiresAtUtc <= nowUtc ||
+                !RestoreSessions.TryRemove(restoreSessionId, out consumedSession))
+            {
+                consumedSession = null;
+            }
         }
-        if (!RestoreSessions.TryRemove(restoreSessionId, out var consumedSession))
+
+        if (consumedSession == null)
             return new RestoreResult { Success = false, Errors = { Loc.T("The_Temporary_File_Does_Not_Exist") } };
-        return await RestoreAsync(consumedSession.Path, selectedTables, overwrite, userId);
+
+        return await RestoreAsyncCore(
+            consumedSession.Path, selectedTables, overwrite, userId, consumedSession.Sha256);
     }
     /// <summary>
     /// يستعيد نسخة احتياطية إلى قاعدة البيانات.
@@ -482,8 +493,12 @@ By: {userId}
     /// <param name="overwrite"></param>
     /// <param name="userId"></param>
     /// <returns>مهمة تُكمل عند انتهاء الاستعادة.</returns>
-    public async Task<RestoreResult> RestoreAsync(
-        string tempFilePath, List<string> selectedTables, bool overwrite, string userId)
+    public Task<RestoreResult> RestoreAsync(
+        string tempFilePath, List<string> selectedTables, bool overwrite, string userId) =>
+        RestoreAsyncCore(tempFilePath, selectedTables, overwrite, userId, expectedSha256: null);
+
+    private async Task<RestoreResult> RestoreAsyncCore(
+        string tempFilePath, List<string> selectedTables, bool overwrite, string userId, string? expectedSha256)
     {
         var sw = Stopwatch.StartNew();
         var result = new RestoreResult();
@@ -548,7 +563,21 @@ By: {userId}
 
         try
         {
-            using var zip = ZipFile.OpenRead(tempFilePath);
+            // Keep one read handle from digest verification through ZIP processing to avoid
+            // a preview/restore time-of-check-to-time-of-use replacement window.
+            await using var archiveStream = new FileStream(
+                tempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            if (expectedSha256 != null)
+            {
+                var expectedHash = Convert.FromHexString(expectedSha256);
+                var actualHash = await SHA256.HashDataAsync(archiveStream);
+                if (!CryptographicOperations.FixedTimeEquals(expectedHash, actualHash))
+                    throw new InvalidDataException("The reviewed restore archive has changed.");
+                archiveStream.Position = 0;
+            }
+
+            using var zip = new ZipArchive(archiveStream, ZipArchiveMode.Read, leaveOpen: true);
+            _ = await BackupArchiveValidator.ValidateAsync(zip);
 
             await using var db = await _sqlFactory.CreateDbContextAsync();
 
@@ -602,7 +631,8 @@ By: {userId}
                             }
                             catch (Exception ex)
                             {
-                                result.Errors.Add($"{tableName}/{id}: {ex.Message}");
+                                _log.LogWarning(ex, "Backup restore row failed in collection {Collection}", tableName);
+                                result.Errors.Add($"A record in '{tableName}' could not be restored.");
                                 skipped++;
                             }
                         }
@@ -621,8 +651,9 @@ By: {userId}
                     catch (Exception ex)
                     {
                         // فشل الجدول كله → rollback ورمي الخطأ
-                        result.Errors.Add($"{tableName}: {ex.Message}");
-                        throw;
+                        _log.LogError(ex, "Backup restore collection failed: {Collection}", tableName);
+                        result.Errors.Add($"Collection '{tableName}' could not be restored.");
+                        throw new InvalidDataException("A backup collection could not be restored.");
                     }
                 }
 
@@ -654,8 +685,9 @@ By: {userId}
         }
         catch (Exception ex)
         {
+            _log.LogError(ex, "Backup restore failed for user {UserId}", userId);
             result.Success = false;
-            result.Errors.Add(ex.Message);
+            result.Errors.Add("The restore could not be completed. Please contact an administrator.");
         }
         finally
         {
@@ -1249,11 +1281,10 @@ By: {userId}
     /// Previews the restore.
     /// </summary>
     /// <remarks>
-    /// The uploaded stream is first copied into a temporary file, then decrypted via
-    /// <see cref="BackupFileProtector.Unprotect"/>, then opened as a ZIP. Every JSON entry
-    /// whose name matches a known collection is counted and added to the preview. The
-    /// An opaque, single-use session identifier is returned so the browser never receives
-    /// the server-side temporary file path.
+    /// The uploaded stream is size-limited, decrypted, and validated as a ZIP using the
+    /// shared strict archive validator. A bounded, user-bound, single-use session stores
+    /// the archive digest so the exact reviewed bytes are required at restore time. The
+    /// browser never receives the server-side temporary file path.
     /// </remarks>
     /// <param name="zipStream">The uploaded ZIP stream (may be encrypted).</param>
     /// <param name="fileName">The original file name (shown in the preview).</param>
@@ -1261,15 +1292,17 @@ By: {userId}
     /// <returns>A <see cref="RestorePreview"/> describing the collections inside the archive.</returns>
     public async Task<RestorePreview> PreviewRestoreAsync(Stream zipStream, string fileName, string userId)
     {
-        var result = new RestorePreview { FileName = fileName };
+        var result = new RestorePreview { FileName = Path.GetFileName(fileName ?? string.Empty) };
         string? localsTempPath = null;
 
         try
         {
-            var tempPath = Path.Combine(Path.GetTempPath(), $"restore-{Guid.NewGuid():N}.zip");
-            localsTempPath = tempPath;
+            if (string.IsNullOrWhiteSpace(userId))
+                throw new InvalidDataException("A valid restore user is required.");
 
-            // 1. Read with a hard compressed-size limit to avoid unbounded memory use.
+            CleanupExpiredRestoreSessions(DateTime.UtcNow);
+
+            // Read with a hard compressed-size limit before decryption.
             using var ms = new MemoryStream();
             var buffer = new byte[81920];
             int read;
@@ -1279,78 +1312,83 @@ By: {userId}
                     throw new InvalidDataException("Backup archive exceeds the maximum allowed size.");
                 await ms.WriteAsync(buffer.AsMemory(0, read));
             }
+
             var fileBytes = ms.ToArray();
-
-            // 2. فك التشفير لو الملف مشفر
             var decryptedBytes = BackupFileProtector.Unprotect(fileBytes);
-            if (decryptedBytes.LongLength > MaxArchiveBytes)
-                throw new InvalidDataException("Decrypted backup exceeds the maximum allowed size.");
+            if (decryptedBytes.LongLength == 0 || decryptedBytes.LongLength > MaxArchiveBytes)
+                throw new InvalidDataException("Decrypted backup has an invalid size.");
 
-            // 3. Write the validated archive to a private, unpredictable temporary path.
+            var tempPath = Path.Combine(Path.GetTempPath(), $"restore-{Guid.NewGuid():N}.zip");
+            localsTempPath = tempPath;
             await File.WriteAllBytesAsync(tempPath, decryptedBytes);
-            result.TempFilePath = tempPath; // retained for internal tests; the MVC view posts only RestoreSessionId
-            result.FileSize = decryptedBytes.Length;
+            result.TempFilePath = tempPath;
+            result.FileSize = decryptedBytes.LongLength;
 
-            // 4. Validate archive shape and expanded size before reading JSON payloads.
-            using var zip = ZipFile.OpenRead(tempPath);
-            if (zip.Entries.Count > 100 || zip.Entries.Sum(e => e.Length) > MaxExpandedBytes)
-                throw new InvalidDataException("Backup archive contains too many or oversized entries.");
-            foreach (var entry in zip.Entries)
+            using (var zip = ZipFile.OpenRead(tempPath))
             {
-                if (entry.Length > MaxArchiveBytes)
-                    throw new InvalidDataException($"Archive entry '{entry.Name}' is too large.");
-                if (!entry.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ||
-                    !string.Equals(entry.FullName, entry.Name, StringComparison.Ordinal)) continue;
-                var tableName = Path.GetFileNameWithoutExtension(entry.Name);
-                if (!KnownTables.ContainsKey(tableName)) continue;
-
-                using var stream = entry.Open();
-                using var reader = new StreamReader(stream);
-                var json = await reader.ReadToEndAsync();
-
-                try
-                {
-                    var docs = JsonSerializer.Deserialize<List<Dictionary<string, JsonElement>>>(json);
-                    result.Collections.Add(new RestoreCollectionPreview
-                    {
-                        Collection = tableName,
-                        LabelAr = KnownTables[tableName],
-                        DocCount = docs?.Count ?? 0,
-                        SizeBytes = entry.Length,
-                        Selected = true
-                    });
-                }
-                catch (Exception ex)
-                {
-                    // ملف JSON تالف → يتسجل وميكملش
-                    result.Errors.Add($"{tableName}: {ex.Message}");
-                }
+                var previews = await BackupArchiveValidator.ValidateAsync(zip);
+                result.Collections.AddRange(previews);
             }
 
-            result.Success = result.Collections.Count > 0 && result.Errors.Count == 0;
-            if (result.Success)
-            {
-                // The browser receives only an opaque, single-use session id, never a server path.
-                foreach (var expired in RestoreSessions.Where(x => x.Value.ExpiresAtUtc <= DateTime.UtcNow).ToArray())
-                {
-                    if (RestoreSessions.TryRemove(expired.Key, out var stale)) { try { File.Delete(stale.Path); } catch { } }
-                }
-                var sessionId = Guid.NewGuid().ToString("N");
-                RestoreSessions[sessionId] = new RestoreSession(tempPath, userId, DateTime.UtcNow.Add(RestoreSessionLifetime));
-                result.RestoreSessionId = sessionId;
-            }
-            else
-            {
-                try { File.Delete(tempPath); } catch { }
-            }
+            var sessionId = Guid.NewGuid().ToString("N");
+            var digest = Convert.ToHexString(SHA256.HashData(decryptedBytes));
+            var session = new RestoreSession(
+                tempPath, userId, DateTime.UtcNow.Add(RestoreSessionLifetime), digest);
+
+            if (!TryAddRestoreSession(sessionId, session))
+                throw new InvalidOperationException("The active restore-session limit has been reached.");
+
+            result.RestoreSessionId = sessionId;
+            result.Success = true;
         }
         catch (Exception ex)
         {
-            result.Errors.Add(ex.Message);
-            if (result.RestoreSessionId == null && localsTempPath != null) { try { File.Delete(localsTempPath); } catch { } }
+            _log.LogWarning(ex, "Backup restore preview rejected for user {UserId}", userId);
+            result.Success = false;
+            result.Collections.Clear();
+            result.Errors.Add(Loc.T("The_Data_Is_Corrupted_Upload_The"));
+            if (result.RestoreSessionId == null && localsTempPath != null)
+            {
+                try { File.Delete(localsTempPath); } catch { }
+            }
         }
 
         return result;
+    }
+
+    private static bool TryAddRestoreSession(string sessionId, RestoreSession session)
+    {
+        lock (RestoreSessionsLock)
+        {
+            CleanupExpiredRestoreSessionsUnderLock(DateTime.UtcNow);
+            if (RestoreSessions.Count >= MaxActiveRestoreSessions ||
+                RestoreSessions.Values.Count(x => string.Equals(x.UserId, session.UserId, StringComparison.Ordinal)) >= MaxActiveRestoreSessionsPerUser)
+            {
+                return false;
+            }
+
+            return RestoreSessions.TryAdd(sessionId, session);
+        }
+    }
+
+    private static void CleanupExpiredRestoreSessions(DateTime nowUtc)
+    {
+        lock (RestoreSessionsLock)
+            CleanupExpiredRestoreSessionsUnderLock(nowUtc);
+    }
+
+    private static void CleanupExpiredRestoreSessionsUnderLock(DateTime nowUtc)
+    {
+        foreach (var item in RestoreSessions.ToArray())
+        {
+            if (item.Value.ExpiresAtUtc > nowUtc)
+                continue;
+
+            if (RestoreSessions.TryRemove(item.Key, out var expired))
+            {
+                try { File.Delete(expired.Path); } catch { }
+            }
+        }
     }
 
     /// <summary>

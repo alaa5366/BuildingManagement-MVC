@@ -29,9 +29,14 @@ This page records the decisions behind the security code so they survive comment
 
 ## Backup restore
 
-* A restore only accepts the temporary file created by the preview step (`restore-<32 hex digits>.zip` directly in the temp folder). Any other path is rejected and the file is not touched, so the form field cannot be used to read or delete arbitrary files.
+* A restore only accepts the temporary file created by the preview step (`restore-<32 hex digits>.zip` directly in the temp folder). Any other path is rejected.
+* The browser receives only an opaque restore-session ID. The session is bound to the previewing user, expires after 20 minutes, is single-use, and is limited to 2 active sessions per user / 10 process-wide.
+* The server stores a SHA-256 digest of the reviewed archive. Restore verifies it in fixed time while holding the same read handle used to process the ZIP, so replacing the temporary file after preview is rejected.
+* ZIP validation rejects duplicate entries, directories and path-bearing names, unknown files/collections, oversized archives (including actual decompressed bytes read, not only ZIP metadata), and JSON rows that do not contain a non-empty string `id` and object `data`. The accepted format remains the application's root-level `README.md` and known `<collection>.json` files.
 * Tables are restored parents first and saved table by table inside one database transaction. If anything fails, the whole restore is rolled back.
 * "Overwrite" updates existing rows in place. It never deletes rows first, because the database cascades deletes to child rows (floors, apartments, expenses, deposits...) that may not be part of the restore.
+* Detailed exceptions are written to server logs; browser responses use generic restore errors.
+* Scheduled-backup settings are validated server-side (frequency/day/hour, known collections, and retention 1–30); rotation clamps retention defensively so invalid stored values cannot purge every scheduled backup.
 * Identity columns (audit log, deposit edit history) get new values on restore; the audit log is append-only.
 * Restoring an old backup that still holds plain-text PINs: the startup migration hashes them at the next start, so those users can sign in again after a restart.
 
@@ -56,3 +61,15 @@ Every controller action must have `[Authorize]` or `[AllowAnonymous]`. `Controll
 3. Run `dotnet libman restore` (or Restore Client-Side Libraries in Visual Studio) so `wwwroot/lib` contains video.js, Chart.js and Bootstrap Icons.
 4. Run `dotnet test Tests/BuildingManagement.Tests`.
 5. Publish, then check: sign-in (resident, admin, super admin), a welcome message with its set-PIN link, a receipt upload, a backup download and restore, the live cameras page and the reports page.
+
+
+## Administrator two-factor authentication
+
+* Admin and super-admin accounts can opt in to TOTP-based two-factor authentication from **Account → Two-factor authentication**. Resident sign-in is unchanged.
+* Enrollment requires a current authenticator code before the setting is enabled. The TOTP secret is encrypted using the existing `Encryption:SecretKey`; the plaintext secret is never stored in the database.
+* Ten one-time recovery codes are generated at enrollment and displayed once. Only SHA-256 hashes are stored. Each recovery code is consumed on successful use.
+* TOTP uses RFC 6238, six digits, a 30-second period, and a ±1 time-step clock-skew window. An accepted time-step cannot be replayed.
+* When enabled, admin/super-admin sign-in does not issue the authentication cookie until the second factor succeeds. The pending sign-in is server-side session state with a five-minute expiry. The challenge is rate limited and protected by anti-forgery validation.
+* Administrator sessions carry an explicit second-factor verification claim. Session revalidation rejects pre-enrollment cookies after the database reports 2FA enabled (within the existing two-minute admin revalidation cache); super-admin checks are performed against the database on cookie validation. The original actor's verification state is preserved and rechecked during impersonation and restoration.
+* Two-factor authentication is opt-in in this release to avoid locking out existing administrators before a managed enrollment rollout. A mandatory policy must be explicitly approved and communicated before deployment.
+* The migration `20261117130000_AddUserTwoFactor` adds the required columns to `Users`. Apply it to TEST and validate before any production planning; no production database was changed by this branch.

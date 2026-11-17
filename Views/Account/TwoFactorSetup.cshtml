@@ -1,0 +1,15 @@
+@model TwoFactorVerifyVm
+@{ ViewData["Title"] = "Set up two-factor authentication"; }
+<div class="container py-4" style="max-width:680px">
+ <h2>Set up authenticator app</h2>
+ <ol><li>Open an authenticator app (for example, Microsoft Authenticator or Google Authenticator).</li><li>Scan this QR code, or enter the setup key manually.</li><li>Enter the current six-digit code to confirm setup.</li></ol>
+ <div class="text-center my-3"><img src="@ViewBag.QrDataUri" alt="Authenticator setup QR code" style="max-width:240px;width:100%" /></div>
+ <p><strong>Manual setup key:</strong></p><code class="user-select-all">@ViewBag.Secret</code>
+ @if(ViewBag.Error != null){<div class="alert alert-danger mt-3">@ViewBag.Error</div>}
+ <form asp-action="EnableTwoFactor" method="post" class="mt-4">
+  @Html.AntiForgeryToken()
+  <label class="form-label">Six-digit verification code</label>
+  <input asp-for="Code" class="form-control" required autocomplete="one-time-code" inputmode="numeric" />
+  <button class="btn btn-primary mt-3" type="submit">Confirm and enable</button>
+ </form>
+</div>

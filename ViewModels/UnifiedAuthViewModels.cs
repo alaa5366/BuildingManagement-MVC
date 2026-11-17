@@ -22,6 +22,9 @@ public class UnifiedLoginVm
     [Required(ErrorMessage = "Validation_CredentialRequired")]
     [DataType(DataType.Password)]
     public string Credential { get; set; } = "";
+
+    /// <summary>Authenticator TOTP or one-time recovery code for the pending second-factor step.</summary>
+    public string TwoFactorCode { get; set; } = "";
 }
 
 // ============================================================

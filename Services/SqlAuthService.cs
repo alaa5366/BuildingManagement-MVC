@@ -256,6 +256,11 @@ public class SqlAuthService
             return AuthResult.Fail("wrong-credentials");
         }
 
+        if (superAdmin.IsDisabled)
+            return AuthResult.Fail("account-disabled", superAdmin.DisabledReason);
+        if (!superAdmin.IsActive)
+            return AuthResult.Fail("account-inactive");
+
         _log.LogDebug("[SqlAuth] SuperAdmin sign-in succeeded");
 
         return AuthResult.Ok(

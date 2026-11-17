@@ -1,0 +1,146 @@
+using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Data.Entities;
+using BuildingManagementMvc.Services;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using Xunit;
+
+namespace BuildingManagement.Tests;
+
+public sealed class TotpAuthenticatorTests
+{
+    [Fact]
+    public void Rfc6238_sha1_vector_matches_six_digit_code()
+    {
+        var secret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
+        var timestamp = DateTimeOffset.FromUnixTimeSeconds(59);
+        Assert.Equal("287082", TotpAuthenticator.GenerateCode(secret, timestamp));
+    }
+
+    [Fact]
+    public void Base32_secret_round_trips()
+    {
+        var bytes = Enumerable.Range(0, 20).Select(i => (byte)i).ToArray();
+        Assert.Equal(bytes, TotpAuthenticator.DecodeBase32(TotpAuthenticator.EncodeBase32(bytes)));
+    }
+
+    [Fact]
+    public void Verification_accepts_current_window_and_rejects_malformed_codes()
+    {
+        var secret = TotpAuthenticator.GenerateSecret();
+        var now = DateTimeOffset.FromUnixTimeSeconds(1_700_000_000);
+        var code = TotpAuthenticator.GenerateCode(secret, now);
+        Assert.True(TotpAuthenticator.TryVerify(secret, code, now, out var step));
+        Assert.Equal(now.ToUnixTimeSeconds() / 30, step);
+        Assert.False(TotpAuthenticator.TryVerify(secret, "12AB56", now, out _));
+        Assert.False(TotpAuthenticator.TryVerify(secret, "12345", now, out _));
+    }
+}
+
+public sealed class TwoFactorServiceTests
+{
+    private sealed class TestFactory : IDbContextFactory<AppDbContext>
+    {
+        private readonly DbContextOptions<AppDbContext> _options;
+        public TestFactory(string name) => _options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(name).Options;
+        public AppDbContext CreateDbContext() => new(_options);
+        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(CreateDbContext());
+    }
+
+    private sealed class TestEncryption : IEncryptionService
+    {
+        public string Encrypt(string plain) => "test:" + plain;
+        public string Decrypt(string cipher) => cipher.StartsWith("test:", StringComparison.Ordinal)
+            ? cipher[5..] : throw new InvalidOperationException("Invalid test ciphertext.");
+    }
+
+    private static async Task<(TwoFactorService Service, TestFactory Factory)> CreateAsync()
+    {
+        var factory = new TestFactory(Guid.NewGuid().ToString("N"));
+        await using (var db = factory.CreateDbContext())
+        {
+            db.Users.Add(new UserEntity { Uid = "admin-1", Role = "admin", Email = "admin@example.test" });
+            await db.SaveChangesAsync();
+        }
+        var service = new TwoFactorService(factory, new TestEncryption(), NullLogger<TwoFactorService>.Instance);
+        return (service, factory);
+    }
+
+    [Fact]
+    public async Task Enrollment_encrypts_secret_and_stores_only_recovery_hashes()
+    {
+        var (service, factory) = await CreateAsync();
+        var secret = TwoFactorService.CreateSecret();
+        var code = TotpAuthenticator.GenerateCode(secret, DateTimeOffset.UtcNow);
+        var recovery = await service.EnableAsync("admin-1", secret, code);
+
+        Assert.NotNull(recovery);
+        Assert.Equal(10, recovery!.Count);
+        Assert.True(await service.IsEnabledAsync("admin-1"));
+        await using var db = factory.CreateDbContext();
+        var user = await db.Users.SingleAsync(x => x.Uid == "admin-1");
+        Assert.StartsWith("test:", user.TwoFactorSecretEncrypted);
+        Assert.DoesNotContain(recovery[0], user.TwoFactorRecoveryCodesJson);
+    }
+
+    [Fact]
+    public async Task TOTP_code_used_for_enrollment_cannot_be_replayed()
+    {
+        var (service, _) = await CreateAsync();
+        var secret = TwoFactorService.CreateSecret();
+        var code = TotpAuthenticator.GenerateCode(secret, DateTimeOffset.UtcNow);
+        Assert.NotNull(await service.EnableAsync("admin-1", secret, code));
+        Assert.False(await service.VerifyAndConsumeAsync("admin-1", code));
+    }
+
+    [Fact]
+    public async Task Recovery_code_is_consumed_once()
+    {
+        var (service, _) = await CreateAsync();
+        var secret = TwoFactorService.CreateSecret();
+        var code = TotpAuthenticator.GenerateCode(secret, DateTimeOffset.UtcNow);
+        var recovery = await service.EnableAsync("admin-1", secret, code);
+        Assert.NotNull(recovery);
+        Assert.True(await service.VerifyAndConsumeAsync("admin-1", recovery![0]));
+        Assert.False(await service.VerifyAndConsumeAsync("admin-1", recovery[0]));
+    }
+
+
+    [Fact]
+    public async Task Recovery_code_can_disable_2FA_if_encrypted_secret_is_unreadable()
+    {
+        var (service, factory) = await CreateAsync();
+        var secret = TwoFactorService.CreateSecret();
+        var code = TotpAuthenticator.GenerateCode(secret, DateTimeOffset.UtcNow);
+        var recovery = await service.EnableAsync("admin-1", secret, code);
+        Assert.NotNull(recovery);
+
+        await using (var db = factory.CreateDbContext())
+        {
+            var user = await db.Users.SingleAsync(x => x.Uid == "admin-1");
+            user.TwoFactorSecretEncrypted = "damaged-ciphertext";
+            await db.SaveChangesAsync();
+        }
+
+        Assert.True(await service.DisableAsync("admin-1", recovery![0]));
+        Assert.False(await service.IsEnabledAsync("admin-1"));
+    }
+
+    [Fact]
+    public async Task Disable_requires_second_factor_and_clears_secret()
+    {
+        var (service, factory) = await CreateAsync();
+        var secret = TwoFactorService.CreateSecret();
+        var code = TotpAuthenticator.GenerateCode(secret, DateTimeOffset.UtcNow);
+        var recovery = await service.EnableAsync("admin-1", secret, code);
+        Assert.NotNull(recovery);
+        Assert.True(await service.DisableAsync("admin-1", recovery![0]));
+        Assert.False(await service.IsEnabledAsync("admin-1"));
+        await using var db = factory.CreateDbContext();
+        var user = await db.Users.SingleAsync(x => x.Uid == "admin-1");
+        Assert.Null(user.TwoFactorSecretEncrypted);
+        Assert.Null(user.TwoFactorRecoveryCodesJson);
+    }
+}

@@ -161,6 +161,7 @@ try
     builder.Services.AddSingleton<QrSecurityService>();
     builder.Services.AddSingleton<QrAuthService>();
     builder.Services.AddSingleton<LoginThrottle>();
+    builder.Services.AddSingleton<TwoFactorService>();
     builder.Services.AddSingleton<SessionRevalidator>();
     builder.Services.AddSingleton<QrCodePdfService>();
     builder.Services.AddSingleton<QrGeneratorService>();
@@ -414,6 +415,7 @@ try
     // Middleware
     // ============================================================
     app.UseForwardedHeaders();
+    app.UseMiddleware<CorrelationIdMiddleware>();
 
     // ✅ Serilog request logging (بعد ForwardedHeaders، قبل الاستثناءات)
     app.UseSerilogRequestLogging(options =>
@@ -427,6 +429,7 @@ try
         };
         options.EnrichDiagnosticContext = (diag, ctx) =>
         {
+            diag.Set("CorrelationId", ctx.TraceIdentifier);
             diag.Set("RequestHost", ctx.Request.Host.Value ?? "");
             diag.Set("RequestScheme", ctx.Request.Scheme);
             diag.Set("RemoteIp", ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown");
