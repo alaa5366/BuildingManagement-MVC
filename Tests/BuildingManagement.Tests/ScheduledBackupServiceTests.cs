@@ -53,6 +53,34 @@ public class ScheduledBackupServiceTests
     }
 
     [Fact]
+    public async Task SaveSettingsAsync_InvalidFrequency_IsRejected()
+    {
+        var settings = new ScheduledBackupSettings { Frequency = "hourly" };
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.SaveSettingsAsync(settings, "admin"));
+    }
+
+    [Theory]
+    [InlineData("weekly", -1, null)]
+    [InlineData("weekly", 7, null)]
+    [InlineData("monthly", null, 0)]
+    [InlineData("monthly", null, 32)]
+    public async Task SaveSettingsAsync_InvalidScheduleDay_IsRejected(
+        string frequency, int? dayOfWeek, int? dayOfMonth)
+    {
+        var settings = new ScheduledBackupSettings
+        {
+            Frequency = frequency,
+            DayOfWeek = dayOfWeek,
+            DayOfMonth = dayOfMonth
+        };
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => _service.SaveSettingsAsync(settings, "admin"));
+    }
+
+    [Fact]
     public async Task SaveSettingsAsync_UnknownCollection_IsRejected()
     {
         var settings = new ScheduledBackupSettings
