@@ -19,7 +19,10 @@ public sealed class ApplicationLogQueryService
         @"^(?<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} [+-]\d{2}:\d{2}) \[(?<level>[A-Z]{3})\] (?<body>.*)$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex SecretAssignment = new(
-        @"(?i)\b(password|passwd|pwd|token|access_token|refresh_token|client_secret|api[_-]?key|authorization|cookie|set-cookie|secret)\b(\s*[:=]\s*)(""[^""]*""|'[^']*'|[^\s,;]+)",
+        @"(?i)[""']?(password|passwd|pwd|token|access_token|refresh_token|client_secret|api[_-]?key|authorization|cookie|set-cookie|secret)[""']?(\s*[:=]\s*)(""[^""]*""|'[^']*'|[^\s,;]+)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex ConnectionString = new(
+        @"(?i)\b(server|data source)\s*=\s*[^;\r\n]+(?:;[^;\r\n]*)*",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex BearerToken = new(
         @"(?i)\bBearer\s+[A-Za-z0-9._~+/-]+=*", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -96,6 +99,7 @@ public sealed class ApplicationLogQueryService
             }
         }
 
+        var effectivePage = Math.Min(page, Math.Max(1, (int)Math.Ceiling(total / (double)pageSize)));
         var ordered = new List<ApplicationLogEntry>(retained.Count);
         while (retained.TryDequeue(out var entry, out _))
             ordered.Add(entry);
@@ -103,8 +107,8 @@ public sealed class ApplicationLogQueryService
 
         return new PagedResult<ApplicationLogEntry>
         {
-            Items = ordered.Skip((page - 1) * pageSize).Take(pageSize).ToList(),
-            CurrentPage = page,
+            Items = ordered.Skip((effectivePage - 1) * pageSize).Take(pageSize).ToList(),
+            CurrentPage = effectivePage,
             PageSize = pageSize,
             TotalItems = total
         };
@@ -223,7 +227,8 @@ public sealed class ApplicationLogQueryService
     private static string Redact(string? value)
     {
         if (string.IsNullOrEmpty(value)) return "";
-        var safe = SecretAssignment.Replace(value, "$1$2[REDACTED]");
+        var safe = ConnectionString.Replace(value, "[REDACTED_CONNECTION_STRING]");
+        safe = SecretAssignment.Replace(safe, "$1$2[REDACTED]");
         safe = BearerToken.Replace(safe, "Bearer [REDACTED]");
         safe = JwtToken.Replace(safe, "[REDACTED_TOKEN]");
         safe = EmailAddress.Replace(safe, "[REDACTED_EMAIL]");
@@ -236,7 +241,7 @@ public sealed class ApplicationLogQueryService
     private static DateTime SafeLastWriteTime(string path)
     {
         try { return File.GetLastWriteTimeUtc(path); }
-        catch (IOException) { return DateTime.MinValue; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return DateTime.MinValue; }
     }
 
     private static PagedResult<ApplicationLogEntry> Empty(int page, int size) =>

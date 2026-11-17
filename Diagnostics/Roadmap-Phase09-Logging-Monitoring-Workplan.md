@@ -31,3 +31,21 @@
 ## Validation record
 
 The assistant has not executed the user's local .NET build or test suite. Record user-confirmed results here only after they are supplied.
+
+
+## Phase 09.1 — Application Logs Explorer
+
+**Branch:** `development/phase09-1-application-logs-explorer`
+**Status:** Implementation committed; local build, focused tests, and UI validation pending.
+
+- Added a separate Application Logs Explorer; it does not replace or mix with the business Audit Trail.
+- Reads only the fixed `logs/serilog/serilog-*.txt` pattern, top-level files, and the latest 14 retained files. Request input is never used to construct a file path.
+- Streams log files with shared read access so the active rolling file can be inspected while the application is running.
+- Supports server-side date, level, message, source-context, correlation-ID, and exception filters with bounded pagination.
+- Limits page size to 100 and the reachable page window to 100 pages; the reader retains only the requested page window in memory.
+- Redacts common secret assignments, bearer/JWT tokens, connection strings, email addresses, and phone-like values before display.
+- Truncates messages and exception continuation text; exposes no absolute file paths.
+- Access is restricted to SuperAdmin and Admin accounts explicitly granted `system.logs.view`. The permission is visible in the permission catalog but is not automatically added to standard Admin templates.
+- No database schema, migrations, external packages, retention-policy changes, log exports, or Production settings changes.
+
+**Validation still required:** run the new focused `ApplicationLogQueryServiceTests`, build the MVC project, run the full test suite, and verify SuperAdmin access / Admin permission granted and denied in the local TEST environment. Existing Phase09 smoke checks are not being repeated.

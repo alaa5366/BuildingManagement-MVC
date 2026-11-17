@@ -79,10 +79,10 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
             Page = int.MaxValue, PageSize = int.MaxValue
         });
 
-        Assert.Equal(100, result.CurrentPage);
+        Assert.Equal(1, result.CurrentPage);
         Assert.Equal(100, result.PageSize);
         Assert.Equal(1, result.TotalItems);
-        Assert.Empty(result.Items);
+        Assert.Single(result.Items);
     }
 
     private ApplicationLogQueryService CreateService() =>
