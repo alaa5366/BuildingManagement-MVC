@@ -1,0 +1,147 @@
+@model BuildingManagementMvc.ViewModels.ApplicationLogsViewModel
+@{
+    ViewData["Title"] = Loc.T("Application_Logs");
+    var result = Model.Results;
+    var query = Model.Query;
+    var fromValue = query.FromUtc?.ToString("yyyy-MM-dd") ?? "";
+    var toValue = query.ToUtc?.ToString("yyyy-MM-dd") ?? "";
+    var levels = new[] { "Verbose", "Debug", "Information", "Warning", "Error", "Fatal" };
+}
+<div class="container-fluid">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-file-earmark-text me-2"></i>@Loc.T("Application_Logs")</h2>
+            <div class="text-muted small">@Loc.T("Application_Logs_Description")</div>
+        </div>
+        <span class="badge bg-secondary">@result.TotalItems.ToString("N0") @Loc.T("Events")</span>
+    </div>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-warning">@Loc.T("Invalid_Date_Range")</div>
+    }
+
+    <form method="get" asp-controller="ApplicationLogs" asp-action="Index" class="card card-body mb-4">
+        <div class="row g-3">
+            <div class="col-12 col-md-4 col-xl-3">
+                <label class="form-label" for="search">@Loc.T("Search")</label>
+                <input class="form-control" id="search" name="search" value="@query.Search" maxlength="200" />
+            </div>
+            <div class="col-12 col-md-4 col-xl-3">
+                <label class="form-label" for="correlationId">@Loc.T("Correlation_ID")</label>
+                <input class="form-control font-monospace" id="correlationId" name="correlationId" value="@query.CorrelationId" maxlength="100" />
+            </div>
+            <div class="col-12 col-md-4 col-xl-3">
+                <label class="form-label" for="source">@Loc.T("Source_Context")</label>
+                <input class="form-control" id="source" name="source" value="@query.Source" maxlength="200" />
+            </div>
+            <div class="col-12 col-md-4 col-xl-3">
+                <label class="form-label" for="level">@Loc.T("Level")</label>
+                <select class="form-select" id="level" name="level">
+                    <option value="">@Loc.T("All_Levels")</option>
+                    @foreach (var item in levels)
+                    {
+                        <option value="@item" selected="@(string.Equals(query.Level, item, StringComparison.OrdinalIgnoreCase))">@item</option>
+                    }
+                </select>
+            </div>
+            <div class="col-6 col-md-3 col-xl-2">
+                <label class="form-label" for="from">@Loc.T("From_Date_UTC")</label>
+                <input class="form-control" type="date" id="from" name="from" value="@fromValue" />
+            </div>
+            <div class="col-6 col-md-3 col-xl-2">
+                <label class="form-label" for="to">@Loc.T("To_Date_UTC")</label>
+                <input class="form-control" type="date" id="to" name="to" value="@toValue" />
+            </div>
+            <div class="col-12 col-md-3 col-xl-3">
+                <label class="form-label" for="hasException">@Loc.T("Exception")</label>
+                <select class="form-select" id="hasException" name="hasException">
+                    <option value="">@Loc.T("All_Events")</option>
+                    <option value="true" selected="@(query.HasException == true)">@Loc.T("With_Exception")</option>
+                    <option value="false" selected="@(query.HasException == false)">@Loc.T("Without_Exception")</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-3 col-xl-2 d-flex align-items-end gap-2">
+                <input type="hidden" name="pageSize" value="@result.PageSize" />
+                <button type="submit" class="btn btn-primary flex-grow-1"><i class="bi bi-search me-1"></i>@Loc.T("Search")</button>
+                <a asp-controller="ApplicationLogs" asp-action="Index" class="btn btn-outline-secondary" title="@Loc.T("Reset")"><i class="bi bi-arrow-counterclockwise"></i></a>
+            </div>
+        </div>
+        <div class="small text-muted mt-3">@Loc.T("Log_Dates_Are_UTC_And_Redacted")</div>
+    </form>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-nowrap">@Loc.T("Date") (UTC)</th>
+                        <th>@Loc.T("Level")</th>
+                        <th>@Loc.T("Message")</th>
+                        <th>@Loc.T("Source_Context")</th>
+                        <th>@Loc.T("Correlation_ID")</th>
+                        <th>@Loc.T("Details")</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (result.Items.Count == 0)
+                {
+                    <tr><td colspan="6" class="text-center text-muted py-5">@Loc.T("No_Log_Events_Found")</td></tr>
+                }
+                else
+                {
+                    @foreach (var item in result.Items)
+                    {
+                        var levelClass = item.Level switch
+                        {
+                            "Fatal" or "Error" => "bg-danger",
+                            "Warning" => "bg-warning text-dark",
+                            "Information" => "bg-info text-dark",
+                            _ => "bg-secondary"
+                        };
+                        <tr>
+                            <td class="text-nowrap small">@item.Timestamp.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss.fff")</td>
+                            <td><span class="badge @levelClass">@item.Level</span></td>
+                            <td class="text-break">@item.Message</td>
+                            <td class="small text-break">@item.SourceContext</td>
+                            <td class="small font-monospace text-break">@item.CorrelationId</td>
+                            <td>
+                                @if (item.HasException)
+                                {
+                                    <details>
+                                        <summary class="text-danger">@Loc.T("Exception")</summary>
+                                        <pre class="small text-wrap mt-2 mb-0">@item.Exception</pre>
+                                    </details>
+                                }
+                                else { <span class="text-muted">—</span> }
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <span class="small text-muted">@result.FirstItemIndex–@result.LastItemIndex / @result.TotalItems.ToString("N0")</span>
+            <nav aria-label="Log pages">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(!result.HasPrevious ? "disabled" : "")">
+                        <a class="page-link" asp-action="Index" asp-route-from="@fromValue" asp-route-to="@toValue"
+                           asp-route-level="@query.Level" asp-route-search="@query.Search"
+                           asp-route-correlationId="@query.CorrelationId" asp-route-source="@query.Source"
+                           asp-route-hasException="@query.HasException" asp-route-page="@(result.CurrentPage - 1)"
+                           asp-route-pageSize="@result.PageSize">@Loc.T("Previous")</a>
+                    </li>
+                    <li class="page-item disabled"><span class="page-link">@result.CurrentPage / @Math.Max(1, result.TotalPages)</span></li>
+                    <li class="page-item @(!result.HasNext || result.CurrentPage >= 100 ? "disabled" : "")">
+                        <a class="page-link" asp-action="Index" asp-route-from="@fromValue" asp-route-to="@toValue"
+                           asp-route-level="@query.Level" asp-route-search="@query.Search"
+                           asp-route-correlationId="@query.CorrelationId" asp-route-source="@query.Source"
+                           asp-route-hasException="@query.HasException" asp-route-page="@(result.CurrentPage + 1)"
+                           asp-route-pageSize="@result.PageSize">@Loc.T("Next")</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
