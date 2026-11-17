@@ -38,10 +38,12 @@ public class AuditLogController : Controller
     private bool IsAdmin => User.IsInRole("admin");
     private bool IsResident => User.IsInRole("resident");
 
-    private bool HasAuditLogPermission =>
-        IsSuperAdmin ||
-        (IsAdmin && User.HasClaim("perm", AdminPermissions.ViewAuditLogBuilding)) ||
-        (IsResident && User.HasClaim("perm", AdminPermissions.ViewAuditLogOwn));
+    private bool HasAuditLogPermission => HasPermissionForUser(User);
+
+    public static bool HasPermissionForUser(System.Security.Claims.ClaimsPrincipal user) =>
+        user.IsInRole("superadmin") ||
+        (user.IsInRole("admin") && user.HasClaim("perm", AdminPermissions.ViewAuditLogBuilding)) ||
+        (user.IsInRole("resident") && user.HasClaim("perm", AdminPermissions.ViewAuditLogOwn));
 
     /// <summary>
     /// Shows the main page of the audit log screen.
