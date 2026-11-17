@@ -9,6 +9,7 @@ public sealed class ApplicationLogEntry
     public string SourceContext { get; init; } = "";
     public string CorrelationId { get; init; } = "";
     public string Exception { get; set; } = "";
+    public string Details { get; set; } = "";
     public string FileName { get; init; } = "";
     public bool HasException => !string.IsNullOrWhiteSpace(Exception);
 }
