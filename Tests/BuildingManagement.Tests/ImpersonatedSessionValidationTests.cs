@@ -28,6 +28,14 @@ public class ImpersonatedSessionValidationTests
             Task.FromResult(CreateDbContext());
     }
 
+    private sealed class UnavailableDbContextFactory : IDbContextFactory<AppDbContext>
+    {
+        public AppDbContext CreateDbContext() => throw new InvalidOperationException("Database unavailable");
+
+        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) =>
+            Task.FromException<AppDbContext>(new InvalidOperationException("Database unavailable"));
+    }
+
     private sealed class TestUserSqlStore : UserSqlStore
     {
         private readonly UserEntity? _user;
@@ -48,6 +56,7 @@ public class ImpersonatedSessionValidationTests
         var factory = new TestDbContextFactory(options);
         var db = factory.CreateDbContext();
         db.Buildings.Add(new BuildingEntity { Id = BuildingId, Name = "Test", BuildingNumber = "T-1" });
+        db.Floors.Add(new FloorEntity { BuildingId = BuildingId, Id = "floor-1", Label = "Floor 1" });
         if (apartmentExists)
             db.Apartments.Add(new ApartmentEntity { BuildingId = BuildingId, Id = ApartmentId, FloorId = "floor-1" });
         await db.SaveChangesAsync();
@@ -215,6 +224,33 @@ public class ImpersonatedSessionValidationTests
             var result = await validator.ValidateAsync(CreateResidentImpersonation());
             Assert.False(result.Valid);
         }
+    }
+
+    [Fact]
+    public async Task Database_outage_fails_closed_for_impersonated_session()
+    {
+        var actor = new UserEntity
+        {
+            Uid = ActorUid,
+            Role = "admin",
+            IsActive = true,
+            IsDisabled = false,
+            BuildingAdmins = new List<BuildingAdminEntity>
+            {
+                new() { AdminUid = ActorUid, BuildingId = BuildingId }
+            }
+        };
+        var users = new UsersService(
+            new TestUserSqlStore(actor),
+            NullLogger<UsersService>.Instance);
+        var validator = new SessionRevalidator(
+            users,
+            new UnavailableDbContextFactory(),
+            new MemoryCache(new MemoryCacheOptions()),
+            NullLogger<SessionRevalidator>.Instance);
+
+        var result = await validator.ValidateAsync(CreateResidentImpersonation());
+        Assert.False(result.Valid);
     }
 
     [Fact]
