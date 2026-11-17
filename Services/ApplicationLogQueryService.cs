@@ -14,6 +14,7 @@ public sealed class ApplicationLogQueryService
     private const int MaxPageSize = 100;
     private const int MaxMessageLength = 2000;
     private const int MaxExceptionLength = 3000;
+    private const int MaxDetailsLength = 4000;
 
     private static readonly Regex EventLine = new(
         @"^(?<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} [+-]\d{2}:\d{2}) \[(?<level>[A-Z]{3})\] (?<body>.*)$",
@@ -154,7 +155,8 @@ public sealed class ApplicationLogQueryService
 
             // Serilog writes structured properties after the final line of
             // multiline messages (for example, EF Core SQL commands).
-            var (_, correlation, source) = SplitProperties(line);
+            // Keep the human-readable prefix as event details, not as metadata.
+            var (continuation, correlation, source) = SplitProperties(line);
             var hasContextProperties =
                 !string.IsNullOrWhiteSpace(correlation) ||
                 !string.IsNullOrWhiteSpace(source);
@@ -176,25 +178,37 @@ public sealed class ApplicationLogQueryService
                         ? Limit(Redact(source), 250)
                         : current.SourceContext,
                     Exception = current.Exception,
+                    Details = current.Details,
                     FileName = current.FileName
                 };
-
-                // The JSON suffix is event metadata, not message or exception text.
-                continue;
             }
 
-            // Preserve the original continuation when it is not recognized
-            // as Serilog context metadata.
-            if ((current.Exception.Length > 0 || ExceptionStart.IsMatch(line)) &&
-                current.Exception.Length < MaxExceptionLength)
+            // A valid JSON suffix is structured event metadata even when it
+            // contains no CorrelationId or SourceContext. Never display it as SQL.
+            if (!string.IsNullOrWhiteSpace(continuation))
             {
-                var safe = Redact(line);
-                var remaining = MaxExceptionLength - current.Exception.Length;
-                var fragment = safe[..Math.Min(remaining, safe.Length)];
+                if ((current.Exception.Length > 0 || ExceptionStart.IsMatch(continuation)) &&
+                    current.Exception.Length < MaxExceptionLength)
+                {
+                    var safe = Redact(continuation);
+                    var remaining = MaxExceptionLength - current.Exception.Length;
+                    var fragment = safe[..Math.Min(remaining, safe.Length)];
 
-                current.Exception = current.Exception.Length == 0
-                    ? fragment
-                    : current.Exception + Environment.NewLine + fragment;
+                    current.Exception = current.Exception.Length == 0
+                        ? fragment
+                        : current.Exception + Environment.NewLine + fragment;
+                }
+                else if (current.Exception.Length == 0 &&
+                         current.Details.Length < MaxDetailsLength)
+                {
+                    var safe = Redact(continuation);
+                    var remaining = MaxDetailsLength - current.Details.Length;
+                    var fragment = safe[..Math.Min(remaining, safe.Length)];
+
+                    current.Details = current.Details.Length == 0
+                        ? fragment
+                        : current.Details + Environment.NewLine + fragment;
+                }
             }
         }
 
