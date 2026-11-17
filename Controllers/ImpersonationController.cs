@@ -332,7 +332,10 @@ public class ImpersonationController : Controller
         {
             claims.Add(new Claim("impersonated", "true"));
             if (!string.IsNullOrWhiteSpace(backup.ImpersonationActorUid))
+            {
                 claims.Add(new Claim("impersonationActorUid", backup.ImpersonationActorUid));
+                claims.Add(new Claim("impersonatedBy", backup.ImpersonationActorUid));
+            }
             if (!string.IsNullOrWhiteSpace(backup.ImpersonationActorRole))
                 claims.Add(new Claim("impersonationActorRole", backup.ImpersonationActorRole));
             if (!string.IsNullOrWhiteSpace(backup.ImpersonationActorEmail))
