@@ -187,6 +187,8 @@ public class AppDbContext : DbContext
         // Keep every FK component aligned with its principal key column.
         // -----------------------------------------------------------------
         mb.Entity<UserEntity>().Property(x => x.Uid).HasMaxLength(128);
+        mb.Entity<UserEntity>().Property(x => x.TwoFactorSecretEncrypted).HasMaxLength(512);
+        mb.Entity<UserEntity>().Property(x => x.TwoFactorRecoveryCodesJson).HasMaxLength(4000);
 
         mb.Entity<UserPermissionEntity>().Property(x => x.Uid).HasMaxLength(128);
         mb.Entity<UserPermissionEntity>().Property(x => x.Permission).HasMaxLength(60);

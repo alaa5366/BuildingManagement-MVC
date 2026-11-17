@@ -56,6 +56,14 @@ public class UserEntity
     /// Gets or sets a value indicating whether it is active.
     /// </summary>
     public bool IsActive { get; set; } = true;
+    /// <summary>Whether time-based two-factor authentication is enabled.</summary>
+    public bool TwoFactorEnabled { get; set; }
+    /// <summary>Encrypted TOTP authenticator secret.</summary>
+    public string? TwoFactorSecretEncrypted { get; set; }
+    /// <summary>JSON array of SHA-256 hashes for one-time recovery codes.</summary>
+    public string? TwoFactorRecoveryCodesJson { get; set; }
+    /// <summary>Last accepted TOTP time step, used to prevent code replay.</summary>
+    public long? TwoFactorLastUsedStep { get; set; }
     /// <summary>
     /// Gets or sets the last login date and time.
     /// </summary>
