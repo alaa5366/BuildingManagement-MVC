@@ -44,5 +44,5 @@ than silently overwriting another writer.
   chooses one (`ChooseContext`).
 * **Welcome message** – contains a one-time *set your PIN* link (`/Account/SetPin`). PINs are never sent or stored in clear text.
 * **Quick QR login** – the link opens a confirmation page; only the button (POST) consumes the token.
-* **Impersonation** – a protected cookie keeps a stack of identities so super admins and admins can return to their own account. Sessions are limited to two hours.
+* **Impersonation** – a protected cookie keeps a stack of identities so super admins and admins can return to their own account. Sessions are limited to two hours. Each impersonated request revalidates the initiating account, its building membership and (for admins) its permission snapshot, as well as the target building/apartment. Validation is cached for at most 30 seconds and fails closed if the authority store is unavailable; nested restoration preserves the original initiating identity.
 * **Backups** – scheduled backups are encrypted on disk; the Backup page downloads them as normal ZIP files.
