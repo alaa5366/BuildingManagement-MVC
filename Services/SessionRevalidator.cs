@@ -66,9 +66,10 @@ public class SessionRevalidator
         if (user.HasClaim("impersonated", "true"))
             return await ValidateImpersonatedAsync(user);
 
-        var email = user.FindFirst(ClaimTypes.Email)?.Value;
-        if (role == "superadmin" || SqlAuthService.IsSuperAdminEmail(email)
-            || user.HasClaim("originalRole", "superadmin"))
+        // The authenticated role claim is authoritative for normal sign-ins.
+        // An allow-listed e-mail must not turn a resident/admin context into a super-admin
+        // session; the allow-list is checked inside ValidateSuperAdminPrincipalAsync.
+        if (IsSuperAdminPrincipal(user))
             return await ValidateSuperAdminPrincipalAsync(user);
 
         // ✅ الساكن (دخول عادي أو QR): لازم لسه موجود ونشط وغير معطّل
@@ -138,6 +139,12 @@ public class SessionRevalidator
             _logger.LogError(ex, "[SessionRevalidator] lookup failed for {Uid}; rejecting session", uid);
             return new Result(false, null);
         }
+    }
+
+    private static bool IsSuperAdminPrincipal(ClaimsPrincipal user)
+    {
+        var role = user.FindFirst(ClaimTypes.Role)?.Value;
+        return role == "superadmin" || user.HasClaim("originalRole", "superadmin");
     }
 
     private async Task<Result> ValidateSuperAdminPrincipalAsync(ClaimsPrincipal user)
