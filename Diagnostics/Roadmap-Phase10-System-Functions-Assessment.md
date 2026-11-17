@@ -1,6 +1,6 @@
 # Original Roadmap Phase10 — System Functions Review
 
-**Status:** IMPLEMENTED — local build, automated tests, and TEST smoke validation pending  
+**Status:** CORE VALIDATION PASSED — extended regression smoke checks remain pending  
 **Branch:** `development/roadmap-phase10-system-functions-review`  
 **Base branch:** `development/roadmap-phase09-logging-monitoring`  
 **Base commit:** `16b870a137ffb90e163571b4ca63612e59bccc66`  
@@ -110,6 +110,18 @@ Existing building/apartment scope restrictions remain in place. Added a testable
 - No changes to the accepted Phase09 branch.
 - No change to existing financial calculation semantics, QR token formats, backup format, or impersonation design.
 
-## Validation status
+## Final review and validation status
 
-Implementation is committed to the dedicated branch. The user must run the local build, full test suite, and the TEST smoke checklist before Phase10 can be accepted. No local build/test result is claimed here.
+**Validated on 2026-11-17 (local/TEST only):**
+- dotnet build: succeeded.
+- dotnet test Tests/BuildingManagement.Tests: 468 passed, 0 failed, 0 skipped.
+- User-reported TEST smoke checks passed for resident-management permission (Test01), building-settings permission (Test02), camera permission grant/revoke without logout (Test03), and Audit Log permissions/scope (Test04).
+- Resident login succeeded when the resident e-mail was also present in Auth:SuperAdminEmails; /ResidentHome/Debug returned HTTP 404 (Test05).
+- Automated role-routing tests cover resident, genuine super-admin, and originalRole=superadmin principals.
+- The branch diff was reviewed against the accepted Phase09 base. No database or Production changes are present.
+
+**Not individually confirmed:** controlled safe-error-response checks in section 7 and the broader regression smoke items in section 8 (including one-time QR access, polls, financial workflows, and backup/restore). Core validation is recorded as passed, but this document does not claim every extended smoke item was executed.
+
+**Operational limitation:** permission-cache version invalidation is in-process. It provides immediate invalidation within one application instance; a multi-instance deployment requires shared/distributed invalidation for the same immediate behavior across nodes. Multi-instance behavior was not validated.
+
+No migrations, SQL scripts, database schema/data changes, Production access, or Production deployment were performed.
