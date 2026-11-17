@@ -57,7 +57,7 @@ try
             rollOnFileSizeLimit: true,
             fileSizeLimitBytes: 10 * 1024 * 1024, // 10 MB/ملف
             shared: true,
-            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}");
+            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}");
     });
 
     if (builder.Environment.IsDevelopment())
@@ -135,7 +135,7 @@ try
 
     // ✅ Health Checks (فحص صحة الداتابيز)
     builder.Services.AddHealthChecks()
-        .AddDbContextCheck<AppDbContext>("Database");
+        .AddDbContextCheck<AppDbContext>("Database", tags: new[] { "ready" });
 
     Console.WriteLine("[Storage] Provider = Sql");
 
@@ -521,8 +521,20 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
 
-    // ✅ Endpoint لفحص الصحة
-    app.MapHealthChecks("/health");
+    // Liveness checks only that the process can serve requests; readiness checks SQL.
+    var readinessHealthOptions = new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+    {
+        Predicate = check => check.Tags.Contains("ready"),
+        ResponseWriter = HealthCheckResponseWriter.WriteAsync
+    };
+    app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+    {
+        Predicate = _ => false,
+        ResponseWriter = HealthCheckResponseWriter.WriteAsync
+    });
+    app.MapHealthChecks("/health/ready", readinessHealthOptions);
+    // Backward-compatible endpoint: /health continues to mean readiness.
+    app.MapHealthChecks("/health", readinessHealthOptions);
 
     app.MapControllerRoute(
         name: "default",
@@ -533,6 +545,7 @@ try
 catch (Exception ex)
 {
     Log.Fatal(ex, "Application terminated unexpectedly");
+    Environment.ExitCode = 1;
 }
 finally
 {
