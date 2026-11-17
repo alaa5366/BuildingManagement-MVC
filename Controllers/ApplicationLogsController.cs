@@ -9,10 +9,10 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace BuildingManagementMvc.Controllers;
 
+/// <summary>Provides an authorized, read-only interface for searching retained application logs.</summary>
 [Authorize(Roles = "superadmin,admin")]
 [AdminPermission(AdminPermissions.ViewApplicationLogs)]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-/// <summary>Provides an authorized, read-only interface for searching retained application logs.</summary>
 public sealed class ApplicationLogsController : Controller
 {
     private readonly ApplicationLogQueryService _logs;

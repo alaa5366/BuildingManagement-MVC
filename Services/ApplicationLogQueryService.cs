@@ -7,7 +7,6 @@ using Microsoft.Extensions.Hosting;
 
 namespace BuildingManagementMvc.Services;
 
-/// <summary>Streams the retained Serilog files and returns only sanitized, filtered events.</summary>
 /// <summary>Reads retained Serilog files and returns sanitized, filtered application log events.</summary>
 public sealed class ApplicationLogQueryService
 {
