@@ -58,7 +58,8 @@ The preflight confirmed that all 13 target tables were absent before the rehears
 - Refined the code-owned finance catalog per DEC-40: read, deposit confirm/cancel, adjustment, expense/revenue read/post/reverse, export, and period close/reopen are separate keys; broad unresolved legacy finance keys are rejected.
 - Added the `OwnershipRecordSource` enum and constraints through `20261118184850_Phase07_OwnershipRecordProvenance`.
 - Build succeeded with 0 warnings and 0 errors. `dotnet ef migrations has-pending-model-changes` reported no model changes.
-- After the service, evaluator, mapping, and catalog test coverage was added, the complete regression suite passed: 545 passed, 0 failed, 0 skipped. The first constrained test-host launch timed out; rerunning outside the restricted shell completed successfully.
+- Mapping service integration tests now prove valid `Users` mappings are audited and a cross-linked Account/Person pair is rejected without changing the pending candidate. SQL Server concurrency/transaction failure tests remain an integration gate.
+- The complete regression suite passed after these tests were added: 547 passed, 0 failed, 0 skipped. The first constrained test-host launch timed out; rerunning outside the restricted shell completed successfully.
 - A new COPY_ONLY backup at `C:\Users\alaa5\AppData\Local\Temp\BuildingManagement_RestoreTest_Phase07-pre-20261118-204900.bak` passed `RESTORE VERIFYONLY WITH CHECKSUM`.
 - Phase07 was applied to `BuildingManagement_RestoreTest` only. Reconciliation confirmed the migration history row, `RecordSource` as `tinyint NOT NULL` with default 0, both new checks enabled and trusted, and zero ownership rows.
 - Focused SQL is saved as `Database/Redesign/GateA-Phase07-Focused-20261118.sql`.
