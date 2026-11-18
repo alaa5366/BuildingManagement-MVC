@@ -692,3 +692,6 @@ The domain review identifies incomplete historical carry-forward recalculation, 
 - [Maintenance, Notifications, and Presence Review — 2026-11-18](Maintenance-Notifications-Presence-Review-2026-11-18.md)
 
 The supporting-domain review found missing maintenance-to-expense linkage, apartment-shared notification state, and apartment-level presence projection that collapses multiple accounts. It proposes separate work-order, notification/outbox, and session/presence boundaries.
+- [Backup, Restore, and Retention Review — 2026-11-18](Backup-Restore-and-Retention-Review-2026-11-18.md)
+
+The backup review confirms strong archive/preview/hash/transaction safeguards but identifies in-process restore sessions, missing distributed scheduler locking, minute-granularity filenames, stale retention history, and local-disk storage as scale-out and recovery gaps.
