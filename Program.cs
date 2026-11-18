@@ -197,7 +197,6 @@ try
 
     builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
     builder.Services.AddSingleton<ResidentsService>();
-    builder.Services.AddScoped<PinMigrationService>();
 
     builder.Services.AddSession(options =>
     {
@@ -402,7 +401,7 @@ try
 
     // Startup must never rewrite credentials or create/clean operational tables.
     // Legacy PIN reconciliation is handled only by an explicit, checkpointed migration.
-    // Login throttling starts in memory; persistence is enabled only by an EF-managed schema.
+    // Login throttling currently uses bounded in-memory counters only; no startup SQL is executed.
 
     // ============================================================
     // Middleware
