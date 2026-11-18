@@ -101,7 +101,7 @@ Indexes: AccountId + CredentialType + active-state lookup. Permit multiple crede
 | IsEnabled | bit | No | Default 0 |
 | SecretCiphertext | varbinary(max) | Yes | Authenticator secret encrypted with managed key |
 | KeyVersion | nvarchar(64) | Yes | Key identifier/version |
-| RecoveryCodeHashes | nvarchar(max) | Yes | Prefer normalized child table for one-time use |
+| *(no recovery-code payload column)* | — | — | Recovery codes are stored only in the normalized `UserRecoveryCodes` child table; do not duplicate them as JSON on this row |
 | LastAcceptedTimeStep | bigint | Yes | Replay prevention |
 | EnrolledAtUtc | datetime2(3) | Yes | Enrollment |
 | LastVerifiedAtUtc | datetime2(3) | Yes | Last successful verification |
