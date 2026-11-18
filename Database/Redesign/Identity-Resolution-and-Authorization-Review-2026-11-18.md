@@ -863,3 +863,38 @@ Inspected test source files (test names and assertions statically; no tests were
 6. **Import failure injection:** fail after building persistence and at each PIN assignment boundary; prove atomic rollback or durable retry/compensation.
 
 No tests/build were executed. This section reports source coverage only and does not claim runtime pass/fail. **Gate A remains NOT AUTHORIZED.**
+
+
+## 22. Invoice, QR, and document delivery review — 2026-11-18
+
+A repository-wide search for file-return actions found additional PDF/PNG delivery paths beyond reports and backup: invoice PDF, building QR-code PDF, apartment QR PNG, and the generic QR-image endpoint.
+
+### 22.1 Invoice PDF
+
+- `InvoiceController` allows SuperAdmin, Admin, and Resident.
+- Resident target apartment is forced from the `apartmentId` claim; an Admin with a building claim can request an apartment only if it exists in the loaded building; a SuperAdmin without a building claim can resolve the building from a supplied apartment id.
+- The controller records an `invoice_download` audit event with building/apartment, actor, role, invoice number, and correlation metadata through `IAuditLogger`.
+- The audit write is still best-effort and separate from the read/download, as covered in section 19.4.
+- The requested month is accepted as a string and defaults only when blank. Add strict `yyyy-MM` validation and explicit handling of missing/future periods so malformed or unexpected values cannot silently select/create unintended in-memory month state.
+- Add `Cache-Control: private, no-store` for invoices because they contain apartment financial/personal information.
+
+### 22.2 QR image and QR PDF
+
+- `QrController` is Admin-only with the resident-management permission and uses the current building claim to load apartment QR data. It records QR access-link generation in the aggregate audit log.
+- `QrImageController.Png` is Admin/SuperAdmin-only, validates a maximum input length and HTTP(S) prefix, and correctly sets `Cache-Control: private, no-store` because the QR URL may contain a token. Its endpoint accepts a URL supplied by the caller rather than resolving a server-side QR resource; maintain strict host/URL policy if this endpoint is ever exposed beyond trusted admins.
+- `BuildingsController.QrCodesPdf` is SuperAdmin-only and generates a PDF containing QR codes for a building. The inspected action does not set private/no-store cache headers or write a dedicated download audit event. QR codes can encode access/login links, so treat the PDF as sensitive, apply no-store headers, and audit generation/download with building scope.
+- The apartment QR PNG action in `QrController` is building-scoped and protected by the class permission. Its download should receive the same cache and audit review where the QR payload can grant access.
+
+### 22.3 File-delivery inventory now known from source search
+
+The inspected file-return endpoints include:
+- Reports CSV and Audit Log CSV.
+- Backup ZIP creation and decrypted scheduled-backup ZIP download.
+- Building JSON, all-building summary JSON, and building XLSX.
+- Invoice PDF.
+- Building QR-code PDF, apartment QR PNG, and generic QR PNG.
+- QR image responses are the only inspected paths explicitly setting `private, no-store`; invoice, QR PDF, and some sensitive exports need consistent cache policy review.
+
+This search is source-code search, not proof that no additional custom response/download mechanism exists. Search for custom middleware, JavaScript-generated downloads, external storage links, and third-party integration endpoints before closing the export inventory.
+
+No application source, schema, or data was changed. No build/tests were run. **Gate A remains NOT AUTHORIZED.**
