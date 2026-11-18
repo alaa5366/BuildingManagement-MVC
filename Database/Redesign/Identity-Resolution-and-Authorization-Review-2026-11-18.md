@@ -792,3 +792,42 @@ Export review acceptance criteria:
 5. Keep audit durability and Log Center architecture as a separate workstream from financial reporting and views.
 
 No application code, migration, schema, or database data was changed. No build, automated tests, runtime profiling, or execution plans were run for this section. **Gate A remains NOT AUTHORIZED.**
+
+
+## 20. Backup and data-export endpoint review — 2026-11-18
+
+Static inspection of `BackupController`, its class-level authorization, and the export/backup actions extends the CSV review to JSON, Excel, and encrypted backup downloads.
+
+### 20.1 Authorization boundary
+
+The controller is class-protected by `[Authorize(Roles = "superadmin")]` and `[HasPermission(AdminPermissions.ManageBackup)]`. This applies to its backup, restore, import, and export actions, including `DownloadBackup`, `ExportJson`, `ExportAllJson`, and `ExportExcel`. This is a strong coarse boundary; it is not a substitute for action-level resource scope if exports are later exposed to building administrators.
+
+### 20.2 Export formats and data exposure
+
+- `ExportJson(id)` loads the full building aggregate and serializes it. It is a broad export of building-domain data, not a narrow reporting projection. The current aggregate mapper explicitly rehydrates `AdminPin` and apartment `Pin` as empty strings, which is an important safeguard for this path. This guarantee depends on every future loader preserving the blank-secret contract.
+- `ExportAllJson()` exports only a wrapper containing timestamp, actor label, count, and building summaries with counts; it is not a full multi-building data dump.
+- `ExportExcel(id)` exports building identity/contact information, apartment owner/phone/monthly fee/status/notes, and category data. The Admin PIN and apartment PIN columns are deliberately blank. The endpoint does not currently export financial ledger details.
+- `DownloadBackup(fileName)` reads the stored encrypted backup, decrypts it in application memory, and returns a ZIP. This is the most sensitive export path because the archive may contain many database collections and personal/financial records.
+- The inspected export actions do not inject an audit logger or record a dedicated export event in their own controller methods. Do not assume that access is durably audited merely because the route is SuperAdmin-only. Confirm whether middleware or another layer records these downloads before accepting the audit requirement as met.
+- JSON and XLSX exports do not pass through `CsvExportSafety`; CSV formula-injection rules are not directly applicable to JSON, while XLSX needs its own explicit cell-type/formula-injection tests for user-controlled strings.
+
+### 20.3 Backup/restore and import observations
+
+- Backup creation is a POST with antiforgery protection and delegates selected collection names to `BackupService.CreateBackupAsync`. The previously documented behavior remains: unknown collection names can be silently skipped while the operation still reports success; this needs explicit rejection or an accurately reported partial result.
+- Backup downloads are GET actions. Because they return decrypted archive bytes, they should be audited as sensitive data access and protected against accidental caching; consider response cache controls and a dedicated download event.
+- Excel import validates the uploaded workbook, stores the parsed model in TempData, then confirmation creates the building and saves its aggregate before assigning apartment PINs one by one. A failure during subsequent PIN assignment can leave a partially completed import. This remains a transactional workflow gap.
+- Import confirmation trusts the parsed TempData payload as its staged input; the future design should bind the preview to the initiating account, target, expiry, immutable content digest, and one-use state, then commit the building and all associated identity/PIN records atomically or provide explicit compensating rollback.
+- The Excel template/import format contains PIN fields, so logs, TempData, exception messages, temporary storage, and backup/restore processing must be reviewed for secret exposure. The current export deliberately blanks PIN values, but that does not make the import pipeline safe by itself.
+
+### 20.4 Required acceptance criteria
+
+1. Record an append-only audit event for each backup create/download/delete, JSON/XLSX export, full export, restore preview/execute, and import preview/confirm. Include actor, operation, target/scope, outcome, timestamp, correlation id, and export format; never include archive contents or PINs.
+2. Set safe response cache headers for decrypted backup and personal/financial exports.
+3. Verify filename/path validation and that a caller cannot select a path outside the managed backup directory.
+4. Test every export with secret canaries to prove PINs, passwords, MFA seeds/recovery codes, tokens, and DVR credentials are absent.
+5. Test XLSX cells containing formula-like prefixes and ensure user-controlled content is serialized as text, never formulas.
+6. Reject unknown backup collection names or return a clearly marked partial result; never silently claim a complete backup.
+7. Make import commit atomic, or implement a durable staged import state with explicit failure/rollback and retry behavior.
+8. Add authorization tests for all actions, including direct URL calls, not only navigation visibility.
+
+No application code, backup archive, schema, or database row was changed. No build or tests were run. **Gate A remains NOT AUTHORIZED.**
