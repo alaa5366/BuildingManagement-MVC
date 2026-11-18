@@ -105,7 +105,7 @@ SELECT
 FROM sys.databases d
 WHERE d.database_id = DB_ID();
 
--- 5. Existing Gate A object names. Any partial/manual objects require manual inspection;
+-- 5. Existing Gate A object names (now 13 tables). Any partial/manual objects require manual inspection;
 -- the deployment script is not a partial-state repair script.
 SELECT
     v.ObjectName,
@@ -114,7 +114,7 @@ FROM (VALUES
     (N'Persons'), (N'UserAccounts'), (N'UserCredentials'),
     (N'UserTwoFactorSettings'), (N'UserRecoveryCodes'),
     (N'RoleDefinitions'), (N'RolePermissions'), (N'UserRoleAssignments'),
-    (N'AccountPermissionOverrides'),
+    (N'AccountPermissionOverrides'), (N'LegacyIdentityMap'),
     (N'ApartmentOwnerships'), (N'ApartmentOccupancies'), (N'ApartmentAccessGrants')
 ) v(ObjectName)
 LEFT JOIN sys.objects o
