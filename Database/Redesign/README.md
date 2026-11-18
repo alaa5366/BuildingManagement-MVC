@@ -463,3 +463,10 @@ Section 19 of the main review documents a source-level trace of financial report
 Reports currently operate on a fully hydrated in-memory building aggregate. Audit UI paging is SQL-filtered and bounded to 200 rows/page with stable timestamp/id ordering; the non-paged audit query is capped at 50,000 but lacks a tie-breaker and can materialize a large export. Audit inserts use a separate DbContext and swallow failures after warning logs, so critical business mutations are not atomically coupled to audit persistence. CSV safety is used in the inspected report/audit exports, but all export endpoints still need inventory.
 
 No code/schema/data changes, build, tests, or runtime profiling were performed. **Gate A remains NOT AUTHORIZED.**
+
+
+### Backup and export endpoint review — 2026-11-18
+
+Section 20 records the static review of SuperAdmin-protected backup, restore, import, JSON, XLSX, and ZIP-download actions. JSON building export serializes the loaded aggregate (the current mapper blanks Admin PIN and apartment PIN); the full JSON action exports summaries only; XLSX exports contact/apartment/category fields and deliberately leaves PIN columns blank. Backup ZIP download decrypts the archive before returning it and is the most sensitive export path.
+
+The export controller actions inspected do not directly record dedicated export audit events; verify whether another layer captures them. Add durable audit, cache controls, secret-canary tests, XLSX formula tests, strict backup collection validation, and atomic staged import. Existing partial-import and unknown-collection concerns remain open. No source/schema/data changes or tests were performed. **Gate A remains NOT AUTHORIZED.**
