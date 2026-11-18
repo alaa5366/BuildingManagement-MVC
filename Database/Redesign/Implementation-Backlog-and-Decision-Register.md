@@ -34,6 +34,9 @@
 | FIN-01 | Financial ledger and command state machines | P1 | APP-01, DATA-04 | Idempotency, concurrency, reversals, strict periods, no physical delete |
 | FIN-02 | Wallet projections and reconciliation | P1 | FIN-01 | Legacy/target parity, deterministic rounding, documented variance sign-off |
 | POLL-01 | Eligibility, delegation and secret ballot | P1 | ID-01, PROP-01, AUTH-01 | No voter-choice join path, duplicate prevention, secrecy and tally tests |
+| QR-01 | QR capability tokens and guest access sessions | P1 | APP-01, AUTH-01, ID-03 | Signed target-bound claims, validate-before-consume, atomic one-time use, no-store/referrer/rate limits, stable session revalidation |
+| IMP-01 | Import and migration workbench | P2 | APP-02, DATA-03, DOC-01 | Actor/target/file-digest binding, strict parser, preview, row-level validation, idempotent commit, checkpoint and reconciliation |
+| SEC-03 | Centralized authorization evaluator | P1 | SEC-01, ID-01, APP-01 | One policy engine for role + permission + scope + account/session + resource; Deny precedence; fail-closed tests |
 | OPS-01 | Maintenance, notifications and presence | P2 | PROP-01, AUTH-01, APP-02 | Explicit visibility/recipient/counting semantics and bounded queries |
 | DOC-01 | Private document and receipt pipeline | P1 | APP-02, SEC-02 | Private storage, decoded-content limits, authorized download, orphan compensation |
 | INT-01 | OCR and import hardening | P2 | DOC-01, APP-01 | OCR advisory-only, per-user limits, no silent coercion/defaults |
