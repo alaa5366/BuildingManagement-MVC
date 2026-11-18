@@ -366,3 +366,17 @@ Approved target decisions: mandatory MFA for admin/SuperAdmin; atomic cross-inst
 The unified design is now recorded as one coordinated implementation package in section 12 of `Identity-Resolution-and-Authorization-Review-2026-11-18.md`, with eight workstreams and seven release gates. This preserves the user's preference for one consolidated delivery rather than many separate feature phases while retaining internal review and safety gates.
 
 The package covers identity/provenance, scoped authorization, ownership/occupancy/access lifecycle, credentials/MFA, cross-instance session and impersonation revocation, transactional audit/outbox, legacy and financial continuity, and UI/API integration. Gate A remains NOT AUTHORIZED; a separate explicit approval is still required after design freeze and fresh preflight evidence. No source code or database was changed and no tests/build/migration were run.
+
+
+## Controller/action resource-scope review — 2026-11-18
+
+Added section 13 to `Identity-Resolution-and-Authorization-Review-2026-11-18.md` with the controller/action/resource-scope matrix across building, resident, apartment, wallet, financial, poll, maintenance, settings, audit, invoice, notifications, camera, impersonation, and QR endpoints.
+
+Important findings:
+- `AdminPermissionAttribute` currently returns for every authenticated non-admin principal rather than denying it. `CamerasController` combines this filter with general `[Authorize]`; resident camera viewing appears intentional in controller comments, but it needs an explicit resident access policy and must not be mistaken for enforcement of the admin permission.
+- `apartment.disable` exists in the permission catalogue, but apartment disable/enable actions inherit `residents.manage` and do not enforce the dedicated key.
+- AuditLog explicitly pins resident queries to their own building/apartment and admin queries to their claimed building; preserve this resource boundary.
+- Financial/apartment endpoints commonly resolve child resources inside the building loaded from the session claim; this must become a service-level invariant in the target evaluator.
+- Current feature permissions are coarse for sensitive read/write and financial transitions. The target matrix must separate scope from UI categories and distinguish personal account data from apartment relationships.
+
+Gate 0 now requires explicit decisions for resident camera access, apartment disable/enable, read-vs-write/financial action separation, resident maintenance visibility, and any legacy permission with no verified consumer. No source code, schema, database rows, or credentials were changed. No build or runtime tests were executed.
