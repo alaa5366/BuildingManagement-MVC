@@ -1129,3 +1129,9 @@ Static review of `PinMigrationService`, `BuildingSqlStore`, `UserSqlStore`, and 
 8. Health dashboard tests proving process-local status is labeled as instance-local and provider error details are sanitized.
 
 No migration, database write, application startup, build, or test was performed. No code/schema/data/configuration was changed. **Gate A remains NOT AUTHORIZED.**
+
+
+### 27.4 Startup wiring confirmed
+
+- Follow-up inspection of `Program.cs` confirms the web application invokes `PinMigrationService.MigrateLegacySecretsAsync()` during startup inside a try/catch. This is not merely an unused service method: starting the application against a database can execute the credential migration and clear legacy PIN columns. A caught exception does not roll back earlier commits in the method.
+- Operational safeguard: do not start the application against the disposable restore database (or any database whose legacy PIN state must remain unchanged) during this review. First take/verify a disposable restore copy and remove/feature-gate the startup mutation in a separately approved code change; then run the explicit migration workflow only against its designated disposable target.
