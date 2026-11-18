@@ -248,3 +248,23 @@ Key findings:
 - Pending/cancelled deposits are excluded from wallet balance; preserve their state and audit history.
 
 Next step: prepare a read-only per-apartment financial reconciliation diagnostic for the affected building/month and all other ledger/share mismatches. No code, tests, SQL, or financial data were changed by this review. Gate A remains blocked.
+
+
+
+## Financial reconciliation diagnostic prepared — 2026-11-18
+
+Added read-only diagnostic files:
+- `Database/Diagnostics/Financial-Reconciliation-ReadOnly-Validation.sql`
+- `Database/Diagnostics/Run-Financial-Reconciliation-ReadOnly-Validation.ps1`
+
+The runner is restricted to `BuildingManagement_RestoreTest`, uses Windows Integrated Security, exports five separate CSV result sets, and commits/pushes only its own timestamped result folder under `Database/Diagnostics/Financial-Reconciliation-Results/` on `development/database-redesign-enterprise`. It refuses a different database, a different branch, or an already-staged Git index. It does not auto-pull.
+
+The SQL compares source expense/revenue ledgers with stored monthly shares by building/month, exports per-apartment stored shares and current fee/closed-state indicators, computes a clearly labelled deterministic candidate allocation ordered by ApartmentId (not proof of historical order), and flags missing/orphan share rows. It is SELECT-only and does not recalculate or update any financial data. No run results exist yet; the script has not been executed or locally tested by the assistant.
+
+Run after pulling the branch:
+
+```powershell
+.\Database\Diagnostics\Run-Financial-Reconciliation-ReadOnly-Validation.ps1
+```
+
+Do not modify any stored shares based on candidate results alone.
