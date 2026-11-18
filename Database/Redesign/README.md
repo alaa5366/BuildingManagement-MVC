@@ -231,3 +231,20 @@ Key decisions/findings:
 - `Users.Pin` currently serves admin PIN and SuperAdmin password semantics; target credentials must be typed explicitly.
 
 No application code was changed, no tests were run, no application was started, and no database or credential values were modified/exported. Gate A remains blocked.
+
+
+
+## Financial and wallet source review — 2026-11-18
+
+Added `Financial-and-Wallet-Code-Review-2026-11-18.md` after reviewing `WalletService`, `BuildingSqlMapper`, monthly share entities, and expense/revenue call sites.
+
+Key findings:
+- Historical wallet calculations use the apartment's current `MonthlyFee` and current `Closed` state for every month; historical fee and eligibility are not snapshotted.
+- Recalculating an old month uses today's open-apartment set. Historical allocation eligibility must be dated and preserved.
+- The distribution method conserves the aggregate total by assigning the rounding remainder to the last apartment, but apartment loading has no explicit stable ordering.
+- Stored monthly shares are loaded as authoritative inputs; they can be stale relative to source ledgers until recalculated.
+- The +0.22 expense and +0.04 revenue differences require apartment-level attribution; aggregate totals do not identify the cause.
+- Carry-over recomputation depends on prior-month balance and can inherit mutable current fee/closed-state semantics.
+- Pending/cancelled deposits are excluded from wallet balance; preserve their state and audit history.
+
+Next step: prepare a read-only per-apartment financial reconciliation diagnostic for the affected building/month and all other ledger/share mismatches. No code, tests, SQL, or financial data were changed by this review. Gate A remains blocked.
