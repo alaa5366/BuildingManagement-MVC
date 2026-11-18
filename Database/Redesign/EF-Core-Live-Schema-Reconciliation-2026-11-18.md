@@ -49,9 +49,9 @@ No live physical table was missing from the model comparison except the intentio
 
 ## 5. Foreign-key inventory
 
-The live catalog contains 32 FK constraints. All reported FKs are enabled and trusted; none is disabled or marked untrusted.
+The live catalog contains 32 FK constraints, and the EF snapshot declares 32 relationships. A relationship-by-relationship comparison matched all 32 on dependent table/columns, principal table/columns, composite-column order, and delete behavior. All live FKs are enabled and trusted; none is disabled or marked untrusted.
 
-The inventory confirms that composite FK column order is represented explicitly in the evidence. A separate relationship-by-relationship comparison against EF's `HasForeignKey` / `OnDelete` model declarations is still required before calling FK parity complete. The existing delete actions must also be reviewed against the target retention policy; schema parity alone does not mean the current cascade policy is safe.
+The observed delete actions remain 22 CASCADE, 9 NO_ACTION, and 1 SET_NULL. The existing cascade examples include resident-to-apartment, financial records-to-building, deposit edit history-to-deposit, poll options/votes-to-poll parents, and user permissions-to-users. This confirms schema parity, not policy safety: the current delete actions still require retention review before target redesign or cutover.
 
 ## 6. Wallet view deployment gap
 
@@ -104,12 +104,11 @@ This confirms that FullSchema is not a faithful current-schema deployment artifa
 
 ## 9. Required follow-up
 
-1. Complete FK parity: compare all 32 live FK constraints to snapshot principal/dependent columns, composite order, optionality, and delete behavior.
-2. Complete physical index review: included columns, filter predicates, sort direction, disabled state, and any indexes not represented by the snapshot.
-3. Resolve DEC-28 and decide the wallet view's authoritative deployment path or remove it if unused.
-4. Define the lifecycle owner for LoginThrottle and remove duplicate schema ownership between startup SQL and FullSchema.
-5. Treat the current FullSchema as stale: reconcile its 119 string-length differences and four missing 2FA columns, then regenerate it from the approved authoritative source only after DEC-28 is decided.
-6. Keep the existing cascade-retention classification open until financial, voting, audit, and identity retention rules are approved.
+1. Complete physical index review: included columns, filter predicates, sort direction, disabled state, and any indexes not represented by the snapshot.
+2. Resolve DEC-28 and decide the wallet view's authoritative deployment path or remove it if unused.
+3. Define the lifecycle owner for LoginThrottle and remove duplicate schema ownership between startup SQL and FullSchema.
+4. Treat the current FullSchema as stale: reconcile its 119 string-length differences and four missing 2FA columns, then regenerate it from the approved authoritative source only after DEC-28 is decided.
+5. Keep the existing cascade-retention classification open until financial, voting, audit, and identity retention rules are approved.
 
 ## 10. Verification boundary
 
