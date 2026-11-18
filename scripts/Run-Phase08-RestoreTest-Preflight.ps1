@@ -124,9 +124,9 @@ $lines.Add('- This report is preflight evidence only; it does not authorize migr
 [System.IO.File]::WriteAllLines($ReportPath,$lines,[System.Text.UTF8Encoding]::new($false))
 
 $relative = $ReportPath.Substring($Repo.Length + 1).Replace('\','/')
-Invoke-Git @('add','--',$relative) | Out-Null
-Invoke-Git @('commit','-m',"docs: record Phase08 RestoreTest preflight $Stamp") | Out-Null
-Invoke-Git @('push','origin',$Branch) | Out-Null
+Invoke-Git -GitArgs @('add','--',$relative) | Out-Null
+Invoke-Git -GitArgs @('commit','-m',"docs: record Phase08 RestoreTest preflight $Stamp") | Out-Null
+Invoke-Git -GitArgs @('push','origin',$Branch) | Out-Null
 
 Write-Host "Preflight report pushed: $relative" -ForegroundColor Green
 Write-Host "Verified backup: $BackupPath" -ForegroundColor Green
