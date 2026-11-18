@@ -1,0 +1,6 @@
+﻿"SchemaName","TableName","IndexName","IsPrimaryKey","IsUnique","KeyColumns"
+"dbo","Apartments","PK_Apartments","True","True","BuildingId,Id"
+"dbo","Apartments","IX_Apartments_BuildingId_Number","False","True","BuildingId,Number"
+"dbo","Apartments","IX_Apartments_BuildingId_FloorId","False","False","BuildingId,FloorId"
+"dbo","Buildings","PK_Buildings","True","True","Id"
+"dbo","Buildings","IX_Buildings_BuildingNumber","False","True","BuildingNumber"
