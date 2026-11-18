@@ -16,10 +16,23 @@ $ErrorsPath = Join-Path $OutputPath "Query-Errors.txt"
 
 function Invoke-Git {
     param([string[]]$Arguments)
-    $result = & git -C $RepoPath @Arguments 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        $details = $result -join [Environment]::NewLine
-        throw ("Git command failed: git " + ($Arguments -join " ") + [Environment]::NewLine + $details)
+
+    # Windows PowerShell 5.1 can promote native stderr output (for example,
+    # the normal "To https://..." line from git push) to NativeCommandError.
+    # Temporarily use Continue so the native process exit code remains authoritative.
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "Continue"
+        $result = @(& git -C $RepoPath @Arguments 2>&1)
+        $gitExitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousPreference
+    }
+
+    if ($gitExitCode -ne 0) {
+        $details = $result | ForEach-Object { $_.ToString() }
+        throw ("Git command failed (exit $gitExitCode): git " + ($Arguments -join " ") + [Environment]::NewLine + ($details -join [Environment]::NewLine))
     }
     return $result
 }
