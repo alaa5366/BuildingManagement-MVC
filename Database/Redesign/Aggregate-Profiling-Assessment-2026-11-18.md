@@ -61,13 +61,13 @@ The other reported comparison for Building `ZzgYia4qMZ23N8qhiCOV` matches exactl
 - 2026-09 expenses 900.00; revenue 1,800.00.
 - 2026-10 expenses 2,700.00; revenue 4,500.00.
 
-The second building `zxhRd7cwZ07rZotXeQ17` has 15 monthly-share rows in each of 2026-09, 2026-10, and 2026-11, with zero expense/revenue shares and carry-over values 0.00, 3,319.00, and 1,519.00 respectively. These carry-over amounts need semantic reconciliation before migration.
+The building `zxhRd7cwZ07rZotXeQ17` has 15 monthly-share rows in each of 2026-09, 2026-10, and 2026-11, with zero expense/revenue shares and carry-over values 0.00, 3,319.00, and 1,519.00 respectively. Building `ZzgYia4qMZ23N8qhiCOV` has 4 monthly-share rows in both 2026-09 and 2026-10; its 2026-10 carry-over is 17,030.00. These carry-over amounts need semantic reconciliation before migration.
 
 ### 4.3 Wallet adjustments
 
 Building `ZzgYia4qMZ23N8qhiCOV` has 2 WalletAdjustment rows with a net amount of +200.00. Preserve both transaction-level history and the aggregate baseline; do not infer the business reason from the aggregate alone.
 
-**Decision:** the 0.22 / 0.04 differences are small but non-zero. Define rounding/precision rules and reconcile at transaction and apartment level before cutover. Never silently round away or overwrite the differences.
+Confirmed deposits in the profile are also status-separated: 4 rows / 5,119.00 for Building `zxhRd7cwZ07rZotXeQ17` in 2026-09, 1 row / 16,780.00 for Building `ZzgYia4qMZ23N8qhiCOV` in 2026-09, and 5 rows / 6,712.00 for that building in 2026-10.\n\n**Decision:** the 0.22 / 0.04 differences are small but non-zero. Define rounding/precision rules and reconcile at transaction and apartment level before cutover. Never silently round away or overwrite the differences.
 
 ## 5. Polls and cameras
 
