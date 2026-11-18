@@ -511,3 +511,19 @@ Static review only; no code, schema, data, tokens, or media-server state were ch
 Section 25 reviews deposit confirmation/cancellation/editing, manual wallet adjustments, and expense/revenue posting/deletion. Existing positive controls include pending-only deposit transitions, edit history for pending payment changes, and recalculation after financial changes. Remaining issues include trusting posted month keys for deposit lookup, lack of explicit concurrency/idempotency guarantees in the aggregate command path, insufficient service-level validation for adjustments/categories/dates, deletion audit events that can be emitted even when no row was deleted, and physical deletion of financial entries instead of immutable reversals. Required acceptance tests are listed in the main review.
 
 Static review only; no financial operations, code, schema, or data were changed. No build/tests were run. **Gate A remains NOT AUTHORIZED.**
+
+
+### Settings secrets and impersonation review — 2026-11-18
+
+Section 26 reviews global/building/personal settings and privileged impersonation.
+
+Priority findings:
+- Global settings GET returns the stored WhatsApp token and Cloudinary API key to the view, and the view renders them into HTML input values. Replace with write-only secret handling and encrypted-at-rest storage.
+- Global/building security and policy settings rely on UI bounds without equivalent service-level validation.
+- Personal preferences and resident profile/PIN changes are apartment-wide in the legacy model; multiple residents share settings and PIN updates.
+- Impersonation entry actions enforce roles but do not visibly enforce the catalogued `secret.access` permission. Stack overflow silently refuses the backup push while the controller still proceeds with impersonation; this must fail closed.
+- Impersonation uses a protected two-hour client-carried recovery cookie; revocation/permission changes during the window are not revalidated from an authoritative server-side session. Audit role attribution is also hardcoded as admin for resident entry/exit.
+- Follow-up verification confirmed `UsersService.SetAsync` hashes admin PIN values through `SecretVerifier.HashIfPlain` before persistence. This is a positive control to preserve with tests.
+- The self-settings route is available to any authenticated user without explicit enforcement of the catalogued `settings.manage.own` permission; define whether this is intentionally role-intrinsic.
+
+The section includes acceptance tests for secret exposure, key rotation, settings validation, independent resident preferences, impersonation permission/stack/revocation, and durable audit. Static review only; no code, settings, credentials, sessions, schema, or data were changed. No build/tests were run. **Gate A remains NOT AUTHORIZED.**
