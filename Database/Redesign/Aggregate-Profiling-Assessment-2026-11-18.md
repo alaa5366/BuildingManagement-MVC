@@ -174,3 +174,11 @@ The six-result-set diagnostic is committed under `Database/Diagnostics/Wallet-Cr
 - No secret values or personal identifiers were exported.
 
 **Updated decision:** the previous aggregate finding of five non-empty User PINs and 79 non-empty Resident PinHash values remains true, but their current format is now known to be BCrypt-shaped. Do not describe them as plaintext. Still do not run the startup migration for inspection: its prefix-only logic and source-clearing behavior require redesign. The next safe credential step is non-mutating cryptographic verification that emits aggregate outcomes only, followed by an explicit recovery/re-enrollment policy for any invalid hashes. Gate A remains blocked by the other unresolved items in Section 10. No DDL/DML or credential rewrite occurred.
+
+
+
+## 15. Authentication source review — 2026-11-18
+
+See `Authentication-and-Credential-Flow-Review-2026-11-18.md` for the detailed review of startup PIN migration, BCrypt classification/verification, direct and unified login, account-context selection, session revalidation, MFA policy, and required tests.
+
+This adds implementation blockers beyond the aggregate database evidence: remove credential mutation from startup; separate BCrypt shape from parseability and actual secret verification; make direct and unified resident account-state checks consistent; decide generic failure messaging for missing credentials; revalidate account scope before issuing a cookie; and plan mandatory admin/SuperAdmin MFA enrollment/recovery. No source behavior was changed and no tests or application startup were run by this review. Gate A remains blocked.
