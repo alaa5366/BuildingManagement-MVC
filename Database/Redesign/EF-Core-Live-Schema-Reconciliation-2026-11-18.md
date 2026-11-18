@@ -45,7 +45,9 @@ No live physical table was missing from the model comparison except the intentio
   - `__EFMigrationsHistory(MigrationId)`;
   - `LoginThrottle(Key)`.
 - All 27 non-constraint indexes declared in the snapshot match the live index inventory by table, ordered key columns, and uniqueness.
-- This does not yet constitute a complete comparison of index included columns, sort direction, filter predicates, fill factor, or operational usage. Those remain part of the detailed physical-index review.
+- The 59 live indexes account for the 30 mapped-table primary keys, 27 mapped secondary indexes, and the two infrastructure primary keys on `__EFMigrationsHistory` and `LoginThrottle`.
+- The catalog reports no disabled indexes, filtered indexes, included columns, or descending key columns. Four mapped secondary indexes are unique: Apartments(BuildingId, Number), Buildings(BuildingNumber), Cameras(DvrId, Channel), and Residents(Uid).
+- Fill factor and operational usage were not part of this comparison.
 
 ## 5. Foreign-key inventory
 
