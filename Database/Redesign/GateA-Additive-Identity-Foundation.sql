@@ -292,4 +292,56 @@ BEGIN
         ON dbo.ApartmentAccessGrants(PersonId, ValidFromUtc, ValidToUtc);
 END;
 
+
+-- Direct per-account permissions are distinct from role permissions.
+-- Preserve legacy UserPermissions semantics here; never promote them to global role grants.
+IF OBJECT_ID(N'dbo.AccountPermissionOverrides', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.AccountPermissionOverrides
+    (
+        OverrideId uniqueidentifier NOT NULL CONSTRAINT PK_AccountPermissionOverrides PRIMARY KEY,
+        AccountId uniqueidentifier NOT NULL,
+        PermissionKey nvarchar(100) NOT NULL,
+        Effect tinyint NOT NULL, -- 0 Deny, 1 Allow; deny takes precedence
+        ScopeType tinyint NOT NULL, -- 0 System, 1 Building, 2 Apartment, 3 Personal
+        ScopeBuildingId nvarchar(64) NULL,
+        ScopeApartmentId nvarchar(64) NULL,
+        ValidFromUtc datetime2(3) NOT NULL,
+        ValidToUtc datetime2(3) NULL,
+        GrantedAtUtc datetime2(3) NOT NULL CONSTRAINT DF_AccountPermissionOverrides_GrantedAtUtc DEFAULT (SYSUTCDATETIME()),
+        GrantedByAccountId uniqueidentifier NULL,
+        RevokedAtUtc datetime2(3) NULL,
+        RevokedByAccountId uniqueidentifier NULL,
+        RowVersion rowversion NOT NULL,
+        CONSTRAINT FK_AccountPermissionOverrides_Accounts FOREIGN KEY(AccountId)
+            REFERENCES dbo.UserAccounts(AccountId) ON DELETE NO ACTION,
+        CONSTRAINT FK_AccountPermissionOverrides_Buildings FOREIGN KEY(ScopeBuildingId)
+            REFERENCES dbo.Buildings(Id) ON DELETE NO ACTION,
+        CONSTRAINT FK_AccountPermissionOverrides_Apartments FOREIGN KEY(ScopeBuildingId, ScopeApartmentId)
+            REFERENCES dbo.Apartments(BuildingId, Id) ON DELETE NO ACTION,
+        CONSTRAINT FK_AccountPermissionOverrides_GrantedBy FOREIGN KEY(GrantedByAccountId)
+            REFERENCES dbo.UserAccounts(AccountId) ON DELETE NO ACTION,
+        CONSTRAINT FK_AccountPermissionOverrides_RevokedBy FOREIGN KEY(RevokedByAccountId)
+            REFERENCES dbo.UserAccounts(AccountId) ON DELETE NO ACTION,
+        CONSTRAINT CK_AccountPermissionOverrides_Effect CHECK (Effect IN (0,1)),
+        CONSTRAINT CK_AccountPermissionOverrides_Scope CHECK
+        (
+            (ScopeType IN (0,3) AND ScopeBuildingId IS NULL AND ScopeApartmentId IS NULL)
+            OR (ScopeType = 1 AND ScopeBuildingId IS NOT NULL AND ScopeApartmentId IS NULL)
+            OR (ScopeType = 2 AND ScopeBuildingId IS NOT NULL AND ScopeApartmentId IS NOT NULL)
+        ),
+        CONSTRAINT CK_AccountPermissionOverrides_Validity CHECK
+            (ValidToUtc IS NULL OR ValidToUtc > ValidFromUtc),
+        CONSTRAINT CK_AccountPermissionOverrides_Revocation CHECK
+            ((RevokedAtUtc IS NULL AND RevokedByAccountId IS NULL)
+             OR RevokedAtUtc IS NOT NULL)
+    );
+    CREATE INDEX IX_AccountPermissionOverrides_Account_Permission_Scope
+        ON dbo.AccountPermissionOverrides
+            (AccountId, PermissionKey, ScopeType, ScopeBuildingId, ScopeApartmentId, ValidFromUtc);
+    CREATE INDEX IX_AccountPermissionOverrides_Permission_Scope
+        ON dbo.AccountPermissionOverrides
+            (PermissionKey, ScopeType, ScopeBuildingId, ScopeApartmentId, ValidFromUtc);
+END;
+
 COMMIT TRANSACTION;
