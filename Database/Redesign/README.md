@@ -139,6 +139,8 @@ Current safe boundary:
 
 ## Additional design artifacts
 
+- `Database/Redesign/Sql-Deployment-and-View-Reconciliation-Decision.md` — confirms the EF mapping/FullSchema/restore mismatch for vw_ApartmentWalletMovements and recommends one authoritative deployment path (EF migrations by default); owner decision DEC-28 remains open.
+
 - `Database/Redesign/Authorization-Evaluation-Contract-and-Precedence.md` — centralized server-side authorization algorithm, scope inheritance, Deny precedence, SuperAdmin semantics, privileged step-up, revocation/cache rules, and security test matrix.
 
 - `Database/Redesign/Legacy-Class-to-Target-Module-Refactoring-Map.md` — observed legacy Controllers/Services mapped to target modules with Replace/Split/Adapt/Retire dispositions, missing workflows, and migration order.
