@@ -431,3 +431,12 @@ The plan groups implementation into WP0–WP7: policy/source-of-truth freeze; ad
 The user approved this unified plan and continuation of the work. This is **plan approval only**. It does not authorize Gate A DDL, EF migration execution, DML/backfill, authentication cutover, destructive operations, or production changes. The next task is WP0 Decision Register and source-of-truth reconciliation. Gate A remains **NOT AUTHORIZED** until a separate explicit approval after G0/G1 evidence is complete.
 
 No application source, schema, database rows, credentials, backups, or runtime state were changed while preparing this plan. No build or tests were executed.
+
+
+### SQL views and log-center review — 2026-11-18
+
+Section 18 of the main review records the repository-wide SQL view/EF mapping inventory, the limitations of the wallet movement projection, the required future reporting/read-model architecture, and the requested enterprise structured log center. The repository search found one declared SQL view (`vw_ApartmentWalletMovements`) and one EF keyless mapping. The live database's complete view inventory is still pending a dedicated read-only `sys.views` diagnostics export; prior restore evidence only confirmed the two named wallet views were absent.
+
+The future log center is explicitly separate from the financial ledger and the append-only business/security audit trail. It should correlate structured application logs, traces, performance telemetry, background jobs, and system health without logging credentials, PINs, MFA secrets, tokens, or ballot choices.
+
+No view SQL or application code was changed. No database inventory query, build, or tests were executed in this documentation pass. **Gate A remains NOT AUTHORIZED.**
