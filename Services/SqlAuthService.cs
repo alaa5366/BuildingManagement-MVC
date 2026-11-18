@@ -415,30 +415,61 @@ public class SqlAuthService
     /// <summary>
     /// Signs the in from context.
     /// </summary>
-    public Task<AuthResult> SignInFromContextAsync(UserContext context)
+    public async Task<AuthResult> SignInFromContextAsync(UserContext context)
     {
+        // The context is a short-lived selection hint, not an authorization snapshot.
+        // Re-read the selected account and its current grants before issuing a cookie.
         if (context.Type == "superadmin")
         {
-            return Task.FromResult(AuthResult.Ok(
-                context.Uid!, "superadmin", context.Email!,
-                context.Name ?? "Super Admin", new List<string>()));
+            if (string.IsNullOrWhiteSpace(context.Uid) || string.IsNullOrWhiteSpace(context.Email)
+                || !IsSuperAdminEmail(context.Email))
+                return AuthResult.Fail("unknown-context");
+
+            await using var db = await _sqlFactory.CreateDbContextAsync();
+            var account = await db.Users
+                .Include(u => u.Permissions)
+                .FirstOrDefaultAsync(u => u.Uid == context.Uid
+                    && u.Email == context.Email && u.Role == "superadmin");
+
+            if (account == null || !account.IsActive || account.IsDisabled)
+                return AuthResult.Fail("account-inactive");
+
+            return AuthResult.Ok(
+                account.Uid, "superadmin", account.Email,
+                account.Name ?? "Super Admin", new List<string>(),
+                permissions: account.Permissions.Select(p => p.Permission)
+                    .Distinct(StringComparer.Ordinal).ToList());
         }
 
         if (context.Type == "admin")
         {
-            return Task.FromResult(AuthResult.Ok(
+            var admin = await _users.GetByUidAsync(context.Uid!);
+            if (admin == null || admin.Role != "admin" || admin.Disabled || !admin.IsActive
+                || !admin.BuildingIds.Contains(context.BuildingId!, StringComparer.Ordinal))
+                return AuthResult.Fail("account-inactive");
+
+            return AuthResult.Ok(
                 context.Uid!, "admin", context.Email!,
-                context.Name ?? "Admin", new List<string> { context.BuildingId! }));
+                context.Name ?? "Admin", new List<string> { context.BuildingId! },
+                permissions: admin.Permissions ?? new List<string>());
         }
 
         if (context.Type == "resident")
         {
-            return Task.FromResult(AuthResult.Ok(
-                context.Uid!, "resident", context.Email!,
-                context.Name ?? "Resident", new List<string> { context.BuildingId! },
-                context.AptId, context.AptNumber));
+            await using var db = await _sqlFactory.CreateDbContextAsync();
+            var resident = await db.Residents.AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Uid == context.Uid
+                    && r.BuildingId == context.BuildingId
+                    && r.ApartmentId == context.AptId
+                    && r.IsActive && !r.IsDisabled);
+            if (resident == null) return AuthResult.Fail("account-inactive");
+
+            return AuthResult.Ok(
+                resident.Uid, "resident", resident.Email ?? "",
+                resident.Name ?? "Resident", new List<string> { context.BuildingId! },
+                context.AptId, context.AptNumber);
         }
 
-        return Task.FromResult(AuthResult.Fail("unknown-context"));
+        return AuthResult.Fail("unknown-context");
     }
 }
