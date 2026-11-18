@@ -197,3 +197,18 @@ The following read-only source reviews now provide implementation evidence for t
 [QR Access, DVR, and Media Integration Review — 2026-11-18](QR-DVR-and-Media-Integration-Review-2026-11-18.md) adds concrete acceptance requirements to QR-01, MEDIA-01, AUTH-01, APP-02, and SEC-02: fail-closed QR issuance, bounded/revocable capabilities, account/person-bound access sessions, secret-free DVR DTOs, and an idempotent MediaMTX reconciliation/outbox workflow.
 
 The QR/DVR/media review also confirms that HLS URL discovery authorization is not equivalent to playlist/segment authorization. MEDIA-01 and AUTH-01 acceptance must include MediaMTX-side per-request authorization (or an authenticated HLS gateway), explicit resident camera visibility scope, and reconciliation of DVR desired/observed stream configuration.
+
+## 11. Owner approval of recommended defaults — 2026-11-18
+
+The owner approved the recommended defaults for **DEC-01 through DEC-46** as the binding design baseline. The detailed approved wording and implementation boundaries are recorded in [Owner Approval — Recommended Decision Defaults](Owner-Approval-Recommended-Defaults-2026-11-18.md).
+
+This approval supersedes the prior Open/Proposed labels **for selection of the recommended design default**. It does not erase evidence requirements or implementation blockers:
+- Evidence-required decisions remain blocked until evidence is collected (notably identity proof, ownership provenance, legacy permission consumers, deployment topology, and accounting sign-off).
+- DEC-15 authorizes preserving current wallet semantics during transition only; it does not approve a new accounting model or finance cutover.
+- DEC-32/33 authorize versioned per-poll eligibility configuration, not a universal voter class.
+- DEC-38 authorizes operational ballot separation only, not cryptographic unlinkability.
+- DEC-28 selects EF Core migrations as authoritative and FullSchema as generated/reference-only; SQL-view deployment reconciliation remains required.
+- DEC-29 requires removal/feature-gating of startup PIN mutation before preserved legacy-data runtime validation.
+- Gate A DDL remains **NOT AUTHORIZED**. This approval does not authorize EF migrations, schema changes, data backfill, identity merge, credential rewrite, finance mutation, production change, or cutover.
+
+All future design artifacts and acceptance tests must use the approved defaults. Any exception requires a numbered decision change and renewed owner approval.
