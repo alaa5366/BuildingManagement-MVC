@@ -898,3 +898,65 @@ The inspected file-return endpoints include:
 This search is source-code search, not proof that no additional custom response/download mechanism exists. Search for custom middleware, JavaScript-generated downloads, external storage links, and third-party integration endpoints before closing the export inventory.
 
 No application source, schema, or data was changed. No build/tests were run. **Gate A remains NOT AUTHORIZED.**
+
+
+
+## 23. Resident lifecycle, voting privacy, maintenance, notifications, presence, and camera access — 2026-11-18
+
+Static source review of `AdminResidentsController`, `ResidentsService`, `PollsController`, `ResidentPollsController`, `PollsService`, `MaintenanceController`, `ResidentMaintenanceController`, `MaintenanceService`, `NotificationsController`, `NotificationsService`, `PresenceController`, `PresenceService`, `CamerasController`, and the related EF mappings. No runtime behavior was exercised.
+
+### 23.1 Resident identity and lifecycle
+
+- Resident CRUD is building-scoped in the controller: Admin uses the `buildingId` claim and SuperAdmin may select a building. Detail/edit/disable/enable/delete first load the resident and compare its `BuildingId` with the caller's scope.
+- `ResidentsService.GetByIdAsync` loads by resident ID alone; scope is therefore an application/controller responsibility and must remain centralized when new service callers are added.
+- `ResidentsService.DeleteAsync` physically deletes the resident row and does not use its `deletedBy` argument. The service injects `IAuditLogger`, but the inspected resident CRUD/PIN methods do not call it. The controller also does not write durable audit events for create/edit/PIN/disable/enable/delete. This is a material lifecycle/audit gap: prefer retained Person/Account records with explicit relationship end dates, account disable/revoke, and append-only audit history rather than deleting the person record.
+- `SetDisabledAsync` changes `IsDisabled`, while `CreateAsync` sets `IsActive`; these are separate state fields. Define one authoritative account-state model and explicit transition rules so disabled/inactive states cannot drift or be interpreted differently by login, authorization, and admin screens.
+- PIN reset hashes the supplied PIN with BCrypt, but `SetApartmentPinAsync` applies the same hash to every resident of an apartment. This preserves the legacy shared-apartment-secret behavior rather than establishing an individual credential per person. The target design must not silently migrate this into one shared account credential; define credential ownership and reset scope per Person/Account.
+- The SuperAdmin-only `RunMigration` action reports a successful migration result, but the inspected `ResidentsService.MigrateFromApartmentsAsync` implementation currently returns a new empty `MigrationResult` without performing migration. The UI can therefore display a completed/zero-entry result while no records were migrated. Treat this as a nonfunctional legacy migration entry point; remove/disable it or replace it with a separately designed, dry-run-first, evidence-backed migration workflow before relying on it.
+- Resident creation accepts `buildingId` and `apartmentId`; the service inserts both values and relies on database relationship constraints for consistency. Keep explicit service-level validation that the apartment belongs to the selected building, with a clear error, rather than making controller correctness depend only on a composite FK.
+
+### 23.2 Voting integrity and secrecy
+
+- The current voting model is explicitly one vote per apartment: the in-memory `Poll.Votes` dictionary maps apartment ID to option ID; the SQL `PollVotes` key is (BuildingId, PollId, ApartmentId), and each row stores OptionId. This is an identifiable ballot, not a secret ballot.
+- More critically, `ResidentPollsController.Vote` writes an aggregate audit entry containing the poll question and selected option text, with the apartment number as the audit target. Even if the vote table were later anonymized, this audit trail currently discloses how a specific apartment voted.
+- The target secret-ballot design must separate eligibility/one-vote enforcement from ballot content: issue an opaque single-use eligibility token or equivalent, store a ballot without apartment/person/account identifiers, and ensure audit/log/notification/export paths never contain the selected option or a linkable ballot identifier. Keep any eligibility-consumption record separate from the encrypted/anonymized ballot store and define the threat model for administrators and database operators.
+- Admin poll deletion removes the poll from the aggregate, and the SQL mapper synchronizes child options/votes. Do not use ordinary delete for polls with votes if historical results or legal/accountability retention is required; close/archive and retain the poll definition and aggregate results under an explicit retention policy.
+- Resident poll listing filters only `Closed == false`, whereas vote acceptance additionally checks deadline expiry. As a result, expired polls may remain visible as apparently open even though the vote action rejects them. Align display state, deadline validation, and server-side vote eligibility; parse deadlines strictly with a defined timezone/UTC contract.
+
+### 23.3 Maintenance and financial linkage
+
+- Resident maintenance view currently returns every non-cancelled maintenance record for the resident's entire building, without apartment-level filtering. This may be intended as a shared-building notice board, but it is a product/data-classification decision: distinguish building-wide work from apartment-specific maintenance and filter accordingly if records can contain private unit/vendor/complaint details.
+- `AddToExpenses` creates a monthly expense, marks the maintenance record `AddedToExpense`, and recalculates distribution. The flag prevents a second conversion through this method, but the created expense is not visibly linked by a durable MaintenanceRecordId in the inspected domain workflow.
+- The maintenance record can still be edited or deleted after conversion. Editing its cost/vendor/title does not update or reverse the already-created expense; deleting the maintenance record does not reverse the expense. This can leave the operational record and financial ledger inconsistent. Introduce an immutable conversion reference and a controlled correction/reversal workflow; never silently rewrite a posted financial expense.
+- Date handling uses permissive `DateTime.TryParse` with `AssumeUniversal`; the controller's Add/Update paths also accept a caller-provided month for expense conversion. Require strict date/month formats, UTC/local semantics, and policy checks for future/backdated posting periods.
+- Audit events for maintenance add/update/delete/conversion are pushed into the building aggregate before `SaveFullAsync`; this is not the same as a separately durable transactional audit/outbox. Preserve the action details and actor but move critical audit/ledger linkage into a transaction/outbox boundary.
+
+### 23.4 Notifications and recipient isolation
+
+- Notifications are stored as a building-level collection and recipient-scoped by `RecipientType` plus apartment `RecipientId`. The controller derives resident recipient identity from the apartment claim, and the service's resident read/mark-read methods require the same apartment ID; this is a useful isolation invariant to preserve.
+- The service caps the entire building's notification list at 200, not 200 per recipient or a time-based retention window. A high-volume event affecting many apartments can evict older notifications for unrelated recipients. Define per-recipient retention and durable unread guarantees instead of a single shared in-memory-style cap.
+- Notifications currently identify residents by apartment rather than person/account. Multiple residents in one apartment share the same notification inbox and read state; moving occupants and ownership changes also make historical recipient meaning ambiguous. The new model should define whether each notification belongs to a Person, Account, Apartment, or building audience, and preserve the recipient snapshot/history at send time.
+- Mark-read operations persist by saving the full building aggregate. For a high-volume system, use targeted, recipient-scoped SQL updates with concurrency protection and bounded paging rather than loading and saving the whole aggregate.
+
+### 23.5 Presence, privacy, and camera access
+
+- `PresenceService.BuildDocId` uses `{buildingId}_{apartmentId}` whenever both claims exist, instead of the authenticated user ID. Consequently, multiple people/accounts in one apartment overwrite the same presence row; online count is effectively apartment/session presence, not unique people or accounts. The UI and data contract must say which concept it represents. If user-level presence is required, key by AccountId and derive apartment/building scope from current authorized relationships.
+- Heartbeat trusts the building/apartment claims and does not independently validate current account status or relationship validity in the service. Ensure session revalidation and relationship revocation invalidate or reject stale heartbeat claims.
+- Heartbeat is the inspected controller's only `IgnoreAntiforgeryToken` exception. It only updates last-seen presence, so the impact is limited, but cookie-authenticated cross-site requests can still make a user appear online. Prefer antiforgery protection unless a tested alternative (e.g. same-site authenticated beacon) is required.
+- Presence cleanup deletes records older than 30 days. Define the privacy/retention policy and avoid turning presence into a long-term activity history; expose only the minimum fields and authorized building-level aggregates.
+- Camera live view and HLS URL endpoints enforce building scope for Admin/Resident and allow SuperAdmin cross-building access. The Admin permission attribute applies to admin principals; resident access is separately permitted by the controller's role/building logic. This should be an explicit policy decision: residents of one apartment currently appear eligible to view all active cameras in their building, not only cameras assigned to their unit.
+- `GetHlsUrl` returns the configured HLS base URL plus a camera-specific stream path. Apply private/no-store response headers and ensure the media server independently enforces authorization; a hidden/unpredictable stream path is not sufficient access control. Test direct HLS playlist/segment access after logout, account disable, building reassignment, and permission revocation.
+
+### 23.6 Required acceptance tests
+
+1. Resident cross-building IDOR tests for details/edit/PIN/disable/enable/delete, plus service-level apartment/building consistency tests.
+2. Resident lifecycle audit tests for every state change and PIN reset; prove physical deletion is blocked or explicitly retained under an approved erasure policy.
+3. A test proving the legacy resident migration endpoint cannot report success while doing no work; replace it with deterministic dry-run and execution evidence before enabling it.
+4. Secret-ballot tests that inspect SQL rows, aggregate audit, application logs, exports, and backups to prove no selected option is linkable to an apartment/person/account.
+5. Poll deadline tests for malformed, timezone-boundary, expired, future, closed, and reopened polls; listing state must match vote eligibility.
+6. Maintenance conversion tests proving posted expense linkage, idempotency, cost edits/deletes after posting, correction/reversal, and ledger reconciliation.
+7. Notification isolation tests for same-apartment multiple residents, cross-apartment mark-read attempts, retention/eviction, and concurrent updates.
+8. Presence tests for two accounts in one apartment, account disable/revocation, stale claims, CSRF behavior, retention, and correct online-count semantics.
+9. Camera tests for resident policy, admin permission, cross-building access, direct HLS playlist/segment authorization, cache headers, and immediate revocation.
+
+No application code, schema, data, or configuration was changed. No build or tests were run; this section is a static source review only. **Gate A remains NOT AUTHORIZED.**
