@@ -139,6 +139,8 @@ Current safe boundary:
 
 ## Additional design artifacts
 
+- `Database/Redesign/Domain-Glossary-and-Application-UseCase-Catalogue.md` — canonical domain language, aggregate boundaries, command/query catalogue, typed outcomes, actor context, and cross-cutting implementation constraints.
+
 - `Database/Redesign/Legacy-Permission-Scope-Catalogue-2026-11-18.md` — all 28 legacy permission keys mapped to proposed scopes/resources, stale catalog references, risky combined capabilities, target decomposition, and five owner decisions. Proposed only; no permission grants or code changed.
 
 - `Database/Redesign/Cross-Document-Consistency-and-GateA-Design-Review-2026-11-18.md` — cross-check of architecture, ERD, data dictionary, mapping, Gate A SQL, and decision register; records corrections and remaining technical blockers. Documentation/design only; Gate A remains unauthorized.
