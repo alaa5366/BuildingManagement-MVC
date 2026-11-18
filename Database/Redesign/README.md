@@ -716,3 +716,15 @@ The identity review is the first active implementation workstream under full-pro
 ## Implementation updates
 
 - [P0 Startup Safety Remediation — 2026-11-18](P0-Startup-Safety-Remediation-2026-11-18.md) — removes credential and raw SQL mutation from application startup; documents the temporary in-memory throttle limitation.
+
+
+## Owner implementation authorization — 2026-11-18
+
+The owner has now explicitly authorized project-wide implementation, including database and schema changes. This supersedes the earlier discovery-only / Gate A not-authorized wording in this README.
+
+- EF Core migrations, entity/model changes, constraints, indexes, and staged data migration work may proceed.
+- The approved disposable target is `BuildingManagement_RestoreTest`; every migration must verify the exact database name and expected migration baseline before applying.
+- Gate A is authorized for implementation/rehearsal on that disposable restore.
+- Preserve legacy data and compatibility until mapping, reconciliation, and regression evidence pass.
+- Production/live database execution, irreversible destructive cleanup, and production cutover remain separate operations requiring explicit target-specific confirmation.
+- No claim of execution or test success without actual run evidence.
