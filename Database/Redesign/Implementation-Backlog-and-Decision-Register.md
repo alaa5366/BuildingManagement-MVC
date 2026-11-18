@@ -148,3 +148,21 @@ These decisions supplement DEC-01 through DEC-30; they do not replace or silentl
 8. `ApartmentAccessGrants` grants access but does not create ownership, occupancy, or an account. Its permission profile and relationship to the general authorization evaluator require explicit policy before physical implementation.
 9. Secret-ballot relational separation is not a cryptographic guarantee. Timing, privileged DB access, backups, and infrastructure logs remain metadata risks; the product must approve the assurance level.
 10. The proposed SQL key types/lengths for all legacy FKs remain provisional until exact live metadata, EF model, and deployment artifacts are reconciled. No proposed type should be copied into DDL by assumption.
+
+
+## 9. Additional permission and finance decisions consolidated from module designs
+
+These decisions are also detailed in the Permission Scope Catalogue and Financial Ledger Design. The IDs below consolidate them into the main owner register.
+
+| ID | Decision | Recommended default | Status / blocking impact |
+|---|---|---|---|
+| DEC-39 | SuperAdmin privilege boundaries | No unconditional bypass. Explicit System role grants; separate grants and fresh MFA for secret access, restore, global secret operations, and system maintenance. | Owner decision; blocks role templates and privileged-operation policies |
+| DEC-40 | Financial permission granularity | Split wallet read, deposit confirm/cancel, adjustment, expense/revenue post/reverse, export, period close/reopen. | Owner decision; blocks finance authorization model |
+| DEC-41 | Meaning of audit.view.own | Personal scope means own Person/account events; apartment-wide visibility requires a separate Apartment-scope permission. | Owner decision; blocks audit visibility policy |
+| DEC-42 | WhatsApp permission boundary | Separate message dispatch from provider configuration and secret management. | Owner decision; blocks integration permissions |
+| DEC-43 | Missing import/tools/sync workflows | Do not migrate grants for absent workflows. Retire stale catalog entries or approve a rebuilt supported workflow with a defined source of truth. | Owner decision; blocks those permission migrations |
+| DEC-44 | Building financial timezone | Explicit IANA timezone per building; use a controlled fallback only for legacy records without a setting. | Owner decision; blocks period-boundary implementation |
+| DEC-45 | Financial operation authority | Separate deposit confirmation, reversal, high-value adjustment, period reopen, and export duties; use step-up/dual approval for high-risk operations. | Owner decision; blocks finance role matrix |
+| DEC-46 | Confirmed deposit correction | Keep confirmed original immutable; correct with a linked reversal and replacement under explicit authority. | Proposed default; confirm before finance command implementation |
+
+These are additive to DEC-01 through DEC-38. The separate PERM/FIN identifiers remain as cross-references in their module documents.
