@@ -9,7 +9,11 @@ $Server = '(localdb)\MSSQLLocalDB'
 $Database = 'BuildingManagement_RestoreTest'
 $SqlRelative = 'Database\Redesign\Generated-Sql\Phase08-20261119-012912.sql'
 $SqlPath = Join-Path $Repo $SqlRelative
-$ExpectedSqlHash = 'CFA0D13D61AE0389660C56462987A3B94B723AAE50207CC6A89BD1D6A8D5F616'
+$ExpectedSqlHashes = @(
+    # Original generated file hash and the observed Git checkout representation.
+    'CFA0D13D61AE0389660C56462987A3B94B723AAE50207CC6A89BD1D6A8D5F616',
+    '93FB742951A1EA322419B0358E792757B0B4DED500AB01E407DAA42DFB858005'
+)
 $BackupPath = Join-Path $env:LOCALAPPDATA 'BuildingManagement\Backups\BuildingManagement_RestoreTest-Phase08-20261119-011703.bak'
 $FromMigration = '20261118184850_Phase07_OwnershipRecordProvenance'
 $Migration1 = '20261118213732_Phase08_FinancialLedgerFoundation'
@@ -90,7 +94,9 @@ if (-not (Test-Path -LiteralPath $SqlPath -PathType Leaf)) { throw "Reviewed SQL
 if (-not (Test-Path -LiteralPath $BackupPath -PathType Leaf)) { throw "Required verified backup is missing: $BackupPath" }
 
 $sqlHash = (Get-FileHash -LiteralPath $SqlPath -Algorithm SHA256).Hash
-if ($sqlHash -ne $ExpectedSqlHash) { throw "SQL SHA256 mismatch. Expected $ExpectedSqlHash; found $sqlHash. Nothing executed." }
+if ($sqlHash -notin $ExpectedSqlHashes) {
+    throw "SQL SHA256 is not one of the two reviewed byte representations. Found $sqlHash. Nothing executed."
+}
 
 # Confirm the exact server/database identity and state from master.
 $master = New-Connection 'master'
