@@ -178,3 +178,12 @@ Added `Database/Diagnostics/GateA-Preflight-Validation.sql`. It is read-only and
 - EF migration history for the selected restored database.
 
 Run this only against the disposable restored test database. A result of `TYPE_LENGTH_OK_REVIEW_COLLATION` is not a final pass by itself: compare collations across all FK components and inspect the key/index result set. Any mismatch or pre-existing partial target object blocks execution pending review. The preflight itself has not been run by this repository change.
+
+### Latest results reviewed — Gate A preflight (2026-11-18)
+
+Found and reviewed:
+- `GateA-Preflight-Validation_01.txt` through `_06.txt`.
+
+The live legacy FK columns match the expected `nvarchar(128)` byte length and all use `SQL_Latin1_General_CP1_CI_AS`; Buildings and Apartments have the expected referenced primary keys; all twelve Gate A target tables are absent; and the database has the four expected EF migrations through AddUserTwoFactor.
+
+The initial output did not report the database default collation. `GateA-Preflight-Validation.sql` has been extended with that check. Re-run it and add the new result file in this same Diagnostics folder. Gate A remains blocked pending that result and the ten aggregate profiling result sets. No DDL/DML was executed.
