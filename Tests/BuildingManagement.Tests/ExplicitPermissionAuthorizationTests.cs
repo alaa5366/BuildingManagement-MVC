@@ -28,7 +28,9 @@ public sealed class ExplicitPermissionAuthorizationTests
     {
         var context = CreateContext(role);
         new AdminPermissionAttribute("backup.manage").OnAuthorization(context);
-        Assert.IsType<ForbidResult>(context.Result);
+        var denied = Assert.IsType<ContentResult>(context.Result);
+        Assert.Equal(StatusCodes.Status403Forbidden, denied.StatusCode);
+        Assert.False(string.IsNullOrWhiteSpace(denied.Content));
     }
 
     [Theory]
