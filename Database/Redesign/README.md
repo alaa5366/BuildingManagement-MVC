@@ -475,3 +475,8 @@ The export controller actions inspected do not directly record dedicated export 
 ### Test-coverage review for reporting and exports — 2026-11-18
 
 Section 21 maps existing tests and gaps. Current tests already provide broad unit coverage for wallet formulas and report arithmetic, plus audit paging/filter and CSV cell-safety tests. Missing evidence includes report-vs-wallet metric contract assertions, SQL projection parity, audit controller scope/export tests, end-to-end export security for JSON/XLSX/ZIP, backup-controller workflows, and import failure injection. No test/build was executed in this documentation update. **Gate A remains NOT AUTHORIZED.**
+
+
+### Invoice and QR document-delivery review — 2026-11-18
+
+Section 22 extends the file-response inventory to invoice PDFs and QR PNG/PDF endpoints. Invoice download enforces resident apartment claims and admin building scope and records an audit event, though persistence is best-effort. Generic QR PNG correctly sets `private, no-store`; invoice PDFs and SuperAdmin building QR PDFs need consistent no-store headers and dedicated audit evidence. QR PDF generation is SuperAdmin-only but may encode access links, so treat it as sensitive. No source changes or tests were performed. **Gate A remains NOT AUTHORIZED.**
