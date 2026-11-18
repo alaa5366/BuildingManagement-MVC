@@ -7,11 +7,17 @@ SAFETY:
 - Read-only SELECT/metadata statements only.
 - Does not print names, phone numbers, email addresses, PINs, password hashes,
   API tokens, encrypted secret values, recovery codes, or payment details.
-- Run against a disposable restored test database, not production.
-- Review the result sets and export them with the redesign baseline.
+- Run against the local disposable restored test database only: BuildingManagement_RestoreTest.
+- The script checks DB_NAME() and aborts if another database is selected.
+- Uses a 5-second lock timeout and low deadlock priority.
+- Review/export all result sets with the redesign baseline.
 */
 USE [BuildingManagement_RestoreTest];
+IF DB_NAME() <> N'BuildingManagement_RestoreTest'
+    THROW 51000, 'Wrong database. Profiling is allowed only on BuildingManagement_RestoreTest.', 1;
 SET NOCOUNT ON;
+SET LOCK_TIMEOUT 5000;
+SET DEADLOCK_PRIORITY LOW;
 SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
 
 SELECT
