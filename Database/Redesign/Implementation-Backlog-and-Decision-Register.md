@@ -212,3 +212,9 @@ This approval supersedes the prior Open/Proposed labels **for selection of the r
 - Gate A DDL remains **NOT AUTHORIZED**. This approval does not authorize EF migrations, schema changes, data backfill, identity merge, credential rewrite, finance mutation, production change, or cutover.
 
 All future design artifacts and acceptance tests must use the approved defaults. Any exception requires a numbered decision change and renewed owner approval.
+
+## 12. Owner authorization — full-project redesign and implementation
+
+The owner has now explicitly approved changing the **entire project**, beyond the earlier approval of design defaults. Full scope includes all domain/application layers, Controllers, Services, Views, persistence/EF migrations, security, finance, voting, operations, media, tests, deployment artifacts, and documentation. Legacy components may be replaced when the target design and safe transition path are ready. See [Owner Authorization — Full Project Redesign](Owner-Authorization-Full-Project-Redesign-2026-11-18.md).
+
+Proceed without routine per-file approvals. Create and validate migrations and rehearse changes on a verified disposable restore/test database. Preserve evidence and rollback paths. Production/live database changes, production deployment, destructive operations on non-disposable data, irreversible cutovers, and external device/service changes remain separately gated for explicit execution approval. Gate A may be prepared and tested on disposable restore only; it is not authorized against production/non-disposable databases.
