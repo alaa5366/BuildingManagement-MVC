@@ -396,3 +396,18 @@ Reviewed `DvrService`, `ResidentsService`, `WalletService`, `ExcelImportService`
 - Use shared one-use preview sessions and distributed leases for restore/import/scheduled jobs in multi-instance deployment.
 - Add tests for direct service misuse, foreign BuildingId/ApartmentId/DvrId, role and permission denial, export-vs-view separation, restore user/session mismatch and replay, preview across instances, backup partial errors, import failure after every stage, duplicate scheduler execution, crash/retry around file/SQL/audit boundaries, and secret redaction.
 - No source code, schema, database rows, credentials, backup files, or runtime state were changed. No build or tests were executed.
+
+
+### Existing service/background test coverage review
+
+Inspected `BackupServiceTests.cs`, `BackupRestorePersistenceTests.cs`, `ScheduledBackupServiceTests.cs`, `ResidentsServiceTests.cs`, and `ResidentsServiceSetPinTests.cs`.
+
+- Backup tests already cover valid ZIP creation, preview validation, user-bound one-use restore sessions, replay rejection, digest tampering, archive-entry validation, and session count limits. Preserve these tests.
+- `CreateBackupAsync_UnknownTable_SkipsIt` explicitly asserts that an unknown collection is skipped while `Success` remains true. This test currently locks in the partial-success behavior identified above; replace it with a fail-closed validation expectation and add a separate explicit partial-read failure test.
+- Restore persistence tests cover insert/skip/overwrite and malformed-later-collection rollback behavior. The direct `RestoreAsync` overload is used by tests, so narrowing it requires a dedicated internal test seam rather than weakening production session binding.
+- Scheduled backup tests cover input validation and normalization, but do not test concurrent scheduler instances, lease acquisition/expiry, duplicate occurrence suppression, crash recovery, file/SQL reconciliation, or rotation races.
+- Resident service tests validate hashing and data mutations, but do not test actor role, building scope, resource mismatch, authorization denial, audit atomicity, or session/security-version revocation. These are not domain-unit test substitutes.
+- No `ExcelImportServiceTests.cs` or `DvrServiceTests.cs` file was found at the inspected paths. Import transaction/replay and DVR secret/resource authorization therefore need new focused test suites.
+- These were test-source inspections only. No tests were executed.
+
+**Test work required before implementation acceptance:** replace the unknown-collection success test; add restore overload visibility/authorization guard tests; add cross-instance scheduler lease/idempotency tests; import transaction failure injection at every write stage and replay tests; service-level foreign-resource and actor-scope tests for DVR/resident/financial operations; and audit/outbox failure/retry tests.
