@@ -195,3 +195,5 @@ The following read-only source reviews now provide implementation evidence for t
 ### QR/media source review evidence
 
 [QR Access, DVR, and Media Integration Review — 2026-11-18](QR-DVR-and-Media-Integration-Review-2026-11-18.md) adds concrete acceptance requirements to QR-01, MEDIA-01, AUTH-01, APP-02, and SEC-02: fail-closed QR issuance, bounded/revocable capabilities, account/person-bound access sessions, secret-free DVR DTOs, and an idempotent MediaMTX reconciliation/outbox workflow.
+
+The QR/DVR/media review also confirms that HLS URL discovery authorization is not equivalent to playlist/segment authorization. MEDIA-01 and AUTH-01 acceptance must include MediaMTX-side per-request authorization (or an authenticated HLS gateway), explicit resident camera visibility scope, and reconciliation of DVR desired/observed stream configuration.
