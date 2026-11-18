@@ -398,6 +398,7 @@ erDiagram
     POLLS ||--o| POLL_VOTING_POLICIES : "policy"
     POLLS ||--o{ POLL_DELEGATIONS : "delegation"
     POLLS ||--o{ POLL_ELIGIBILITY : "eligible subjects"
+    PERSONS ||--o{ POLL_ELIGIBILITY : "person eligibility subject"
     POLLS ||--o{ POLL_BALLOTS : "anonymous choices"
     POLL_OPTIONS ||--o{ POLL_BALLOTS : "selected option"
     POLLS ||--o{ POLL_LIFECYCLE_EVENTS : "lifecycle"
