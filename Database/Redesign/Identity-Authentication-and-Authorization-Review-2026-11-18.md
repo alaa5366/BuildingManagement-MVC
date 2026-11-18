@@ -173,3 +173,16 @@ Target:
 - No build or tests were run as part of this review.
 - Full-project implementation is owner-authorized. Database rehearsal must use a verified disposable restore; production/live cutover remains separately gated.
 - Continue next with controller-by-controller authorization coverage and a permission-consumer matrix, then implement the target policy engine and tests.
+
+
+## 10. Implementation update — P0 startup safety
+
+The first source-code remediation is now committed:
+- Removed automatic invocation and DI registration of the legacy PIN migration.
+- Removed the legacy PIN migration service implementation so it cannot be re-enabled accidentally through DI.
+- Removed startup initialization of SQL-backed LoginThrottle and replaced it with in-process counters that do not issue SQL.
+- Updated the security documentation to state that legacy credentials are not rewritten at startup.
+
+This closes the startup-mutation hazard, but does not complete credential migration. The in-memory throttle currently resets on process restart; durable persistence is a follow-up requiring an EF-managed table and tests. The account-centric identity model, explicit scoped authorization, and mandatory administrator MFA remain open implementation work.
+
+See [P0 Startup Safety Remediation](P0-Startup-Safety-Remediation-2026-11-18.md). The changes are source-reviewed on GitHub, but no build or tests were run in this session.
