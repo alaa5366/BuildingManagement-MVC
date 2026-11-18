@@ -342,3 +342,6 @@ Key findings:
 - Permission claims are not a substitute for resource-aware authorization; the current attribute does not evaluate building/apartment scope.
 
 Target requirements now include a persisted account security/session version, centralized mutation service, explicit grant/revoke/replace semantics, transactional audit outbox, and cross-instance revocation tests. No source code or database was changed; no build/runtime tests were executed.
+
+
+Additional audit/authentication review confirmed that `AuditLogger.LogAsync` writes through a separate DbContext after the business mutation and catches/swallow exceptions after logging a warning. Callers therefore cannot know whether the audit event was durably persisted. The authentication cookie currently uses a seven-day sliding lifetime without a persisted account security-stamp/session-version claim in the inspected setup; impersonation backup state is held in a protected two-hour cookie and its audit uses the same best-effort logger. The transactional outbox and cross-instance session-revocation requirements are therefore mandatory target controls, including active impersonation revocation.
