@@ -105,3 +105,19 @@ The diagnostic must not recalculate or update stored shares, and must not export
 This review is based on repository source only. No source code was changed, no tests were executed, no SQL diagnostic was run, and no financial rows were updated or deleted.
 
 **Gate A remains blocked** until historical fee/eligibility semantics, the +0.22/+0.04 differences, carry-over restatement policy, cancelled-deposit treatment, wallet adjustments, and retention rules are resolved. No DDL/DML, EF migration, financial backfill, or cutover is authorized by this review.
+
+
+## 6. Reconciliation results — 2026-11-18
+
+The per-apartment read-only run is now reviewed; detailed findings are in `Financial-Reconciliation-Results-Assessment-2026-11-18.md`.
+
+- The 2026-10 variance for `LmkUDOJcjlvjiGmluz6c` is confirmed at +0.22 expense and +0.04 revenue. All 60 share rows exist; 57 currently open apartments each carry the same rounded share, so the aggregate overage is consistent with rounding without a final remainder correction. The deterministic candidate corrects the final row and sums exactly, but ApartmentId order is diagnostic only and cannot prove historical order.
+- The 2026-09 to 2026-11 records for `zxhRd7cwZ07rZotXeQ17` show zero expense/revenue ledger/share totals. September has 5,119.00 confirmed and 6,356.00 cancelled deposits; cancelled amounts remain excluded. Carry-over totals progress 0.00, 3,319.00, and 1,519.00. Apartment-level negative reconstructed balances are consistent with unpaid monthly fees offset by a larger credit in apartment 12, but historical fee/eligibility is not proven by current fields.
+- `ZzgYia4qMZ23N8qhiCOV` reconciles for September and October. November has no monthly share or expense/revenue rows and is an in-progress month in this run; two adjustments total +200.00.
+- No missing/orphan share rows were returned in the diagnostic scope.
+
+**Updated FIN-05:** the 2026-10 difference is no longer an unattributed aggregate variance. It is consistent with independent per-apartment rounding persisted without exact remainder allocation. Treat it as a historical posted-period variance; do not overwrite the snapshot. A reviewed adjustment/restatement or documented acceptance is required.
+
+**Updated FIN-06:** carry-over is visibly apartment-scoped. The target model must preserve per-apartment debt/credit and avoid cross-apartment netting by default. Negative balances are not automatically data defects.
+
+**Next decision:** define posted-month correction/restatement authority, negative-balance handling, historical fee/eligibility snapshots, and the month-close boundary. No financial data was changed; no code, tests, DDL/DML, EF migration, or backfill was executed.
