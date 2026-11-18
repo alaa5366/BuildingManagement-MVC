@@ -70,3 +70,39 @@ After the diagnostic results are reviewed:
 ## 5. Safety boundary
 
 This review used repository source only. The new SQL/PowerShell diagnostic has been committed but has **not** been run here. No SQL DDL/DML, EF migration, credential rewrite, startup migration, view creation, or application cutover has been performed.
+
+
+
+## 6. Diagnostic results reviewed — 2026-11-18 15:15 +02:00
+
+Results are committed under `Database/Diagnostics/Wallet-Credential-Validation-Results/20261118-151511/` (six result sets, 15 rows), captured from `BuildingManagement_RestoreTest` on `ZOS-AAM\\LOCALDB#8B6B20E4`.
+
+### Wallet objects
+
+- `dbo.vw_ApartmentWalletMovements`: ABSENT.
+- `dbo.vw_ApartmentWalletBalance`: ABSENT.
+- No wallet-named view definitions were returned because neither requested object exists.
+- No SQL-module dependency rows were returned for wallet-named objects.
+
+This supports the earlier repository review: no database-side module dependency was found in the inspected restore. It does not rule out external reporting/client dependencies. Keep the view mapping/schema artifact classified as schema/model drift pending confirmation of external consumers; do not create either view speculatively.
+
+### Credential-format aggregate results
+
+| Source / field | Records | Empty | Non-empty classification |
+|---|---:|---:|---|
+| Users / admin PIN | 3 | 0 | 3 `BCRYPT_SHAPE_60_UNVERIFIED` |
+| Users / superadmin PIN | 2 | 0 | 2 `BCRYPT_SHAPE_60_UNVERIFIED` |
+| Residents / PinHash | 79 | 0 | 79 `BCRYPT_SHAPE_60_UNVERIFIED` |
+| Residents / PasswordHash | 79 | 79 | 0 |
+| Apartments / Pin | 79 | 79 | 0 |
+| Buildings / AdminPin | 3 | 3 | 0 |
+
+No plaintext-candidate or other non-BCrypt class was reported in the current restored snapshot. The five Users PINs and 79 Resident PinHash values all have a 60-character BCrypt-shaped format. This is **not** proof that the hash payloads are valid, supported by the installed BCrypt implementation, or capable of verifying the expected PIN. No hash/PIN values or identifying data were exported.
+
+### Updated operational decision
+
+- Do not run the current startup `PinMigrationService` against this restore for inspection. Although the current aggregate results show BCrypt-shaped values, the migration's prefix-only decision logic and source-clearing behavior remain unsafe and are not needed to validate these already-shaped values.
+- Next credential work should be a read-only/offline verification harness using controlled test inputs or a secure in-process verifier that emits aggregate success/failure counts only. Never export hashes or PINs, and never rewrite credentials as part of verification.
+- Keep Gate A blocked until credential verification/re-enrollment policy, identity linking, financial reconciliation, cascade retention, and the disposable rehearsal/rollback plan are resolved.
+
+The diagnostic was read-only. No DDL/DML, application startup, credential rewrite, view creation, EF migration, backfill, or cutover was performed by this run.
