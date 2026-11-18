@@ -702,3 +702,6 @@ The security/operations review identifies plaintext secret echoing in the supera
 
 The QR/media review identifies ignored token-persistence failures, unbounded QR lifetimes and missing revocation workflow, apartment-shared synthetic QR identity, DVR credential-bearing EF DTOs, stale MediaMTX paths after DVR updates, and cross-system partial-failure states.
 The media review was extended to the live camera wall: application checks currently gate HLS URL discovery, while the browser consumes the direct MediaMTX playlist/segments. MediaMTX-side authorization for every stream resource remains unverified and must be treated as a separate security boundary.
+- [Owner Approval — Recommended Decision Defaults (DEC-01 to DEC-46)](Owner-Approval-Recommended-Defaults-2026-11-18.md)
+
+**Decision status:** The owner has approved the recommended defaults for DEC-01 through DEC-46. These defaults govern design and acceptance criteria; evidence gates remain, and Gate A / database execution are not authorized.
