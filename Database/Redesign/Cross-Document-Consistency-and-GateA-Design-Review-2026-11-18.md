@@ -208,3 +208,16 @@ A further consistency pass added RowVersion to:
 - ApartmentAccessGrants (grant revocation concurrency).
 
 The data dictionary and parity matrix were updated to match. Recovery-code consumption remains a conditional atomic one-time update; it does not rely on a client-side read-then-write.
+
+## 14. Superseding implementation status — 2026-11-18
+
+The earlier status rows above describe the review at the time they were written. Owner approval of the recommended defaults and the subsequent Phase06/07 implementation update the following items:
+
+- **CONS-01:** `ApartmentAccessGrantService` validates actor, person, scope, reason, expiry, grant/revocation state, and writes append-only audit events in the same serializable transaction. Emergency and temporary grants require expiry.
+- **CONS-02:** The central evaluator is implemented and tested. `ApartmentAccessGrantService` requires the explicit `apartment.access.grant.manage` permission at building/apartment scope and fresh MFA. The five access profile keys still confer no independent permissions.
+- **CONS-06:** The evaluator enforces account-to-Person personal scope; a request for another Person fails as an invalid resource. Extend this with endpoint-level tests as target login and mapping are brought online.
+- **CONS-07:** The ownership service now enforces period-wide status consistency, share totals, duplicate-person rules, and serializable writes. Database concurrency tests remain part of the next service integration gate.
+- **DEC-01 through DEC-46:** Apply the approved defaults in `Owner-Approval-Recommended-Defaults-2026-11-18.md`. Approval does not supply missing identity evidence, source mappings, finance semantics, or endpoint/resource evidence.
+- **CONS-14 / legacy permission mapping:** Remains a cutover blocker. Do not migrate legacy grants until each legacy key is matched to its actual consumer and resource scope. The legacy mapping catalogue is an inventory and implementation aid, not proof that existing assignments are safe to backfill.
+
+Phase06 and Phase07 are rehearsed on the disposable restore only. The target identity and grant tables remain empty; existing legacy login and authorization endpoints are intentionally not switched to the target evaluator until reviewed identity mappings and compatibility tests are ready.

@@ -92,3 +92,12 @@ These are owner decisions. The proposed safe defaults can guide design but are n
 ## 6. Safety
 
 This is a documentation-only mapping. It does not alter authorization code, issue grants, change role templates, or migrate `UserPermissions`. No build or tests were run. The final mapping must be reconciled against every endpoint and service method before the target permission catalog is frozen.
+
+## 7. Implementation follow-up — 2026-11-18
+
+The owner approved the recommended defaults through DEC-01 to DEC-46. This resolves the policy choices listed above where they concern defaults, but does not provide endpoint evidence or authorize backfilling an ambiguous legacy assignment.
+
+- `DefaultAuthorizationPermissionCatalog` is now the code-owned allow-list used by the central `AuthorizationEvaluator`. Unknown keys fail closed; sensitive grants require a fresh MFA claim; explicit deny takes precedence.
+- `apartment.access.grant.manage` is a new building/apartment-scoped permission that requires fresh MFA. The transactional grant lifecycle checks it before granting or revoking access.
+- `ApartmentAccessGrantEntity.PermissionSetKey` values remain inert identifiers. No family, tenant, caretaker, emergency, or temporary profile grants permissions by itself.
+- This catalogue remains an inventory for the staged migration. Legacy login/controllers still use legacy permission claims, and no legacy permission assignment has been copied into target role or override tables. Complete each consumer/resource review before any cutover or grant import.
