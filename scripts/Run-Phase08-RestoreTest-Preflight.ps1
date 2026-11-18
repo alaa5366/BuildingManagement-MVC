@@ -39,9 +39,14 @@ function Invoke-Sql([string]$ConnectionString, [string]$Sql) {
 Set-Location $Repo
 if (-not (Test-Path '.\BuildingManagementMVC.csproj')) { throw 'Repository path is not the BuildingManagement-MVC project.' }
 if ((Invoke-Git -GitArgs @('branch','--show-current')) -ne $Branch) { throw "Switch to $Branch before running." }
-if ((Invoke-Git @('status','--porcelain'))) { throw 'Working tree is not clean. Commit or safely preserve local changes before running; nothing was changed.' }
-Invoke-Git @('fetch','origin',$Branch) | Out-Null
-Invoke-Git @('merge','--ff-only','@{u}') | Out-Null
+# Preserve all pre-existing unstaged/untracked work. Refuse only staged changes,
+# because the report-only commit must never include somebody else's staged files.
+$staged = & git diff --cached --name-only
+if ($LASTEXITCODE -ne 0) { throw 'Unable to inspect Git index; nothing was changed.' }
+if ($staged) { throw "Git index contains staged changes. Unstage or commit them separately before running; staged paths: $($staged -join ', ')" }
+$preExistingChanges = & git status --short
+if ($LASTEXITCODE -ne 0) { throw 'Unable to inspect working tree; nothing was changed.' }
+# No fetch/merge here: pull the reviewed branch before running this preflight.
 
 $masterCs = "Server=$Server;Database=master;Integrated Security=True;TrustServerCertificate=True;Connect Timeout=15;"
 $dbCheck = Invoke-Sql $masterCs @"
@@ -92,6 +97,10 @@ $lines.Add("- Database: $Database")
 $lines.Add("- State: $($dbCheck.Rows[0].state_desc)")
 $lines.Add("- User access: $($dbCheck.Rows[0].user_access_desc)")
 $lines.Add("- Recovery model: $($dbCheck.Rows[0].recovery_model_desc)")
+$lines.Add('')
+$lines.Add('## Pre-existing local working-tree changes (preserved; not included in this report commit)')
+if (-not $preExistingChanges) { $lines.Add('- None.') }
+foreach ($change in $preExistingChanges) { $lines.Add("- `$change`") }
 $lines.Add("- Backup: $BackupPath")
 $lines.Add('- Backup type: COPY_ONLY')
 $lines.Add('- RESTORE VERIFYONLY WITH CHECKSUM: PASSED')
