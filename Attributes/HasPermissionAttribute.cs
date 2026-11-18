@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 namespace BuildingManagementMvc.Attributes;
 
 /// <summary>
-/// Authorization filter that checks a single named permission for admins (super admins always pass). Redirects anonymous users to the login page.
+/// Authorization filter that checks a single explicit permission for administrator accounts.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false)]
 public class HasPermissionAttribute : Attribute, IAuthorizationFilter
@@ -30,15 +30,13 @@ public class HasPermissionAttribute : Attribute, IAuthorizationFilter
         }
 
         var role = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
-        if (role == "superadmin") return;
-
-        var hasPerm = false;
-        foreach (var claim in user.FindAll("perm"))
+        if (role != "admin" && role != "superadmin")
         {
-            if (claim.Value == _permission) { hasPerm = true; break; }
+            context.Result = new ForbidResult();
+            return;
         }
 
-        if (!hasPerm)
+        if (!user.HasClaim("perm", _permission))
             context.Result = new ForbidResult();
     }
 }
