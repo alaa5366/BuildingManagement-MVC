@@ -345,3 +345,17 @@ Target requirements now include a persisted account security/session version, ce
 
 
 Additional audit/authentication review confirmed that `AuditLogger.LogAsync` writes through a separate DbContext after the business mutation and catches/swallow exceptions after logging a warning. Callers therefore cannot know whether the audit event was durably persisted. The authentication cookie currently uses a seven-day sliding lifetime without a persisted account security-stamp/session-version claim in the inspected setup; impersonation backup state is held in a protected two-hour cookie and its audit uses the same best-effort logger. The transactional outbox and cross-instance session-revocation requirements are therefore mandatory target controls, including active impersonation revocation.
+
+
+## Authentication and MFA lifecycle review — 2026-11-18
+
+Added section 11 to `Identity-Resolution-and-Authorization-Review-2026-11-18.md` after reviewing the login, cookie, TOTP, recovery-code, and startup credential-migration paths.
+
+Key findings:
+- Admin/SuperAdmin MFA is opt-in today; privileged login is challenged only when the account already has MFA enabled. The approved target requires mandatory MFA before privileged access.
+- MFA enable/disable does not currently revoke other sessions or create a durable security audit/outbox event.
+- TOTP replay protection and recovery-code consumption use a process-local keyed lock; cross-instance atomicity is not established.
+- Pending login/MFA setup uses Session backed by `AddDistributedMemoryCache`, which is not a shared multi-instance session store. Login rate limiting is also currently process-local.
+- `Program.cs` automatically invokes legacy PIN migration at startup. Application startup can therefore mutate credential data; do not run the app against the restore just for inspection. Replace this with a separately approved, audited, transactional migration.
+
+Approved target decisions: mandatory MFA for admin/SuperAdmin; atomic cross-instance factor/recovery-code consumption; shared pending-auth/session and login-throttle stores; persisted account security version; durable transactional security audit; and removal of credential migration from startup. This is documentation/design only. No source or database changes, migrations, or tests were performed.
