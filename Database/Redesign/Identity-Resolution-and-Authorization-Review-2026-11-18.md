@@ -831,3 +831,35 @@ The controller is class-protected by `[Authorize(Roles = "superadmin")]` and `[H
 8. Add authorization tests for all actions, including direct URL calls, not only navigation visibility.
 
 No application code, backup archive, schema, or database row was changed. No build or tests were run. **Gate A remains NOT AUTHORIZED.**
+
+
+## 21. Reporting, wallet, audit, and export test-coverage review — 2026-11-18
+
+Inspected test source files (test names and assertions statically; no tests were executed during this review).
+
+### 21.1 Existing coverage worth preserving
+
+- `ReportsServiceTests` covers month labels and shifts, all/year/6m/12m selection, report totals for deposits/expenses/revenues, net calculation, debtors/creditors, and monthly series.
+- `WalletServiceTests` has broad unit coverage for month initialization, deposit lifecycle, rounding remainder allocation, pending/cancelled/confirmed deposit handling, wallet formula components, carry-over, distributions, and aggregate totals.
+- `AuditLoggerTests` verifies database-side page filtering, correlation metadata, and rejection of AuditLog updates/deletes.
+- `CsvExportSafetyTests` covers formula-like values and negative numeric values.
+
+### 21.2 Material gaps
+
+- Report tests do not demonstrate that period cash-flow totals are intentionally distinct from total wallet balances; add explicit contract tests and naming/label assertions.
+- No inspected report tests cover invalid `range` values, future months, gaps in historical month keys, large histories, or the exact CSV content/encoding/escaping and audit event behavior.
+- Wallet unit tests validate the current in-memory algorithm, but do not establish parity with a future SQL projection, month-close rules, historical correction/recalculation under realistic multi-month data, or stability of cent remainder allocation when apartment ordering changes.
+- The inspected AuditLogger tests do not cover controller role/scope behavior, CSV export scope parity, export maximums, stable equal-timestamp ordering, deep paging, audit insert failure behavior, or atomicity with a business mutation.
+- CSV safety helper tests are not end-to-end tests of every CSV endpoint. No inspected tests cover XLSX formula-like strings, JSON secret canaries, ZIP backup confidentiality, decrypted backup response cache headers, or direct URL authorization for each backup/export action.
+- No BackupController test file was found by the repository search. This does not prove there are no indirect tests, but the critical export/import controller workflows lack an obvious focused test suite.
+
+### 21.3 Required regression suite before read-model or Log Center implementation
+
+1. **Report metric contracts:** selected range, missing months, zero-activity months, cash-flow vs wallet balances, average denominator, and stable output labels.
+2. **Wallet golden cases:** 3–12 consecutive months, late deposit confirmation, cancelled/pending deposits, prior-month adjustment, closed/reopened apartments, apartment addition/removal, month gaps, and exact rounding reconciliation.
+3. **SQL read-model parity:** compare every proposed SQL result against the current WalletService oracle on deterministic fixtures before replacing any existing path.
+4. **Audit query/controller:** role matrix, cross-building and cross-apartment negative tests, filters, equal timestamps, page boundaries, export limits, and audit failure/outbox behavior.
+5. **Export security:** direct action authorization, secret-canary scans for JSON/XLSX/ZIP, CSV and XLSX formula injection, cache headers, filename/path traversal, and export audit records.
+6. **Import failure injection:** fail after building persistence and at each PIN assignment boundary; prove atomic rollback or durable retry/compensation.
+
+No tests/build were executed. This section reports source coverage only and does not claim runtime pass/fail. **Gate A remains NOT AUTHORIZED.**
