@@ -353,7 +353,7 @@ Constraints and indexes:
 - Filtered indexes on PersonId and AccountId, plus status/source lookup.
 - Restrictive FKs to Persons and UserAccounts; no cascade delete.
 - Residents rows may map many-to-one to Person, but do not directly carry AccountId. The account is reached through the reviewed Person-to-UserAccount relation.
-- A linked Users row requires both PersonId and AccountId. The migration service must verify transactionally that the AccountId belongs to the same PersonId; this pair is not inferred from two independent FKs.
+- A Users row in Linked or Separate disposition requires both PersonId and AccountId; Pending, Rejected, and ManualReview rows must have neither target populated. The migration service must verify transactionally that the AccountId belongs to the same PersonId; this pair is not inferred from two independent FKs. Review timestamp and reviewer are required together.
 - Pending, Rejected, and ManualReview rows may remain unresolved. Never fabricate a target just to complete the migration.
 - Initial source allow-list is deliberately limited to Users and Residents. Expand only with a separately reviewed mapping.
 
