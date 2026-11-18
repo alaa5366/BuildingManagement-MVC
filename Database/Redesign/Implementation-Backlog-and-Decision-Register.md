@@ -114,3 +114,34 @@ An epic is complete only when all applicable items are true:
 - No EF entities, migrations, database objects, or application runtime paths were changed by this planning work.
 - No backfill, identity merge, credential rewrite, finance mutation, or cutover was performed.
 - The next permissible work is further read-only reconciliation and finalization of the decision register; implementation begins only after the relevant approvals.
+
+
+## 7. Additional decisions recovered from the earlier blueprint and mapping review
+
+The earlier blueprint contains seven product-policy questions that must remain visible in the consolidated register. The mapping and current target model also reveal one additional decision about apartment-level preferences.
+
+| ID | Decision | Recommended default | Status / blocking impact |
+|---|---|---|---|
+| DEC-31 | Ownership completeness | Permit explicitly incomplete/unknown ownership periods; never normalize partial shares to 100%. Require exactly 100% only when the period is declared complete and legally verified. | Open; blocks ownership backfill and share constraints |
+| DEC-32 | Person-mode voting eligibility | Make eligibility a versioned poll policy; explicitly decide whether owners, occupants, or both qualify. Tenants/occupants may vote only when the poll policy says so. | Open; blocks poll eligibility implementation |
+| DEC-33 | Apartment-mode voting eligibility | Define whether eligibility derives from owners, occupants, or an approved combination, and snapshot the rule before poll opening. | Open; blocks apartment-mode poll setup |
+| DEC-34 | Multiple-apartment representation | Permit one representative to represent multiple apartments in one poll only if each apartment has a distinct valid delegation and the poll policy allows it. | Open; affects delegation uniqueness constraints |
+| DEC-35 | Apartment vs person preferences | Keep existing apartment-level language/notification/payment preferences as defaults during migration; add person-level overrides only with explicit precedence and consent semantics. | Open; blocks preference cutover |
+| DEC-36 | Legacy authentication compatibility | Do not silently carry plaintext legacy PINs. Preserve old verifier paths only where the verifier and cryptographic keys are proven; otherwise require reset/re-enrollment. Decide whether password, PIN, and external-provider sign-in remain supported during transition. | Open; blocks credential cutover |
+| DEC-37 | Retention and legal deletion | Define retention periods and legal holds separately for buildings, finance, audit, identity evidence, and ballots. Financial/audit evidence is not erased by ordinary account/building deletion. | Open; blocks archival/deletion policy and final retirement |
+| DEC-38 | Ballot secrecy assurance level | Default to operational separation with documented metadata-risk controls; if cryptographic unlinkability or certification is required, commission a separate protocol/security review before promising that property. | Open; blocks final ballot architecture claim |
+
+These decisions supplement DEC-01 through DEC-30; they do not replace or silently resolve them.
+
+## 8. Recovered cross-document consistency items
+
+1. The earlier blueprint's seven open questions are now represented by DEC-31 through DEC-38 (the preferences question is additionally represented as DEC-35).
+2. The data dictionary proposes both a `RecoveryCodeHashes` field and a normalized `UserRecoveryCodes` child table. Treat the child table as authoritative and remove the redundant serialized field from the final physical schema unless a separately justified compatibility need is approved.
+3. The target architecture describes the modular monolith and application boundaries; the older blueprint/ERD remain logical and physical data proposals. Neither overrides the newer dependency rules.
+4. `AccountPermissionOverrides` is required to preserve account-specific `UserPermissions`; it must be present consistently in the ERD, data dictionary, Gate A SQL, migration mapping, and permission evaluator. It is not interchangeable with role-wide `RolePermissions`.
+5. `LegacyIdentityMap` is the authoritative provenance name. Retire references to the earlier conceptual `IdentityMigrationMap` name except in historical change notes.
+6. The Gate A table inventory is additive-only and does not contain poll, finance-ledger, outbox, audit, private-document, or integration-secret target structures. Those belong to later approved phases and must not be implied by Gate A.
+7. The current design uses a Person as the subject of ownership/occupancy/access grants, while interactive authorization is performed by UserAccount. Application services must resolve account -> Person -> effective relationship and never substitute AccountId for PersonId.
+8. `ApartmentAccessGrants` grants access but does not create ownership, occupancy, or an account. Its permission profile and relationship to the general authorization evaluator require explicit policy before physical implementation.
+9. Secret-ballot relational separation is not a cryptographic guarantee. Timing, privileged DB access, backups, and infrastructure logs remain metadata risks; the product must approve the assurance level.
+10. The proposed SQL key types/lengths for all legacy FKs remain provisional until exact live metadata, EF model, and deployment artifacts are reconciled. No proposed type should be copied into DDL by assumption.
