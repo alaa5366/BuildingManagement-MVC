@@ -144,3 +144,17 @@ Current safe boundary:
 - `Database/Diagnostics/DatabaseRedesign-ReadOnly-Profiling.sql` — read-only, privacy-conscious profiling for identity candidates, ownership/occupancy, finance reconciliation, poll integrity, camera/DVR scope, secret presence counts, wallet-view metadata, FK delete actions, and EF migration history.
 
 These artifacts do not create or apply database changes. The profiling script is intended for the disposable `BuildingManagement_RestoreTest` database and returns aggregate counts/totals rather than personal or secret values.
+
+## Legacy mapping and reconciliation rules — 2026-11-18
+
+Added:
+- `Database/Redesign/Legacy-to-Target-Data-Mapping.md` — field-level mapping rules for Users, Residents, Apartments, BuildingAdmins, UserPermissions, credentials, MFA, voting, and financial history.
+- Explicit UID candidate-link rules; no matching by name/phone/email alone.
+- Manual-review treatment for legacy owner text and IsOwner/IsPrimary flags.
+- Credential/MFA/secret handling constraints and reconciliation acceptance criteria.
+
+**New blocking finding:** legacy `UserPermissions` is account-specific, while the proposed `RolePermissions` is role-specific. These structures are not equivalent. The target must add a scoped account-permission override model (recommended) or approve a controlled custom-role conversion before permission backfill. No permissions are to be migrated until this gap is closed.
+
+Repository inspection also confirms that `Residents` contains one row per apartment relationship with a unique `Uid`, and that its current `IsOwner`/`IsPrimary` flags do not provide legal ownership shares or dated occupancy history. The mapping artifact records these as candidates requiring profiling/review, not automatic migrations.
+
+Current implementation boundary remains unchanged: no EF entity changes, no EF migration, no SQL execution, no backfill, and no application cutover have been performed.
