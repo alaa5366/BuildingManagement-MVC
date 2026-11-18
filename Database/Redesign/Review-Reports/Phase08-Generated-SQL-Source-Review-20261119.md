@@ -4,7 +4,7 @@
 - SQL artifact: `Database/Redesign/Generated-Sql/Phase08-20261119-012912.sql`
 - SQL blob SHA: `f1161967c4acc79b006a68ee9c077b51f9a721f2`
 - Expected SHA-256: `CFA0D13D61AE0389660C56462987A3B94B723AAE50207CC6A89BD1D6A8D5F616`
-- Reviewed SQL length: 368 lines including final newline (36?); 22,391 characters.
+- Reviewed SQL length: 368 lines including final newline; 22,391 characters.
 - Review mode: read-only inspection of the complete generated SQL and comparison with both Phase08 migration source files, model snapshot, finance entity definitions, and finance target design.
 - Database changes: none. SQL was not executed.
 
