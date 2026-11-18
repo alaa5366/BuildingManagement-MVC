@@ -187,3 +187,10 @@ Found and reviewed:
 The live legacy FK columns match the expected `nvarchar(128)` byte length and all use `SQL_Latin1_General_CP1_CI_AS`; Buildings and Apartments have the expected referenced primary keys; all twelve Gate A target tables are absent; and the database has the four expected EF migrations through AddUserTwoFactor.
 
 The initial output did not report the database default collation. `GateA-Preflight-Validation.sql` has been extended with that check. Re-run it and add the new result file in this same Diagnostics folder. Gate A remains blocked pending that result and the ten aggregate profiling result sets. No DDL/DML was executed.
+
+
+## Aggregate profiling update — 2026-11-18
+
+The read-only aggregate profiling run has completed and its 15 result sets are committed under `Database/Diagnostics/Profiling-Results/20261118-145432/`. See `Database/Redesign/Aggregate-Profiling-Assessment-2026-11-18.md` for the findings and required reconciliation actions.
+
+The profiling evidence is no longer a blocker. Gate A execution is still blocked pending the updated Gate A preflight (including database default collation), credential strategy, manual identity-link decisions, finance/carry-over reconciliation, wallet-view discrepancy resolution, and retention review of cascade relationships. No DDL, EF migration, backfill, or application cutover has been executed.
