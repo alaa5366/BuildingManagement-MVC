@@ -1,4 +1,0 @@
-﻿20261116120818_InitialCreate	8.0.10
-20261117012657_Phase04_StandardizeKeyColumnTypes	8.0.10
-20261117050000_Phase05_RemoveRedundantResidentIndexes	8.0.10
-20261117130000_AddUserTwoFactor	8.0.10
