@@ -293,3 +293,18 @@ Added `Identity-Resolution-and-Authorization-Review-2026-11-18.md`.
 - Preserve legacy `UserPermissions` as scoped account overrides; do not convert them to role-wide permissions.
 
 Identity backfill remains blocked pending manual candidate dispositions, provenance-map design, authorization revocation review, and approved merge controls. No database or application changes were made.
+
+
+## Gate A identity provenance correction — 2026-11-18
+
+Added `dbo.LegacyIdentityMap` to the proposed additive Gate A SQL and added it to `GateA-Preflight-Validation.sql`. The expected Gate A target-object inventory is now 13 tables.
+
+- Initial source types: Users and Residents.
+- Residents rows may map many-to-one to a Person; they do not directly store AccountId in the map.
+- A linked Users source row requires PersonId + AccountId. The migration service must verify the account belongs to that person transactionally.
+- A filtered unique index prevents two legacy Users rows mapping to the same Account. Source row identity is unique by (SourceSystem, SourceTable, SourceKey).
+- Pending, rejected, and manual-review rows can remain unresolved. No matching by phone/name/email and no automatic merge.
+
+Updated: `Target-Data-Dictionary-and-ERD.md`, `Legacy-to-Target-Data-Mapping.md`, and `Identity-Resolution-and-Authorization-Review-2026-11-18.md`.
+
+**Next action:** pull the branch and rerun the revised read-only Gate A preflight on the disposable restore. This only checks metadata/object presence; it does not execute the Gate A DDL. The preflight runner has not been run after this change. No database changes or backfill occurred.
