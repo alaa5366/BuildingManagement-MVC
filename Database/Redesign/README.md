@@ -380,3 +380,6 @@ Important findings:
 - Current feature permissions are coarse for sensitive read/write and financial transitions. The target matrix must separate scope from UI categories and distinguish personal account data from apartment relationships.
 
 Gate 0 now requires explicit decisions for resident camera access, apartment disable/enable, read-vs-write/financial action separation, resident maintenance visibility, and any legacy permission with no verified consumer. No source code, schema, database rows, or credentials were changed. No build or runtime tests were executed.
+
+
+Authorization test review also found that the current reflection tests verify attribute presence and only a small set of role declarations; they do not behavior-test the custom permission filters' non-admin path, the apartment disable permission, or foreign-resource access on exports/mutations. Required additions are recorded in section 13. No tests were run.
