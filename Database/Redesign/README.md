@@ -678,3 +678,11 @@ Section 31 consolidates the recommended dependency order:
 - P3: performance, log operations, backup drills, CSP hardening, and removal or implementation of dormant features.
 
 Static source review only. No code or database changes, migrations, external service actions, builds, or tests were performed. **Gate A remains NOT AUTHORIZED.**
+
+## Live schema reconciliation
+
+- [Live Schema Parity Assessment — 2026-11-18](Live-Schema-Parity-Assessment-2026-11-18.md)
+- [EF Core / Live SQL Schema Reconciliation — 2026-11-18](EF-Core-Live-Schema-Reconciliation-2026-11-18.md)
+- [Gate A Column and Constraint Parity Matrix](GateA-Column-and-Constraint-Parity-Matrix.md)
+
+The EF reconciliation found that the 30 EF-mapped physical tables and 313 mapped columns align with the disposable restore catalog; the additional `LoginThrottle` table is provisioned by raw startup SQL, and the mapped wallet view is absent from the restore. See the detailed report for scope and remaining checks. Gate A remains NOT AUTHORIZED.
