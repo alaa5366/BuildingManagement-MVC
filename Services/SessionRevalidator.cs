@@ -159,12 +159,18 @@ public class SessionRevalidator
             await using var db = await _sqlFactory.CreateDbContextAsync();
             var account = await db.Users.AsNoTracking()
                 .Where(x => x.Uid == uid && x.Email == email && x.Role == "superadmin")
-                .Select(x => new { x.IsActive, x.IsDisabled, x.TwoFactorEnabled })
+                .Select(x => new
+                {
+                    x.IsActive,
+                    x.IsDisabled,
+                    x.TwoFactorEnabled,
+                    Permissions = x.Permissions.Select(p => p.Permission).ToList()
+                })
                 .FirstOrDefaultAsync();
 
             var valid = account != null && account.IsActive && !account.IsDisabled
                 && (!account.TwoFactorEnabled || user.HasClaim("twoFactorVerified", "true"));
-            return new Result(valid, null);
+            return new Result(valid, valid ? account!.Permissions.Distinct(StringComparer.Ordinal).ToList() : null);
         }
         catch (Exception ex)
         {
