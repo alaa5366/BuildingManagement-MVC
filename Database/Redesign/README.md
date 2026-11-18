@@ -698,3 +698,6 @@ The backup review confirms strong archive/preview/hash/transaction safeguards bu
 - [Security, Audit, and Operations Review — 2026-11-18](Security-Audit-and-Operations-Review-2026-11-18.md)
 
 The security/operations review identifies plaintext secret echoing in the superadmin settings page, startup-time identity data migration, local Data Protection/log storage assumptions, and CSP/rate-limit/health exposure decisions. It also confirms the SQL audit path is append-only despite the aggregate's in-memory cap.
+- [QR Access, DVR, and Media Integration Review — 2026-11-18](QR-DVR-and-Media-Integration-Review-2026-11-18.md)
+
+The QR/media review identifies ignored token-persistence failures, unbounded QR lifetimes and missing revocation workflow, apartment-shared synthetic QR identity, DVR credential-bearing EF DTOs, stale MediaMTX paths after DVR updates, and cross-system partial-failure states.
