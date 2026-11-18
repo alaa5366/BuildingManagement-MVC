@@ -322,3 +322,8 @@ The metadata preflight is a pass, not a DDL approval. Gate A remains **NOT AUTHO
 ## Admin access lifecycle finding — 2026-11-18
 
 A source review of `UserSqlStore` and `AdminManagementService` found that admin upsert only adds BuildingAdmins links (it does not revoke omitted links), while `AdminManagementService.DeleteAsync` physically deletes BuildingAdmins, UserPermissions, and Users in three commands before writing the audit event. The method has no explicit transaction around these deletes. The target migration must replace ordinary hard deletion with disable/revoke plus retained provenance/history, make grant/revoke semantics explicit, and use atomic audit/outbox handling. See section 8 of `Identity-Resolution-and-Authorization-Review-2026-11-18.md`. No application source or database data was changed.
+
+
+## Legacy permission-scope finding — 2026-11-18
+
+The permission matrix stores a flat account-level permission list with no BuildingId/ApartmentId on each permission. The permission attribute checks for a matching claim but does not itself enforce resource scope; session revalidation separately checks that claimed building memberships remain assigned. Permission keys imply different scopes, but the stored rows do not prove their effective resource scope. Therefore legacy permission backfill must classify each permission key against its consuming controller/service and keep ambiguous scope mappings unresolved; never fan out every permission to all assigned buildings or promote it to a role-wide grant. See section 9 of `Identity-Resolution-and-Authorization-Review-2026-11-18.md`.
