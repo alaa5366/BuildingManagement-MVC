@@ -701,3 +701,4 @@ The security/operations review identifies plaintext secret echoing in the supera
 - [QR Access, DVR, and Media Integration Review — 2026-11-18](QR-DVR-and-Media-Integration-Review-2026-11-18.md)
 
 The QR/media review identifies ignored token-persistence failures, unbounded QR lifetimes and missing revocation workflow, apartment-shared synthetic QR identity, DVR credential-bearing EF DTOs, stale MediaMTX paths after DVR updates, and cross-system partial-failure states.
+The media review was extended to the live camera wall: application checks currently gate HLS URL discovery, while the browser consumes the direct MediaMTX playlist/segments. MediaMTX-side authorization for every stream resource remains unverified and must be treated as a separate security boundary.
