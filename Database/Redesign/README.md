@@ -168,3 +168,13 @@ The additive foundation now also defines `AccountPermissionOverrides`:
 - The target data dictionary and legacy mapping document now describe this table.
 
 This closes the schema-design gap for preserving `UserPermissions` without broadening a user's permissions to every holder of a role. It does **not** mean the table has been executed or that the EF model/backfill is implemented.
+
+### Gate A metadata preflight
+
+Added `Database/Diagnostics/GateA-Preflight-Validation.sql`. It is read-only and reports:
+- Actual SQL type, byte length, nullability, and collation for legacy FK columns referenced by Gate A.
+- Candidate PK/unique-key metadata for Buildings and Apartments.
+- Existing Gate A object names (to detect partial/manual prior creation).
+- EF migration history for the selected restored database.
+
+Run this only against the disposable restored test database. A result of `TYPE_LENGTH_OK_REVIEW_COLLATION` is not a final pass by itself: compare collations across all FK components and inspect the key/index result set. Any mismatch or pre-existing partial target object blocks execution pending review. The preflight itself has not been run by this repository change.
