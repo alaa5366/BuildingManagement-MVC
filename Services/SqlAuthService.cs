@@ -236,6 +236,7 @@ public class SqlAuthService
 
         await using var db = await _sqlFactory.CreateDbContextAsync();
         var superAdmin = await db.Users
+            .Include(u => u.Permissions)
             .FirstOrDefaultAsync(u => u.Email == email && u.Role == "superadmin");
 
         if (superAdmin == null)
@@ -269,7 +270,8 @@ public class SqlAuthService
             email: email,
             name: string.IsNullOrWhiteSpace(superAdmin.Name)
                 ? "Super Admin" : superAdmin.Name,
-            buildingIds: new List<string>());
+            buildingIds: new List<string>(),
+            permissions: superAdmin.Permissions.Select(p => p.Permission).Distinct(StringComparer.Ordinal).ToList());
     }
 
     // ═══════════════════════════════════════════════════════════
