@@ -178,7 +178,7 @@ SELECT
     BuildingId,
     MonthKey,
     Status AS StatusOrCategory,
-    COUNT_BIG(*) AS RowCount,
+    COUNT_BIG(*) AS [TotalRows],
     SUM(Amount) AS TotalAmount
 FROM dbo.Deposits
 GROUP BY BuildingId, MonthKey, Status
