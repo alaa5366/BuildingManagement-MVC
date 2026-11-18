@@ -675,3 +675,29 @@ Compare this inventory with EF mappings, migrations, `BuildingManagement-FullSch
 Repository source inventory: **one declared SQL view and one EF keyless mapping found**. Live database inventory: **not yet complete**. Wallet view semantics: **insufficient for an authoritative balance**. The target is a coherent reporting/read-model layer plus a separate structured log center; no new view SQL is approved yet.
 
 No source code, SQL view, schema, database row, or runtime setting was changed. No build, tests, execution plans, or live SQL inventory were run in this section. Gate A remains **NOT AUTHORIZED**.
+
+
+#### 18.8 Live restore inventory completed — 2026-11-18
+
+Reviewed the read-only export at `Database/Diagnostics/View-Inventory-Results/20261118-163035/` (generated 16:30:36 +02:00) from `(localdb)\\MSSQLLocalDB`, database `BuildingManagement_RestoreTest`, branch `development/database-redesign-enterprise`.
+
+**Observed results:**
+
+- `01-Views.csv` contains no rows: the restored database currently has **zero SQL views**.
+- `02-View-Definitions.csv` contains no rows: no view definitions were returned.
+- `03-Dependency-Edges.csv` and `04-View-Consumers.csv` contain no rows: no SQL-module-to-view dependency or referencing-module rows were returned by this inventory.
+- `05-Indexed-View-Indexes.csv` contains no rows; there are no indexed views in this restore.
+- `06-Synonyms.csv` contains no rows.
+- `09-QueryStore-View-Usage.csv` contains no rows matching the inventory query's `vw_` / `ApartmentWallet` criteria.
+- Query Store is `READ_WRITE`, desired state `READ_WRITE`, capture mode `AUTO`, current storage approximately 1 MB, maximum 1000 MB.
+- The source-table size export reports 3,150 rows in `dbo.AuditLog`, 237 in `dbo.Apartments`, 237 in `dbo.Residents`, 204 in `dbo.Notifications`, 113 in `dbo.MonthlyApartmentShares`, 78 in `dbo.Deposits`, 36 in `dbo.Expenses`, 12 in `dbo.Revenues`, and 6 in `dbo.WalletAdjustments`. These are approximate storage/row-count metadata, not a financial reconciliation.
+
+**Interpretation and scope boundary:**
+
+This live result supersedes the pending-live-inventory wording in sections 18.6–18.7: the dedicated `sys.views` export has now completed and found no SQL views in this restored database. It does **not** invalidate the separate repository finding that `BuildingManagement-FullSchema.sql` declares `dbo.vw_ApartmentWalletMovements` and `AppDbContext` contains a keyless mapping for it. The source artifact, EF model, and restored database are therefore not aligned. The previously named `vw_ApartmentWalletMovements` and `vw_ApartmentWalletBalance` are both absent from this restore; do not assume the first is deployable or that the second exists.
+
+The empty Query Store result means only that this query found no captured matching text under the current Query Store state and permissions. It does not prove that no application code, dynamic SQL, external report, SQL Agent job, SSRS report, or separately deployed database consumes or expects a view. The runner README explicitly excludes SQL Agent jobs/steps, SSRS catalogs, dynamic SQL references, and external application consumers. Those require a separate inventory before any compatibility/removal decision.
+
+**Next design action:** reconcile the source SQL artifact and EF mapping with the actual deployment/migration path. Determine whether the wallet movement projection is intended to be deployed, is legacy dead metadata, or is supplied by an external deployment package. Trace all report/export consumers and validate the required columns and semantics before creating or removing any view. Do not create a wallet-balance view until the balance formula and financial source-of-truth rules are approved.
+
+No schema or data changes were issued by the inventory script. No build or tests were run. **Gate A remains NOT AUTHORIZED.**
