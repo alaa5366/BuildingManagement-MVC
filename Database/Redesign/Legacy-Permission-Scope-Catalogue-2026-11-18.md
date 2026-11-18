@@ -99,6 +99,7 @@ The owner approved the recommended defaults through DEC-01 to DEC-46. This resol
 
 - `DefaultAuthorizationPermissionCatalog` is now the code-owned allow-list used by the central `AuthorizationEvaluator`. Unknown keys fail closed; sensitive grants require a fresh MFA claim; explicit deny takes precedence.
 - `apartment.access.grant.manage` is a new building/apartment-scoped permission that requires fresh MFA. The transactional grant lifecycle checks it before granting or revoking access.
+- `identity.mapping.review` is a System-scoped, fresh-MFA permission for exact-source legacy identity dispositions. It does not infer a target person or account; `Users` mappings must prove that the chosen account belongs to the chosen Person.
 - Finance permissions are split into `deposit.read`, `deposit.confirm`, `deposit.cancel`, `wallet.adjust`, `expense.read/post/reverse`, `revenue.read/post/reverse`, `finance.export`, and `finance.period.close/reopen`. Former broad keys such as `wallet.manage`, `expenses.manage`, and `revenues.manage` are not accepted by the target catalog.
 - `ApartmentAccessGrantEntity.PermissionSetKey` values remain inert identifiers. No family, tenant, caretaker, emergency, or temporary profile grants permissions by itself.
 - This catalogue remains an inventory for the staged migration. Legacy login/controllers still use legacy permission claims, and no legacy permission assignment has been copied into target role or override tables. Complete each consumer/resource review before any cutover or grant import.

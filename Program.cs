@@ -138,6 +138,7 @@ try
     builder.Services.AddScoped<AuthorizationEvaluator>();
     builder.Services.AddScoped<ApartmentOwnershipService>();
     builder.Services.AddScoped<ApartmentAccessGrantService>();
+    builder.Services.AddScoped<LegacyIdentityMappingService>();
 
     // ✅ Health Checks (فحص صحة الداتابيز)
     builder.Services.AddHealthChecks()

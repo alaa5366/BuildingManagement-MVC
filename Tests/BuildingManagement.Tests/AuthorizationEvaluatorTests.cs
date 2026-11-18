@@ -66,6 +66,16 @@ public sealed class AuthorizationEvaluatorTests
     }
 
     [Fact]
+    public void PermissionCatalog_IdentityMappingReviewRequiresSystemScopeAndFreshMfa()
+    {
+        var catalog = new DefaultAuthorizationPermissionCatalog();
+
+        Assert.True(catalog.TryGet("identity.mapping.review", out var definition));
+        Assert.True(definition.RequiresFreshMfa);
+        Assert.Equal(new HashSet<AuthorizationScopeType> { AuthorizationScopeType.System }, definition.AllowedGrantScopes);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_DeniesUnauthenticatedPrincipal()
     {
         await using var db = CreateContext();
