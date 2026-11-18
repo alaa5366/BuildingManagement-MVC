@@ -15,8 +15,17 @@ $ReportPath = Join-Path $ReportDir "Phase08-RestoreTest-Preflight-$Stamp.md"
 
 function Invoke-Git {
     param([Parameter(Mandatory = $true)][string[]]$GitArgs)
-    $output = & git @GitArgs 2>&1
-    $code = $LASTEXITCODE
+    # Git commonly writes successful push progress to stderr. In Windows PowerShell
+    # with ErrorActionPreference=Stop, native stderr can become a terminating error
+    # before LASTEXITCODE is checked. Temporarily use Continue and trust the exit code.
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $output = & git @GitArgs 2>&1
+        $code = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
     if ($code -ne 0) { throw "git $($GitArgs -join ' ') failed ($code): $($output -join [Environment]::NewLine)" }
     return (($output | ForEach-Object { $_.ToString() }) -join [Environment]::NewLine).Trim()
 }
