@@ -89,13 +89,26 @@ The restore contains the four expected EF migrations, all at ProductVersion 8.0.
 
 These migrations account for the mapped model's migration history, but do not provision the wallet view or LoginThrottle. A successful EF migration run therefore does not, by itself, guarantee the full runtime database contract.
 
+## 8A. FullSchema artifact drift
+
+A static column-definition comparison was also performed against `BuildingManagement-FullSchema.sql`:
+
+- FullSchema contains 32 table definitions and 314 parsed column definitions (including identity columns).
+- The live restore contains the same 32 table objects when the 30 EF tables, LoginThrottle, and EF migration history are counted.
+- FullSchema has no live-missing columns in the compared set.
+- The live database has four columns absent from FullSchema: `Users.TwoFactorEnabled`, `Users.TwoFactorSecretEncrypted`, `Users.TwoFactorRecoveryCodesJson`, and `Users.TwoFactorLastUsedStep`. These are introduced by the applied `AddUserTwoFactor` migration.
+- 119 matched FullSchema column definitions differ from the live catalog in declared string length. The comparison did not find type, precision/scale, or nullability differences among those 119 records; the drift is specifically length metadata.
+- Examples include FullSchema bounded `nvarchar(n)` declarations where the live schema and current EF snapshot use `nvarchar(max)`, plus `Buildings.BuildingNumber` and `Residents.Phone` whose live lengths are wider than the FullSchema declarations.
+
+This confirms that FullSchema is not a faithful current-schema deployment artifact for the restored database. It is stale in both the post-2FA column inventory and a substantial set of string-length declarations. Do not use it to recreate or alter a current database until it is regenerated from the authoritative model and reviewed. Preserve the old artifact for historical comparison only.
+
 ## 9. Required follow-up
 
 1. Complete FK parity: compare all 32 live FK constraints to snapshot principal/dependent columns, composite order, optionality, and delete behavior.
 2. Complete physical index review: included columns, filter predicates, sort direction, disabled state, and any indexes not represented by the snapshot.
 3. Resolve DEC-28 and decide the wallet view's authoritative deployment path or remove it if unused.
 4. Define the lifecycle owner for LoginThrottle and remove duplicate schema ownership between startup SQL and FullSchema.
-5. Compare the FullSchema table/constraint definitions to the live catalog and EF migrations, documenting every drift rather than treating the artifact as authoritative by default.
+5. Treat the current FullSchema as stale: reconcile its 119 string-length differences and four missing 2FA columns, then regenerate it from the approved authoritative source only after DEC-28 is decided.
 6. Keep the existing cascade-retention classification open until financial, voting, audit, and identity retention rules are approved.
 
 ## 10. Verification boundary
