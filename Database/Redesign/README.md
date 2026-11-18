@@ -359,3 +359,10 @@ Key findings:
 - `Program.cs` automatically invokes legacy PIN migration at startup. Application startup can therefore mutate credential data; do not run the app against the restore just for inspection. Replace this with a separately approved, audited, transactional migration.
 
 Approved target decisions: mandatory MFA for admin/SuperAdmin; atomic cross-instance factor/recovery-code consumption; shared pending-auth/session and login-throttle stores; persisted account security version; durable transactional security audit; and removal of credential migration from startup. This is documentation/design only. No source or database changes, migrations, or tests were performed.
+
+
+## Consolidated identity/security implementation package — 2026-11-18
+
+The unified design is now recorded as one coordinated implementation package in section 12 of `Identity-Resolution-and-Authorization-Review-2026-11-18.md`, with eight workstreams and seven release gates. This preserves the user's preference for one consolidated delivery rather than many separate feature phases while retaining internal review and safety gates.
+
+The package covers identity/provenance, scoped authorization, ownership/occupancy/access lifecycle, credentials/MFA, cross-instance session and impersonation revocation, transactional audit/outbox, legacy and financial continuity, and UI/API integration. Gate A remains NOT AUTHORIZED; a separate explicit approval is still required after design freeze and fresh preflight evidence. No source code or database was changed and no tests/build/migration were run.
