@@ -391,11 +391,12 @@ BEGIN
         ),
         CONSTRAINT CK_LegacyIdentityMap_UserAccountTarget CHECK
         (
-            SourceTable <> N'Users'
-            OR MappingStatus <> 1
-            OR AccountId IS NOT NULL
+            (SourceTable <> N'Users' OR MappingStatus <> 1 OR AccountId IS NOT NULL)
+            AND (SourceTable <> N'Residents' OR AccountId IS NULL)
         )
     );
+    CREATE UNIQUE INDEX UX_LegacyIdentityMap_Account
+        ON dbo.LegacyIdentityMap(AccountId) WHERE AccountId IS NOT NULL;
     CREATE INDEX IX_LegacyIdentityMap_Person
         ON dbo.LegacyIdentityMap(PersonId) WHERE PersonId IS NOT NULL;
     CREATE INDEX IX_LegacyIdentityMap_Account
