@@ -1,0 +1,2 @@
+﻿"DatabaseName","ServerName","ProductVersion","Edition","CompatibilityLevel","DatabaseCollation","RecoveryModel","DatabaseState","IsReadOnly","SnapshotIsolationState","ReadCommittedSnapshotOn"
+"BuildingManagement_RestoreTest","ZOS-AAM\LOCALDB#420F145D","17.0.4025.3","Express Edition (64-bit)","170","SQL_Latin1_General_CP1_CI_AS","SIMPLE","ONLINE","False","OFF","True"
