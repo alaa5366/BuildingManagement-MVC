@@ -470,3 +470,8 @@ No code/schema/data changes, build, tests, or runtime profiling were performed. 
 Section 20 records the static review of SuperAdmin-protected backup, restore, import, JSON, XLSX, and ZIP-download actions. JSON building export serializes the loaded aggregate (the current mapper blanks Admin PIN and apartment PIN); the full JSON action exports summaries only; XLSX exports contact/apartment/category fields and deliberately leaves PIN columns blank. Backup ZIP download decrypts the archive before returning it and is the most sensitive export path.
 
 The export controller actions inspected do not directly record dedicated export audit events; verify whether another layer captures them. Add durable audit, cache controls, secret-canary tests, XLSX formula tests, strict backup collection validation, and atomic staged import. Existing partial-import and unknown-collection concerns remain open. No source/schema/data changes or tests were performed. **Gate A remains NOT AUTHORIZED.**
+
+
+### Test-coverage review for reporting and exports — 2026-11-18
+
+Section 21 maps existing tests and gaps. Current tests already provide broad unit coverage for wallet formulas and report arithmetic, plus audit paging/filter and CSV cell-safety tests. Missing evidence includes report-vs-wallet metric contract assertions, SQL projection parity, audit controller scope/export tests, end-to-end export security for JSON/XLSX/ZIP, backup-controller workflows, and import failure injection. No test/build was executed in this documentation update. **Gate A remains NOT AUTHORIZED.**
