@@ -454,3 +454,12 @@ Next: reconcile the SQL artifact, EF mapping, migration/deployment process, and 
 ### EF migration-path mismatch confirmed
 
 A source cross-check found the keyless `ApartmentWalletMovementsView` mapping in `AppDbContext` and model snapshot/designer metadata, but none of the four actual EF migration operation files creates the SQL view. The only checked-in SQL definition located is in `BuildingManagement-FullSchema.sql`. Thus EF metadata does not deploy the object, matching the live restore inventory where no views exist. Reconcile the standalone FullSchema deployment path and EF migrations; do not create or remove the view until runtime/report consumers are verified. No source or migration was changed.
+
+
+### Reporting, wallet, and audit read-path review — 2026-11-18
+
+Section 19 of the main review documents a source-level trace of financial reporting, wallet balance calculations, aggregate hydration, audit paging/export, and CSV safety. Key finding: report period net activity (`collected - expenses + revenues`) differs from the actual apartment wallet balance formula (carry-over, confirmed deposits, monthly fee, stored expense/revenue distributions, and adjustments). The `TotalsOf` tuple also exposes both `Balance` and `TotalWallet`, which are not equivalent. These metrics need distinct contracts and reconciliation tests before any SQL read model is approved.
+
+Reports currently operate on a fully hydrated in-memory building aggregate. Audit UI paging is SQL-filtered and bounded to 200 rows/page with stable timestamp/id ordering; the non-paged audit query is capped at 50,000 but lacks a tie-breaker and can materialize a large export. Audit inserts use a separate DbContext and swallow failures after warning logs, so critical business mutations are not atomically coupled to audit persistence. CSV safety is used in the inspected report/audit exports, but all export endpoints still need inventory.
+
+No code/schema/data changes, build, tests, or runtime profiling were performed. **Gate A remains NOT AUTHORIZED.**
