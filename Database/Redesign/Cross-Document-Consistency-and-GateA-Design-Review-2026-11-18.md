@@ -198,3 +198,13 @@ The architecture and application contracts now explicitly include:
 - a finance-specific target design covering legacy wallet formula, ledger concepts, command state machines, allocation, rounding, period semantics, and reconciliation.
 
 The ERD now also explicitly shows Person -> PollEligibility for person-mode eligibility. It intentionally continues to show no relationship between PollEligibility and PollBallots.
+
+
+## 13. Concurrency tokens added to mutable security/access records
+
+A further consistency pass added RowVersion to:
+- UserCredentials (credential revoke/replace concurrency);
+- UserTwoFactorSettings (enrollment and security-state concurrency);
+- ApartmentAccessGrants (grant revocation concurrency).
+
+The data dictionary and parity matrix were updated to match. Recovery-code consumption remains a conditional atomic one-time update; it does not rely on a client-side read-then-write.
