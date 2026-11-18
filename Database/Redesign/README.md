@@ -625,3 +625,25 @@ Key findings:
 - Admin permission cache invalidation is process-local; arbitrary permission strings and unknown templates are not rejected at the controller boundary.
 
 See Section 29 for source paths, detailed reasoning, and acceptance tests. Section 30 provides the ordered remediation roadmap and release gates.
+
+
+### Sections 29–31 — Authentication, QR, MFA, receipt/OCR, import, and final roadmap
+
+New verified findings:
+- Stable QR confirmation issues a synthetic resident UID (`qr-{ApartmentId}`) that the resident session revalidator does not recognize; the next request rejects the session. The separate quick-login flow uses the real resident UID.
+- Stable QR confirmation responses are outside the current no-store middleware path, and the anonymous confirmation POST lacks the login rate-limit attribute.
+- MFA is opt-in today: privileged login challenges only accounts where 2FA is already enabled. The target requirement for mandatory admin/superadmin MFA is not met.
+- Unified login trims the password/credential string, unlike the dedicated superadmin login path. Resident PIN creation/reset services do not consistently enforce the four-digit policy; legacy and unified login paths also use different active-account filters.
+- Receipt upload returns a normal Cloudinary secure URL without an application-level private/signed delivery policy. Upload can leave orphaned remote objects if database persistence fails.
+- OCR is synchronous, has no explicit endpoint rate policy or image-dimension ceiling, and is heuristic extraction only—not bank verification.
+- Excel import parsing silently defaults blank PINs to 0000 and coerces malformed PINs; unsupported floor labels map to ground floor. Import/tools/sync backend mappings refer to controllers/services absent from the current branch inventory.
+
+Important correction to Section 28: the checked-in Phase08 security assessment confirms a **single-instance deployment**. Process-local throttle/cache/locks are therefore current topology choices, not confirmed multi-instance defects. Scale-out requires a separate distributed design. Proxy IP behavior still depends on production KnownProxies configuration.
+
+Section 31 consolidates the recommended dependency order:
+- P0: stop unsafe startup PIN mutation, keep Gate A blocked, resolve SQL view deployment, preserve/reconcile financial history.
+- P1: fix QR/MFA/PIN/receipt/OCR security, financial idempotency and durable audit, and backup outcomes/recovery.
+- P2: implement person/account and ownership/occupancy lifecycle, secret ballots, privacy scopes, and authorization/catalog consistency.
+- P3: performance, log operations, backup drills, CSP hardening, and removal or implementation of dormant features.
+
+Static source review only. No code or database changes, migrations, external service actions, builds, or tests were performed. **Gate A remains NOT AUTHORIZED.**
