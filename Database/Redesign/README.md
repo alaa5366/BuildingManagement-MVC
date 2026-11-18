@@ -139,6 +139,8 @@ Current safe boundary:
 
 ## Additional design artifacts
 
+- `Database/Redesign/Legacy-Class-to-Target-Module-Refactoring-Map.md` — observed legacy Controllers/Services mapped to target modules with Replace/Split/Adapt/Retire dispositions, missing workflows, and migration order.
+
 - `Database/Redesign/GateA-Column-and-Constraint-Parity-Matrix.md` — static comparison of all 13 Gate A tables/134 columns against the data dictionary, plus constraint inventory and remaining blockers. No SQL execution; Gate A remains unauthorized.
 
 - `Database/Redesign/GateA-Disposable-Restore-Rehearsal-Plan.md` — hard stops, evidence bundle, local script behavior, postflight acceptance, and rollback for a future disposable-restore rehearsal. It is preparation only; Gate A remains unauthorized.
