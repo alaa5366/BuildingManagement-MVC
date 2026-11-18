@@ -701,3 +701,18 @@ The empty Query Store result means only that this query found no captured matchi
 **Next design action:** reconcile the source SQL artifact and EF mapping with the actual deployment/migration path. Determine whether the wallet movement projection is intended to be deployed, is legacy dead metadata, or is supplied by an external deployment package. Trace all report/export consumers and validate the required columns and semantics before creating or removing any view. Do not create a wallet-balance view until the balance formula and financial source-of-truth rules are approved.
 
 No schema or data changes were issued by the inventory script. No build or tests were run. **Gate A remains NOT AUTHORIZED.**
+
+
+#### 18.9 EF migration/deployment-path cross-check — 2026-11-18
+
+A follow-up repository search and direct inspection of the four checked-in migration source files confirms:
+
+- `Data/AppDbContext.cs` exposes `DbSet<ApartmentWalletMovementsView>` and maps it with `HasNoKey()` / `ToView("vw_ApartmentWalletMovements")`.
+- `Data/Entities.cs` defines the keyless projection type.
+- The EF model snapshot and migration designer files repeat the mapping metadata, as expected.
+- The actual migration operation files `InitialCreate`, `Phase04_StandardizeKeyColumnTypes`, `Phase05_RemoveRedundantResidentIndexes`, and `AddUserTwoFactor` contain no `CREATE VIEW` or reference to `vw_ApartmentWalletMovements`.
+- The only checked-in executable SQL definition located by the repository search is in `BuildingManagement-FullSchema.sql`.
+
+**Finding:** the EF mapping is metadata only; it does not create the SQL object. The current checked-in EF migration chain does not deploy the view. A database created or upgraded solely through these migrations can therefore lack the object while the DbContext still advertises the keyless query type. The FullSchema script appears to be a separate deployment path and must be reconciled with the EF migration path. Do not treat model snapshot/designer entries as a migration operation.
+
+**Required next decision:** choose one supported deployment source of truth. Either (a) add a deliberate, reviewed, idempotent migration for the view and test fresh-install plus upgrade paths, or (b) remove/retire the unused mapping and source SQL definition after proving there are no runtime/report consumers. Do not do either until a consumer search and runtime usage decision are complete. No application source or migration was changed in this review.
