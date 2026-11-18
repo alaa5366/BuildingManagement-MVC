@@ -1213,3 +1213,70 @@ Static source review only. No application, backup job, synchronization job, data
 - Backup creation and restore preview/execute are privileged, high-impact operations. Preserve the existing SuperAdmin + ManageBackup authorization and antiforgery protections, and add explicit durable audit outcomes for success, rejection, failure, and download; do not rely solely on generic request logs.
 
 Additional acceptance tests: RunNow with scheduling disabled, empty collection list, injected backup exception, and successful run must produce four distinct accurate outcomes; DeleteBackup for missing, malformed, existing, and history-only records must not falsely report deletion; backup ZIP responses must be verified no-store at the application and proxy layers.
+
+
+### 29. Authentication, account selection, session revalidation, and second-factor controls
+
+#### 29.1 Direct and unified login do not apply identical account-state rules
+
+- `SqlAuthService.SignInResidentAsync` selects the first resident matching the normalized phone and `!IsDisabled`, but does not require `IsActive`. The unified login query does require `IsActive`. An inactive resident can therefore pass primary credential verification on the direct route and receive a cookie which `SessionRevalidator.ValidateResidentAsync` rejects on the next request.
+- `FindAllContextsAsync` skips disabled admins but does not filter `IsActive`; the dedicated `SignInAdminAsync` checks both active and disabled state. Unified login can therefore create a context for an inactive admin, then issue a cookie that the next-request revalidator rejects.
+- `UnifiedLogin` trims both identifier and credential before verification. Trimming the identifier is expected; trimming the credential changes a valid password containing intentional leading/trailing whitespace. Keep credentials byte-for-byte as submitted (except explicitly documented normalization for numeric PINs).
+- `SignInResidentAsync` uses `FirstOrDefault` for a phone match in an apartment and checks only that one resident's PIN. Multiple resident accounts sharing a phone can cause valid credentials for a later row to fail. Define the intended account-selection rule and query all matching resident accounts deterministically.
+- `SignInAdminAsync` selects the first admin for a phone/building without a deterministic ordering or uniqueness guarantee. Enforce the intended uniqueness constraint or return an explicit account-selection outcome.
+- In unified login, the single-context `SignInFromContextAsync` failure branch does not call `RegisterFailure`; current context construction usually pre-verifies the secret, but account-state and future verification failures should be counted consistently.
+
+#### 29.2 Authentication hot path and account enumeration
+
+- `FindAllContextsAsync` loads all resident rows matching a phone, then performs separate apartment and building lookups for each resident. This is an N+1 authentication path and can become expensive for shared/contact phone numbers. Replace it with a single projected join, bounded result count, and deterministic ordering.
+- Login lookup endpoints return building floor/apartment information anonymously by design and are IP rate-limited. Confirm that this metadata is intentionally public and that the selected apartment list does not reveal resident identity, phone, ownership, or occupancy.
+- The login code generally uses generic credential errors and a timing burn for missing account cases, which is positive. Preserve generic responses across direct/unified routes and test timing/error parity for nonexistent, disabled, inactive, PIN-not-set, and wrong-credential cases.
+
+#### 29.3 LoginThrottle lockout semantics and multi-instance limits
+
+- `LoginThrottle.Reset(accountKey)` removes only the account counter. It does not clear the IP counter created by `RegisterFailure`. A shared office/home IP that reaches 20 failures can remain blocked for the full 15-minute window even after a legitimate account signs in successfully, potentially locking out other users behind the same NAT. Define separate account/IP decay semantics and test shared-IP recovery.
+- The live counters are process-local; SQL is only a startup recovery snapshot and asynchronously persisted mirror. Concurrent instances can make independent lock decisions and overwrite each other's persisted counter snapshots. This is explicitly a single-instance implementation, not a distributed lockout guarantee.
+- `InitializeAsync` creates `dbo.LoginThrottle` with raw startup DDL and deletes expired rows at application startup. This is another implicit schema mutation outside EF migrations. Move table creation to a reviewed migration/deployment step and keep startup initialization data-only.
+- If database initialization fails, the service silently switches to in-memory-only mode with a warning. Decide whether production should fail closed, alert health/readiness, or explicitly accept degraded protection; do not let operators mistake fallback mode for durable lockout.
+- Persisted keys are truncated SHA-256-derived values rather than plaintext identifiers, which reduces direct PII exposure. Keep that property and define retention/deletion for the throttle table.
+
+#### 29.4 Second-factor policy and concurrency
+
+- Two-factor authentication is currently opt-in: `CompleteSignInAsync` challenges admins/SuperAdmins only when `TwoFactorService.IsEnabledAsync` returns true. There is no universal enrollment requirement for those roles in this sign-in path. If the intended policy is mandatory MFA for administrators and SuperAdmins, enforce it at account provisioning and login, with a controlled enrollment/recovery-only state.
+- TOTP/recovery-code consumption is serialized by `KeyedLock`, which is process-local. Two application instances can concurrently read the same recovery-code list or TOTP last-used step and both accept a one-time value. Add a database concurrency token or atomic conditional update/transaction so consumption is single-use across instances.
+- The same service stores TOTP secrets encrypted and recovery codes as SHA-256 hashes, and prevents TOTP step replay within one process/database state. Preserve these controls while fixing distributed atomicity.
+- 2FA setup secret is held in server-side session for ten minutes and displayed in the setup view/QR. Ensure setup pages and responses are no-store, never log provisioning URIs, and clear setup state on completion, cancellation, expiry, and account/security changes.
+- Recovery codes are placed in TempData for one-time display. Confirm TempData is cookie/session protected as configured, ensure they are not copied to logs/analytics, and provide a documented regenerate/revoke process.
+- Disabling MFA consumes a valid code and clears the secret/recovery hashes. Define whether all other active sessions must be revoked, and ensure session/version invalidation is cross-instance.
+
+#### 29.5 Session revalidation and synthetic QR identities
+
+- `QrAccessController.Confirm` creates a resident cookie with synthetic NameIdentifier `qr-{ApartmentId}`. `SessionRevalidator.ValidateResidentAsync` validates every resident by finding `Residents.Uid == NameIdentifier`. No corresponding synthetic resident UID is created by this controller. Unless another explicit QR-principal branch exists (none is present in the inspected validator), this stable-QR session is rejected on its next cookie validation. Align the identity contract: use a real resident UID with consent/eligibility checks, or define a dedicated short-lived QR/guest principal and validator path with restricted permissions.
+- Ordinary resident validation caches account state for two minutes and may use last-known-good state for up to 15 minutes during database failure. This is an availability/security trade-off: a recently disabled resident may retain access during that period. Document the maximum revocation delay and consider fail-closed behavior for sensitive operations.
+- Admin permission-version invalidation is held in a process-local dictionary. A permission change on one instance does not immediately invalidate another instance's cache; cached permissions can remain effective until expiry. Use a shared security stamp/permission version in the database or distributed cache.
+- SuperAdmin validation queries the database for each cookie validation (no equivalent short cache), while ordinary admin/resident checks are cached. Benchmark this asymmetry under normal page navigation and define a bounded, safe cache policy.
+- Impersonation validation is stricter than ordinary last-known-good behavior and rejects on unavailable authority data; preserve fail-closed validation and add cross-instance revocation tests.
+
+#### 29.6 Authorization catalog and service-boundary validation
+
+- `PermissionsController.Toggle` accepts a posted permission string and adds it to the selected admin's permission list without visibly validating it against `AdminPermissions.All`. Reject unknown permission identifiers at the controller and service boundary; never persist arbitrary permission strings as grants.
+- `ApplyTemplate` maps an unknown template to an empty permission list. An invalid or tampered template value can therefore remove all permissions from the selected admin. Return a validation error for unknown templates and require an explicit confirmation for a template that removes grants.
+- Admin management service methods accept building IDs, phone values, and permission lists from callers; ensure all business validation (building existence, allowed permission IDs, target role, duplicate account policy, and normalized contact constraints) is enforced in the service, not only in UI controls.
+- Controller-level authorization coverage tests are useful, but they do not prove every action's object-level building/apartment scope or every service's validation. Add data-driven tests for cross-building IDs, cross-apartment IDs, role/permission combinations, and direct service invocation.
+
+#### 29.7 Required acceptance tests
+
+1. Direct and unified login must reject inactive/disabled resident/admin accounts consistently before issuing cookies.
+2. Verify passwords with leading/trailing spaces are handled exactly as documented; numeric PIN normalization must be explicit and separate.
+3. Test shared phone numbers, duplicate admin phone/building rows, deterministic context ordering, and valid PIN selection across all matching residents.
+4. Benchmark unified login with many resident records sharing a phone; assert bounded query count and response time.
+5. Verify shared-IP throttling behavior, account reset, IP counter expiry, persistence failure mode, and two-instance concurrent failures.
+6. Verify startup does not create/alter schema outside approved migrations; test LoginThrottle migration on an empty disposable DB.
+7. Enforce mandatory MFA for every admin/SuperAdmin if policy requires it; test enrollment, lost authenticator, recovery-code rotation, disable, re-enable, and session revocation.
+8. Race two instances consuming the same TOTP step and the same recovery code; exactly one request must succeed.
+9. Test stable QR login through the complete cookie validation and resident dashboard request; it must not issue a cookie that is immediately rejected.
+10. Test resident disable/delete and admin permission revocation across two instances within the documented revocation SLA.
+11. Submit unknown permissions/templates and verify no arbitrary grant or unintended permission wipe occurs.
+12. Verify all sensitive authentication/setup/recovery responses are no-store and provisioning/recovery secrets never appear in logs.
+
+Static source review only. No code, database, configuration, credential, or production behavior was changed. No build or tests were run. **Gate A remains NOT AUTHORIZED.**
