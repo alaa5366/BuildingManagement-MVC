@@ -401,3 +401,8 @@ No source code or database was changed. No build or tests were run. Gate A remai
 
 
 Test-source review for section 14: backup tests currently codify unknown-collection skip as Success=true; scheduled-backup tests validate settings but not distributed execution; resident service tests do not cover actor/scope authorization; no ExcelImportServiceTests or DvrServiceTests were found at the inspected paths. Existing restore-session one-use/digest tests are valuable and must be preserved. Detailed additions are in section 14. No tests were run.
+
+
+### Deletion and retention review — 2026-11-18
+
+Section 15 of `Identity-Resolution-and-Authorization-Review-2026-11-18.md` now records the source findings for building/apartment/resident/admin/poll deletion, aggregate-sync deletion semantics, cascade dependencies, backup rotation, retention requirements, and required failure-injection tests. The current physical-delete/cascade paths are not acceptable as the target lifecycle for financially or legally meaningful history. This remains documentation-only; no code or database changes were made. Gate A remains **NOT AUTHORIZED**.
