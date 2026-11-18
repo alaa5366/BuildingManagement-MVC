@@ -960,3 +960,47 @@ Static source review of `AdminResidentsController`, `ResidentsService`, `PollsCo
 9. Camera tests for resident policy, admin permission, cross-building access, direct HLS playlist/segment authorization, cache headers, and immediate revocation.
 
 No application code, schema, data, or configuration was changed. No build or tests were run; this section is a static source review only. **Gate A remains NOT AUTHORIZED.**
+
+
+## 24. Quick QR lifecycle, PIN activation, and DVR/media-server consistency — 2026-11-18
+
+Static review of `AdminAptsController`, `BuildingsController.GenerateQuickQr`, `AccountController` quick-login/set-PIN routes, `QrSecurityService`, `DvrsController`, `DvrService`, `DvrNetworkPolicy`, and `MediaMtxService`. No tokens were generated/consumed and no external media server was contacted.
+
+### 24.1 Quick-login QR controls
+
+- The Quick QR token format uses AES-GCM authenticated encryption; validation checks token format, authenticated decryption, expiry, usage count, and optional device fingerprint. Consumption uses a conditional SQL update and handles the first-use insert race. This is a strong foundation worth preserving.
+- The QR confirmation GET intentionally does not consume the token, protecting against link-preview scanners; the explicit confirmation POST consumes it atomically before issuing the resident cookie. Preserve this separation.
+- There are two QR generation entry points with inconsistent validation. `BuildingsController.GenerateQuickQr` bounds validity to 1–1440 minutes and max uses to 1–1000. `AdminAptsController.GenerateQuickQr` passes `validityMinutes` and `maxUses` directly into the token without equivalent bounds. For a non-one-time token, a non-positive max-use value becomes effectively unlimited in `TryConsumeQuickTokenAsync`; a non-positive validity can produce an already-expired token, while an excessively large value can create a long-lived credential. Centralize validation in one service and apply it to every controller.
+- `AdminAptsController.GenerateWelcome` substitutes 24 hours for non-positive values but has no upper bound for `validityHours`. Apply a documented maximum and validate all token parameters server-side, not only in the view.
+- The Quick QR payload contains building/apartment identifiers and a purpose. `ResolveSetPinAsync` checks the purpose is exactly `setpin`; the normal quick-login resolver must similarly reject non-login purposes. Keep purpose-specific validation in a shared token service, not duplicated controller code.
+
+### 24.2 One-time set-PIN workflow
+
+- The anonymous SetPin POST validates a four-digit PIN and confirmation, then consumes the one-time token before calling `SetApartmentPinAsync`. If the database update fails after consumption, the token is permanently spent and the resident cannot retry with the same link. Make token consumption and credential update a single transaction/atomic state transition, or use a durable staged state that permits safe retry without permitting replay.
+- The current `SetApartmentPinAsync` changes the PIN hash for every resident associated with the apartment. This means a one-time link is effectively resetting a shared apartment credential for all resident rows, not activating one named Person/Account. The target design must bind the activation token to an explicit intended account/person and enforce one-account credential ownership.
+- The token is placed in a query-string URL. Apply strict no-store/referrer policy on confirmation and SetPin pages, redact token query strings from reverse-proxy/application telemetry, and ensure no third-party analytics or external resources receive the token through the Referer header.
+- Add explicit audit/outbox records for token issuance, successful consumption, failed credential activation, and administrative revocation, without storing the bearer token itself.
+
+### 24.3 DVR credentials and media-server lifecycle
+
+- DVR credentials are encrypted at rest through `IEncryptionService`; the network policy restricts DVR source endpoints to private IP literals and validates port bounds. RTSP paths are constrained to relative paths with length/character/traversal checks. Preserve these protections and add deployment key-rotation/recovery tests.
+- `DvrService.GetByBuildingAsync` and `GetByIdAsync` return full `DvrEntity` objects, including the encrypted password field. Even though the inspected views do not need the ciphertext to display connection details, do not pass secret-bearing persistence entities to views or API responses. Project to a dedicated safe DTO that omits `PasswordEncrypted`.
+- `GetDecryptedPasswordAsync` is a general service method returning the plaintext DVR password. Keep it narrowly scoped to the media-server integration path, avoid logging it or embedding it in exception messages, and audit privileged credential rotation/retrieval without recording the value.
+- Adding a camera creates its SQL row and then registers the MediaMTX path; if registration fails, the controller deletes the SQL row. This is a useful compensation pattern, but failure-injection tests should verify both sides and retry behavior.
+- Editing a DVR updates SQL connection fields and encrypted password, but the inspected update workflow does not re-register or update existing MediaMTX paths. Existing streams may therefore continue using stale RTSP connection settings after a credential/IP/port change. Make the update a coordinated operation: validate, stage media-server update, persist desired state, and reconcile failures with retry/outbox.
+- Deleting a DVR removes MediaMTX paths one at a time and only then deletes the SQL DVR row. If a later path deletion fails, earlier paths may already be gone while SQL still retains all camera records; retries must be idempotent and reconcile actual media-server state. The service then physically deletes the DVR row. Prefer an explicit Decommissioning/Disabled state, a durable cleanup job, and retained audit history before final purge.
+- Camera deletion similarly removes the MediaMTX path before deleting the SQL row. Add a durable operation state so a database failure after external deletion can be reconciled instead of leaving a camera record that appears active but has no stream.
+- The inspected DVR create/update/delete and camera create/delete paths do not visibly write dedicated durable audit events. Add actor/building/device/camera identifiers, operation, outcome, and correlation ID to the audit/outbox; never include plaintext or encrypted credentials.
+
+### 24.4 Required acceptance tests
+
+1. Shared QR-option validator tests for negative, zero, boundary, and excessive validity/max-use values across both generation endpoints.
+2. Purpose-confusion tests proving a set-PIN token cannot log in and a login token cannot set a PIN.
+3. Concurrency and failure-injection tests for one-time token consumption, including DB failure after consume and safe retry semantics.
+4. Set-PIN tests proving one account/person is affected, not every resident in an apartment; secret query-string redaction and no-store/referrer headers.
+5. DTO/view tests proving DVR encrypted password fields never reach HTML/API output; secret-canary tests for logs and exceptions.
+6. DVR update tests proving MediaMTX uses the new connection details after credential/IP/port changes.
+7. Partial-failure tests for multi-camera DVR deletion, camera deletion, MediaMTX outages, SQL failures, retries, and reconciliation.
+8. Authorization and audit tests for every DVR/camera action, including cross-building IDs and credential rotation.
+
+No application code, schema, data, configuration, QR token, or media-server state was changed. No build/tests were run. **Gate A remains NOT AUTHORIZED.**
