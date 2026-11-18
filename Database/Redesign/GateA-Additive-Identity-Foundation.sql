@@ -10,6 +10,26 @@ SAFETY:
 - Application-level encryption is required for UserTwoFactorSettings.SecretCiphertext.
 */
 SET XACT_ABORT ON;
+
+DECLARE @GateAExistingTableCount int =
+(
+    SELECT COUNT(*)
+    FROM sys.tables
+    WHERE schema_id = SCHEMA_ID(N'dbo')
+      AND name IN
+      (
+          N'Persons', N'UserAccounts', N'UserCredentials', N'UserTwoFactorSettings',
+          N'UserRecoveryCodes', N'RoleDefinitions', N'RolePermissions',
+          N'UserRoleAssignments', N'ApartmentOwnerships', N'ApartmentOccupancies',
+          N'ApartmentAccessGrants', N'AccountPermissionOverrides', N'LegacyIdentityMap'
+      )
+);
+
+-- The script is transactional: a partial Gate A table set indicates pre-existing/manual drift.
+-- Stop rather than silently skipping some tables and creating the rest.
+IF @GateAExistingTableCount NOT IN (0, 13)
+    THROW 51000, 'Gate A preflight failed: partial target-table set already exists. Inspect schema; do not continue.', 1;
+
 BEGIN TRANSACTION;
 
 IF OBJECT_ID(N'dbo.Persons', N'U') IS NULL
