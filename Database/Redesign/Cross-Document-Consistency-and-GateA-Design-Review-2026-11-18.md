@@ -152,3 +152,26 @@ Continue without waiting for owner decisions on unrelated tracks:
 - Gate A remains **NOT AUTHORIZED**.
 
 The design is not frozen until the remaining technical issues and owner decisions have documented dispositions. The work may continue on independent read-only and design tracks without blocking on every open decision.
+
+
+## 9. Additional Gate A consistency hardening
+
+A second pass over the SQL artifact identified further cases where the proposed physical constraints needed to match the domain contract. The documentation artifacts were updated as follows:
+
+- `UserAccounts.AccountStatus` now documents numeric values 0 Pending, 1 Active, 2 Locked, 3 Disabled.
+- External login provider and subject must be either both NULL or both populated.
+- `UserCredentials.CredentialType` is currently limited to 0 Password and 1 PIN; external provider identities are account-level, not password-hash rows. Additional credential types require an explicit schema design rather than an undocumented numeric value.
+- MFA enabled state requires ciphertext, key version, and enrollment timestamp. Disabled state clears the active secret/key version.
+- Role permission effect is explicitly 0 Deny / 1 Allow, with Deny precedence.
+- The Gate A SQL now stops if only a partial set of its 13 target tables already exists. A complete existing set still requires separate schema parity validation; object existence is not enough.
+- The data dictionary now includes grant timestamps and grant/revocation rationale fields consistent with the proposed SQL for role assignments and account permission overrides, and the grant timestamp for apartment access grants.
+
+These remain proposed SQL/document changes only. The Gate A rehearsal plan requires a fresh read-only metadata check and schema-parity comparison before any approved execution.
+
+## 10. Additional open implementation details
+
+- The `CredentialType` catalog currently supports Password and PIN only. Passkeys, recovery factors, external identity providers, and future authenticators must be modeled explicitly rather than assigned ad hoc enum values.
+- Disabled MFA clears the active encrypted secret. Recovery codes must be consumed/revoked as part of disable/re-enrollment workflows; this lifecycle must be tested.
+- Role assignment and permission override grantor fields are nullable in the current proposed schema. Automated grants need a dedicated system actor; human-issued grants should not have missing actor attribution. This remains an owner/security-policy decision.
+- ApartmentAccessGrants `GrantType` values and `PermissionSetKey` registry/version semantics remain open (CONS-01/02).
+- A complete set of pre-existing Gate A tables must be validated column-by-column and constraint-by-constraint before the idempotent script is allowed to skip creation. The current script guard only rejects a partial set.
