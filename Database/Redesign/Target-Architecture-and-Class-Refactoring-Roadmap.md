@@ -352,4 +352,4 @@ This document does not authorize:
 - changing financial records or wallet balances;
 - enabling production cutover or retiring legacy tables.
 
-The next safe activity is to reconcile this architecture against the existing target ERD, data dictionary, legacy mapping, Gate A SQL, and the latest diagnostic outputs, then publish a decision register and implementation backlog. Gate A remains **NOT AUTHORIZED** until the owner explicitly approves it after reviewing the complete evidence and rehearsal plan.
+The architecture, decision register, implementation backlog, and first cross-document consistency review are now published. The next safe activity is to complete the remaining column/constraint parity matrix, permission-to-resource scope catalogue, and read-only deployment metadata reconciliation, then prepare (but do not execute) the disposable-restore Gate A rehearsal package. Owner decisions remain separately tracked. Gate A remains **NOT AUTHORIZED** until the owner explicitly approves it after reviewing the complete evidence and rehearsal plan.
