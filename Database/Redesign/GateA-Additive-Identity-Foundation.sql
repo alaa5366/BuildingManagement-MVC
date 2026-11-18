@@ -11,6 +11,31 @@ SAFETY:
 */
 SET XACT_ABORT ON;
 
+-- Hard safety boundary: this first rehearsal is permitted only on the named disposable restore.
+IF DB_NAME() <> N'BuildingManagement_RestoreTest'
+    THROW 51001, 'Gate A stopped: target database must be exactly BuildingManagement_RestoreTest.', 1;
+
+IF DB_ID() IS NULL OR DATABASEPROPERTYEX(DB_NAME(), 'Status') <> N'ONLINE'
+    THROW 51002, 'Gate A stopped: target database is not online.', 1;
+
+-- Require the expected legacy schema baseline before adding any target objects.
+IF OBJECT_ID(N'dbo.Users', N'U') IS NULL
+   OR OBJECT_ID(N'dbo.Residents', N'U') IS NULL
+   OR OBJECT_ID(N'dbo.Buildings', N'U') IS NULL
+   OR OBJECT_ID(N'dbo.Apartments', N'U') IS NULL
+   OR OBJECT_ID(N'dbo.__EFMigrationsHistory', N'U') IS NULL
+    THROW 51003, 'Gate A stopped: expected legacy tables or EF migration history are missing.', 1;
+
+IF (SELECT COUNT(*) FROM dbo.__EFMigrationsHistory
+    WHERE MigrationId IN
+    (
+        N'20261116120818_InitialCreate',
+        N'20261117012657_Phase04_StandardizeKeyColumnTypes',
+        N'20261117050000_Phase05_RemoveRedundantResidentIndexes',
+        N'20261117130000_AddUserTwoFactor'
+    )) <> 4
+    THROW 51004, 'Gate A stopped: expected four-migration baseline was not found.', 1;
+
 DECLARE @GateAExistingTableCount int =
 (
     SELECT COUNT(*)
@@ -27,8 +52,8 @@ DECLARE @GateAExistingTableCount int =
 
 -- The script is transactional: a partial Gate A table set indicates pre-existing/manual drift.
 -- Stop rather than silently skipping some tables and creating the rest.
-IF @GateAExistingTableCount NOT IN (0, 13)
-    THROW 51000, 'Gate A preflight failed: partial target-table set already exists. Inspect schema; do not continue.', 1;
+IF @GateAExistingTableCount <> 0
+    THROW 51000, 'Gate A stopped: one or more target tables already exist. This rehearsal requires a fresh restore with all 13 target tables absent; inspect schema and do not rerun.', 1;
 
 BEGIN TRANSACTION;
 
