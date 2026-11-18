@@ -158,3 +158,13 @@ Added:
 Repository inspection also confirms that `Residents` contains one row per apartment relationship with a unique `Uid`, and that its current `IsOwner`/`IsPrimary` flags do not provide legal ownership shares or dated occupancy history. The mapping artifact records these as candidates requiring profiling/review, not automatic migrations.
 
 Current implementation boundary remains unchanged: no EF entity changes, no EF migration, no SQL execution, no backfill, and no application cutover have been performed.
+
+### Permission-model gap addressed in Gate A design
+
+The additive foundation now also defines `AccountPermissionOverrides`:
+- Preserves account-specific legacy permission semantics separately from role-wide `RolePermissions`.
+- Supports System/Building/Apartment/Personal scope, Allow/Deny effect, effective dates, revocation audit, rowversion, and restrictive scope FKs.
+- Uses deny precedence; interval overlap and duplicate active grants remain transactional service validations.
+- The target data dictionary and legacy mapping document now describe this table.
+
+This closes the schema-design gap for preserving `UserPermissions` without broadening a user's permissions to every holder of a role. It does **not** mean the table has been executed or that the EF model/backfill is implemented.
