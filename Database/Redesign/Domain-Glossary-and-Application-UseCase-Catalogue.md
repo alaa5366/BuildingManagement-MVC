@@ -35,6 +35,8 @@
 | IntegrationSecret | Encrypted, versioned credential for an external provider | Ordinary settings or view-model field |
 | DocumentAsset | Private file object with ownership, classification, retention, and download policy | Public URL |
 | BackupArtifact | Integrity-verifiable protected backup plus reconciled metadata | A successful button click |
+| CapabilityToken | Short-lived signed/opaque capability bound to a target, use policy, expiry, and revocation state | Permanent identity or session |
+| ImportBatch | Staged, versioned, actor/target-bound import with row-level validation and commit outcome | Direct bulk insertion or unreviewed file upload |
 | Reconciliation | Comparison of source/target records and balances with explicit variance dispositions | A count-only migration report |
 | LegacyIdentityMap | Durable reviewed source-row-to-target identity provenance | Temporary migration log |
 
@@ -101,7 +103,20 @@ Commands are the only application entry points allowed to mutate business state.
 - `CloseFinancialPeriod` / `ReopenFinancialPeriod` — controlled period transition.
 - `ReconcileLegacyWallet` — produce variance report; never auto-correct legacy rows.
 
-### 3.6 Polling
+### 3.6 QR and capability tokens
+- `IssueQrCapability` — create a target-bound token with signed authorization fields, expiry, use limit, and revocation metadata.
+- `ConfirmQrAccess` — verify token and target, apply policy, consume once, and establish a dedicated guest/resident session.
+- `RevokeQrCapability` — revoke outstanding capabilities and invalidate derived access.
+- `ValidateCapabilityUse` — read-only validation without consuming the token.
+
+### 3.7 Import and migration workbench
+- `CreateImportBatch` — bind file digest, actor, target scope, template version, and expiry.
+- `ValidateImportBatch` — parse and validate all rows without creating domain records.
+- `PreviewImportBatch` — show safe row-level outcomes and conflicts.
+- `CommitImportBatch` — commit approved valid rows idempotently with checkpointing.
+- `CancelImportBatch` — cancel uncommitted staged work and preserve audit evidence.
+
+### 3.8 Polling
 - `CreatePoll` / `AmendDraftPoll` — draft-only configuration.
 - `FreezePollPolicy` / `OpenPoll` — snapshot eligibility policy and options.
 - `IssueEligibilityCredential` — create one-time opaque participation credential.
@@ -109,7 +124,7 @@ Commands are the only application entry points allowed to mutate business state.
 - `ClosePoll` / `FinalizePoll` — close, validate tally, and publish approved results.
 - `AnnulPoll` / `ReopenPoll` — controlled whole-poll remedy; never edit individual choices.
 
-### 3.7 Operations and integrations
+### 3.9 Operations and integrations
 - `CreateMaintenanceRequest` / `UpdateMaintenanceRequest` / `CloseMaintenanceRequest`.
 - `PostMaintenanceCost` / `ReverseMaintenanceCost`.
 - `DispatchNotification` / `MarkNotificationRead` / `UpdateNotificationPreference`.
