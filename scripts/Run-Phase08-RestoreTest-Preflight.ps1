@@ -98,7 +98,7 @@ $lines.Add("- Recovery model: $($dbCheck.Rows[0].recovery_model_desc)")
 $lines.Add('')
 $lines.Add('## Pre-existing local working-tree changes (preserved; not included in this report commit)')
 if (-not $preExistingChanges) { $lines.Add('- None.') }
-foreach ($change in $preExistingChanges) { $lines.Add("- `$change`") }
+foreach ($change in $preExistingChanges) { $lines.Add("- " + $change) }
 $lines.Add("- Backup: $BackupPath")
 $lines.Add('- Backup type: COPY_ONLY')
 $lines.Add('- RESTORE VERIFYONLY WITH CHECKSUM: PASSED')
