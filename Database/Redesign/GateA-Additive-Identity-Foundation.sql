@@ -97,6 +97,7 @@ BEGIN
         ExpiresAtUtc datetime2(3) NULL,
         RevokedAtUtc datetime2(3) NULL,
         ReplacedByCredentialId uniqueidentifier NULL,
+        RowVersion rowversion NOT NULL,
         CONSTRAINT FK_UserCredentials_UserAccounts FOREIGN KEY(AccountId)
             REFERENCES dbo.UserAccounts(AccountId) ON DELETE NO ACTION,
         CONSTRAINT FK_UserCredentials_ReplacedBy FOREIGN KEY(ReplacedByCredentialId)
@@ -120,6 +121,7 @@ BEGIN
         EnrolledAtUtc datetime2(3) NULL,
         LastVerifiedAtUtc datetime2(3) NULL,
         UpdatedAtUtc datetime2(3) NULL,
+        RowVersion rowversion NOT NULL,
         CONSTRAINT FK_UserTwoFactorSettings_UserAccounts FOREIGN KEY(AccountId)
             REFERENCES dbo.UserAccounts(AccountId) ON DELETE NO ACTION,
         CONSTRAINT CK_UserTwoFactorSettings_EnabledSecret CHECK
@@ -307,6 +309,7 @@ BEGIN
         RevokedAtUtc datetime2(3) NULL,
         RevokedByAccountId uniqueidentifier NULL,
         Reason nvarchar(500) NULL,
+        RowVersion rowversion NOT NULL,
         CONSTRAINT FK_ApartmentAccessGrants_Apartments FOREIGN KEY(BuildingId, ApartmentId)
             REFERENCES dbo.Apartments(BuildingId, Id) ON DELETE NO ACTION,
         CONSTRAINT FK_ApartmentAccessGrants_Persons FOREIGN KEY(PersonId)
