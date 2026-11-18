@@ -172,6 +172,21 @@ public class AppDbContext : DbContext
     /// Gets the residents.
     /// </summary>
     public DbSet<ResidentEntity> Residents => Set<ResidentEntity>();
+
+    // Canonical identity and authorization foundation (Gate A).
+    public DbSet<PersonEntity> Persons => Set<PersonEntity>();
+    public DbSet<UserAccountEntity> UserAccounts => Set<UserAccountEntity>();
+    public DbSet<UserCredentialEntity> UserCredentials => Set<UserCredentialEntity>();
+    public DbSet<UserTwoFactorSettingEntity> UserTwoFactorSettings => Set<UserTwoFactorSettingEntity>();
+    public DbSet<UserRecoveryCodeEntity> UserRecoveryCodes => Set<UserRecoveryCodeEntity>();
+    public DbSet<RoleDefinitionEntity> RoleDefinitions => Set<RoleDefinitionEntity>();
+    public DbSet<RolePermissionEntity> RolePermissions => Set<RolePermissionEntity>();
+    public DbSet<UserRoleAssignmentEntity> UserRoleAssignments => Set<UserRoleAssignmentEntity>();
+    public DbSet<ApartmentOwnershipEntity> ApartmentOwnerships => Set<ApartmentOwnershipEntity>();
+    public DbSet<ApartmentOccupancyEntity> ApartmentOccupancies => Set<ApartmentOccupancyEntity>();
+    public DbSet<ApartmentAccessGrantEntity> ApartmentAccessGrants => Set<ApartmentAccessGrantEntity>();
+    public DbSet<AccountPermissionOverrideEntity> AccountPermissionOverrides => Set<AccountPermissionOverrideEntity>();
+    public DbSet<LegacyIdentityMapEntity> LegacyIdentityMaps => Set<LegacyIdentityMapEntity>();
     protected override void ConfigureConventions(ModelConfigurationBuilder cb)
     {
         cb.Properties<decimal>().HavePrecision(18, 2);
@@ -182,6 +197,8 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
+        IdentityModelConfiguration.Configure(mb);
+
         // -----------------------------------------------------------------
         // Phase 04: Explicit SQL Server lengths for PK/FK and key columns.
         // Keep every FK component aligned with its principal key column.
