@@ -209,7 +209,7 @@ System jobs use a dedicated non-human actor identity and explicit job permission
 
 ## 8. Open owner decisions carried forward
 
-This contract catalogue does not resolve DEC-01 through DEC-38 or PERM-01 through PERM-05. The most important blockers remain ownership completeness, voting eligibility/delegation, financial rounding and period semantics, maintenance visibility, preferences/notification recipient semantics, retention, ballot assurance, and privileged SuperAdmin permissions.
+This contract catalogue does not resolve DEC-01 through DEC-46 or PERM-01 through PERM-05. The most important blockers remain ownership completeness, voting eligibility/delegation, financial rounding and period semantics, maintenance visibility, preferences/notification recipient semantics, retention, ballot assurance, and privileged SuperAdmin permissions.
 
 ## 9. Verification status
 
