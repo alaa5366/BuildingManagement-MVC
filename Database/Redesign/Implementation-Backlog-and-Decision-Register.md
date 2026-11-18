@@ -88,7 +88,7 @@ Status values: **Open** = requires business/technical approval; **Proposed** = a
 | DEC-25 | Backup deletion semantics | Reconcile artifact and history; typed partial/missing states, audited operator action | Open |
 | DEC-26 | Audit retention/tamper evidence | Separate security/business audit from diagnostic logs; define retention and privileged access | Open |
 | DEC-27 | Deployment topology | Treat current deployment as single instance until proven otherwise; design ports for future shared state | Evidence required |
-| DEC-28 | SQL view deployment | One authoritative, versioned mechanism; reconcile migration chain and FullSchema first | Blocked by DATA-01 |
+| DEC-28 | SQL view/schema deployment authority | Recommended: EF Core migrations are authoritative; FullSchema is generated/reference-only. Alternative: FullSchema is sole authority and EF deployment is reconciled/retired. | Owner decision required; blocked by DATA-01 |
 | DEC-29 | Startup legacy PIN migration | Remove/feature-gate automatic startup mutation; require dry-run/checkpoint/operator approval | P0 blocker before runtime validation on preserved legacy data |
 | DEC-30 | Health endpoint exposure | Minimal liveness public to trusted infrastructure; readiness details restricted to monitoring network | Open |
 
