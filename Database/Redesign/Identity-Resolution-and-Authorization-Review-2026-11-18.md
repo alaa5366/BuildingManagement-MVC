@@ -585,3 +585,93 @@ Before any application implementation is accepted:
 The discovery and static source review is now complete through the currently available repository and supplied restore evidence. The design direction is viable, but the application is **not implementation-ready for identity cutover** until the policy decisions, retention model, transactional authorization/security services, finance reconciliation, and deployment controls above are closed.
 
 **Gate A remains NOT AUTHORIZED.** No DDL/DML, EF migration, source-code change, backfill, cutover, production access, or destructive operation was performed. No build, test suite, or runtime validation was executed in this review.
+
+
+### 18. SQL views, reporting projections, and observability/log-center architecture review — 2026-11-18
+
+This section records a repository-wide static inventory of view declarations and EF mappings found through source search. It does **not** claim a complete inventory of the live SQL Server database: the supplied restore evidence previously confirmed that `vw_ApartmentWalletMovements` and `vw_ApartmentWalletBalance` were absent, but no all-views result set from `sys.views` has yet been supplied. A dedicated read-only SQL inventory is still required before any view is changed or retired.
+
+#### 18.1 Repository inventory
+
+- The only `CREATE VIEW` declaration found in `BuildingManagement-FullSchema.sql` is `dbo.vw_ApartmentWalletMovements`.
+- `Data/AppDbContext.cs` exposes one keyless query type, `ApartmentWalletMovementsView`, mapped with `HasNoKey()` and `ToView("vw_ApartmentWalletMovements")`.
+- `Data/Entities.cs` contains the corresponding projection type.
+- The EF model snapshot and migration designer snapshots repeat the mapping metadata. Those references are **not** SQL view-creation statements.
+- No repository definition, EF mapping, or consumer for `vw_ApartmentWalletBalance` was found. The earlier restore inspection also reported both wallet view names absent.
+- No additional `CREATE VIEW`, `CREATE OR ALTER VIEW`, or `ToView(...)` declaration was found in the searched repository sources. This is a source-search result, not proof that the live database has no other views or that external SQL modules do not depend on them.
+
+#### 18.2 Current wallet view assessment
+
+`vw_ApartmentWalletMovements` returns one row per apartment and aggregates confirmed deposits plus wallet adjustments. It is a movement summary, not the authoritative apartment balance or a complete statement. It does not include carryover, monthly charges/shares, expense/revenue distribution, month selection, or a full accounting reconciliation. The existing code review found that `WalletService` calculates wallet behavior independently and no runtime consumer of this view was identified.
+
+Consequences:
+- Do not rename this view or expand its meaning while retaining the old name.
+- Do not create `vw_ApartmentWalletBalance` from assumptions; its intended semantics and external dependencies are unknown.
+- Decide whether the projection is still useful. If retained, give it a precise contract and make its grain, currency/decimal rules, status inclusion, and as-of semantics explicit.
+- The authoritative balance must have one defined calculation path, with reconciliation against confirmed deposits, adjustments, monthly shares, carryover, expenses/revenues, reversals, and rounding. A view must not silently duplicate a different balance formula from `WalletService`.
+- Keep historical financial rows immutable or reversibly corrected; do not let view refactoring change historical totals.
+
+#### 18.3 Target view and reporting architecture
+
+The redesign should produce a deliberate, versioned set of read-only reporting projections rather than adding ad-hoc views. Candidate domains (subject to actual query/report needs and profiling) are:
+
+1. **Apartment wallet statement** — transaction-level rows with source type/id, effective date, posted date, month, signed amount, status, reversal/reference, and deterministic ordering. This is a statement projection, not just a total.
+2. **Apartment wallet balance** — one row per apartment and as-of date/month, with separately exposed opening/carryover, confirmed receipts, adjustments, allocated charges, expenses/revenues where applicable, closing balance, and reconciliation status. Business rules must be approved first.
+3. **Building financial period summary** — period-level totals and reconciliation deltas, preserving source totals and rounding evidence.
+4. **Apartment occupancy/ownership/access projection** — current and historical effective-dated relationships, with explicit distinction between owner, occupant, and temporary access; never collapse these into a single resident flag.
+5. **Authorization/reporting projection** — optional administrative read model for effective grants and scope, generated from the centralized evaluator's rules; it must not become a second authorization engine.
+6. **Audit and operational event read models** — searchable, paged projections for the log center, kept distinct from financial and domain views.
+
+These are candidates, not approved object names or committed SQL. Prefer a small number of stable contracts with explicit versioning (for breaking changes use a versioned view/API contract or compatibility window). Use views for relational projection, not for secret decryption, authorization decisions, state transitions, or write workflows.
+
+#### 18.4 Performance, security, and maintainability rules
+
+- Inspect actual execution plans, row counts, logical reads, and Query Store evidence before adding indexes or rewriting a view. Avoid scalar functions and row-by-row correlated work on large reporting paths where a grouped/relational plan is better.
+- Aggregate child tables before joining them to avoid fan-out multiplication (e.g., deposits × adjustments × shares).
+- Use deterministic keys and ordering for paging; include stable tie-breakers.
+- Make date boundaries sargable and define business timezone/UTC conversion explicitly.
+- Keep decimal precision and rounding policy consistent with the financial ledger; never use floating point for money.
+- Apply resource scope in the authorized query/application layer. A view that returns all buildings is not safe merely because the caller hides rows in the UI. If SQL row-level security is considered, document identity propagation, connection pooling, bypass paths, and test coverage first.
+- Grant application principals only required SELECT access; keep DDL ownership separate. Views are not automatically a security boundary.
+- Track each view's owner, purpose, grain, source tables, filters, freshness, consumers, expected row volume, indexes relied upon, and deprecation path.
+- Do not use `SELECT *`; keep column contracts explicit and test them.
+
+#### 18.5 Log-center / Igor-style observability direction
+
+The requested log experience should be treated as a first-class **Enterprise System Monitoring & Log Center**, not as a collection of SQL views over the existing AuditLog table. It should bring together:
+- structured application logs (level, timestamp, service/environment/instance, category, event id, exception);
+- correlation/trace identifiers across HTTP request, database work, background jobs, import/export, backup/restore, and security events;
+- a distinct append-only business/security audit trail with actor, action, target, scope, outcome, reason, and before/after metadata where safe;
+- performance telemetry (request duration, SQL duration, query count, slow-query thresholds, job duration, failure/retry counts);
+- system health and dependency status;
+- searchable filters, time ranges, severity, event category, actor, building/resource scope, correlation id, and export/retention controls.
+
+Important separation:
+- Application diagnostics answer **what the software did and why it failed**.
+- Security/business audit answers **who performed which sensitive action, against what resource, and with what outcome**.
+- Financial ledger/reporting answers **what monetary event occurred and how balances reconcile**.
+These streams may be correlated by trace/correlation and domain event identifiers, but must not be merged into one mutable table or treated as interchangeable.
+
+The log center should use structured logging and a supported centralized sink/store with retention and access controls. Avoid logging PINs, passwords, MFA seeds/recovery codes, tokens, connection strings, DVR credentials, ballot choices, or unnecessary personal/financial payloads. Sensitive values must be redacted before the sink. Use bounded-cardinality dimensions; do not put arbitrary user input or IDs into metric labels. Audit writes for critical mutations should use a transactional outbox or equivalent durable mechanism; ordinary diagnostic logs must not be mistaken for durable audit evidence.
+
+A future UI should provide paged server-side search, saved filters, event detail with redaction, correlation/trace drill-down, slow-operation views, health panels, and controlled export. SuperAdmin access must be protected by MFA/step-up and itself audited. The UI must not issue unrestricted database-wide queries on each page load.
+
+#### 18.6 Required read-only database inventory before view redesign
+
+The next diagnostics run must export separate result sets for:
+- all user-visible and system SQL views (schema/name, create/modify dates, object id);
+- each view's full definition and whether encrypted/definition unavailable;
+- SQL dependency edges from `sys.sql_expression_dependencies` plus unresolved references;
+- indexed views and their index definitions;
+- referencing modules (procedures, functions, triggers) and synonyms;
+- SQL Agent jobs/steps and external report/integration references where available;
+- row counts and approximate size for source tables;
+- existing Query Store/query-statistics evidence for view consumers, where enabled and permitted.
+
+Compare this inventory with EF mappings, migrations, `BuildingManagement-FullSchema.sql`, controllers/services/repositories, report/export code, scheduled jobs, and external consumers. A view may only be removed after its consumers and compatibility window are verified.
+
+#### 18.7 Current disposition
+
+Repository source inventory: **one declared SQL view and one EF keyless mapping found**. Live database inventory: **not yet complete**. Wallet view semantics: **insufficient for an authoritative balance**. The target is a coherent reporting/read-model layer plus a separate structured log center; no new view SQL is approved yet.
+
+No source code, SQL view, schema, database row, or runtime setting was changed. No build, tests, execution plans, or live SQL inventory were run in this section. Gate A remains **NOT AUTHORIZED**.
