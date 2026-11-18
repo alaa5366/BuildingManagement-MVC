@@ -151,7 +151,7 @@ The Gate A additive script now includes `dbo.LegacyIdentityMap` (not the earlier
 - Each Residents source row may map to a Person; multiple Residents rows may intentionally map to the same Person because they can represent multiple apartment relationships.
 - Each Users source row may map to a Person and exactly one Account. A filtered unique index prevents multiple Users source rows from mapping to the same Account.
 - Residents source rows cannot directly map an Account in this provenance table. Account linkage is established through the reviewed Person/Account relationship, not duplicated across resident relationship rows.
-- Status values: 0 Pending, 1 Linked, 2 Separate, 3 Rejected, 4 ManualReview. Pending/rejected/manual-review rows may retain NULL targets; linked/separate rows require a Person. A linked Users row also requires an Account.
+- Status values: 0 Pending, 1 Linked, 2 Separate, 3 Rejected, 4 ManualReview. Pending/rejected/manual-review rows may retain NULL targets; linked/separate rows require a Person. A Users row in Linked or Separate disposition also requires an Account; Pending, Rejected, and ManualReview rows must not have target IDs.
 - The table stores evidence references and safe review reasons, not raw contact values, PINs, hashes, or other secrets.
 - FKs are restrictive. The mapping is migration evidence and must survive ordinary Person/Account lifecycle operations.
 
