@@ -495,3 +495,12 @@ Critical findings:
 - Resident camera access is building-wide under the current controller policy; HLS delivery must enforce authorization at the media server and be tested for revocation.
 
 The section includes concrete acceptance tests. This was static review only: no source/configuration/schema/data changes, build, or tests. **Gate A remains NOT AUTHORIZED.**
+
+
+### Quick QR and DVR/media-server lifecycle review — 2026-11-18
+
+Section 24 extends the static review to Quick QR generation/consumption, one-time PIN activation, DVR credential handling, and MediaMTX coordination.
+
+Positive controls include AES-GCM authenticated QR tokens, a GET confirmation page that does not consume tokens, atomic use-count consumption, encrypted DVR passwords, and private-IP/relative-RTSP-path validation. Gaps include inconsistent QR parameter bounds between generation endpoints, one-time set-PIN tokens being consumed before the PIN database update (so a DB failure burns the link), apartment-wide shared PIN reset semantics, secret-bearing DVR entities being returned from service read methods, DVR updates not visibly reconciling existing MediaMTX paths, and partial external cleanup risk during DVR deletion. The section defines retry/outbox, audit, DTO, and failure-injection acceptance criteria.
+
+Static review only; no code, schema, data, tokens, or media-server state were changed. No build/tests were run. **Gate A remains NOT AUTHORIZED.**
