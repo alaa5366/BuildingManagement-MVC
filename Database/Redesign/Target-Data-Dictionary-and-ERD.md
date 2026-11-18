@@ -329,25 +329,36 @@ Polls/options cannot be physically deleted after opening or after ballots exist.
 
 Unique key on (ScopeType, BuildingId, ProviderKey, SecretName) with correct handling for system-scoped NULL BuildingId. Encryption key material must be external to SQL Server. UI may receive only configured state, last-updated metadata, and safe masked hints where approved. Never return ciphertext or decrypted secret.
 
-### 2.6 Migration evidence and mapping
-
-#### IdentityMigrationMap
+### 2.6 LegacyIdentityMap — migration provenance
 
 | Column | Proposed SQL type | Null | Rule / purpose |
 |---|---|---:|---|
-| MigrationMapId | uniqueidentifier | No | PK |
-| SourceTable | nvarchar(128) | No | Allow-listed source table |
-| SourceKey | nvarchar(256) | No | Exact serialized legacy key |
-| TargetEntityType | nvarchar(80) | No | Target entity |
-| TargetId | uniqueidentifier | Yes | NULL if unresolved |
-| ResolutionStatus | tinyint | No | Pending, Mapped, ReviewedMerge, Rejected |
-| ResolutionMethod | nvarchar(80) | Yes | Exact UID, manual review, etc. |
-| EvidenceReference | nvarchar(500) | Yes | Review evidence |
-| ProcessedAtUtc | datetime2(3) | Yes | Completion |
-| ErrorCode | nvarchar(80) | Yes | Safe diagnostic code |
+| LegacyIdentityMapId | uniqueidentifier | No | PK |
+| SourceSystem | nvarchar(80) | No | Stable source-system key |
+| SourceTable | nvarchar(128) | No | Initial allow-list: Users, Residents |
+| SourceKey | nvarchar(256) | No | Exact serialized source-row key; never a secret |
+| PersonId | uniqueidentifier | Yes | FK Persons; many Residents rows may map to one Person |
+| AccountId | uniqueidentifier | Yes | FK UserAccounts; only Users source rows may populate it |
+| MappingStatus | tinyint | No | 0 Pending, 1 Linked, 2 Separate, 3 Rejected, 4 ManualReview |
+| MatchMethod | nvarchar(80) | Yes | Exact UID candidate, manual review, etc. |
+| EvidenceReference | nvarchar(500) | Yes | Restricted evidence reference, not raw PII |
+| ReviewReason | nvarchar(1000) | Yes | Safe, non-secret rationale |
+| ReviewedAtUtc / ReviewedByAccountId | datetime2(3) / uniqueidentifier | Yes | Review audit |
+| CreatedAtUtc / UpdatedAtUtc | datetime2(3) | No / Yes | Record audit |
+| RowVersion | rowversion | No | Concurrency |
 
-Unique index (SourceTable, SourceKey). Do not store plaintext secrets or unnecessary personal values in this ledger. Access restricted to migration operators.
+Constraints and indexes:
+- Unique `(SourceSystem, SourceTable, SourceKey)`.
+- Filtered unique index on non-null AccountId: a legacy Users row cannot be mapped to the same target account as another Users row.
+- Filtered indexes on PersonId and AccountId, plus status/source lookup.
+- Restrictive FKs to Persons and UserAccounts; no cascade delete.
+- Residents rows may map many-to-one to Person, but do not directly carry AccountId. The account is reached through the reviewed Person-to-UserAccount relation.
+- A linked Users row requires both PersonId and AccountId. The migration service must verify transactionally that the AccountId belongs to the same PersonId; this pair is not inferred from two independent FKs.
+- Pending, Rejected, and ManualReview rows may remain unresolved. Never fabricate a target just to complete the migration.
+- Initial source allow-list is deliberately limited to Users and Residents. Expand only with a separately reviewed mapping.
 
+Do not store plaintext credentials, hashes, PINs, raw contact details, or unnecessary personal values in this ledger. Restrict read access to migration operators.
+ 
 ### 2.7 Existing tables intentionally retained in first rollout
 
 No redesign/rekey is proposed in the identity migration for:
@@ -388,7 +399,7 @@ erDiagram
     PERSONS ||--o{ POLL_DELEGATIONS : "delegator or representative"
     POLL_DELEGATIONS ||--o{ POLL_ELIGIBILITY : "eligibility evidence"
     USER_ACCOUNTS ||--o{ PROTECTED_INTEGRATION_SECRETS : "updates"
-    USER_ACCOUNTS ||--o{ IDENTITY_MIGRATION_MAP : "migration actor"
+    PERSONS ||--o{ LEGACY_IDENTITY_MAP : "legacy source mapping"
 
     APARTMENTS ||--o{ APARTMENT_OWNERSHIPS : "ownership history"
     APARTMENTS ||--o{ APARTMENT_OCCUPANCIES : "occupancy history"
@@ -484,3 +495,8 @@ This table preserves the semantics of legacy `UserPermissions(Uid, Permission)`,
 
 Scope combinations must match `UserRoleAssignments`. Restrictive FKs enforce account, building, and apartment scope. The service must evaluate permission overrides with explicit scope and validity; deny takes precedence. Do not create role-wide permissions from account-specific legacy rows. Interval overlap and duplicate active grants are transactionally validated.
 
+
+
+### 2.9 Gate A provenance table alignment
+
+The physical additive Gate A script now creates `dbo.LegacyIdentityMap` as described in section 2.6. It replaces the earlier conceptual `IdentityMigrationMap` naming. The preflight object inventory now expects thirteen Gate A tables. This remains proposed DDL only; no execution or EF migration is authorized.
