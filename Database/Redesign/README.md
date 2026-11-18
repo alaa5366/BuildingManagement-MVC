@@ -139,6 +139,8 @@ Current safe boundary:
 
 ## Additional design artifacts
 
+- `Database/Redesign/GateA-Disposable-Restore-Rehearsal-Plan.md` — hard stops, evidence bundle, local script behavior, postflight acceptance, and rollback for a future disposable-restore rehearsal. It is preparation only; Gate A remains unauthorized.
+
 - `Database/Redesign/Domain-Glossary-and-Application-UseCase-Catalogue.md` — canonical domain language, aggregate boundaries, command/query catalogue, typed outcomes, actor context, and cross-cutting implementation constraints.
 
 - `Database/Redesign/Legacy-Permission-Scope-Catalogue-2026-11-18.md` — all 28 legacy permission keys mapped to proposed scopes/resources, stale catalog references, risky combined capabilities, target decomposition, and five owner decisions. Proposed only; no permission grants or code changed.
