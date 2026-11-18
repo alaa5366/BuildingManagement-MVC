@@ -609,3 +609,19 @@ This roadmap orders the findings from Sections 1–29 by risk and dependency. It
 - Gate A: **NOT AUTHORIZED**.
 - Database DDL/DML, EF migration execution, backfill, cutover, production deployment, and destructive cleanup: **NOT APPROVED**.
 - Evidence reviewed to date includes static source review and the user-run restore-database diagnostic CSVs described in the earlier sections. The assistant has not run the application build, test suite, restore operation, or database migration in this review.
+
+
+### Authentication and session validation — Section 29
+
+Section 29 reviews direct/unified login parity, account selection, lockout, MFA, session revalidation, QR identity, and permission validation.
+
+Key findings:
+- Direct resident login and unified login use inconsistent active-account checks; inactive residents/admins can pass primary authentication and receive a cookie that session revalidation then rejects.
+- Unified login trims credentials, which can alter legitimate passwords containing surrounding whitespace.
+- Unified login performs N+1 apartment/building lookups for resident candidates; direct resident/admin selection is ambiguous when duplicate phone rows exist.
+- LoginThrottle resets the account counter but not the IP counter; shared-IP users can remain locked out. Live counters are process-local; startup creates dbo.LoginThrottle with raw DDL.
+- MFA is opt-in in the current login flow, and TOTP/recovery consumption is protected only by an in-process lock, not cross-instance atomicity.
+- Stable QR login creates a synthetic resident UID while the validator requires a matching Residents.Uid; the resulting cookie appears to be rejected on the next validated request.
+- Admin permission cache invalidation is process-local; arbitrary permission strings and unknown templates are not rejected at the controller boundary.
+
+See Section 29 for source paths, detailed reasoning, and acceptance tests. Section 30 provides the ordered remediation roadmap and release gates.
