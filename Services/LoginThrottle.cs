@@ -85,9 +85,11 @@ public sealed class LoginThrottle
         }
     }
 
-    private static string HashKey(string key)
+    internal static string K(string key)
     {
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(key.Trim().ToLowerInvariant()));
         return "lf:" + Convert.ToHexString(hash, 0, 16);
     }
+
+    private static string HashKey(string key) => K(key);
 }
