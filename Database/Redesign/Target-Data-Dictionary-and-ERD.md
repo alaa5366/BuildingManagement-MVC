@@ -388,6 +388,7 @@ erDiagram
     PERSONS ||--o{ APARTMENT_OCCUPANCIES : "occupies over time"
     PERSONS ||--o{ APARTMENT_ACCESS_GRANTS : "receives access"
     USER_ACCOUNTS ||--o{ USER_ROLE_ASSIGNMENTS : "has scoped roles"
+    USER_ACCOUNTS ||--o{ ACCOUNT_PERMISSION_OVERRIDES : "direct scoped overrides"
     ROLE_DEFINITIONS ||--o{ USER_ROLE_ASSIGNMENTS : "assigned"
     ROLE_DEFINITIONS ||--o{ ROLE_PERMISSIONS : "contains"
     POLLS ||--o| POLL_VOTING_POLICIES : "policy"
@@ -400,6 +401,7 @@ erDiagram
     POLL_DELEGATIONS ||--o{ POLL_ELIGIBILITY : "eligibility evidence"
     USER_ACCOUNTS ||--o{ PROTECTED_INTEGRATION_SECRETS : "updates"
     PERSONS ||--o{ LEGACY_IDENTITY_MAP : "legacy source mapping"
+    USER_ACCOUNTS ||--o{ LEGACY_IDENTITY_MAP : "legacy account mapping"
 
     APARTMENTS ||--o{ APARTMENT_OWNERSHIPS : "ownership history"
     APARTMENTS ||--o{ APARTMENT_OCCUPANCIES : "occupancy history"
