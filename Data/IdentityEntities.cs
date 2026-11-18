@@ -122,7 +122,7 @@ public sealed class ApartmentOwnershipEntity
     public DateTime? ValidToUtc { get; set; }
     public DateTime RecordedAtUtc { get; set; }
     public Guid? RecordedByAccountId { get; set; }
-    public string? EvidenceReference { get; set; }
+    public string EvidenceReference { get; set; } = "";
     public string? Notes { get; set; }
     public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 }
@@ -159,7 +159,7 @@ public sealed class ApartmentAccessGrantEntity
     public Guid GrantedByAccountId { get; set; }
     public DateTime? RevokedAtUtc { get; set; }
     public Guid? RevokedByAccountId { get; set; }
-    public string? Reason { get; set; }
+    public string Reason { get; set; } = "";
     public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 }
 
