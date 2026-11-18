@@ -253,3 +253,8 @@ The backlog is now an implementation backlog, not a read-only plan. Work proceed
 The Gate A DDL received a static implementation review. A cross-account credential replacement vulnerability was closed by making the replacement FK composite on `(ReplacedByCredentialId, AccountId)` and adding the matching candidate key. The expected four EF migration IDs and hard-stop preflight were checked against repository source. See `GateA-DDL-Implementation-Review-2026-11-18.md`.
 
 **Current status:** DDL source reviewed/amended; EF Core entities/configuration, generated migration and model snapshot, migration tests, and disposable restore rehearsal remain to be completed. Do not run the standalone SQL and a duplicate EF migration against the same database. EF Core migration history must remain the authoritative application schema deployment record.
+
+
+## 14. Identity EF Core model implementation
+
+The Gate A target model has now been represented by 13 typed EF entities and explicit SQL Server model configuration, registered in `AppDbContext`. The guarded local script `Generate-GateA-EF-Migration.ps1` generates the migration and model snapshot from the actual runtime model, runs build/tests, and only then offers a scoped commit/push. The generated migration has not yet been created or applied. See `Identity-EF-Core-Model-Implementation-2026-11-18.md`.
