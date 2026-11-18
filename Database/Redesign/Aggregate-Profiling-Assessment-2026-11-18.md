@@ -192,3 +192,11 @@ See `Financial-and-Wallet-Code-Review-2026-11-18.md` for source-level findings. 
 The +0.22 expense and +0.04 revenue variances therefore require per-apartment evidence; do not assume they are harmless rounding. Carry-over restatement must be designed around immutable posted balances and explicit corrections. Cancelled deposits remain excluded from collected wallet funds.
 
 Next action is a read-only per-apartment reconciliation diagnostic; no source code, tests, SQL, or financial rows were changed by this review. Gate A remains blocked.
+
+
+
+## 17. Per-apartment financial reconciliation runner prepared — 2026-11-18
+
+Added `Database/Diagnostics/Financial-Reconciliation-ReadOnly-Validation.sql` and `Database/Diagnostics/Run-Financial-Reconciliation-ReadOnly-Validation.ps1`. This read-only batch is designed to resolve the building/month share variances with five result sets: database identity; monthly source-ledger vs share totals; per-apartment stored inputs; deterministic candidate allocation (ApartmentId order, explicitly not historical proof); and missing/orphan share rows.
+
+The runner is restricted to `BuildingManagement_RestoreTest`, exports CSV files, and auto-commits/pushes only the timestamped results folder to the discovery branch. It has not yet been executed. No stored share, wallet, or ledger row has been changed. Review the output before making any financial migration decision.
