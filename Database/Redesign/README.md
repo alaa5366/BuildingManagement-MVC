@@ -317,3 +317,8 @@ Reviewed the updated read-only run at `Database/Diagnostics/GateA-Preflight-Resu
 Added `GateA-Schema-Constraint-Review-2026-11-18.md`. The static review documents which invariants are enforced by SQL and which require transactional service validation, including the LegacyIdentityMap Person/Account pair, dated ownership and occupancy overlaps, role/scope compatibility, permission evaluation, credential replacement, and MFA lifecycle. It also flags the still-undefined ApartmentAccessGrants type catalogue and revocation lifecycle.
 
 The metadata preflight is a pass, not a DDL approval. Gate A remains **NOT AUTHORIZED for execution**. Credential verification/re-enrollment, manual identity dispositions, financial/carry-over policy, external wallet-view dependency confirmation, cascade retention policy, service-side invariant implementation, and disposable restore/rollback rehearsal remain outstanding. No DDL/DML, EF migration, backfill, or cutover was performed.
+
+
+## Admin access lifecycle finding — 2026-11-18
+
+A source review of `UserSqlStore` and `AdminManagementService` found that admin upsert only adds BuildingAdmins links (it does not revoke omitted links), while `AdminManagementService.DeleteAsync` physically deletes BuildingAdmins, UserPermissions, and Users in three commands before writing the audit event. The method has no explicit transaction around these deletes. The target migration must replace ordinary hard deletion with disable/revoke plus retained provenance/history, make grant/revoke semantics explicit, and use atomic audit/outbox handling. See section 8 of `Identity-Resolution-and-Authorization-Review-2026-11-18.md`. No application source or database data was changed.
