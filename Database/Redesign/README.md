@@ -139,6 +139,8 @@ Current safe boundary:
 
 ## Additional design artifacts
 
+- `Database/Redesign/Audit-Outbox-and-Observability-Target-Design.md` — durable business/security audit, transactional outbox/inbox, diagnostic log separation, scope-based access, retention, redaction, and operational tests.
+
 - `Database/Redesign/Target-Entity-Inventory-and-Phased-Schema-Roadmap.md` — whole-system target entity inventory, Gate A vs later entities, legacy coexistence, and phased schema delivery boundaries.
 
 - `Database/Redesign/Financial-Ledger-and-Wallet-Target-Design.md` — legacy wallet formula, financial command state machines, immutable ledger concepts, allocation/rounding, period semantics, reconciliation, and owner decisions DEC-15/16/17.
