@@ -708,3 +708,6 @@ The media review was extended to the live camera wall: application checks curren
 - [Owner Authorization — Full Project Redesign (2026-11-18)](Owner-Authorization-Full-Project-Redesign-2026-11-18.md)
 
 **Project execution status:** Full-project redesign and implementation are owner-authorized. This includes code, database migration artifacts, tests, and documentation. Disposable restore/test rehearsals are authorized with strict guards; production/live changes and irreversible cutovers remain separately gated.
+- [Identity, Authentication, and Authorization Review — 2026-11-18](Identity-Authentication-and-Authorization-Review-2026-11-18.md)
+
+The identity review is the first active implementation workstream under full-project authorization. It identifies the split Users/Residents model, ambiguous apartment-keyed resident context selection, shared apartment PIN behavior, optional administrator MFA, implicit SuperAdmin permission bypass, and startup credential migration as replacement targets.
