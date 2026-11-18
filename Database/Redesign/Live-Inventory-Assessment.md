@@ -167,3 +167,10 @@ Observed on `BuildingManagement_RestoreTest` / `ZOS-AAM\\LOCALDB#8B6B20E4`:
 - The preflight result set did not include the database default collation. The preflight SQL has therefore been extended to report it. New target `nvarchar` columns inherit the database default collation unless explicitly overridden; this remains an execution gate.
 
 **Assessment:** the legacy FK key type/length, legacy key collation consistency, and referenced key/index structure are supported by the returned evidence. The overall Gate A execution gate is **not yet passed** until the database default collation result is reviewed and the full ten-section aggregate profiling results are supplied. No SQL DDL/DML was executed.
+
+
+## Superseding aggregate profiling update — 2026-11-18
+
+The 15 aggregate profiling result sets are now available under `Database/Diagnostics/Profiling-Results/20261118-145432/`. Their findings and detailed reconciliation decisions are documented in `Database/Redesign/Aggregate-Profiling-Assessment-2026-11-18.md`.
+
+The prior statement that aggregate profiling outputs were still missing is superseded. Profiling is complete, but Gate A remains blocked: identity matches are zero; credential migration requires algorithm verification/re-enrollment; small financial differences and carry-over balances require reconciliation; both expected wallet views are absent in the restored database; cascade retention rules need approval; and the updated Gate A preflight (including database default collation) must be rerun and reviewed. No Gate A DDL, EF migration, backfill, or cutover has been executed.
