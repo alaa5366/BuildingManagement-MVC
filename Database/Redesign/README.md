@@ -327,3 +327,18 @@ A source review of `UserSqlStore` and `AdminManagementService` found that admin 
 ## Legacy permission-scope finding — 2026-11-18
 
 The permission matrix stores a flat account-level permission list with no BuildingId/ApartmentId on each permission. The permission attribute checks for a matching claim but does not itself enforce resource scope; session revalidation separately checks that claimed building memberships remain assigned. Permission keys imply different scopes, but the stored rows do not prove their effective resource scope. Therefore legacy permission backfill must classify each permission key against its consuming controller/service and keep ambiguous scope mappings unresolved; never fan out every permission to all assigned buildings or promote it to a role-wide grant. See section 9 of `Identity-Resolution-and-Authorization-Review-2026-11-18.md`.
+
+
+## Permission mutation and session-revocation review — 2026-11-18
+
+Extended the identity/authorization review with a code-level inspection of cookie validation, permission mutation, account lifecycle, and audit ordering (section 10 of `Identity-Resolution-and-Authorization-Review-2026-11-18.md`).
+
+Key findings:
+- The current admin session invalidation version is process-local; a multi-instance deployment can retain a stale authorization cache on another instance for up to the two-minute cache lifetime.
+- PIN changes do not currently invalidate admin sessions.
+- SuperAdmin validation checks SQL account state but has no shared session-revocation version/emergency revoke mechanism.
+- Account changes and audit writes are separate operations; audit failure can leave a committed change without its corresponding event.
+- Building membership updates have no explicit grant/revoke/replace-all contract, and an empty BuildingIds list cannot revoke all links through the current upsert path.
+- Permission claims are not a substitute for resource-aware authorization; the current attribute does not evaluate building/apartment scope.
+
+Target requirements now include a persisted account security/session version, centralized mutation service, explicit grant/revoke/replace semantics, transactional audit outbox, and cross-instance revocation tests. No source code or database was changed; no build/runtime tests were executed.
