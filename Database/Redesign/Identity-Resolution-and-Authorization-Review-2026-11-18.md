@@ -1328,3 +1328,141 @@ This roadmap orders Sections 1–29 by risk and dependency. It is a proposed seq
 - Gate A: **NOT AUTHORIZED**.
 - Database DDL/DML, EF migration execution, backfill, cutover, production deployment, and destructive cleanup: **NOT APPROVED**.
 - Evidence reviewed includes static source review and user-run restore-database diagnostic CSVs referenced in earlier sections. The assistant did not run the application build, test suite, restore operation, or database migration in this review.
+
+
+### 29. Authentication, second-factor enforcement, session validation, and stable QR access
+
+#### 29.1 Stable QR access currently creates a principal that cannot pass resident session validation
+
+- `QrAccessController.Confirm` creates a resident cookie with NameIdentifier `qr-{ApartmentId}`.
+- `SessionRevalidator.ValidateResidentAsync` accepts a resident only when `dbo.Residents.Uid == NameIdentifier` and the row is active and not disabled. No resident UID is created with the `qr-` prefix by this controller path.
+- Therefore the stable QR confirmation path is internally inconsistent: the cookie is issued, but the next authenticated request is rejected by session validation. The quick-login path is different: it uses the real `resident.Uid` and should remain separate.
+- Fix by resolving the actual eligible resident/account identity for the QR grant, or by introducing a first-class short-lived QR session type with explicit revocation and scope. Do not add a blanket `qr-` bypass to resident validation.
+- The current test inventory contains QR security and presence/media tests but no direct `QrAccessController` + `SessionRevalidator` integration test. Add an end-to-end test that confirms stable QR login remains authenticated, expires, and is revoked.
+
+#### 29.2 QR token response and abuse controls
+
+- `QrAccessController.Enter` places the stable access token in the query string and renders a confirmation page. The global response middleware adds `Cache-Control: no-store` to `/Account` and `/QrImage`, but not `/QrAccess`. Add no-store/private headers to all token-bearing QR confirmation and error responses, and verify reverse-proxy caching and access-log redaction.
+- `QrAccessController.Confirm` is anonymous and has antiforgery protection through the global MVC filter, but unlike the quick-login POST it has no explicit `EnableRateLimiting("login")` attribute. Add a dedicated bounded policy for token confirmation to constrain database work and abuse.
+- The stable QR token is signed over building, apartment, expiry, use type, and UID. The payload also contains `By` and `Ts`, which are not included in the HMAC input. They must remain informational only; if either ever influences authorization, expiry, audit attribution, or policy, include it in the signed canonical payload.
+- `QrTokenStoreService.CheckAndUseTokenAsync` consumes a single-use token before `QrAccessController` resolves the building/apartment. If the target has been removed or becomes unavailable after consumption, the link is burned even though no session is created. Prefer validate-target then atomic consume, with a transaction/conditional recheck to avoid a race.
+
+#### 29.3 Two-factor authentication is currently opt-in, not mandatory
+
+- `AccountController.CompleteSignInAsync` challenges administrators only when `TwoFactorService.IsEnabledAsync(uid)` returns true. If 2FA is disabled, admin and superadmin sign-in proceeds without a second factor.
+- `SessionRevalidator` correctly rejects a cookie without `twoFactorVerified=true` once the database says 2FA is enabled. That protects enrolled accounts but does not enforce enrollment for all privileged accounts.
+- This does not meet the target security policy that admin and superadmin accounts must have MFA, while resident MFA may remain optional. Add a controlled enrollment-required state, recovery/admin bootstrap path, and rollout plan before enforcing it; avoid locking out existing administrators.
+- `TwoFactorService` writes enable/disable events to application logs only. There is no corresponding durable audit event in the inspected service path for enrollment, disablement, recovery-code consumption, or failed recovery. Add security audit events without recording the TOTP secret or plaintext recovery codes.
+- The TOTP verifier prevents reuse of a time step and recovery codes are hashed and consumed. The keyed lock is process-local; the existing security assessment confirms a single application instance, so this is consistent with the current topology. A future multi-instance deployment must add database-level concurrency protection.
+
+#### 29.4 Credential and account-state consistency
+
+- `AccountController.UnifiedLogin` trims both the identifier and `vm.Credential`. Trimming a password changes the credential; a valid superadmin password with intentional leading/trailing spaces cannot be used through unified login even though the dedicated superadmin path passes the password unchanged. Normalize identifiers only; preserve password bytes/characters and test whitespace edge cases.
+- `SqlAuthService.SignInResidentAsync` selects a resident by phone and `!IsDisabled`, but does not filter `IsActive`. The unified resident lookup does filter both `IsActive` and `!IsDisabled`. The session revalidator later rejects an inactive resident, but authentication should reject the account before issuing a cookie and use one consistent predicate.
+- `SqlAuthService.FindAllContextsAsync` filters admin candidates by role, phone, and `!IsDisabled`, but not `IsActive`. The cookie revalidator eventually rejects inactive admins; the login query should apply the same status predicate to avoid issuing a doomed session and confusing account-selection behavior.
+- `SessionRevalidator.ValidateAsync` returns valid for authenticated principals whose role is neither `admin` nor `resident` nor a recognized superadmin principal. Role-restricted controllers still block many such requests, but unknown/missing roles should fail closed at the session boundary.
+- Resident session validation is cached for two minutes and has a last-known-good fallback for up to fifteen minutes during database errors. This is an explicit availability/security trade-off: disabling or deleting a resident may not revoke an already cached session immediately, and a database outage can preserve the last-known-good resident session. Document the maximum window and test it.
+- The current security assessment documents the deployment as single-instance. Therefore the process-local login throttle, memory cache, keyed locks, and fixed-window rate limits are not automatically current deployment defects. Treat cross-instance synchronization as a future deployment gate, not as an immediate defect unless the topology changes. The forwarded-IP limiter still depends on the actual `Proxy:KnownProxies` deployment configuration.
+
+#### 29.5 Permission-filter safety and regression coverage
+
+- `AdminPermissionAttribute` intentionally returns without a decision for authenticated non-admin roles and relies on a paired `[Authorize(Roles=...)]`. `HasPermissionAttribute` similarly checks a permission claim but does not independently enforce a role. Preserve this pairing on every call site.
+- `Auth:EnforceAdminPermissions=false` disables the permission check for all admins on `AdminPermissionAttribute` call sites. This is an emergency bypass; production configuration should reject or prominently alert on this value. It must never be silently set by a deployment override.
+- `ControllerAuthorizationTests` verifies that actions have `Authorize` or `AllowAnonymous`, and checks selected sensitive controller permissions. It does not comprehensively assert that every `AdminPermissionAttribute` and `HasPermissionAttribute` is paired with the intended role restriction. Add a reflection-based complete pairing test and explicit tests for the emergency bypass setting.
+
+#### 29.6 Required acceptance tests
+
+1. Stable QR confirmation creates a valid resident-scoped session using an authorized identity; next request succeeds; expired, disabled, deleted, and cross-building grants fail.
+2. QR confirmation pages and redirects carry no-store headers; query tokens are redacted from request logs and never appear in referrers or analytics.
+3. Repeated anonymous QR confirmation requests are rate-limited without breaking legitimate single-use and multi-use flows.
+4. Altering unsigned QR metadata cannot affect any authorization or audit decision; signed fields cannot be modified.
+5. Admin and superadmin enrollment-required policy blocks privileged use until MFA is enrolled, with a tested recovery/bootstrap path and no lockout.
+6. TOTP time-step replay and recovery-code replay fail under concurrent requests; audit events record security outcomes but never secrets.
+7. Unified login preserves password whitespace; legacy and unified paths use the same active/disabled account predicates.
+8. Missing/unknown role claims fail session validation; resident disable/delete and database outage behavior matches the documented revocation window.
+9. Every custom permission filter call site has an explicit role gate; production startup rejects `Auth:EnforceAdminPermissions=false`.
+
+### 30. Resident credential validation, receipt/OCR boundaries, and dormant import workflows
+
+#### 30.1 Resident PIN validation must be enforced by the service, not just the form
+
+- `AdminResidentsController.Create` and `ChangePin` pass submitted PIN values to `ResidentsService.CreateAsync` and `ChangePinAsync`. Those service methods hash the supplied value but do not enforce the expected four-digit numeric PIN policy.
+- `ResidentsService.SetApartmentPinAsync` and `UpdateResidentPinAsync` also hash the supplied value without a shared policy check.
+- The resident legacy login path explicitly requires a four-digit PIN, while unified login verifies the stored hash without the same length rule. This creates inconsistent account behavior and permits weak/blank/non-numeric PINs through server-side routes if client validation is bypassed.
+- Centralize PIN policy in one domain/service validator used by create, change, apartment reset, import, and account self-service. Reject invalid values; never silently coerce them. Add tests for null, empty, whitespace, alphabetic, Unicode digits, 3/5+ digits, and valid leading-zero PINs.
+
+#### 30.2 Receipt delivery and upload lifecycle
+
+- `CloudinaryService.UploadReceiptAsync` uploads receipts using the normal image upload parameters and returns `SecureUrl`; no private/authenticated delivery type or signed-download policy is configured in this service. Treat the returned URL as a bearer-access URL unless the Cloudinary account has a separately verified private-delivery policy.
+- Bank-transfer receipts can contain sender names, account fragments, references, amounts, and timestamps. Prefer private/authenticated storage and short-lived signed delivery, with access authorization at the application boundary; avoid exposing permanent public URLs in resident/admin HTML, exports, logs, or notifications.
+- The resident wallet uploads the receipt to Cloudinary before saving the deposit aggregate. If deposit creation or `SaveFullAsync` fails, the remote object can remain orphaned. Add a durable upload state/outbox or compensating delete and a scheduled orphan reconciliation process.
+- The upload service accepts a caller-supplied original filename as provider metadata. Keep it display-only and encoded; never use it as a storage path or authorization key. Use a generated opaque object key and store the provider ID separately.
+
+#### 30.3 OCR endpoint resource and trust boundary
+
+- `ResidentWalletController.ParseReceiptImage` allows up to 10 MB per image (with a 15 MB request limit), checks magic bytes, then invokes Tesseract synchronously in the request. There is no explicit per-user/IP OCR rate policy or image-dimension/pixel-count ceiling in the inspected path.
+- `ImageSniffer` checks only a short file signature. It does not decode the full image or validate dimensions, frame count, decompression cost, or pixel count. Add a safe decode/re-encode pipeline, pixel/dimension ceilings, format allowlist tied to actual OCR support, and concurrency/rate limits for OCR.
+- `TransactionParser` is heuristic text extraction. The controller's `success=true` means text patterns were recognized, not that a bank/provider confirmed the transfer. Keep OCR as a form-filling aid only; a receipt must remain pending until a trusted financial reconciliation or authorized administrator confirmation.
+- Failed OCR responses may return raw extracted text. Treat it as sensitive financial information, do not persist it in application logs or telemetry, and ensure browser error reporting does not capture it.
+
+#### 30.4 Excel import parser and feature catalog drift
+
+- `ExcelImportService.ExtractData` substitutes `0000` for a blank apartment PIN and pads/truncates other malformed PIN strings to four characters before `ValidateFile` checks the result. Consequently the later four-digit validation cannot detect the original malformed input. Reject blank/invalid PINs at extraction/validation; do not manufacture default credentials.
+- Unknown floor labels map to order 0, which can silently place an unsupported floor into the ground-floor bucket. Reject unsupported labels or parse a validated explicit floor order.
+- The current Controllers directory has no `BuildingImportController`, `BuildingWizardController`, or `ToolsController`; the Services directory has no `MigrationService` or `DbMaintenanceService`. `AdminPermissions.BackendInfo` still advertises these routes/services, and the Excel parser/template services exist without a matching controller in the current branch inventory.
+- The current Controllers/Services inventories also lack the sync controller/services listed by `ManageSync`. Treat the permission backend map as documentation metadata, not proof that these features are runnable. Reconcile the catalog, navigation, views, and actual route inventory; remove stale links or document the external owner and API.
+
+#### 30.5 Required acceptance tests
+
+1. Every resident PIN mutation path enforces the same server-side four-digit numeric policy; invalid values leave stored hashes unchanged.
+2. Receipt URLs cannot be retrieved without an authorized session; signed URLs expire; object deletion/reconciliation handles failed deposit persistence.
+3. Image parser rejects malformed, oversized-dimension, animated/unsupported, and decompression-heavy files; OCR concurrency and request limits are enforced.
+4. OCR parsing never auto-confirms a payment; a forged receipt with matching text remains pending until trusted verification.
+5. Raw OCR text and receipt metadata do not leak to application logs, exports, or third-party telemetry.
+6. Blank PINs, malformed PINs, and unknown floor labels in Excel files produce explicit validation errors; no default PIN or floor coercion is applied.
+7. Every permission catalog backend mapping resolves to a real route/service or is explicitly marked retired/external.
+
+### 31. Consolidated remediation roadmap and review disposition
+
+The following order is recommended. It is a dependency order, not authorization to implement or migrate.
+
+#### P0 — Stop unsafe migration and prevent privilege/data loss
+
+1. Remove or explicitly feature-gate the startup `PinMigrationService.MigrateLegacySecretsAsync` mutation before any restore-database application startup that must preserve legacy evidence. Provide a dry-run report, durable checkpoint, transaction/rollback strategy, and operator approval.
+2. Keep Gate A blocked until identity mapping, person/account cardinality, ownership/occupancy semantics, and LegacyIdentityMap constraints are approved against fresh profiling and reconciliation evidence.
+3. Resolve the SQL view deployment mismatch: `AppDbContext` maps `vw_ApartmentWalletMovements`, but the restore database has no SQL views and the EF migration chain does not create it. Define one authoritative deployment mechanism and test it before any schema cutover.
+4. Do not delete or rewrite legacy financial data while deposit, wallet, expense, revenue, adjustment, and maintenance relationships are being reconciled. Use reversal/void records and immutable audit history.
+
+#### P1 — Security and financial correctness before release
+
+1. Fix stable QR identity/session validation and add no-store/rate-limit controls for token-bearing endpoints.
+2. Define and safely roll out mandatory MFA for all admin/superadmin accounts; audit enrollment, disablement, recovery, and account security changes.
+3. Centralize resident PIN validation and remove default/coerced credentials from all creation/reset/import paths.
+4. Protect receipt images with authenticated delivery, signed expiry, and orphan cleanup; bound OCR resource consumption and keep OCR non-authoritative.
+5. Fix financial command idempotency/concurrency, strict month/deposit resolution, reversal semantics, and cross-aggregate consistency identified in Sections 19, 25, and 28.
+6. Replace best-effort audit-after-write for critical identity, financial, impersonation, backup, and secret operations with durable transaction/outbox semantics.
+7. Correct backup RunNow outcomes, artifact deletion semantics, no-store downloads, scheduler single-instance lease/overlap protection, and backup/history reconciliation.
+
+#### P2 — Privacy, lifecycle, and authorization consistency
+
+1. Implement Person/UserAccount separation and effective-dated ownership/occupancy/access grants; remove apartment-shared identity and PIN assumptions.
+2. Redesign secret ballots so the vote record cannot be joined to voter identity; remove option text from resident vote audit events.
+3. Define apartment-vs-building visibility for maintenance, cameras, notifications, and presence, then enforce the same scope in controllers, services, media server, and exports.
+4. Reconcile permission catalog mappings with actual controllers/services; add complete role + permission reflection tests and fail-closed handling for unknown roles.
+5. Correct stable QR token cache/log handling, session revocation windows, and audit attribution for impersonation.
+
+#### P3 — Performance, operability, and maintainability
+
+1. Replace full-aggregate reads/in-memory filters with scoped SQL projections and bounded paging where dataset size justifies it.
+2. Optimize log explorer indexing/caching and define per-instance vs centralized log visibility.
+3. Add backup restore drills, health/proxy smoke tests, CSP report-only validation, and secret-canary tests.
+4. Remove dead synchronization/import code or provide supported, monitored workflows with explicit source-of-truth and idempotency.
+5. Complete query-plan and index tuning only after representative production-like data profiling; do not add speculative indexes.
+
+#### Review scope and limitations
+
+- Static inspection covered the current branch's controller/service/data/test inventories and the previously documented database, financial, identity, backup, privacy, and performance areas. Sections 1–31 consolidate the observed issues and their acceptance-test expectations.
+- The security assessment file confirms a single-instance deployment. Multi-instance recommendations are future scale-out constraints unless deployment topology changes.
+- No local application execution, database connection, migrations, DDL/DML, file upload, external Cloudinary/MediaMTX action, or production operation was performed during this review.
+- No build or test suite was run as part of this static review. Existing test files were inspected as source only; their passing status is not asserted.
+- **Gate A remains NOT AUTHORIZED.** No implementation, data migration, or schema change is approved by this review.
