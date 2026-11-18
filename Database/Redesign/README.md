@@ -139,6 +139,8 @@ Current safe boundary:
 
 ## Additional design artifacts
 
+- `Database/Redesign/Target-Architecture-and-Class-Refactoring-Roadmap.md` — target modular-monolith architecture, module/class responsibilities, dependency rules, cross-cutting patterns, migration/coexistence strategy, delivery phases, acceptance tests, and blocking decisions. This is a design baseline only; it does not authorize implementation or Gate A.
+
 - `Database/Redesign/Enterprise-Database-Redesign-Blueprint.md` — architecture principles, target domains, migration/rollback approach, and unresolved product decisions.
 - `Database/Redesign/Target-Data-Dictionary-and-ERD.md` — proposed target data dictionary, SQL Server type conventions, constraints/index strategy, and conceptual Mermaid ERD. Proposed types are not final until key metadata reconciliation is complete.
 - `Database/Diagnostics/DatabaseRedesign-ReadOnly-Profiling.sql` — read-only, privacy-conscious profiling for identity candidates, ownership/occupancy, finance reconciliation, poll integrity, camera/DVR scope, secret presence counts, wallet-view metadata, FK delete actions, and EF migration history.
