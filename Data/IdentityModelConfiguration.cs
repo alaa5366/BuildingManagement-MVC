@@ -168,6 +168,7 @@ internal static class IdentityModelConfiguration
         {
             e.ToTable("ApartmentOwnerships", t =>
             {
+                t.HasCheckConstraint("CK_ApartmentOwnerships_Evidence", "LEN(LTRIM(RTRIM([EvidenceReference]))) > 0");
                 t.HasCheckConstraint("CK_ApartmentOwnerships_Share", "[OwnershipSharePercent] > 0 AND [OwnershipSharePercent] <= 100");
                 t.HasCheckConstraint("CK_ApartmentOwnerships_Validity", "[ValidToUtc] IS NULL OR [ValidToUtc] > [ValidFromUtc]");
             });
@@ -176,7 +177,7 @@ internal static class IdentityModelConfiguration
             e.Property(x => x.BuildingId).HasMaxLength(64);
             e.Property(x => x.ApartmentId).HasMaxLength(64);
             e.Property(x => x.OwnershipSharePercent).HasPrecision(9, 6);
-            e.Property(x => x.EvidenceReference).HasMaxLength(500);
+            e.Property(x => x.EvidenceReference).HasMaxLength(500).IsRequired();
             e.Property(x => x.Notes).HasMaxLength(1000);
             Utc3(e.Property(x => x.ValidFromUtc));
             Utc3(e.Property(x => x.ValidToUtc));
@@ -221,6 +222,7 @@ internal static class IdentityModelConfiguration
         {
             e.ToTable("ApartmentAccessGrants", t =>
             {
+                t.HasCheckConstraint("CK_ApartmentAccessGrants_Reason", "LEN(LTRIM(RTRIM([Reason]))) > 0");
                 t.HasCheckConstraint("CK_ApartmentAccessGrants_Validity", "[ValidToUtc] IS NULL OR [ValidToUtc] > [ValidFromUtc]");
                 t.HasCheckConstraint("CK_ApartmentAccessGrants_Revocation",
                     "(([RevokedAtUtc] IS NULL AND [RevokedByAccountId] IS NULL) OR ([RevokedAtUtc] IS NOT NULL AND [RevokedByAccountId] IS NOT NULL))");
@@ -230,7 +232,7 @@ internal static class IdentityModelConfiguration
             e.Property(x => x.BuildingId).HasMaxLength(64);
             e.Property(x => x.ApartmentId).HasMaxLength(64);
             e.Property(x => x.PermissionSetKey).HasMaxLength(80);
-            e.Property(x => x.Reason).HasMaxLength(500);
+            e.Property(x => x.Reason).HasMaxLength(500).IsRequired();
             Utc3(e.Property(x => x.ValidFromUtc));
             Utc3(e.Property(x => x.ValidToUtc));
             Utc3(e.Property(x => x.GrantedAtUtc)).HasDefaultValueSql("SYSUTCDATETIME()");
@@ -289,7 +291,7 @@ internal static class IdentityModelConfiguration
                 t.HasCheckConstraint("CK_LegacyIdentityMap_ReviewStamp",
                     "(([ReviewedAtUtc] IS NULL AND [ReviewedByAccountId] IS NULL) OR ([ReviewedAtUtc] IS NOT NULL AND [ReviewedByAccountId] IS NOT NULL))");
                 t.HasCheckConstraint("CK_LegacyIdentityMap_ResolvedReview",
-                    "([MappingStatus] NOT IN (1,2) OR ([ReviewedAtUtc] IS NOT NULL AND [ReviewedByAccountId] IS NOT NULL))");
+                    "([MappingStatus] NOT IN (1,2) OR ([ReviewedAtUtc] IS NOT NULL AND [ReviewedByAccountId] IS NOT NULL AND [ReviewReason] IS NOT NULL AND LEN(LTRIM(RTRIM([ReviewReason]))) > 0))");
                 t.HasCheckConstraint("CK_LegacyIdentityMap_LinkTargets",
                     "(([MappingStatus] IN (0,3,4) AND [PersonId] IS NULL AND [AccountId] IS NULL) OR ([MappingStatus] IN (1,2) AND [PersonId] IS NOT NULL))");
                 t.HasCheckConstraint("CK_LegacyIdentityMap_UserAccountTarget",
