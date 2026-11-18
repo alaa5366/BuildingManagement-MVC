@@ -184,7 +184,7 @@ Run this only against the disposable restored test database. A result of `TYPE_L
 Found and reviewed:
 - `GateA-Preflight-Validation_01.txt` through `_06.txt`.
 
-The live legacy FK columns match the expected `nvarchar(128)` byte length and all use `SQL_Latin1_General_CP1_CI_AS`; Buildings and Apartments have the expected referenced primary keys; all twelve Gate A target tables are absent; and the database has the four expected EF migrations through AddUserTwoFactor.
+The live legacy FK columns match the expected `nvarchar(128)` byte length and all use `SQL_Latin1_General_CP1_CI_AS`; Buildings and Apartments have the expected referenced primary keys; all thirteen Gate A target tables are absent; and the database has the four expected EF migrations through AddUserTwoFactor.
 
 The initial output did not report the database default collation. `GateA-Preflight-Validation.sql` has been extended with that check. Re-run it and add the new result file in this same Diagnostics folder. Gate A remains blocked pending that result and the ten aggregate profiling result sets. No DDL/DML was executed.
 
@@ -194,7 +194,7 @@ The initial output did not report the database default collation. `GateA-Preflig
 The read-only aggregate profiling run has completed and its 15 result sets are committed under `Database/Diagnostics/Profiling-Results/20261118-145432/`. See `Database/Redesign/Aggregate-Profiling-Assessment-2026-11-18.md` for the findings and required reconciliation actions.
 
 The profiling evidence is no longer a blocker. Gate A execution is still blocked pending the updated Gate A preflight (including database default collation), credential strategy, manual identity-link decisions, finance/carry-over reconciliation, wallet-view discrepancy resolution, and retention review of cascade relationships. No DDL, EF migration, backfill, or application cutover has been executed.
-\n## Updated Gate A preflight result — 2026-11-18\n\nThe latest read-only run is committed under `Database/Diagnostics/GateA-Preflight-Results/20261118-150906/` (7 result sets). It confirms: the three referenced legacy FK key columns are non-nullable `nvarchar(64)` / 128 bytes; all use `SQL_Latin1_General_CP1_CI_AS`; the database default collation matches; expected Buildings/Apartments primary keys and indexes are present; all twelve Gate A target objects are absent; and the four expected EF migrations remain applied.\n\nThis clears the previously pending database-default-collation check for the inspected key relationships. It does **not** clear Gate A overall. Credential strategy, manual identity-link decisions, finance/carry-over reconciliation, wallet-view discrepancy, cascade retention policy, and a disposable-restore rehearsal with rollback verification remain mandatory blockers. The run was read-only; no schema/data changes, EF migration, backfill, or cutover occurred.\n
+\n## Updated Gate A preflight result — 2026-11-18\n\nThe latest read-only run is committed under `Database/Diagnostics/GateA-Preflight-Results/20261118-150906/` (7 result sets). It confirms: the three referenced legacy FK key columns are non-nullable `nvarchar(64)` / 128 bytes; all use `SQL_Latin1_General_CP1_CI_AS`; the database default collation matches; expected Buildings/Apartments primary keys and indexes are present; all thirteen Gate A target objects are absent; and the four expected EF migrations remain applied.\n\nThis clears the previously pending database-default-collation check for the inspected key relationships. It does **not** clear Gate A overall. Credential strategy, manual identity-link decisions, finance/carry-over reconciliation, wallet-view discrepancy, cascade retention policy, and a disposable-restore rehearsal with rollback verification remain mandatory blockers. The run was read-only; no schema/data changes, EF migration, backfill, or cutover occurred.\n
 
 ## Wallet and PIN source review — 2026-11-18
 
@@ -288,11 +288,11 @@ Added `Identity-Resolution-and-Authorization-Review-2026-11-18.md`.
 
 - Existing profile evidence: 79 Residents, 5 Users, zero exact UID matches between the two sets; duplicate normalized-phone groups exist (4 in Residents, 1 in Users), while duplicate normalized-email groups were not found.
 - Phone/email/name/apartment equality is not sufficient to merge people. Keep unresolved source rows separate; one Person may retain multiple apartment relationships, while one Person may have at most one interactive account.
-- The current mapping document refers to an `IdentityMigrationMap`, but Gate A SQL/object list does not include a durable source-to-target identity map. Add and review a `LegacyIdentityMap` design before freezing Gate A; no table has been added or executed yet.
+- This review originally identified a missing durable source-to-target identity map. The gap was subsequently addressed in the Gate A design by adding `LegacyIdentityMap`; see the correction section below.
 - `UserSqlStore.UpsertAsync` adds BuildingAdmins links but does not remove omitted links from an update payload. Review explicit revocation paths and historical evidence before treating every stored link as currently active.
 - Preserve legacy `UserPermissions` as scoped account overrides; do not convert them to role-wide permissions.
 
-Identity backfill remains blocked pending manual candidate dispositions, provenance-map design, authorization revocation review, and approved merge controls. No database or application changes were made.
+Identity backfill remains blocked pending manual candidate dispositions, authorization revocation review, and approved merge controls. No database or application changes were made.
 
 
 ## Gate A identity provenance correction — 2026-11-18
@@ -308,3 +308,12 @@ Added `dbo.LegacyIdentityMap` to the proposed additive Gate A SQL and added it t
 Updated: `Target-Data-Dictionary-and-ERD.md`, `Legacy-to-Target-Data-Mapping.md`, and `Identity-Resolution-and-Authorization-Review-2026-11-18.md`.
 
 **Next action:** pull the branch and rerun the revised read-only Gate A preflight on the disposable restore. This only checks metadata/object presence; it does not execute the Gate A DDL. The preflight runner has not been run after this change. No database changes or backfill occurred.
+
+
+## Latest Gate A preflight and schema review — 2026-11-18
+
+Reviewed the updated read-only run at `Database/Diagnostics/GateA-Preflight-Results/20261118-155025/` (7 result sets, 30 rows). It confirms the expected restored database, the three legacy key columns as non-nullable `nvarchar(64)` / 128 bytes, matching column and database-default collations, required Buildings/Apartments keys, all **13** Gate A target objects absent, and the four expected EF migrations.
+
+Added `GateA-Schema-Constraint-Review-2026-11-18.md`. The static review documents which invariants are enforced by SQL and which require transactional service validation, including the LegacyIdentityMap Person/Account pair, dated ownership and occupancy overlaps, role/scope compatibility, permission evaluation, credential replacement, and MFA lifecycle. It also flags the still-undefined ApartmentAccessGrants type catalogue and revocation lifecycle.
+
+The metadata preflight is a pass, not a DDL approval. Gate A remains **NOT AUTHORIZED for execution**. Credential verification/re-enrollment, manual identity dispositions, financial/carry-over policy, external wallet-view dependency confirmation, cascade retention policy, service-side invariant implementation, and disposable restore/rollback rehearsal remain outstanding. No DDL/DML, EF migration, backfill, or cutover was performed.
