@@ -705,3 +705,6 @@ The media review was extended to the live camera wall: application checks curren
 - [Owner Approval — Recommended Decision Defaults (DEC-01 to DEC-46)](Owner-Approval-Recommended-Defaults-2026-11-18.md)
 
 **Decision status:** The owner has approved the recommended defaults for DEC-01 through DEC-46. These defaults govern design and acceptance criteria; evidence gates remain, and Gate A / database execution are not authorized.
+- [Owner Authorization — Full Project Redesign (2026-11-18)](Owner-Authorization-Full-Project-Redesign-2026-11-18.md)
+
+**Project execution status:** Full-project redesign and implementation are owner-authorized. This includes code, database migration artifacts, tests, and documentation. Disposable restore/test rehearsals are authorized with strict guards; production/live changes and irreversible cutovers remain separately gated.
