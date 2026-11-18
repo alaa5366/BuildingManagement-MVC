@@ -480,3 +480,18 @@ Section 21 maps existing tests and gaps. Current tests already provide broad uni
 ### Invoice and QR document-delivery review — 2026-11-18
 
 Section 22 extends the file-response inventory to invoice PDFs and QR PNG/PDF endpoints. Invoice download enforces resident apartment claims and admin building scope and records an audit event, though persistence is best-effort. Generic QR PNG correctly sets `private, no-store`; invoice PDFs and SuperAdmin building QR PDFs need consistent no-store headers and dedicated audit evidence. QR PDF generation is SuperAdmin-only but may encode access links, so treat it as sensitive. No source changes or tests were performed. **Gate A remains NOT AUTHORIZED.**
+
+
+### Resident, voting, maintenance, presence, and camera review — 2026-11-18
+
+Section 23 of `Identity-Resolution-and-Authorization-Review-2026-11-18.md` reviews resident account lifecycle, voting privacy, maintenance-to-expense linkage, notification recipient semantics, online presence, and camera/HLS access.
+
+Critical findings:
+- Resident deletion is physical, resident CRUD/PIN changes have no durable service-level audit calls, and the legacy apartment-to-resident migration method currently returns an empty result without migrating data.
+- Current voting is identifiable by apartment, and the vote audit event records the selected option alongside the apartment number; it is not a secret ballot.
+- Maintenance records can be edited/deleted after their costs have been posted as expenses, without a linked correction/reversal path.
+- Notifications are apartment-scoped and globally capped at 200 per building; multiple residents in one apartment share the same inbox/read state.
+- Presence is keyed by building+apartment when those claims exist, so it measures apartment activity rather than unique users.
+- Resident camera access is building-wide under the current controller policy; HLS delivery must enforce authorization at the media server and be tested for revocation.
+
+The section includes concrete acceptance tests. This was static review only: no source/configuration/schema/data changes, build, or tests. **Gate A remains NOT AUTHORIZED.**
