@@ -504,3 +504,10 @@ Section 24 extends the static review to Quick QR generation/consumption, one-tim
 Positive controls include AES-GCM authenticated QR tokens, a GET confirmation page that does not consume tokens, atomic use-count consumption, encrypted DVR passwords, and private-IP/relative-RTSP-path validation. Gaps include inconsistent QR parameter bounds between generation endpoints, one-time set-PIN tokens being consumed before the PIN database update (so a DB failure burns the link), apartment-wide shared PIN reset semantics, secret-bearing DVR entities being returned from service read methods, DVR updates not visibly reconciling existing MediaMTX paths, and partial external cleanup risk during DVR deletion. The section defines retry/outbox, audit, DTO, and failure-injection acceptance criteria.
 
 Static review only; no code, schema, data, tokens, or media-server state were changed. No build/tests were run. **Gate A remains NOT AUTHORIZED.**
+
+
+### Financial command and ledger correction review — 2026-11-18
+
+Section 25 reviews deposit confirmation/cancellation/editing, manual wallet adjustments, and expense/revenue posting/deletion. Existing positive controls include pending-only deposit transitions, edit history for pending payment changes, and recalculation after financial changes. Remaining issues include trusting posted month keys for deposit lookup, lack of explicit concurrency/idempotency guarantees in the aggregate command path, insufficient service-level validation for adjustments/categories/dates, deletion audit events that can be emitted even when no row was deleted, and physical deletion of financial entries instead of immutable reversals. Required acceptance tests are listed in the main review.
+
+Static review only; no financial operations, code, schema, or data were changed. No build/tests were run. **Gate A remains NOT AUTHORIZED.**
