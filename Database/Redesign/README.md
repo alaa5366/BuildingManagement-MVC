@@ -139,6 +139,8 @@ Current safe boundary:
 
 ## Additional design artifacts
 
+- `Database/Redesign/Target-Entity-Inventory-and-Phased-Schema-Roadmap.md` — whole-system target entity inventory, Gate A vs later entities, legacy coexistence, and phased schema delivery boundaries.
+
 - `Database/Redesign/Financial-Ledger-and-Wallet-Target-Design.md` — legacy wallet formula, financial command state machines, immutable ledger concepts, allocation/rounding, period semantics, reconciliation, and owner decisions DEC-15/16/17.
 
 - `Database/Redesign/Sql-Deployment-and-View-Reconciliation-Decision.md` — confirms the EF mapping/FullSchema/restore mismatch for vw_ApartmentWalletMovements and recommends one authoritative deployment path (EF migrations by default); owner decision DEC-28 remains open.
