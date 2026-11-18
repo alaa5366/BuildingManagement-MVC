@@ -411,3 +411,62 @@ Inspected `BackupServiceTests.cs`, `BackupRestorePersistenceTests.cs`, `Schedule
 - These were test-source inspections only. No tests were executed.
 
 **Test work required before implementation acceptance:** replace the unknown-collection success test; add restore overload visibility/authorization guard tests; add cross-instance scheduler lease/idempotency tests; import transaction failure injection at every write stage and replay tests; service-level foreign-resource and actor-scope tests for DVR/resident/financial operations; and audit/outbox failure/retry tests.
+
+
+## 15. Deletion, archival, cascade, and retention lifecycle review — 2026-11-18
+
+Reviewed `Data/AppDbContext.cs`, `Data/BuildingSqlStore.cs`, `Data/BuildingSqlMapper.cs`, `Services/BuildingsService.cs`, `Services/ResidentsService.cs`, `Services/AdminManagementService.cs`, `Services/PollsService.cs`, and the existing resident-service tests.
+
+### Confirmed destructive paths and relationship behavior
+
+1. **Building deletion is a direct physical delete.** `BuildingsService.DeleteAsync` delegates to `BuildingSqlStore.DeleteAsync`, which executes `ExecuteDeleteAsync` against `Buildings`. There is no archive/retirement state, pre-delete impact report, explicit transaction orchestration in the service, or service-level retention policy in this path. The controller redirects without surfacing a structured deletion result.
+
+2. **Building relationships mix cascade and restrictive behavior.** The EF model configures building-level cascade for settings, building-admin links, floors, apartments, financial categories, expenses, revenues, monthly shares, deposits, wallet adjustments, notifications, polls, maintenance records, QR tokens, and DVRs. AuditLog uses `SetNull` for BuildingId, which is a useful preservation behavior. However, several child-to-apartment relationships use `NoAction` (monthly shares, deposits, wallet adjustments, notifications, poll votes, and QR tokens), and Apartment-to-Floor also uses `NoAction`. A building delete or aggregate child removal can therefore encounter FK blockers depending on dependent rows and the actual deployed constraints. This is a source-model conclusion; no delete was executed against the restore database.
+
+3. **Apartment removal is not a safe generic delete.** The mapper's `Sync` helper physically removes every existing row absent from an incoming aggregate. It is used for floors, apartments, categories, expenses, revenues, monthly shares, deposits, polls, poll options/votes, maintenance, and other collections. Removing an apartment also cascades to Residents through the configured composite FK, while financial and operational dependants configured with `NoAction` may block the save. A missing row in an in-memory aggregate is therefore currently interpreted as deletion, not as "not loaded" or "not authorized to edit".
+
+4. **Aggregate replacement is broader than a single entity update.** `BuildingSqlMapper.SaveAsync` wraps its writes in a transaction and validates the Building rowversion, which are positive protections. But the incoming Building aggregate is still treated as the complete desired state for many child collections. If a caller submits a partial/filtered aggregate, omitted records can be physically removed. The mapper comment explicitly documents this overwrite behavior. All callers must be inventoried and classified as full-aggregate versus partial projections before any retention-safe redesign.
+
+5. **Residents are physically deleted.** `ResidentsService.DeleteAsync` loads a Resident, calls `Remove`, and saves; its `deletedBy` argument is not persisted in the shown method. The current test `DeleteAsync_RemovesResident` explicitly expects the row to disappear. Because Residents is the apartment relationship/authentication record in the legacy model, physical deletion loses the relationship and its source context rather than ending a dated occupancy/access interval.
+
+6. **Admin deletion is physical and multi-statement.** The previously documented `AdminManagementService.DeleteAsync` removes BuildingAdmins, UserPermissions, and Users; it also invalidates only the local session validator and writes audit afterward. This must be replaced with a retained account state and explicit access/role revocation lifecycle.
+
+7. **Poll deletion is not protected by a ballot-retention lifecycle.** `PollsService.Delete` removes a poll from the aggregate list without checking whether voting has started or preserving a final immutable result. The mapper cascades Poll -> PollOptions -> PollVotes. A normal poll delete can therefore remove ballot rows and options. This is incompatible with the approved future secret-ballot and immutable election/audit history requirements.
+
+8. **Additional dependent history is cascade-deleted.** DepositEditHistory cascades from Deposits; deleting a deposit removes its edit history. DVR deletion cascades to Cameras. Poll option deletion cascades to PollVotes. QR usage rows are not configured with a shown FK to QrTokens in the inspected model, so orphaned usage history may remain after token deletion; that may be desirable for audit but requires an explicit retention/identity policy. The model alone does not establish whether all deployed constraints match.
+
+9. **Audit retention is inconsistent by design.** AuditLog is append-only in the aggregate mapper and its BuildingId is set null when the building is deleted. This preserves the row but can lose its direct building FK association; immutable building identifier/number and a retained subject reference should remain available for audit interpretation. AuditLog append-only in this mapper does not make all other audit writers durable or atomic; the separate audit/outbox findings in sections 10–14 still apply.
+
+10. **Backup retention is file-oriented, not a full archival contract.** Scheduled rotation deletes old ZIP files based on filesystem creation time and a keep-count. Manual backup deletion removes the file and then deletes SQL history rows, so a failure can leave file/history inconsistency. There is no demonstrated legal hold, retention class, protected immutable archive, or restore verification policy in this path.
+
+### Required target deletion and retention policy
+
+- Replace ordinary deletion of Buildings, Apartments, Residents/occupancy, Persons, Accounts, Polls, Deposits, and other historically meaningful records with explicit lifecycle transitions: Active -> Suspended/Closed/Archived -> Retained, with separately governed legal erasure where required.
+- A building should normally be retired/closed, not physically deleted. It must remain addressable for financial statements, ownership/occupancy history, audit, backup, and legal retention. Physical erasure must require a dependency report, retention/hold checks, explicit authorization, durable audit, and a tested restore/rollback procedure.
+- Apartment closure must end occupancy/access intervals and disable apartment credentials without deleting historical ownership, occupancy, votes, financial shares, deposits, wallet adjustments, invoices, maintenance, notifications, or audit references.
+- Resident deletion must become relationship termination and account/access revocation, preserving Person and account identity where legally allowed. A resident's move-out must not delete a Person who may occupy another apartment.
+- Polls with any ballot must be immutable after opening/first vote except for controlled close/cancel metadata. Ballots and eligibility evidence need separate retention domains; deleting a poll must never silently erase votes.
+- Posted/confirmed financial entries, cancellations, adjustments, monthly shares, carryovers, and deposit edit history must be append-only or corrected by compensating entries. A cancelled deposit is not equivalent to a deleted deposit. Draft/unposted records may have a separately approved correction policy.
+- Keep restrictive FKs for legally significant history, but do not rely on FK errors as the retention strategy. Define explicit archive/retention states, parent-child lifecycle rules, and controlled purge jobs.
+- Introduce a deletion-impact preview that enumerates affected records by domain and counts, including cross-building links, active residents, owners, accounts, financial history, votes, cameras, QR tokens, and backup artifacts. The preview must be revalidated at commit time to avoid TOCTOU races.
+- Make every lifecycle transition transactional with an outbox/audit record and account security-version update where access is affected. Use idempotent operations and concurrency tokens.
+- Define retention classes, legal holds, data minimization/anonymization rules, encrypted archive storage, retention expiry, and a separate irreversible purge approval. Preserve source-to-target provenance for migrated records.
+- Change aggregate persistence contracts: explicit commands for add/update/close/remove; never infer deletion from omission in a partial DTO/projection. Keep full replacement only for an explicitly named, validated full-aggregate command with completeness proof.
+- Replace cascade-delete defaults for historical domains with restrictive references or soft lifecycle semantics. Keep cascade only for disposable dependants whose loss is explicitly acceptable and tested.
+
+### Tests required
+
+- Building retirement preserves all finance, ownership, occupancy, audit, voting, and operational history.
+- Physical deletion is blocked while legal hold/retention or dependent records exist.
+- Apartment closure ends access but retains historical financial/occupancy links.
+- Removing an apartment from a partial aggregate cannot delete it or its residents.
+- Full aggregate replacement is accepted only with explicit completeness/version proof.
+- Deleting/closing a resident does not erase their Person or other apartment relationships.
+- Poll deletion/option edits are rejected after voting starts; closed ballot results remain immutable and auditable.
+- Deposit deletion cannot cascade away edit history; posted financial records require compensating entries.
+- DVR/camera retirement follows device evidence-retention rules.
+- QR token expiry/revocation preserves the required usage/audit trail without permitting replay.
+- Backup file/history rotation and legal holds remain consistent under crashes and concurrent workers.
+- Failure injection at every lifecycle/audit/outbox stage proves atomicity or durable resumability.
+
+This section is source-review evidence only. No application source, schema, database rows, backup files, or runtime state were changed. No build or tests were executed. Gate A remains **NOT AUTHORIZED**.
