@@ -47,7 +47,7 @@ The focused SQL was generated idempotently from `20261117130000_AddUserTwoFactor
 1. The permission evaluator and ownership write service are now implemented in application code. They are registered for dependency injection but are not wired into legacy controllers or authentication endpoints. Access-profile keys still authorize no operations.
 2. Before any production deployment, require a separate target confirmation, production backup/restore plan, and production-specific reconciliation. Rehearsals changed only the disposable restore database.
 
-The preflight confirmed that all 13 target tables were absent before the rehearsal, the prior four migrations were present, legacy keys matched `nvarchar(64)` lengths, and key collations matched the database default. The schema rehearsal is complete and reconciled; the new tables remain empty, and no backfill or application data mutation was performed.
+The original preflight confirmed that all 13 target tables were absent before the Phase06 rehearsal, the prior four migrations were present, legacy keys matched `nvarchar(64)` lengths, and key collations matched the database default. Subsequent controlled candidate registration is recorded below; no target Person or UserAccount was created and no credential or permission data was imported.
 
 ## Phase07 follow-up — 2026-11-18
 
@@ -63,3 +63,11 @@ The preflight confirmed that all 13 target tables were absent before the rehears
 - A new COPY_ONLY backup at `C:\Users\alaa5\AppData\Local\Temp\BuildingManagement_RestoreTest_Phase07-pre-20261118-204900.bak` passed `RESTORE VERIFYONLY WITH CHECKSUM`.
 - Phase07 was applied to `BuildingManagement_RestoreTest` only. Reconciliation confirmed the migration history row, `RecordSource` as `tinyint NOT NULL` with default 0, both new checks enabled and trusted, and zero ownership rows.
 - Focused SQL is saved as `Database/Redesign/GateA-Phase07-Focused-20261118.sql`.
+
+## Pending identity candidate staging — 2026-11-18
+
+- Read-only preflight confirmed the exact target database and schema history; source counts were Users=5 and Residents=79, with zero blank keys. `LegacyIdentityMap`, `Persons`, and `UserAccounts` were initially empty.
+- Created and verified COPY_ONLY backup `C:\Users\alaa5\AppData\Local\Temp\BuildingManagement_RestoreTest_IdentityCandidates-pre-20261118-211500.bak` (13,230,080 bytes; `RESTORE VERIFYONLY WITH CHECKSUM` passed).
+- Executed `Database/Redesign/GateA-Identity-Pending-Candidates-20261118.sql` against `BuildingManagement_RestoreTest` only. It inserted exact Users/Residents source keys as status `Pending` (0), with no PersonId or AccountId, and wrote one aggregate audit event. It performs no fuzzy matching and does not read or copy credential values.
+- Reconciliation confirmed Users=5 Pending, Residents=79 Pending, invalid/mapped rows=0, one audit event with aggregate counts, Persons=0, UserAccounts=0, and both Phase06/07 migrations still present. Results are in `Database/Diagnostics/GateA-Preflight-Results/20261118-212000/GateA-Identity-Pending-Candidates-Reconciliation.txt`.
+- These 84 candidates remain unresolved until an authorized reviewer records evidence-backed dispositions. No permission assignments or login cutover were performed.
