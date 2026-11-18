@@ -344,4 +344,64 @@ BEGIN
             (PermissionKey, ScopeType, ScopeBuildingId, ScopeApartmentId, ValidFromUtc);
 END;
 
+
+-- Durable source-to-target identity provenance.
+-- Residents rows may map many-to-one to Person; Users rows map to Person + Account.
+-- Unresolved rows remain present with NULL target IDs and are never auto-merged.
+IF OBJECT_ID(N'dbo.LegacyIdentityMap', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.LegacyIdentityMap
+    (
+        LegacyIdentityMapId uniqueidentifier NOT NULL
+            CONSTRAINT PK_LegacyIdentityMap PRIMARY KEY,
+        SourceSystem nvarchar(80) NOT NULL,
+        SourceTable nvarchar(128) NOT NULL,
+        SourceKey nvarchar(256) NOT NULL,
+        PersonId uniqueidentifier NULL,
+        AccountId uniqueidentifier NULL,
+        MappingStatus tinyint NOT NULL, -- 0 Pending, 1 Linked, 2 Separate, 3 Rejected, 4 ManualReview
+        MatchMethod nvarchar(80) NULL,
+        EvidenceReference nvarchar(500) NULL,
+        ReviewReason nvarchar(1000) NULL,
+        ReviewedAtUtc datetime2(3) NULL,
+        ReviewedByAccountId uniqueidentifier NULL,
+        CreatedAtUtc datetime2(3) NOT NULL
+            CONSTRAINT DF_LegacyIdentityMap_CreatedAtUtc DEFAULT (SYSUTCDATETIME()),
+        UpdatedAtUtc datetime2(3) NULL,
+        RowVersion rowversion NOT NULL,
+        CONSTRAINT FK_LegacyIdentityMap_Persons FOREIGN KEY(PersonId)
+            REFERENCES dbo.Persons(PersonId) ON DELETE NO ACTION,
+        CONSTRAINT FK_LegacyIdentityMap_Accounts FOREIGN KEY(AccountId)
+            REFERENCES dbo.UserAccounts(AccountId) ON DELETE NO ACTION,
+        CONSTRAINT FK_LegacyIdentityMap_ReviewedBy FOREIGN KEY(ReviewedByAccountId)
+            REFERENCES dbo.UserAccounts(AccountId) ON DELETE NO ACTION,
+        CONSTRAINT UQ_LegacyIdentityMap_Source UNIQUE(SourceSystem, SourceTable, SourceKey),
+        CONSTRAINT CK_LegacyIdentityMap_SourceTable CHECK (SourceTable IN (N'Users', N'Residents')),
+        CONSTRAINT CK_LegacyIdentityMap_Status CHECK (MappingStatus IN (0,1,2,3,4)),
+        CONSTRAINT CK_LegacyIdentityMap_ReviewStamp CHECK
+        (
+            (ReviewedAtUtc IS NULL AND ReviewedByAccountId IS NULL)
+            OR ReviewedAtUtc IS NOT NULL
+        ),
+        CONSTRAINT CK_LegacyIdentityMap_LinkTargets CHECK
+        (
+            (MappingStatus IN (0,3,4))
+            OR (MappingStatus = 1 AND PersonId IS NOT NULL)
+            OR (MappingStatus = 2 AND PersonId IS NOT NULL)
+        ),
+        CONSTRAINT CK_LegacyIdentityMap_UserAccountTarget CHECK
+        (
+            SourceTable <> N'Users'
+            OR MappingStatus <> 1
+            OR AccountId IS NOT NULL
+        )
+    );
+    CREATE INDEX IX_LegacyIdentityMap_Person
+        ON dbo.LegacyIdentityMap(PersonId) WHERE PersonId IS NOT NULL;
+    CREATE INDEX IX_LegacyIdentityMap_Account
+        ON dbo.LegacyIdentityMap(AccountId) WHERE AccountId IS NOT NULL;
+    CREATE INDEX IX_LegacyIdentityMap_Status_Source
+        ON dbo.LegacyIdentityMap(MappingStatus, SourceTable, SourceSystem);
+END;
+
 COMMIT TRANSACTION;
