@@ -211,6 +211,33 @@ Candidate services:
 
 Separate ordinary settings from secrets. Secret values are write-only in UI/API, encrypted at rest with managed key rotation, and never returned in view models. GET operations must not create or mutate settings rows.
 
+### 3.15 QR, capability tokens and guest access
+
+Owns QR/capability-token issuance, signature/encryption versioning, target binding, expiry, use limits, one-time consumption, revocation, and confirmation-to-session handoff.
+
+Candidate services:
+- `QrCapabilityIssuer`
+- `QrCapabilityVerifier`
+- `OneTimeTokenConsumptionService`
+- `QrAccessOrchestrator`
+- `GuestAccessPolicy`
+
+Rules: validate the intended target and its current authorization state before consuming a one-time token; consumption and resulting state transition must be atomic where possible. Sign every payload field that can influence authorization or audit policy. Use opaque identifiers, no-store/referrer protections, query-string/log redaction, strict rate limits, bounded validity/use counts, and replay protection. A QR token is a capability, not a permanent account identity. Resident cookie issuance must resolve to a real Person/UserAccount or an explicit short-lived guest principal with a dedicated session type; synthetic identifiers must not pass through ordinary resident revalidation.
+
+### 3.16 Import and migration workbench
+
+Owns controlled import batches, schema/version validation, preview, row-level decisions, operator approval, checkpoint/restart, and reconciliation. This is distinct from the domain migration services that resolve legacy identity and financial history.
+
+Candidate services:
+- `ImportBatchOrchestrator`
+- `ImportFileParser`
+- `ImportValidationService`
+- `ImportPreviewQueryService`
+- `ImportCommitService`
+- `ImportReconciliationService`
+
+Rules: every import is bound to actor, target scope, file digest, schema/template version, expiry, and one-time confirmation. Never coerce invalid values into defaults (e.g. blank PIN to 0000, unknown floor to zero, padding/truncating identifiers). Stage and validate before creating domain records; use idempotent commits and row-level outcomes. Financial/identity imports require specialized approval and reconciliation, not a generic bulk save.
+
 ## 4. Web and UI redesign
 
 Controllers become thin HTTP adapters:
