@@ -152,3 +152,18 @@ Run data reconciliation, authorization isolation tests, financial totals compari
 - No EF migration was generated or applied.
 - No production data/schema was accessed or modified.
 - The next safe implementation action is to complete Gate A as an additive code/schema change, while retaining the legacy path, after the missing profiling output is reviewed for any unexpected data constraints.
+
+## 9. Gate A preflight results reviewed — 2026-11-18 11:17 UTC
+
+The six result files `Database/Diagnostics/GateA-Preflight-Validation_01.txt` through `_06.txt` were reviewed against the preflight script.
+
+Observed on `BuildingManagement_RestoreTest` / `ZOS-AAM\\LOCALDB#8B6B20E4`:
+
+- The three referenced legacy key columns are present and match `nvarchar(128)` bytes (64 Unicode characters): `Buildings.Id`, `Apartments.BuildingId`, and `Apartments.Id`.
+- All three legacy columns use `SQL_Latin1_General_CP1_CI_AS`.
+- `Apartments` has PK `(BuildingId, Id)`; `Buildings` has PK `(Id)`. The expected apartment composite key is present.
+- All twelve Gate A target table names are absent; no partial target table was reported.
+- The database reports the four expected EF migrations through `20261117130000_AddUserTwoFactor`, ProductVersion `8.0.10`.
+- The preflight result set did not include the database default collation. The preflight SQL has therefore been extended to report it. New target `nvarchar` columns inherit the database default collation unless explicitly overridden; this remains an execution gate.
+
+**Assessment:** the legacy FK key type/length, legacy key collation consistency, and referenced key/index structure are supported by the returned evidence. The overall Gate A execution gate is **not yet passed** until the database default collation result is reviewed and the full ten-section aggregate profiling results are supplied. No SQL DDL/DML was executed.
