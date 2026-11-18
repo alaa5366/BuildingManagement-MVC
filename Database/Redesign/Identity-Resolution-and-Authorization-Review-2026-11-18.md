@@ -275,3 +275,64 @@ To avoid fragmenting the work into many small feature phases, implement the appr
 - No claim of tests, builds, SQL execution, or rollback success unless actually run and evidence recorded.
 
 The user has approved the unified target design and continued review. This is not authorization to execute Gate A or mutate any database.
+
+
+## 13. Controller/action resource-scope matrix and permission enforcement gaps — 2026-11-18
+
+A focused controller/action review was performed against the branch source for the authorization filters, permission catalogue, audit log, settings, resident endpoints, financial endpoints, cameras, invoices, notifications, impersonation, and apartment/resident administration. This is a source-level review; no code or data was changed.
+
+### Current enforcement pattern
+
+- `[Authorize]` establishes authentication/role gates, but does not by itself establish a building/apartment resource boundary.
+- `AdminPermissionAttribute` checks a `perm` claim only when the principal is in the `admin` role. Its current implementation returns without denying when the user is authenticated but is not an admin. This includes residents and any other authenticated role.
+- `HasPermissionAttribute` checks a matching `perm` claim for non-SuperAdmin users and lets SuperAdmin pass. It also does not evaluate a requested building/apartment resource.
+- Therefore custom permission attributes are coarse feature gates, not the target resource-aware authorization evaluator. Controller/service checks must still bind the operation to the target resource.
+
+### Permission/action/scope matrix (observed legacy behavior)
+
+| Feature / endpoints reviewed | Current role or permission gate | Effective resource boundary observed | Target scope |
+|---|---|---|---|
+| Buildings administration — `BuildingsController` | Mostly SuperAdmin role; selected details action also permits admin | Admin Details compares route building ID with the building claim; create/list and SuperAdmin management are system-level | System for create/delete/global inventory; Building for admin read limited to assigned building |
+| Admin accounts and permission assignment — `AdminsController`, `PermissionsController` | SuperAdmin role plus `admins.manage` | Global account/assignment administration | System |
+| Resident administration — `AdminResidentsController` | Admin/SuperAdmin plus `residents.manage` | Admin building claim or SuperAdmin-selected building; resident record actions check the resident's BuildingId | Building, with person/account actions separated in target |
+| Apartment administration — `AdminAptsController` | Admin plus `residents.manage` | Uses the building claim and loads the apartment from that building | Building for apartment operations; apartment state is the target resource |
+| Apartment disable/enable — `AdminAptsController.DisableApartment/EnableApartment` | Inherited class-level `residents.manage` | Building-scoped apartment lookup; no separate `apartment.disable` action gate was found in the reviewed controller | Building + Apartment, with a dedicated destructive/status-transition permission |
+| Wallet administration — `WalletController` | Admin plus `wallet.manage` | Loads the claimed building; apartment adjustment target is resolved within that building | Building + Apartment for every movement/adjustment |
+| Resident wallet — `ResidentWalletController` | Resident role | Uses both building and apartment claims and resolves the apartment within that building | Personal account + Apartment |
+| Expenses/revenues/reports — `ExpensesController`, `RevenuesController`, `ReportsController` | Admin plus feature permission | Uses the building claim as the data root | Building |
+| Polls — `PollsController`, `ResidentPollsController` | Admin feature permission for management; resident role for voting | Admin loads claimed building; resident vote uses claimed building and apartment | Building for poll management; Apartment/eligible occupant for ballot eligibility |
+| Maintenance — `MaintenanceController`, `ResidentMaintenanceController` | Admin feature permission or resident role | Resident endpoint loads maintenance log for the claimed building; no apartment filter was observed in the reviewed action | Building for shared maintenance; Apartment/Personal only if records are private or individually assigned |
+| Building/global/personal settings — `SettingsController` | Global: SuperAdmin + `settings.manage.global`; Building: Admin/SuperAdmin + `settings.manage.building`; Own: authenticated user | Building POST explicitly compares admin building claim; Own service receives current user, role, building and apartment claims | System / Building / Personal |
+| Audit log — `AuditLogController` | Explicit role+permission check in both Index and ExportCsv | Resident filters are forced to own building+apartment; admin filters are forced to claimed building; SuperAdmin can filter globally | System / Building / Apartment (resident own) |
+| Invoice download — `InvoiceController` | Admin/Resident/SuperAdmin role | Resident apartment is taken from claims, ignoring supplied aptId; admin target apartment is resolved within claimed building; SuperAdmin without building context can resolve an apartment by aptId | Apartment + Personal entitlement; System for SuperAdmin |
+| Notifications — `NotificationsController` | Admin/Resident role | Uses claimed building and recipient type; residents must have apartment claim | Building for admin notifications; Apartment/Personal for resident notifications |
+| Camera live/HLS — `CamerasController` | Class-level `[Authorize]` + `AdminPermission(cameras.view)` | Live checks requested building against building claim for non-SuperAdmin; HLS resolves camera first then checks camera.BuildingId against claim | Building + camera resource; resident viewing must be an explicit resident access policy, not an accidental bypass of an admin permission filter |
+| Impersonation — `ImpersonationController` | Admin/SuperAdmin role, action-specific checks | Target apartment is resolved inside selected/claimed building; SuperAdmin can choose building; actor and target are separately represented in claims/restore context | System/Building/Apartment with actor+target policy and auditable session lifecycle |
+| Anonymous QR access — `QrAccessController` | Anonymous entry, signed token validation, POST antiforgery and token-use check | Token is consumed before creating a resident principal for the token's building/apartment | Token-scoped one-time capability; resulting session is Apartment-scoped |
+| QR image endpoint — `QrImageController` | Admin/SuperAdmin role | Accepts HTTP(S) data and renders QR image; it does not itself grant access | No business-data scope; protect token-bearing output from cache/log leakage |
+
+### Confirmed gaps requiring implementation decisions
+
+1. **AdminPermission non-admin pass-through:** the implementation's `if (!user.IsInRole("admin")) return;` means it does not deny residents. The class-level `[Authorize]` on `CamerasController` allows any authenticated role to reach the actions, while the filter does not enforce `cameras.view` for residents. The controller comments explicitly describe resident live viewing, so this may be an intended resident capability; however, it must be modeled as a distinct resident apartment/building access policy. Do not treat the current admin permission attribute as enforcing it. Add tests for resident, admin-with-permission, admin-without-permission, SuperAdmin, and any unsupported authenticated role.
+2. **Apartment disable permission is not separately enforced:** `AdminPermissions.DisableApartment = "apartment.disable"` exists, but the reviewed `AdminAptsController.DisableApartment` and `EnableApartment` actions inherit the class-level `residents.manage` requirement. The dedicated permission key is not used at those action declarations. Decide whether disabling an apartment requires both resident-management and a distinct apartment-status permission, then enforce and test it server-side.
+3. **Audit-log permission keys are more precise than the generic permission attributes:** the controller correctly uses explicit role+claim logic and forces the resource filters for residents/admins. Preserve this as a baseline behavior during migration; do not replace it with a generic claim-only attribute.
+4. **Building scope must be checked after resolving the target resource:** the reviewed financial and apartment controllers commonly load the current building from the session claim and resolve child IDs inside that object. The target service layer must retain this invariant so a forged/foreign apartment, camera, deposit, poll, or invoice ID cannot cross the building boundary.
+5. **Read-only versus mutation permissions are currently coarse:** examples include a single `wallet.manage` covering balance viewing, deposit confirmation/cancellation, and manual adjustment, and `residents.manage` covering resident CRUD plus apartment status/QR operations. The target catalogue should distinguish read, create, update, financial confirmation, adjustment, disable/revoke, export, and sensitive-data actions where risk differs.
+6. **Scope cannot be inferred from the permission key or UI category:** the catalogue groups permissions into Admin/Financial/Services/System, but those are presentation categories, not scope types. `settings.manage.global`, `.building`, and `.own` imply different scopes; `audit.view.all/building/own` are role/resource variants. Persist explicit ScopeType and ScopeId in target assignments/overrides.
+7. **Personal scope is not a synonym for resident apartment scope:** own profile/preferences are account-personal, while wallet, occupancy and voting eligibility are apartment/relationship scoped. The target evaluator must resolve both independently.
+8. **Impersonation must not inherit the target user's authority:** authorization should evaluate the initiating actor's permission to enter the target scope, then restrict the impersonated session to the target resource and explicitly allowed actions. Every action and exit/revocation path must preserve actor attribution.
+
+### Required authorization test matrix
+
+- For each sensitive endpoint, test anonymous, resident, admin without permission, admin with permission in the correct building, admin with permission but wrong building, SuperAdmin, disabled account, and impersonated principal.
+- Repeat the same tests for both HTML and export/download/API endpoints; a hidden button or GET-page restriction does not secure a POST or export.
+- Use foreign BuildingId, ApartmentId, CameraId, DepositId, PollId, and ResidentId values to verify server-side ownership/scope binding.
+- Test action-specific separation: view vs mutate, confirm vs cancel, financial adjustment, apartment disable/enable, export, QR generation, camera stream URL retrieval, and secret access.
+- Test that role/permission/scope revocation is effective across application instances and invalidates impersonated sessions.
+- Add reflection-based coverage that every controller/action has a role gate and that every custom permission attribute is paired with the intended role policy; add behavioral tests for the filter's non-admin path.
+
+### Gate 0 deliverables updated
+
+The permission catalogue must now include a controller/action/resource matrix, a resident camera policy, apartment disable/enable policy, read-vs-write separation for high-impact financial and identity actions, and explicit decisions for building-wide resident maintenance visibility. Any legacy permission with no confirmed consuming endpoint or unclear scope remains unmapped/manual-review; do not automatically grant it at System or all-Buildings scope.
+
+This section records source observations and target requirements only. No application source, schema, database rows, credentials, or sessions were changed. No build or runtime tests were executed.
