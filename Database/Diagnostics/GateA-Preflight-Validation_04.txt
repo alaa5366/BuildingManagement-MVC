@@ -1,3 +1,0 @@
-﻿Apartments	BuildingId	nvarchar	128	SQL_Latin1_General_CP1_CI_AS
-Apartments	Id	nvarchar	128	SQL_Latin1_General_CP1_CI_AS
-Buildings	Id	nvarchar	128	SQL_Latin1_General_CP1_CI_AS
