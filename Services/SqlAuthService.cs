@@ -446,14 +446,15 @@ public class SqlAuthService
         if (context.Type == "admin")
         {
             var admin = await _users.GetByUidAsync(context.Uid!);
-            if (admin == null || admin.Role != "admin" || admin.Disabled || !admin.IsActive
-                || !admin.BuildingIds.Contains(context.BuildingId!, StringComparer.Ordinal))
+            if (admin == null || admin.Role != "admin" || admin.IsDisabled || !admin.IsActive
+                || !admin.BuildingAdmins.Any(ba => ba.BuildingId == context.BuildingId))
                 return AuthResult.Fail("account-inactive");
 
             return AuthResult.Ok(
                 context.Uid!, "admin", context.Email!,
                 context.Name ?? "Admin", new List<string> { context.BuildingId! },
-                permissions: admin.Permissions ?? new List<string>());
+                permissions: admin.Permissions.Select(p => p.Permission)
+                    .Distinct(StringComparer.Ordinal).ToList());
         }
 
         if (context.Type == "resident")
