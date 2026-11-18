@@ -172,3 +172,22 @@ These decisions are also detailed in the Permission Scope Catalogue and Financia
 | DEC-46 | Confirmed deposit correction | Keep confirmed original immutable; correct with a linked reversal and replacement under explicit authority. | Proposed default; confirm before finance command implementation |
 
 These are additive to DEC-01 through DEC-38. The separate PERM/FIN identifiers remain as cross-references in their module documents.
+
+## 10. Source-review evidence added on 2026-11-18
+
+The following read-only source reviews now provide implementation evidence for the existing epics and decision register. They do not close owner decisions or authorize implementation.
+
+| Review artifact | Backlog impact / evidence |
+|---|---|
+| [EF Core / Live SQL Schema Reconciliation](EF-Core-Live-Schema-Reconciliation-2026-11-18.md) | DATA-01 / DB-01: 30 mapped tables, 313 mapped columns, 27 secondary indexes, and 32 FK relationships match the disposable restore; FullSchema has 119 string-length differences and four missing 2FA columns; wallet view deployment and LoginThrottle ownership remain open. |
+| [Financial and Voting Domain Review](Financial-and-Voting-Domain-Review-2026-11-18.md) | FIN-01 / FIN-02 / FIN-03 / POLL-01: historical carry-forward recalculation gaps, order-dependent equal allocation, mutable/deletable financial source rows, current-fee historical recalculation, apartment-keyed votes, and ballot choice disclosure in audit. |
+| [Maintenance, Notifications, and Presence Review](Maintenance-Notifications-Presence-Review-2026-11-18.md) | OPS-01 / APP-02: maintenance-to-expense linkage is not durable; notification ownership/read state is apartment-scoped; presence query collapses multiple accounts in one apartment. |
+| [Backup, Restore, and Retention Review](Backup-Restore-and-Retention-Review-2026-11-18.md) | OPS-02: in-process restore sessions, no distributed scheduler lease, minute-granularity filenames, stale history after retention, and local-disk storage assumptions. |
+| [Security, Audit, and Operations Review](Security-Audit-and-Operations-Review-2026-11-18.md) | SEC-02 / SET-01 / OBS-01 / APP-02: global secrets are echoed to the settings view, PIN migration runs at startup, local key/log storage assumptions, CSP hardening, and append-only audit preservation. |
+
+### Updated execution order
+
+1. Continue read-only source review of remaining integration/media/QR and authorization workflows; do not implement isolated fixes in the legacy aggregate path.
+2. Complete cross-document consistency and target domain contracts, using the new source reviews as acceptance requirements for FIN, POLL, OPS, OBS, SET, and OPS-02.
+3. Resolve only the owner decisions that block a specific domain contract (DEC-15/16/17/31/32/33/37/38/44/45/46 as applicable); independent source review continues while they remain open.
+4. Rehearse any approved schema change against a disposable restore only after explicit authorization. Gate A remains **NOT AUTHORIZED**.
