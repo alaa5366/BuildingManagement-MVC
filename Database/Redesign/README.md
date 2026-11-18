@@ -695,3 +695,6 @@ The supporting-domain review found missing maintenance-to-expense linkage, apart
 - [Backup, Restore, and Retention Review — 2026-11-18](Backup-Restore-and-Retention-Review-2026-11-18.md)
 
 The backup review confirms strong archive/preview/hash/transaction safeguards but identifies in-process restore sessions, missing distributed scheduler locking, minute-granularity filenames, stale retention history, and local-disk storage as scale-out and recovery gaps.
+- [Security, Audit, and Operations Review — 2026-11-18](Security-Audit-and-Operations-Review-2026-11-18.md)
+
+The security/operations review identifies plaintext secret echoing in the superadmin settings page, startup-time identity data migration, local Data Protection/log storage assumptions, and CSP/rate-limit/health exposure decisions. It also confirms the SQL audit path is append-only despite the aggregate's in-memory cap.
