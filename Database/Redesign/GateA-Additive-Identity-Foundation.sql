@@ -157,9 +157,12 @@ BEGIN
         ScopeApartmentId nvarchar(64) NULL,
         ValidFromUtc datetime2(3) NOT NULL,
         ValidToUtc datetime2(3) NULL,
+        GrantedAtUtc datetime2(3) NOT NULL CONSTRAINT DF_UserRoleAssignments_GrantedAtUtc DEFAULT (SYSUTCDATETIME()),
         GrantedByAccountId uniqueidentifier NULL,
+        GrantReason nvarchar(500) NULL,
         RevokedAtUtc datetime2(3) NULL,
         RevokedByAccountId uniqueidentifier NULL,
+        RevocationReason nvarchar(500) NULL,
         RowVersion rowversion NOT NULL,
         CONSTRAINT FK_UserRoleAssignments_Accounts FOREIGN KEY(AccountId)
             REFERENCES dbo.UserAccounts(AccountId) ON DELETE NO ACTION,
@@ -182,8 +185,8 @@ BEGIN
         CONSTRAINT CK_UserRoleAssignments_Validity CHECK
             (ValidToUtc IS NULL OR ValidToUtc > ValidFromUtc),
         CONSTRAINT CK_UserRoleAssignments_Revocation CHECK
-            ((RevokedAtUtc IS NULL AND RevokedByAccountId IS NULL)
-             OR (RevokedAtUtc IS NOT NULL))
+            ((RevokedAtUtc IS NULL AND RevokedByAccountId IS NULL AND RevocationReason IS NULL)
+             OR (RevokedAtUtc IS NOT NULL AND RevokedByAccountId IS NOT NULL))
     );
     CREATE INDEX IX_UserRoleAssignments_Account_Scope
         ON dbo.UserRoleAssignments(AccountId, ScopeType, ScopeBuildingId, ScopeApartmentId);
@@ -271,6 +274,7 @@ BEGIN
         PermissionSetKey nvarchar(80) NOT NULL,
         ValidFromUtc datetime2(3) NOT NULL,
         ValidToUtc datetime2(3) NULL,
+        GrantedAtUtc datetime2(3) NOT NULL CONSTRAINT DF_ApartmentAccessGrants_GrantedAtUtc DEFAULT (SYSUTCDATETIME()),
         GrantedByAccountId uniqueidentifier NOT NULL,
         RevokedAtUtc datetime2(3) NULL,
         RevokedByAccountId uniqueidentifier NULL,
@@ -284,7 +288,10 @@ BEGIN
         CONSTRAINT FK_ApartmentAccessGrants_RevokedBy FOREIGN KEY(RevokedByAccountId)
             REFERENCES dbo.UserAccounts(AccountId) ON DELETE NO ACTION,
         CONSTRAINT CK_ApartmentAccessGrants_Validity CHECK
-            (ValidToUtc IS NULL OR ValidToUtc > ValidFromUtc)
+            (ValidToUtc IS NULL OR ValidToUtc > ValidFromUtc),
+        CONSTRAINT CK_ApartmentAccessGrants_Revocation CHECK
+            ((RevokedAtUtc IS NULL AND RevokedByAccountId IS NULL)
+             OR (RevokedAtUtc IS NOT NULL AND RevokedByAccountId IS NOT NULL))
     );
     CREATE INDEX IX_ApartmentAccessGrants_Apartment_Period
         ON dbo.ApartmentAccessGrants(BuildingId, ApartmentId, ValidFromUtc, ValidToUtc);
@@ -310,8 +317,10 @@ BEGIN
         ValidToUtc datetime2(3) NULL,
         GrantedAtUtc datetime2(3) NOT NULL CONSTRAINT DF_AccountPermissionOverrides_GrantedAtUtc DEFAULT (SYSUTCDATETIME()),
         GrantedByAccountId uniqueidentifier NULL,
+        GrantReason nvarchar(500) NULL,
         RevokedAtUtc datetime2(3) NULL,
         RevokedByAccountId uniqueidentifier NULL,
+        RevocationReason nvarchar(500) NULL,
         RowVersion rowversion NOT NULL,
         CONSTRAINT FK_AccountPermissionOverrides_Accounts FOREIGN KEY(AccountId)
             REFERENCES dbo.UserAccounts(AccountId) ON DELETE NO ACTION,
@@ -333,8 +342,8 @@ BEGIN
         CONSTRAINT CK_AccountPermissionOverrides_Validity CHECK
             (ValidToUtc IS NULL OR ValidToUtc > ValidFromUtc),
         CONSTRAINT CK_AccountPermissionOverrides_Revocation CHECK
-            ((RevokedAtUtc IS NULL AND RevokedByAccountId IS NULL)
-             OR RevokedAtUtc IS NOT NULL)
+            ((RevokedAtUtc IS NULL AND RevokedByAccountId IS NULL AND RevocationReason IS NULL)
+             OR (RevokedAtUtc IS NOT NULL AND RevokedByAccountId IS NOT NULL))
     );
     CREATE INDEX IX_AccountPermissionOverrides_Account_Permission_Scope
         ON dbo.AccountPermissionOverrides
@@ -381,6 +390,11 @@ BEGIN
         CONSTRAINT CK_LegacyIdentityMap_ReviewStamp CHECK
         (
             (ReviewedAtUtc IS NULL AND ReviewedByAccountId IS NULL)
+            OR (ReviewedAtUtc IS NOT NULL AND ReviewedByAccountId IS NOT NULL)
+        ),
+        CONSTRAINT CK_LegacyIdentityMap_ResolvedReview CHECK
+        (
+            MappingStatus NOT IN (1,2)
             OR (ReviewedAtUtc IS NOT NULL AND ReviewedByAccountId IS NOT NULL)
         ),
         CONSTRAINT CK_LegacyIdentityMap_LinkTargets CHECK
