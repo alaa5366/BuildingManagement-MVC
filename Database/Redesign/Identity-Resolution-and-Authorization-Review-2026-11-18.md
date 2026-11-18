@@ -1004,3 +1004,41 @@ Static review of `AdminAptsController`, `BuildingsController.GenerateQuickQr`, `
 8. Authorization and audit tests for every DVR/camera action, including cross-building IDs and credential rotation.
 
 No application code, schema, data, configuration, QR token, or media-server state was changed. No build/tests were run. **Gate A remains NOT AUTHORIZED.**
+
+
+## 25. Financial command validation, deposit state transitions, and ledger correction — 2026-11-18
+
+Static source review of `WalletController`, `WalletService`, `ExpensesController`, `ExpensesService`, `RevenuesController`, `RevenuesService`, and the permission catalog. No financial command was executed.
+
+### 25.1 Deposit lifecycle
+
+- Deposit creation enforces amount > 0 and apartment existence in `WalletService.CreateDeposit`; confirmation/cancellation accept only pending deposits and stamp actor/time. Pending edits record old/new amount/note, reason, actor, and timestamp, and reject confirmed/cancelled deposits. These are important state rules to retain.
+- `WalletController.ConfirmDeposit` and `CancelDeposit` call `GetOrCreateMonth(building, month)` through the service before locating the deposit. The caller-supplied month therefore influences the aggregate lookup and carry-over recomputation. Define a strict `yyyy-MM` parser and resolve the deposit's authoritative month from its persisted row rather than trusting a posted month value.
+- Confirmation/cancellation, audit aggregate event, notification, and `SaveFullAsync` are currently grouped in one aggregate save call, but there is no explicit idempotency key or concurrency token on the in-memory transition path shown here. Two simultaneous admin requests can race on a stale aggregate. Add rowversion/conditional state transition and ensure only one command can move Pending to Confirmed/Cancelled.
+- `UpdateDeposit` correctly restricts edits to pending deposits and writes an edit-history entry. The controller's pre-check and service's status check should be consolidated in one command service with a transaction and immutable before/after event.
+- Receipt fields include URL/path/name/size/type/success. Treat receipt path and URL as sensitive untrusted input: validate storage ownership, content type/size, download authorization, malware scanning, and no-store behavior. Do not let user-supplied receipt paths become filesystem paths.
+
+### 25.2 Manual wallet adjustments
+
+- `AddAdjustment` accepts any non-zero decimal amount and delegates to `AddWalletAdjustment`; the inspected service does not itself validate that the apartment exists, that the month key is valid, or that the amount/reason meets an approved limit/policy. Enforce these invariants in the domain command, not only the form.
+- The adjustment audit detail contains amount and reason but the controller call does not visibly pass the apartment ID as a structured target. Persist building, apartment, month, signed amount, reason, actor, approval context, and correlation ID as structured immutable data.
+- Define whether large or exceptional adjustments require dual approval, whether an adjustment can be reversed only by a compensating entry, and whether a posted adjustment can ever be edited/deleted. Preserve every adjustment as a ledger event.
+
+### 25.3 Expense and revenue corrections
+
+- Expense/revenue Add controllers check amount > 0 and non-empty category ID, but the inspected services simply create the item and do not independently validate the category belongs to the building, is active/appropriate-kind, or that the supplied date and month key follow a strict format.
+- Both delete controllers call the service delete method but ignore its Boolean result, then recalculate distributions, write an audit event, and save regardless. A nonexistent ID can therefore produce a misleading "deleted" audit event. Audit only a successful state transition and include the deleted row's former amount, category, note/reference, month, and actor.
+- Expense/revenue deletion physically removes the item from the month aggregate. For a financial ledger, prefer reversal/void entries with reason and actor, preserving the original posting and recomputing distributions through a traceable correction event.
+- The selected month key and transaction date are independent fields in the current model. Keep their semantics explicit: posting period is not necessarily the same as transaction date, but both must be validated and retained.
+
+### 25.4 Required acceptance tests
+
+1. Strict month/date validation and cross-month deposit-ID tampering tests.
+2. Concurrent confirmation/cancellation tests proving a deposit can transition out of Pending exactly once.
+3. Deposit edit history tests including audit/outbox failure and receipt metadata/path validation.
+4. Adjustment tests for nonexistent/cross-building apartment IDs, invalid month keys, decimal precision/limits, approvals, and compensating reversal.
+5. Expense/revenue category ownership/kind/active validation and date/month validation tests at the service boundary.
+6. Delete tests proving missing IDs do not create success audit events and successful corrections preserve the original financial row.
+7. Ledger reconciliation tests proving every correction can be traced from original posting through reversal/replacement and wallet recalculation.
+
+No application code, schema, data, or configuration was changed. No build/tests were run. **Gate A remains NOT AUTHORIZED.**
