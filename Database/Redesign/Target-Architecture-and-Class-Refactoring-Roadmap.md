@@ -315,7 +315,7 @@ Set query budgets for high-traffic paths. Paginate at database level, use stable
 | A5 | Finance | ledger commands, idempotency, concurrency, reversals, allocations, reconciliation, report read models |
 | A6 | Resident/building operations | maintenance, notifications, presence, settings, profile/preferences |
 | A7 | Polls and secret ballot | eligibility snapshot, delegation, anonymous ballot box, duplicate prevention, tally and secrecy tests |
-| A8 | Integrations and documents | private receipts, OCR limits, camera/media orchestration, integration secret vault |
+| A8 | Integrations, documents, QR and imports | private receipts, OCR limits, camera/media orchestration, integration secret vault, capability tokens/guest sessions, staged import workbench |
 | A9 | Backup and operations | backup typed results, retention reconciliation, restore drills, health policy, audit/log explorer |
 | A10 | UI and compatibility cutover | new controllers/view models/views, feature flags, module-by-module rollout, accessibility and regression |
 | A11 | Legacy retirement | zero unexplained reconciliation differences, approved retention, rollback window closed, explicit decommission approval |
