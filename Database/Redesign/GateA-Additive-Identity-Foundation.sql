@@ -125,8 +125,11 @@ BEGIN
         RowVersion rowversion NOT NULL,
         CONSTRAINT FK_UserCredentials_UserAccounts FOREIGN KEY(AccountId)
             REFERENCES dbo.UserAccounts(AccountId) ON DELETE NO ACTION,
-        CONSTRAINT FK_UserCredentials_ReplacedBy FOREIGN KEY(ReplacedByCredentialId)
-            REFERENCES dbo.UserCredentials(CredentialId) ON DELETE NO ACTION,
+        -- The replacement credential must belong to the same account; a plain self-FK
+        -- would otherwise allow cross-account credential-chain corruption.
+        CONSTRAINT UQ_UserCredentials_Credential_Account UNIQUE(CredentialId, AccountId),
+        CONSTRAINT FK_UserCredentials_ReplacedBy FOREIGN KEY(ReplacedByCredentialId, AccountId)
+            REFERENCES dbo.UserCredentials(CredentialId, AccountId) ON DELETE NO ACTION,
         CONSTRAINT CK_UserCredentials_Type CHECK (CredentialType IN (0,1)),
         CONSTRAINT CK_UserCredentials_Expiry CHECK (ExpiresAtUtc IS NULL OR ExpiresAtUtc > CreatedAtUtc)
     );
