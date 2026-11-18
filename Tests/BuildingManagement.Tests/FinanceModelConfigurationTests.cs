@@ -32,6 +32,15 @@ public sealed class FinanceModelConfigurationTests
 
         var difference = AssertTargetTable<FinancialReconciliationDifferenceEntity>(model, "FinancialReconciliationDifferences");
         Assert.Contains(difference.GetCheckConstraints(), item => item.Name == "CK_FinancialReconciliationDifferences_Scope");
+
+        var deposit = AssertTargetTable<PaymentDepositEntity>(model, "PaymentDeposits");
+        var resolution = Assert.Single(deposit.GetCheckConstraints(), item => item.Name == "CK_PaymentDeposits_Resolution");
+        Assert.Contains("[Status] = 0", resolution.Sql);
+        Assert.Contains("[Status] = 1", resolution.Sql);
+        Assert.Contains("[ResolutionReason] IS NULL", resolution.Sql);
+        Assert.Contains("[Status] = 2", resolution.Sql);
+        Assert.Contains("[Status] = 3", resolution.Sql);
+        Assert.Contains("LEN(LTRIM(RTRIM([ResolutionReason]))) > 0", resolution.Sql);
     }
 
     private static IEntityType AssertTargetTable<TEntity>(IModel model, string tableName)
