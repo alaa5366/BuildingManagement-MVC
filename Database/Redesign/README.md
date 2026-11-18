@@ -118,3 +118,11 @@ The following gates are mandatory:
 7. Run reconciliation tests and application regression tests before production approval.
 
 No destructive schema change, data migration, production deployment, or live database write is authorized by this discovery artifact alone.
+
+## Additional design artifacts
+
+- `Database/Redesign/Enterprise-Database-Redesign-Blueprint.md` — architecture principles, target domains, migration/rollback approach, and unresolved product decisions.
+- `Database/Redesign/Target-Data-Dictionary-and-ERD.md` — proposed target data dictionary, SQL Server type conventions, constraints/index strategy, and conceptual Mermaid ERD. Proposed types are not final until key metadata reconciliation is complete.
+- `Database/Diagnostics/DatabaseRedesign-ReadOnly-Profiling.sql` — read-only, privacy-conscious profiling for identity candidates, ownership/occupancy, finance reconciliation, poll integrity, camera/DVR scope, secret presence counts, wallet-view metadata, FK delete actions, and EF migration history.
+
+These artifacts do not create or apply database changes. The profiling script is intended for the disposable `BuildingManagement_RestoreTest` database and returns aggregate counts/totals rather than personal or secret values.
