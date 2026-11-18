@@ -64,3 +64,22 @@
 4. DEC-32/33 approve configurable, versioned eligibility, not one universal owner/tenant rule for every poll.
 5. DEC-38 approves operational separation only; no claim of cryptographic unlinkability is made.
 6. Gate A remains **NOT AUTHORIZED**. No DDL, EF migration, backfill, or cutover is authorized by this record.
+
+
+## Superseding implementation authorization — 2026-11-18
+
+The project owner subsequently gave explicit broader authorization: **“database approve to change”** and **“go on”**, following the earlier approval to change anything in the project. This addendum supersedes the earlier “Not authorized” implementation wording for project development and disposable/test database work.
+
+Authorized without repeated per-change approval:
+- Modify application code, architecture, configuration, EF Core entities, model configuration, migrations, indexes, constraints, and database objects required by the approved target design.
+- Execute reviewed schema migrations and data transformations against the disposable restore database `BuildingManagement_RestoreTest`, with preflight identity checks, backup/restore protection, before/after reconciliation, and test evidence.
+- Perform staged, additive compatibility migrations and reversible backfills where source-to-target mappings are evidenced.
+- Update and retire legacy application paths only after replacement parity and regression checks.
+
+Safety boundaries that remain:
+- Do not target a live/production database or deploy/cut over production without identifying that exact target and obtaining a separate explicit confirmation.
+- Do not silently merge people, infer ownership, rewrite credentials, or alter posted financial meaning. Ambiguous rows must be quarantined for review; approved business rules and evidence requirements still apply.
+- Do not perform irreversible destructive cleanup until the replacement is proven, reconciliation is clean, and a recoverable backup/rollback path is verified.
+- Never claim a migration, build, test, backup, or restore was run unless tool evidence confirms it.
+
+**Gate A status:** authorized for implementation and rehearsal on the disposable `BuildingManagement_RestoreTest` database, subject to the safety boundaries above. This authorization is not production deployment approval.
