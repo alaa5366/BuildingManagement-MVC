@@ -1,0 +1,1 @@
+﻿BuildingManagement_RestoreTest	SQL_Latin1_General_CP1_CI_AS	MATCHES_CURRENT_LEGACY_KEY_COLLATION

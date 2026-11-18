@@ -1,0 +1,12 @@
+﻿AccountPermissionOverrides	ABSENT
+ApartmentAccessGrants	ABSENT
+ApartmentOccupancies	ABSENT
+ApartmentOwnerships	ABSENT
+Persons	ABSENT
+RoleDefinitions	ABSENT
+RolePermissions	ABSENT
+UserAccounts	ABSENT
+UserCredentials	ABSENT
+UserRecoveryCodes	ABSENT
+UserRoleAssignments	ABSENT
+UserTwoFactorSettings	ABSENT
