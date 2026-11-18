@@ -716,3 +716,79 @@ A follow-up repository search and direct inspection of the four checked-in migra
 **Finding:** the EF mapping is metadata only; it does not create the SQL object. The current checked-in EF migration chain does not deploy the view. A database created or upgraded solely through these migrations can therefore lack the object while the DbContext still advertises the keyless query type. The FullSchema script appears to be a separate deployment path and must be reconciled with the EF migration path. Do not treat model snapshot/designer entries as a migration operation.
 
 **Required next decision:** choose one supported deployment source of truth. Either (a) add a deliberate, reviewed, idempotent migration for the view and test fresh-install plus upgrade paths, or (b) remove/retire the unused mapping and source SQL definition after proving there are no runtime/report consumers. Do not do either until a consumer search and runtime usage decision are complete. No application source or migration was changed in this review.
+
+
+## 19. Reporting, wallet read paths, audit queries, and export review — 2026-11-18
+
+This section is a static source review of `ReportsController`, `ReportsService`, `WalletService`, `WalletController`, `ResidentWalletController`, `AuditLogController`, `AuditLogQueryService`, `AuditLogger`, `CsvExportSafety`, `BuildingSqlStore`, `BuildingSqlMapper`, and the relevant EF mappings. No runtime query plans or fresh application tests were executed.
+
+### 19.1 Financial reporting is built from a hydrated aggregate, not SQL read models
+
+- `ReportsController.Index` and `ExportCsv` load the building through `BuildingsService.GetByIdAsync(BuildingId)`, then call `ReportsService.BuildReport`.
+- `ReportsService.BuildReport` iterates the in-memory `Building.Months`, apartments, categories, expenses, and revenues. It computes each month's confirmed deposits by iterating apartments and calling `WalletService.TotalConfirmedDeposits`; wallet balances and top debtors/creditors are also computed in memory.
+- `GetReportMonths` supports `all`, `year`, `12m`, and otherwise defaults to a six-month window. An arbitrary invalid range is not rejected; it falls through to the six-month behavior.
+- The current report's `NetBalance` is `TotalCollected - TotalExpenses + TotalRevenues`. It is a period cash-flow-style arithmetic total, not the sum of apartment wallet balances and not a complete balance-sheet/liability measure. It does not directly include monthly fees, opening/carryover balances, or manual wallet adjustments.
+- The report's wallet chart and debtor/creditor lists instead call `ComputeWalletBalance` for the current month. These are different measures with different time semantics: selected range for summary and current month for wallet positions.
+- `AvgMonthly` divides the selected-range net total by the number of selected month keys, including months without a corresponding `MonthData` record in rolling ranges. This should be explicitly described as an average over calendar months, not only months with activity.
+- `ExportCsv` rebuilds the same report and exports its summary/monthly/category sections. The export must retain the exact metric definitions and selected range used by the UI.
+
+**Design consequence:** define separate, named contracts such as `FinancialActivitySummary` (period inflows/outflows), `ApartmentWalletStatement` (posted events), and `ApartmentWalletBalance` (as-of position). Do not name a cash-flow metric simply `Balance` without a clear definition. A future SQL read model must reproduce approved business formulas, not merely aggregate similarly named columns.
+
+### 19.2 Wallet balance rules and historical dependencies
+
+The inspected `ComputeWalletBalance` formula is:
+
+`carry-over + confirmed deposits - monthly fee (unless apartment closed) - expense distribution + revenue distribution + wallet adjustments`.
+
+Additional observations:
+
+- Pending and cancelled deposits are excluded from confirmed collections and balances.
+- Expense and revenue distributions are stored in monthly aggregate dictionaries and are calculated over open apartments. The distribution routine rounds shares to cents and assigns the remaining cents to the final apartment in the current apartment ordering.
+- `ComputeWalletBalance` returns zero if the apartment or month is absent; it does not synthesize a missing month.
+- `ComputeCarryOverForNextMonth` uses the prior month's computed wallet balance. `RecomputeCarryOverFrom` recalculates later existing months in key order.
+- `TotalsOf` returns both `Balance = collected + revenues - expenses` and `TotalWallet = sum of apartment wallet balances`. The former is not the latter. Consumers must not treat them as interchangeable.
+- The source code uses mutable in-memory aggregate dictionaries and lists. A relational projection must define how missing distributions, closed apartments, apartment additions/removals, month gaps, historical corrections, and carry-over recalculation are handled.
+- The current view definition in `BuildingManagement-FullSchema.sql` only describes confirmed deposits plus adjustments; it cannot replace the wallet formula.
+
+**Required finance decisions before SQL view design:** authoritative month-close policy; whether a monthly fee is assessed for closed/part-month apartments; treatment of apartments added or closed after month start; effective-date and ordering policy for distributions; adjustment/reversal semantics; month gaps; carry-over snapshots vs recomputation; and rounding/remainder allocation independent of incidental row order. Reconciliation tests must compare per-apartment balances and building totals over multiple consecutive months, including corrections to earlier months.
+
+### 19.3 Aggregate loading and scalability implications
+
+The current `BuildingSqlMapper.LoadAsync` hydrates one building by issuing separate queries for the building row and many child collections (floors, apartments, categories, expenses, revenues, monthly shares, deposits, deposit edits, adjustments, notifications, polls/options/votes, maintenance, admins, and capped aggregate-originated audit rows). It then materializes the aggregate in memory for existing services.
+
+This is a compatibility architecture, not a query-oriented reporting architecture. A report request therefore pays for a broad building load even when the page needs only a few monthly totals. Query count and materialized row volume grow with building history and operational activity. A future read path should query only the required period and building scope, aggregate at the correct grain, and page detail rows in SQL. It must not replace the aggregate write path prematurely.
+
+The load path uses separate queries rather than a single multi-collection join, which avoids one obvious join fan-out pattern, but it still has multiple round trips and potentially large in-memory collections. The actual cost must be measured with realistic larger datasets and execution telemetry before selecting a replacement.
+
+### 19.4 Audit log query and export behavior
+
+- `AuditLogController` requires role-scoped audit permissions and derives resident building/apartment scope and admin building scope from claims before calling the query service. The CSV action applies the same scope construction.
+- `AuditLogger.QueryPageAsync` applies SQL-side filters, runs a separate `CountAsync`, clamps page size to 1–200, and uses deterministic `Ts DESC, AuditId DESC` ordering before `Skip/Take`. This is the correct baseline pattern for the UI, although deep OFFSET pages can become expensive as history grows.
+- The non-paged `QueryAsync` clamps its limit to 1–50,000 and orders only by `Ts DESC` (without the `AuditId` tie-breaker). Any CSV export built on this path is bounded but can have unstable ordering for equal timestamps and can still materialize a large result set. A future export should use a stable keyset/cursor or bounded streaming strategy, enforce an explicit date/range ceiling, and preserve resource scope.
+- `AuditLogger.LogAsync` creates its own DbContext and saves the audit row independently. Exceptions are caught and logged as warnings. This confirms the previously recorded durability gap: the business mutation and audit insert are not one atomic transaction/outbox operation. Critical audit events can be lost while the main operation succeeds.
+- The logger validates the building and apartment association before storing the apartment number/id. This avoids attaching an apartment identifier to an unrelated or nonexistent building, but does not itself guarantee audit durability.
+- Correlation id is added to serialized metadata when an Activity tag is present. It is useful correlation metadata, not a replacement for a durable event id or transactional outbox.
+
+**Log Center consequence:** retain separate stores/contracts for diagnostic application logs, durable security/business audit, and financial ledger events. Add a stable event identifier, actor/resource scope, correlation/trace identifiers, outcome, and safe structured metadata. Critical audit writes need a transactional outbox or equivalent durable commit path. Search/export must be bounded, scoped, paged, and redacted.
+
+### 19.5 CSV export controls
+
+The inspected report and audit CSV paths call `CsvExportSafety.Cell` for each cell, and the repository contains focused `CsvExportSafetyTests`. This is a positive control against spreadsheet formula injection. It does not prove every export endpoint uses the helper. A repository-wide export inventory and tests for every endpoint are still required, including backup/JSON exports and any dynamically generated CSV.
+
+Export review acceptance criteria:
+- every user-controlled text cell is neutralized consistently;
+- numeric/date serialization uses invariant formats and explicit timezone rules;
+- columns and metric definitions are versioned/documented;
+- exports preserve the same resource scope as their page;
+- large exports have bounded ranges/streaming and are audited;
+- secrets, PINs, MFA material, tokens, camera credentials, and private ballot data are excluded.
+
+### 19.6 Next work items and disposition
+
+1. Inventory every export endpoint and verify its permission, scope, formula-injection defense, range limit, and audit behavior.
+2. Trace report and wallet UI consumers to identify the exact required fields and metric labels.
+3. Build finance golden-case tests for multi-month carry-over, closed/open apartments, adjustments, cancelled/pending/confirmed deposits, zero/negative distributions, rounding remainders, and historical corrections.
+4. Design read models only after metric definitions and reconciliation rules are approved; prefer period-filtered SQL projections over loading the full building aggregate for report pages.
+5. Keep audit durability and Log Center architecture as a separate workstream from financial reporting and views.
+
+No application code, migration, schema, or database data was changed. No build, automated tests, runtime profiling, or execution plans were run for this section. **Gate A remains NOT AUTHORIZED.**
