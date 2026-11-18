@@ -18,14 +18,14 @@
 
 | Legacy source | Legacy field(s) | Proposed target | Mapping rule | Confidence / action |
 |---|---|---|---|---|
-| `Users` | `Uid` | `UserAccounts` legacy reference + `IdentityMigrationMap` | Preserve exact UID in migration provenance; new AccountId is a UUID. | High for source-account continuity; do not reuse UID as new PK. |
+| `Users` | `Uid` | `UserAccounts` legacy reference + `LegacyIdentityMap` | Preserve exact UID in migration provenance; new AccountId is a UUID. | High for source-account continuity; do not reuse UID as new PK. |
 | `Users` | `Name` | `Persons.DisplayName` | Candidate person profile value. | Medium; reconcile against exact-UID Residents records. |
 | `Users` | `Email`, `Phone`, `Whatsapp`, `PhotoUrl` | `Persons.PrimaryEmail`, `PrimaryPhone`, `Whatsapp`, `PhotoUrl` | Normalize only for comparison; retain original value in source until reviewed. | Medium; conflict review required. |
 | `Users` | `IsActive`, `IsDisabled`, `DisabledReason` | `UserAccounts.AccountStatus` | Define an explicit status mapping and precedence; disabled must not become active. | Requires status mapping test. |
 | `Users` | `Role` | `UserRoleAssignments` | `superadmin` => System scope; `admin` => Building scope only where matching `BuildingAdmins` evidence exists. | `resident` and role conflicts require review; no inferred building scope. |
 | `Users` | `CreatedAt`, `UpdatedAt`, `LastLoginAt` | account/person audit timestamps | Preserve source timestamps and timezone interpretation. | Verify stored timezone convention. |
 | `Residents` | `Uid` | candidate link to `Users.Uid`; then account/person | Exact UID, unique on both sources, no conflicting identity evidence. | Candidate only; profile duplicates and multiple apartment relationships are possible. |
-| `Residents` | `Id` | `IdentityMigrationMap.SourceKey` | Keep as source row identity; do not treat it as PersonId. | High. |
+| `Residents` | `Id` | `LegacyIdentityMap.SourceKey` | Keep as source row identity; do not treat it as PersonId. | High. |
 | `Residents` | `Name`, `Phone`, `Whatsapp`, `Email`, `PhotoUrl` | `Persons` | Use as profile evidence after UID linkage; conflicting values are queued for review, not overwritten by last-write-wins. | Medium / manual conflict resolution. |
 | `Residents` | `IsActive`, `IsDisabled`, `DisabledReason` | account status and/or relationship status | Separate ability to log in from whether the person currently occupies/has access to an apartment. | Domain decision; do not collapse into one flag. |
 | `Residents` | `PinHash`, `PasswordHash` | `UserCredentials` | Only if hash algorithm, parameters, verification implementation, and credential policy are confirmed. | Security gate; never copy plaintext. |
@@ -33,7 +33,7 @@
 | `Residents` | resident row + `BuildingId`, `ApartmentId` | `ApartmentOccupancies` candidate | Relationship candidate; use explicit effective dates only if trustworthy source dates exist. | Requires business rule and date provenance. |
 | `Residents` | `IsPrimary` | `ApartmentOccupancies.IsPrimary` candidate | Preserve only after detecting multiple active primary rows and resolving them. | Blocked by profiling. |
 | `BuildingAdmins` | `BuildingId`, `AdminUid` | `UserRoleAssignments` | Create one Building-scoped admin assignment for a verified account. | High if both FKs resolve; preserve source row provenance. |
-| `UserPermissions` | `Uid`, `Permission` | **Unmapped — account-level permission override model required** | Current target `RolePermissions` is role-level, not user-specific. Do not silently convert direct grants into global role permissions. | Blocking design gap; see section 7. |
+| `UserPermissions` | `Uid`, `Permission` | `AccountPermissionOverrides` | Preserve each account-specific permission as `AccountPermissionOverrides`; retain explicit effect and scope. | Blocking design gap; see section 7. |
 
 ### Account uniqueness and UID collisions
 
@@ -141,3 +141,20 @@ No backfill or application cutover until all are true:
 - [ ] Disposable restore, rollback, and application regression tests pass.
 
 **Current status:** mapping rules documented; no entity code, EF migration, SQL execution, backfill, or application cutover has been performed by this artifact.
+
+
+## 10. Durable legacy identity provenance — Gate A schema decision
+
+The Gate A additive script now includes `dbo.LegacyIdentityMap` (not the earlier generic `IdentityMigrationMap` name).
+
+- One row is uniquely identified by `(SourceSystem, SourceTable, SourceKey)`; initial allow-listed sources are `Users` and `Residents`.
+- Each Residents source row may map to a Person; multiple Residents rows may intentionally map to the same Person because they can represent multiple apartment relationships.
+- Each Users source row may map to a Person and exactly one Account. A filtered unique index prevents multiple Users source rows from mapping to the same Account.
+- Residents source rows cannot directly map an Account in this provenance table. Account linkage is established through the reviewed Person/Account relationship, not duplicated across resident relationship rows.
+- Status values: 0 Pending, 1 Linked, 2 Separate, 3 Rejected, 4 ManualReview. Pending/rejected/manual-review rows may retain NULL targets; linked/separate rows require a Person. A linked Users row also requires an Account.
+- The table stores evidence references and safe review reasons, not raw contact values, PINs, hashes, or other secrets.
+- FKs are restrictive. The mapping is migration evidence and must survive ordinary Person/Account lifecycle operations.
+
+The database constraints do not prove that AccountId belongs to the same PersonId in this mapping row; the migration service must verify that pair transactionally against UserAccounts before accepting a linked Users row. This avoids relying on an unenforced polymorphic/source-specific relationship.
+
+This schema is additive design only. The revised Gate A script has not been executed, and no backfill has started.
