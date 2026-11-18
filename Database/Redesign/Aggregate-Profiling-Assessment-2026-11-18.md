@@ -161,3 +161,16 @@ The source-level findings are documented in `Wallet-and-Credential-Code-Review-2
 PIN source review found that application startup invokes `PinMigrationService.MigrateLegacySecretsAsync`. It hashes non-BCrypt-prefixed Users PIN and Residents PinHash values, clears non-empty Buildings.AdminPin values, and migrates/clears Apartments.Pin values. The resident loop treats every non-prefixed non-empty value as raw PIN; this can corrupt access if the stored value is malformed or uses another encoding. The routine also clears source PIN fields without a durable per-record migration audit/verification proof. Do not start the application against the restore for inspection before reviewing the new SQL-only format diagnostic. The previous counts (5 non-empty User PINs and 79 non-empty Resident PinHash values) do not prove their current formats.
 
 New read-only runner and SQL: `Database/Diagnostics/Run-Wallet-and-Credential-ReadOnly-Validation.ps1` and `Wallet-and-Credential-ReadOnly-Validation.sql`. Results are pending. No app startup, credential rewrite, DDL/DML, view creation, or migration was performed.
+
+
+
+## 14. Superseding wallet and credential diagnostic — 2026-11-18 15:15 +02:00
+
+The six-result-set diagnostic is committed under `Database/Diagnostics/Wallet-Credential-Validation-Results/20261118-151511/`. It supersedes the earlier statement that wallet metadata/dependency and credential-format results were pending.
+
+- Both requested wallet views are absent in the restored database; no wallet-named SQL view definition or SQL-module dependency rows were returned. This supports schema/model drift, not a demonstrated database-module runtime dependency. External reporting/client dependencies remain unverified.
+- All 5 Users PIN values (3 admin, 2 superadmin) and all 79 Residents.PinHash values classify as `BCRYPT_SHAPE_60_UNVERIFIED` (length 60). This is format/length evidence only, not cryptographic verification.
+- Apartments.Pin is empty for all 79 apartments; Buildings.AdminPin is empty for all 3 buildings; Residents.PasswordHash is empty for all 79 residents.
+- No secret values or personal identifiers were exported.
+
+**Updated decision:** the previous aggregate finding of five non-empty User PINs and 79 non-empty Resident PinHash values remains true, but their current format is now known to be BCrypt-shaped. Do not describe them as plaintext. Still do not run the startup migration for inspection: its prefix-only logic and source-clearing behavior require redesign. The next safe credential step is non-mutating cryptographic verification that emits aggregate outcomes only, followed by an explicit recovery/re-enrollment policy for any invalid hashes. Gate A remains blocked by the other unresolved items in Section 10. No DDL/DML or credential rewrite occurred.
