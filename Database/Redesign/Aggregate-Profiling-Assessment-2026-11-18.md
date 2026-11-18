@@ -182,3 +182,13 @@ The six-result-set diagnostic is committed under `Database/Diagnostics/Wallet-Cr
 See `Authentication-and-Credential-Flow-Review-2026-11-18.md` for the detailed review of startup PIN migration, BCrypt classification/verification, direct and unified login, account-context selection, session revalidation, MFA policy, and required tests.
 
 This adds implementation blockers beyond the aggregate database evidence: remove credential mutation from startup; separate BCrypt shape from parseability and actual secret verification; make direct and unified resident account-state checks consistent; decide generic failure messaging for missing credentials; revalidate account scope before issuing a cookie; and plan mandatory admin/SuperAdmin MFA enrollment/recovery. No source behavior was changed and no tests or application startup were run by this review. Gate A remains blocked.
+
+
+
+## 16. Financial and wallet source-code review — 2026-11-18
+
+See `Financial-and-Wallet-Code-Review-2026-11-18.md` for source-level findings. Historical balance calculations use current apartment `MonthlyFee` and `Closed` state, while distribution recalculation uses the current open-apartment set. Stored monthly shares are loaded as authoritative wallet inputs and can diverge from source ledgers. The equal-share algorithm assigns exact remainder to the final apartment but uses an apartment list with no explicit stable ordering.
+
+The +0.22 expense and +0.04 revenue variances therefore require per-apartment evidence; do not assume they are harmless rounding. Carry-over restatement must be designed around immutable posted balances and explicit corrections. Cancelled deposits remain excluded from collected wallet funds.
+
+Next action is a read-only per-apartment reconciliation diagnostic; no source code, tests, SQL, or financial rows were changed by this review. Gate A remains blocked.
