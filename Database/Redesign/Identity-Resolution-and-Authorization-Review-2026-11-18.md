@@ -1042,3 +1042,46 @@ Static source review of `WalletController`, `WalletService`, `ExpensesController
 7. Ledger reconciliation tests proving every correction can be traced from original posting through reversal/replacement and wallet recalculation.
 
 No application code, schema, data, or configuration was changed. No build/tests were run. **Gate A remains NOT AUTHORIZED.**
+
+
+## 26. Global/building settings, integration secrets, and impersonation authorization — 2026-11-18
+
+Static review of `SettingsController`, `SettingsService`, `GlobalSettings` models/views, `ImpersonationController`, `ImpersonationService`, and `AdminPermissions`. No settings were changed and no impersonation session was initiated.
+
+### 26.1 Integration secrets exposed through settings read model
+
+- `SettingsService.GetGlobalAsync` copies the stored WhatsApp API token and Cloudinary API key directly into the `GlobalSettings` view model. `Views/Settings/Global.cshtml` renders both values into ordinary HTML input `value` attributes. Thus a user authorized to view global settings receives the stored secret in page HTML/browser DOM; this expands exposure through browser extensions, screenshots, client-side inspection, and accidental page capture.
+- `SaveGlobalAsync` assigns the posted values directly back to storage, with null converted to an empty string. A masked/blank UI cannot safely mean "keep existing value" without an explicit update contract; conversely, displaying the real token makes the secret unnecessarily retrievable. Replace with write-only secret inputs: GET returns only configured/not-configured metadata, POST preserves existing value when the secret field is omitted, and explicit rotate/clear operations are separate audited commands.
+- The inspected entity/model path stores WhatsApp token and Cloudinary API key as ordinary settings strings; no encryption/decryption wrapper is visible in this service. Treat them as plaintext-at-rest until a separate storage/key-management path proves otherwise. Encrypt integration credentials using a managed key, support key rotation, and keep secrets out of exports, audit metadata, logs, and backups where feasible.
+- The global settings GET creates and saves a default row when none exists. A read endpoint therefore has a write side effect and can race under concurrent first access. Use a controlled initialization/migration or an idempotent insert with unique-key handling.
+- Global security limits are accepted from the posted model; HTML min/max attributes are not server-side validation. Validate session timeout and PIN-attempt bounds in the service/domain layer and define whether these settings actually govern the corresponding authentication components.
+- Building settings save accepts `InvoiceDayOfMonth`, `VotingQuorumPercent`, `ExpenseDistribution`, and currency strings without visible domain-range/allowlist validation in `SettingsService`. Validate day-of-month, quorum range, supported distribution modes, and currency catalogue before persistence.
+- Resident own-settings are stored on the Apartment row, not an individual resident/account. Multiple residents in one apartment therefore share language, notification preferences, and preferred payment method. The target identity model should move personal preferences to Account/Person and reserve Apartment-level preferences for truly shared unit settings.
+- `UpdateResidentProfileAsync` updates every resident row in the apartment with the same name/phone and PIN hash. This confirms the current profile and credential actions are apartment-wide, not individual-person operations. Preserve legacy mapping but do not carry shared PIN/profile mutation semantics into the new Person/Account design.
+- `UpdateAdminProfileAsync` reads a user through `UsersService` and submits a PIN update through `SetAsync`; ensure the credential write path hashes before persistence and never stores the posted PIN in a generic profile dictionary or audit/event payload. The service source indicates it passes the raw new PIN to `UsersService.SetAsync`; confirm the downstream implementation always hashes it and add a persistence canary test.
+
+### 26.2 Impersonation permission and recovery-stack integrity
+
+- The permission catalog defines `SecretAccess = "secret.access"` and maps it to impersonation actions, but the inspected `EnterResidentWallet`, `EnterResidentHome`, and `EnterBuildingAdmin` actions enforce roles and antiforgery without an explicit `HasPermission(SecretAccess)`/equivalent check. The role check alone is not the declared least-privilege permission contract. Add a dedicated authorization policy that validates actor role, permission, target scope, and recent MFA/step-up state.
+- `ImpersonationService.PushBackup` refuses to push when the stack reaches depth 5, but returns no success/failure result. The controller proceeds to issue the impersonated authentication cookie regardless. At maximum nesting depth, the actor can enter another identity without a matching recovery snapshot; Exit may then fail to restore the correct identity. Make push return an explicit result and fail closed before issuing any impersonated cookie.
+- The backup stack is stored in a two-hour protected cookie and copied into request Items. Data Protection protects confidentiality/integrity, and the cookie is HttpOnly/SameSite=Lax; however, its `Secure` flag is set from `Request.IsHttps`, meaning it is not Secure on HTTP deployments. Production must enforce HTTPS and set Secure unconditionally outside local development. Consider cookie size limits as the stack stores permissions and actor metadata.
+- The cookie stack is client-carried and has no server-side revocation/session record. A still-valid protected backup cookie can restore the actor snapshot until expiry even if the actor is disabled or permissions are revoked during the two-hour window. Bind impersonation to a server-side session/revocation version and revalidate the initiating account and target relationship on every transition.
+- `LogEnterAsync` records `userRole: "admin"` for resident impersonation regardless of whether the initiating actor is admin or SuperAdmin; `LogExitAsync` likewise hardcodes admin. The SuperAdmin-to-building-admin path has a separate logger, but the resident entry/exit audit role can be inaccurate. Record immutable actor account ID and actual actor role separately from the effective impersonated role, target, reason/ticket, and correlation ID.
+- Audit calls happen after the authentication cookie is issued. Since the audit logger is best-effort/separate-context, a failed audit write can leave a live privileged impersonation session without a durable audit trail. Require durable audit/outbox acceptance before the transition is considered successful; if that cannot be guaranteed, fail closed.
+- The backup snapshot includes permissions and MFA-verification flags. Restoring those claims from a two-hour-old snapshot can restore stale permissions/MFA state. Do not treat serialized claims as authoritative; re-resolve actor role, permissions, account status, and MFA policy at exit/restore time.
+- The code deliberately supports nested impersonation. Define whether nested impersonation is necessary; if retained, use explicit parent-child session IDs, bounded depth with fail-closed behavior, and actor/target chain audit rather than relying solely on a client-side stack.
+
+### 26.3 Required acceptance tests
+
+1. HTML/API secret-canary tests proving WhatsApp/Cloudinary secrets never appear in GET responses, DOM, logs, audit metadata, or exports.
+2. Settings secret-preservation tests: omitted field preserves current secret; explicit rotate/clear changes it; encrypted-at-rest and key-rotation tests.
+3. Server-side validation tests for session timeout, PIN attempt limits, invoice day, voting quorum, distribution mode, and currency.
+4. Two residents in one apartment must have independent personal preferences and credentials after migration; apartment-level shared settings remain separately modeled.
+5. Verify downstream `UsersService.SetAsync` hashes PIN before persistence; raw-PIN canary must never appear in database/log/audit.
+6. Impersonation tests proving every entry action requires SecretAccess plus current MFA/step-up and exact target scope.
+7. Stack-depth boundary test proving a failed push cannot issue an impersonated cookie; test malformed/expired/tampered cookie recovery.
+8. Disable/revoke actor and change permissions during impersonation; all subsequent operations and Exit/restore must revalidate or safely terminate.
+9. Audit failure injection: no impersonation transition may succeed without durable actor/role/target/reason/time/correlation audit.
+10. HTTPS deployment tests require Secure cookies and ensure restored permissions/MFA are reloaded from authoritative state.
+
+No application code, schema, data, configuration, credentials, or sessions were changed. No build/tests were run. **Gate A remains NOT AUTHORIZED.**
