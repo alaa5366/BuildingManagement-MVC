@@ -728,3 +728,9 @@ The owner has now explicitly authorized project-wide implementation, including d
 - Preserve legacy data and compatibility until mapping, reconciliation, and regression evidence pass.
 - Production/live database execution, irreversible destructive cleanup, and production cutover remain separate operations requiring explicit target-specific confirmation.
 - No claim of execution or test success without actual run evidence.
+
+
+
+## Gate A DDL implementation review
+
+See [Gate A DDL Implementation Review — 2026-11-18](GateA-DDL-Implementation-Review-2026-11-18.md). The Gate A SQL was statically reviewed and amended to enforce same-account credential replacement chains. The four-migration baseline and strict disposable-database preflight were verified against repository migration source. The SQL remains a reviewed foundation, not an EF Core migration; EF entities, model configuration, generated migration/snapshot, and disposable restore rehearsal are the next implementation gates. No SQL execution or database mutation is claimed.
