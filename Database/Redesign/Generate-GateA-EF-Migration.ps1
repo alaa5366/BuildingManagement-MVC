@@ -36,6 +36,7 @@ if (($status -join "").Trim()) { throw "Working tree must be clean before genera
 $efVersion = & dotnet ef --version 2>&1
 if ($LASTEXITCODE -ne 0) { throw "EF CLI unavailable. Install: dotnet tool install --global dotnet-ef --version 8.0.10" }
 Write-Host "EF CLI: $efVersion"
+Invoke-DotNet -Arguments @("restore",$Project)
 Invoke-DotNet -Arguments @("ef","migrations","add",$MigrationName,"--project",$Project,"--startup-project",$Project,"--context","AppDbContext","--output-dir","Migrations")
 Invoke-DotNet -Arguments @("build",$Project,"--no-restore")
 Invoke-DotNet -Arguments @("test",$TestProject,"--no-restore")
