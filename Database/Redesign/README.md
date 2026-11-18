@@ -280,3 +280,16 @@ Reviewed the five result sets (215 rows) under `Database/Diagnostics/Financial-R
 - The missing/orphan result set returned no rows for the scoped months.
 
 No financial data was changed. Do not silently recalculate historical shares. Gate A remains blocked pending explicit variance/restatement policy, negative-balance policy, historical fee/eligibility snapshots, month closing rules, credential strategy, identity-link decisions, retention policy, and disposable restore rehearsal/rollback.
+
+
+## Identity resolution and authorization review — 2026-11-18
+
+Added `Identity-Resolution-and-Authorization-Review-2026-11-18.md`.
+
+- Existing profile evidence: 79 Residents, 5 Users, zero exact UID matches between the two sets; duplicate normalized-phone groups exist (4 in Residents, 1 in Users), while duplicate normalized-email groups were not found.
+- Phone/email/name/apartment equality is not sufficient to merge people. Keep unresolved source rows separate; one Person may retain multiple apartment relationships, while one Person may have at most one interactive account.
+- The current mapping document refers to an `IdentityMigrationMap`, but Gate A SQL/object list does not include a durable source-to-target identity map. Add and review a `LegacyIdentityMap` design before freezing Gate A; no table has been added or executed yet.
+- `UserSqlStore.UpsertAsync` adds BuildingAdmins links but does not remove omitted links from an update payload. Review explicit revocation paths and historical evidence before treating every stored link as currently active.
+- Preserve legacy `UserPermissions` as scoped account overrides; do not convert them to role-wide permissions.
+
+Identity backfill remains blocked pending manual candidate dispositions, provenance-map design, authorization revocation review, and approved merge controls. No database or application changes were made.
