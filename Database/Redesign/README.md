@@ -440,3 +440,12 @@ Section 18 of the main review records the repository-wide SQL view/EF mapping in
 The future log center is explicitly separate from the financial ledger and the append-only business/security audit trail. It should correlate structured application logs, traces, performance telemetry, background jobs, and system health without logging credentials, PINs, MFA secrets, tokens, or ballot choices.
 
 No view SQL or application code was changed. No database inventory query, build, or tests were executed in this documentation pass. **Gate A remains NOT AUTHORIZED.**
+
+
+### Live SQL view inventory completed — 2026-11-18
+
+Reviewed `Database/Diagnostics/View-Inventory-Results/20261118-163035/` from the disposable `BuildingManagement_RestoreTest` LocalDB restore. The live `sys.views` inventory returned **zero views**; definitions, SQL dependency edges, view consumers, indexed-view indexes, synonyms, and matching Query Store view-usage results were empty. Query Store is READ_WRITE with AUTO capture. The table metadata export includes 3,150 AuditLog rows, 237 Apartments, and 237 Residents.
+
+This confirms a deployment/source mismatch: the repository SQL artifact declares `vw_ApartmentWalletMovements` and EF maps a keyless projection, but neither wallet view exists in the restored database. The source definition must not be treated as proof of deployment. Query Store's empty matching result is not proof that there are no dynamic-SQL, SQL Agent, SSRS, or external application consumers; these are outside the runner's scope and need separate checks.
+
+Next: reconcile the SQL artifact, EF mapping, migration/deployment process, and all report/export consumers before approving any view creation/removal. No schema/data changes, build, or tests were performed. **Gate A remains NOT AUTHORIZED.**
