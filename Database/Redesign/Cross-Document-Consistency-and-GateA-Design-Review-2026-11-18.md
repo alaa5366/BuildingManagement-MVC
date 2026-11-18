@@ -83,13 +83,13 @@ Gate A does **not** create the future poll/ballot model, financial ledger, outbo
 
 | ID | Finding | Required action | Status |
 |---|---|---|---|
-| CONS-01 | `ApartmentAccessGrants.GrantType` is a numeric code but the allowed values are not yet defined in a shared catalog or CHECK constraint. | Define stable grant types, semantics, expiry/revocation transitions, and service authorization behavior. | Open |
-| CONS-02 | `ApartmentAccessGrants.PermissionSetKey` is versioned by description but has no approved code-owned catalog/versioning policy. | Define the permission profile registry, whether profiles are immutable/versioned, and how changed profiles affect existing grants. | Open |
+| CONS-01 | `ApartmentAccessGrants.GrantType` is a controlled byte-backed enum with a SQL CHECK constraint. Owner-approved values: Family=1, Tenant=2, Caretaker=3, Emergency=4, Temporary=5. | Keep enum values stable; define expiration/revocation and authorization behavior in the grant service. | Catalog approved; service policy open |
+| CONS-02 | `ApartmentAccessGrants.PermissionSetKey` now uses code-owned immutable v1 keys paired to each GrantType; the DB rejects unknown or mismatched keys. Profiles have no implicit permissions. | Keep existing profile versions immutable; define explicit least-privilege permissions and an evaluator before any profile can authorize operations. | Registry approved; authorization policy fail-closed/open |
 | CONS-03 | Granting actor columns are nullable in some administrative grant tables. | Decide whether system-generated grants use a dedicated system actor; do not leave unexplained NULL actor attribution for human operations. | Open |
 | CONS-04 | `UserRoleAssignments` and `AccountPermissionOverrides` permit a NULL grant actor. | Require actor for human-issued grants; define explicit service/system actor for automated provisioning. | Open |
 | CONS-05 | Role and permission catalog ownership is split between code-owned definitions and SQL rows. | Define seed/version deployment, deactivation, and compatibility behavior when code and DB catalog versions differ. | Open |
 | CONS-06 | Personal scope has NULL scope IDs and relies on resolving Account -> Person in application logic. | Define a single authorization evaluator contract and tests proving a personal grant can never authorize another Person. | Open |
-| CONS-07 | Ownership-share aggregate and interval-overlap constraints cannot be expressed by the current row-level checks. | Implement transactional serializable/domain validation and concurrent-write tests; retain explicit incomplete ownership periods. | Open |
+| CONS-07 | Ownership-share aggregate and interval-overlap constraints cannot be expressed by the current row-level checks. | Owner-approved default allows totals below 100% without inference or normalization, rejects totals above 100%, and validates intervals transactionally. Implement this policy and concurrent-write tests in the ownership service. | Policy approved; service validation open |
 | CONS-08 | The filtered unique primary-occupancy index only protects currently open intervals, not arbitrary historical overlap. | Implement transactional interval validation and correction workflow; test concurrent changes. | Open |
 | CONS-09 | `LegacyIdentityMap` independently references PersonId and AccountId; SQL cannot prove they belong together. | Migration application service must verify Account.PersonId = map.PersonId in the same transaction; add negative integration tests. | Open |
 | CONS-10 | Resolved mapping rows now require reviewer/timestamp, but the authority to review and the evidence quality rubric are not yet specified. | Define migration reviewer permission, dual approval for ambiguous cases, and permitted evidence classes. | Open |
@@ -173,7 +173,7 @@ These remain proposed SQL/document changes only. The Gate A rehearsal plan requi
 - The `CredentialType` catalog currently supports Password and PIN only. Passkeys, recovery factors, external identity providers, and future authenticators must be modeled explicitly rather than assigned ad hoc enum values.
 - Disabled MFA clears the active encrypted secret. Recovery codes must be consumed/revoked as part of disable/re-enrollment workflows; this lifecycle must be tested.
 - Role assignment and permission override grantor fields are nullable in the current proposed schema. Automated grants need a dedicated system actor; human-issued grants should not have missing actor attribution. This remains an owner/security-policy decision.
-- ApartmentAccessGrants `GrantType` values and `PermissionSetKey` registry/version semantics remain open (CONS-01/02).
+- ApartmentAccessGrants `GrantType` and versioned `PermissionSetKey` registry are owner-approved and constrained; profile authorization remains fail-closed until its permission policy/evaluator is implemented (CONS-02).
 - A complete set of pre-existing Gate A tables must be validated column-by-column and constraint-by-constraint before the idempotent script is allowed to skip creation. The current script guard only rejects a partial set.
 
 

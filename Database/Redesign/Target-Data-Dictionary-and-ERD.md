@@ -134,15 +134,18 @@ Unique index on CodeHash; filtered index for unused codes by AccountId.
 | ApartmentId | legacy key type | No | Composite FK to Apartments |
 | PersonId | uniqueidentifier | No | FK Persons |
 | OwnershipSharePercent | decimal(9,6) | No | CHECK 0 < share ≤ 100 |
+| CompletenessStatus | tinyint | No | 0 Unknown, 1 Incomplete, 2 CompleteVerified; default Unknown |
+| CompletenessVerifiedAtUtc | datetime2(3) | Yes | Required when the period is declared CompleteVerified |
+| CompletenessVerifiedByAccountId | uniqueidentifier | Yes | Reviewer account; required when CompleteVerified |
 | ValidFromUtc | datetime2(3) | No | Effective start |
 | ValidToUtc | datetime2(3) | Yes | Exclusive end; must be later than start |
 | RecordedAtUtc | datetime2(3) | No | Audit |
-| RecordedByAccountId | uniqueidentifier | Yes | Actor |
-| EvidenceReference | nvarchar(500) | Yes | Document/reference; not document secret |
+| RecordedByAccountId | uniqueidentifier | Yes | Required for human-created records; nullable for system/import records with source provenance |
+| EvidenceReference | nvarchar(500) | No | Required document/reference; not document secret |
 | Notes | nvarchar(1000) | Yes | Administrative note |
 | RowVersion | rowversion | No | Concurrency |
 
-Indexes: (BuildingId, ApartmentId, ValidFromUtc, ValidToUtc); (PersonId, ValidFromUtc, ValidToUtc). Prevent duplicate overlapping rows for the same person/apartment in service/domain validation; SQL Server cannot express general interval-overlap exclusion with a simple unique index. Enforce share-total rules transactionally for each effective date. Do not require exactly 100% for records explicitly marked incomplete; if that distinction is needed, add a reviewed ownership-completeness state at the apartment/effective-period level.
+Indexes: (BuildingId, ApartmentId, ValidFromUtc, ValidToUtc); (PersonId, ValidFromUtc, ValidToUtc). All owner rows for the same apartment/effective period must agree on CompletenessStatus. A CompleteVerified period requires reviewer evidence and an exactly 100% aggregate; Unknown/Incomplete periods may total less than 100%. Prevent invalid overlapping periods and aggregate shares above 100% transactionally. Never infer or normalize missing shares. Human-created records require an actor, while system/import records require durable source provenance.
 
 #### ApartmentOccupancies
 
@@ -172,7 +175,7 @@ Indexes: apartment + effective dates; person + effective dates. A filtered uniqu
 | ApartmentId | legacy key type | No | Composite FK to Apartments |
 | PersonId | uniqueidentifier | No | FK Persons |
 | GrantType | tinyint | No | Controlled grant type |
-| PermissionSetKey | nvarchar(80) | No | Versioned permission profile |
+| PermissionSetKey | nvarchar(80) | No | Immutable code-owned v1 key matched to GrantType; grants no implicit permissions |
 | ValidFromUtc | datetime2(3) | No | Start |
 | ValidToUtc | datetime2(3) | Yes | Expiry |
 | GrantedAtUtc | datetime2(3) | No | Record/command timestamp |

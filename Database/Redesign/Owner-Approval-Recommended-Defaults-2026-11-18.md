@@ -83,3 +83,7 @@ Safety boundaries that remain:
 - Never claim a migration, build, test, backup, or restore was run unless tool evidence confirms it.
 
 **Gate A status:** authorized for implementation and rehearsal on the disposable `BuildingManagement_RestoreTest` database, subject to the safety boundaries above. This authorization is not production deployment approval.
+
+## Ongoing decision instruction — 2026-11-18
+
+The project owner instructed: **“please use approve recommended defaults for all coming decisions.”** Apply the recommended default to future design and implementation choices without repeatedly asking for the same approval. Preserve the safety boundaries above, prefer least privilege and fail-closed behavior where access semantics are not yet defined, and do not treat this instruction as production deployment approval.

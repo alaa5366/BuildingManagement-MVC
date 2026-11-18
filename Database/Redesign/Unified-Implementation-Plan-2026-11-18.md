@@ -3,14 +3,14 @@
 **Repository:** `alaa5366/BuildingManagement-MVC`  
 **Branch:** `development/database-redesign-enterprise`  
 **Approval recorded:** 2026-11-18 — approval to consolidate the completed discovery into one coordinated implementation program.  
-**Execution status:** Plan approved; implementation has not started.  
-**Database boundary:** `BuildingManagement_RestoreTest` only for any future rehearsal. Production is excluded.
+**Execution status:** Additive identity/authorization schema rehearsal completed through Phase07; service foundation is implemented but not yet connected to legacy endpoints.
+**Database boundary:** Only `BuildingManagement_RestoreTest` has been changed. Production is excluded.
 
 ## 1. Purpose and delivery rule
 
 Deliver one coordinated redesign of identity, authorization, property relationships, credentials/MFA, voting, financial continuity, audit, retention, and operations. Do not create unrelated feature phases or independently migrate one domain while leaving another with contradictory identity or security rules.
 
-The work is organized as **one delivery program with ordered work packages**. Work packages can be implemented and reviewed together where dependencies permit, but their safety checkpoints are mandatory. The user approval recorded here is approval of this plan and its documentation; it is **not** approval to execute Gate A SQL, alter a database, backfill data, cut over authentication, or change production.
+The work is organized as **one delivery program with ordered work packages**. Work packages can be implemented and reviewed together where dependencies permit, but their safety checkpoints are mandatory. The later owner authorization recorded in `Owner-Approval-Recommended-Defaults-2026-11-18.md` supersedes this document's original plan-only approval for application changes and disposable-database rehearsal. Production deployment and data-bearing cutover remain separately gated.
 
 ## 2. Non-negotiable target rules
 
@@ -40,7 +40,7 @@ The work is organized as **one delivery program with ordered work packages**. Wo
 
 **Exit criteria**
 - No contradictory schema definitions or unclassified legacy dependencies.
-- ApartmentAccessGrants GrantType catalogue and revoke lifecycle finalized.
+- ApartmentAccessGrants GrantType and versioned PermissionSetKey catalogs finalized; grants remain fail-closed until a permission evaluator and explicit profile policy are implemented. Revoke lifecycle remains open.
 - Ownership/occupancy interval and share rules approved.
 - Financial carryover/rounding/reconciliation and wallet-view dependencies resolved.
 - No unresolved policy silently inferred from current code.
@@ -185,7 +185,7 @@ The following must be explicitly decided and recorded before schema freeze:
 | Identity | Who approves merges; acceptable evidence; treatment of shared contacts and disputed identities |
 | Ownership | Whether shares must total exactly 100%; handling partial/unknown shares and overlapping effective periods |
 | Occupancy | Trusted date evidence; overlap policy; primary occupant rules; move-in/out approval |
-| Apartment access | GrantType catalogue; delegation; emergency access; expiry and revocation reasons |
+| Apartment access | Permission evaluator/profile permissions; delegation; emergency access; expiry and revocation reasons |
 | Authorization | Role catalogue; scope compatibility; permission matrix; Allow/Deny precedence; resource-level rules |
 | Account | Disabled/suspended/locked/archived states; recovery; legal erasure authority |
 | Credentials | Resident/admin methods; legacy PIN reset/re-enrollment; password policy; compromise response |
@@ -231,7 +231,7 @@ Start WP0 by creating a **Decision Register** and completing a single focused de
 
 Do not start WP1 DDL yet. In particular:
 - The latest preflight reviewed was `Database/Diagnostics/GateA-Preflight-Results/20261118-155025/`; rerun the preflight before any future schema operation.
-- `ApartmentAccessGrants.GrantType` and its lifecycle remain unresolved.
+- `ApartmentAccessGrants.GrantType` and PermissionSetKey values are owner-approved; profiles have no implicit permissions until the evaluator and lifecycle policy are implemented.
 - Identity candidates require human disposition; no fuzzy auto-link.
 - Credential hashes are BCrypt-shaped but not cryptographically verified.
 - Financial carryover/rounding and wallet-view external dependencies remain unresolved.
@@ -243,3 +243,10 @@ Do not start WP1 DDL yet. In particular:
 - **2026-11-18:** User approved consolidating the completed review into one unified implementation plan and continuing the work.
 - This approval covers the plan and documentation only. It does not authorize DDL/DML, EF migration execution, backfill, authentication cutover, destructive operations, or production changes.
 - No application source, database schema, database rows, credentials, backups, or runtime state were changed while preparing this plan.
+
+## 9. Current implementation status — 2026-11-18
+
+- The owner later authorized implementation and rehearsal against `BuildingManagement_RestoreTest`, with the recommended defaults approved. This supersedes the older “Plan approved; implementation has not started” and “Gate A is not authorized” statements above.
+- Phase06 and Phase07 migrations have been applied to the named disposable restore database with verified COPY_ONLY backups and post-migration reconciliation. The new target tables remain empty; no identity backfill or authentication cutover occurred.
+- Code-owned permission evaluation and transactional ownership-period recording are implemented and registered. Legacy endpoints are not yet migrated to use the new evaluator; permission profile keys still grant no apartment-level operations.
+- Section 7's “Immediate next execution task” describes the original pre-authorization plan and is historical. Continue implementation with explicit compatibility, lifecycle, and regression gates. Production remains out of scope without separate approval.

@@ -49,7 +49,7 @@ The current schema does not make Person email or phone globally unique, and does
 
 ## 5. Remaining design risks before freezing Gate A
 
-- `ApartmentAccessGrants.GrantType` currently has no database enum/check constraint. Finalize the grant-type catalogue and add a check constraint before the schema is frozen; do not guess numeric values.
+- `ApartmentAccessGrants.GrantType` uses owner-approved byte-backed values Family=1, Tenant=2, Caretaker=3, Emergency=4, Temporary=5, each paired to a fixed versioned `PermissionSetKey` with database CHECK constraints. Profiles remain fail-closed until an authorization evaluator and explicit permission policy exist; see `Phase06-Identity-Authorization-Migration-Recheck-2026-11-18.md`.
 - `ApartmentAccessGrants` needs the same explicit revocation/audit lifecycle policy as role assignments and account permission overrides.
 - The one-open-primary filtered index does not prevent overlapping dated primary intervals. The service-side interval rule above is mandatory; a future SQL Server trigger/exclusion-like strategy may be considered only after concurrency tests.
 - `LegacyIdentityMap.SourceKey` must contain only the stable source row key, never phone, email, PIN, password/hash, or other personal/secret data.

@@ -169,6 +169,10 @@ internal static class IdentityModelConfiguration
             e.ToTable("ApartmentOwnerships", t =>
             {
                 t.HasCheckConstraint("CK_ApartmentOwnerships_Evidence", "LEN(LTRIM(RTRIM([EvidenceReference]))) > 0");
+                t.HasCheckConstraint("CK_ApartmentOwnerships_CompletenessStatus", "[CompletenessStatus] IN (0,1,2)");
+                t.HasCheckConstraint("CK_ApartmentOwnerships_CompletenessVerification", "(([CompletenessStatus] = 2 AND [CompletenessVerifiedAtUtc] IS NOT NULL AND [CompletenessVerifiedByAccountId] IS NOT NULL) OR ([CompletenessStatus] IN (0,1) AND [CompletenessVerifiedAtUtc] IS NULL AND [CompletenessVerifiedByAccountId] IS NULL))");
+                t.HasCheckConstraint("CK_ApartmentOwnerships_RecordSource", "[RecordSource] IN (0,1,2)");
+                t.HasCheckConstraint("CK_ApartmentOwnerships_RecordActor", "([RecordSource] <> 0 OR [RecordedByAccountId] IS NOT NULL)");
                 t.HasCheckConstraint("CK_ApartmentOwnerships_Share", "[OwnershipSharePercent] > 0 AND [OwnershipSharePercent] <= 100");
                 t.HasCheckConstraint("CK_ApartmentOwnerships_Validity", "[ValidToUtc] IS NULL OR [ValidToUtc] > [ValidFromUtc]");
             });
@@ -177,14 +181,18 @@ internal static class IdentityModelConfiguration
             e.Property(x => x.BuildingId).HasMaxLength(64);
             e.Property(x => x.ApartmentId).HasMaxLength(64);
             e.Property(x => x.OwnershipSharePercent).HasPrecision(9, 6);
+            e.Property(x => x.CompletenessStatus).HasConversion<byte>().HasDefaultValue(OwnershipCompletenessStatus.Unknown);
+            e.Property(x => x.RecordSource).HasConversion<byte>().HasDefaultValue(OwnershipRecordSource.Human);
             e.Property(x => x.EvidenceReference).HasMaxLength(500).IsRequired();
             e.Property(x => x.Notes).HasMaxLength(1000);
             Utc3(e.Property(x => x.ValidFromUtc));
             Utc3(e.Property(x => x.ValidToUtc));
             Utc3(e.Property(x => x.RecordedAtUtc)).HasDefaultValueSql("SYSUTCDATETIME()");
+            Utc3(e.Property(x => x.CompletenessVerifiedAtUtc));
             e.Property(x => x.RowVersion).IsRowVersion();
             e.HasOne<PersonEntity>().WithMany().HasForeignKey(x => x.PersonId).OnDelete(DeleteBehavior.NoAction);
             e.HasOne<UserAccountEntity>().WithMany().HasForeignKey(x => x.RecordedByAccountId).OnDelete(DeleteBehavior.NoAction);
+            e.HasOne<UserAccountEntity>().WithMany().HasForeignKey(x => x.CompletenessVerifiedByAccountId).OnDelete(DeleteBehavior.NoAction);
             e.HasOne<ApartmentEntity>().WithMany().HasForeignKey(x => new { x.BuildingId, x.ApartmentId })
                 .HasPrincipalKey(x => new { x.BuildingId, x.Id }).OnDelete(DeleteBehavior.NoAction);
             e.HasIndex(x => new { x.BuildingId, x.ApartmentId, x.ValidFromUtc, x.ValidToUtc }).HasDatabaseName("IX_ApartmentOwnerships_Apartment_Period");
@@ -222,6 +230,9 @@ internal static class IdentityModelConfiguration
         {
             e.ToTable("ApartmentAccessGrants", t =>
             {
+                t.HasCheckConstraint("CK_ApartmentAccessGrants_GrantType", "[GrantType] IN (1,2,3,4,5)");
+                t.HasCheckConstraint("CK_ApartmentAccessGrants_PermissionSet", "(([GrantType] = 1 AND [PermissionSetKey] = N'apartment.access.family.v1') OR ([GrantType] = 2 AND [PermissionSetKey] = N'apartment.access.tenant.v1') OR ([GrantType] = 3 AND [PermissionSetKey] = N'apartment.access.caretaker.v1') OR ([GrantType] = 4 AND [PermissionSetKey] = N'apartment.access.emergency.v1') OR ([GrantType] = 5 AND [PermissionSetKey] = N'apartment.access.temporary.v1'))");
+                t.HasCheckConstraint("CK_ApartmentAccessGrants_BoundedUrgentAccess", "([GrantType] NOT IN (4,5) OR [ValidToUtc] IS NOT NULL)");
                 t.HasCheckConstraint("CK_ApartmentAccessGrants_Reason", "LEN(LTRIM(RTRIM([Reason]))) > 0");
                 t.HasCheckConstraint("CK_ApartmentAccessGrants_Validity", "[ValidToUtc] IS NULL OR [ValidToUtc] > [ValidFromUtc]");
                 t.HasCheckConstraint("CK_ApartmentAccessGrants_Revocation",
@@ -229,6 +240,7 @@ internal static class IdentityModelConfiguration
             });
             e.HasKey(x => x.GrantId);
             e.Property(x => x.GrantId).ValueGeneratedNever();
+            e.Property(x => x.GrantType).HasConversion<byte>();
             e.Property(x => x.BuildingId).HasMaxLength(64);
             e.Property(x => x.ApartmentId).HasMaxLength(64);
             e.Property(x => x.PermissionSetKey).HasMaxLength(80);

@@ -2,6 +2,68 @@ using System;
 
 namespace BuildingManagementMvc.Data.Entities;
 
+/// <summary>Stable purpose categories for explicit apartment access grants.</summary>
+public enum ApartmentAccessGrantType : byte
+{
+    Family = 1,
+    Tenant = 2,
+    Caretaker = 3,
+    Emergency = 4,
+    Temporary = 5
+}
+
+/// <summary>States whether an apartment ownership period has a complete, verified share total.</summary>
+public enum OwnershipCompletenessStatus : byte
+{
+    Unknown = 0,
+    Incomplete = 1,
+    CompleteVerified = 2
+}
+
+/// <summary>Identifies how an ownership assertion entered the system.</summary>
+public enum OwnershipRecordSource : byte
+{
+    Human = 0,
+    Import = 1,
+    System = 2
+}
+
+/// <summary>
+/// Code-owned, immutable permission profile keys. Profiles intentionally carry no
+/// permissions until an approved permission-scope policy is implemented.
+/// </summary>
+public static class ApartmentAccessPermissionProfileCatalog
+{
+    public const string Family = "apartment.access.family.v1";
+    public const string Tenant = "apartment.access.tenant.v1";
+    public const string Caretaker = "apartment.access.caretaker.v1";
+    public const string Emergency = "apartment.access.emergency.v1";
+    public const string Temporary = "apartment.access.temporary.v1";
+
+    /// <summary>Gets the immutable versioned profile key for a grant type.</summary>
+    /// <param name="grantType">The approved apartment access grant type.</param>
+    /// <returns>The code-owned profile key associated with the grant type.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">The grant type is not defined.</exception>
+    public static string For(ApartmentAccessGrantType grantType) => grantType switch
+    {
+        ApartmentAccessGrantType.Family => Family,
+        ApartmentAccessGrantType.Tenant => Tenant,
+        ApartmentAccessGrantType.Caretaker => Caretaker,
+        ApartmentAccessGrantType.Emergency => Emergency,
+        ApartmentAccessGrantType.Temporary => Temporary,
+        _ => throw new ArgumentOutOfRangeException(nameof(grantType), grantType, "Unknown apartment access grant type.")
+    };
+
+    /// <summary>Checks whether a profile key is known and paired with the supplied grant type.</summary>
+    /// <param name="grantType">The apartment access grant type.</param>
+    /// <param name="permissionSetKey">The proposed versioned profile key.</param>
+    /// <returns><see langword="true"/> when the type and key match; otherwise <see langword="false"/>.</returns>
+    public static bool IsValidFor(ApartmentAccessGrantType grantType, string? permissionSetKey) =>
+        permissionSetKey is not null &&
+        Enum.IsDefined(grantType) &&
+        string.Equals(For(grantType), permissionSetKey, StringComparison.Ordinal);
+}
+
 /// <summary>Canonical human identity, independent from login credentials and apartment relationships.</summary>
 public sealed class PersonEntity
 {
@@ -118,11 +180,15 @@ public sealed class ApartmentOwnershipEntity
     public string ApartmentId { get; set; } = "";
     public Guid PersonId { get; set; }
     public decimal OwnershipSharePercent { get; set; }
+    public OwnershipCompletenessStatus CompletenessStatus { get; set; }
+    public OwnershipRecordSource RecordSource { get; set; }
     public DateTime ValidFromUtc { get; set; }
     public DateTime? ValidToUtc { get; set; }
     public DateTime RecordedAtUtc { get; set; }
     public Guid? RecordedByAccountId { get; set; }
     public string EvidenceReference { get; set; } = "";
+    public DateTime? CompletenessVerifiedAtUtc { get; set; }
+    public Guid? CompletenessVerifiedByAccountId { get; set; }
     public string? Notes { get; set; }
     public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 }
@@ -151,7 +217,7 @@ public sealed class ApartmentAccessGrantEntity
     public string BuildingId { get; set; } = "";
     public string ApartmentId { get; set; } = "";
     public Guid PersonId { get; set; }
-    public byte GrantType { get; set; }
+    public ApartmentAccessGrantType GrantType { get; set; }
     public string PermissionSetKey { get; set; } = "";
     public DateTime ValidFromUtc { get; set; }
     public DateTime? ValidToUtc { get; set; }

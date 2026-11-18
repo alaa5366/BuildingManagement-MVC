@@ -32,7 +32,7 @@ This confirms document-to-script column-name alignment only. It does not validat
 | RoleDefinitions | RoleKey, DisplayName, IsSystemRole, IsActive | 4 | Names aligned |
 | RolePermissions | RoleKey, PermissionKey, Effect | 3 | Names aligned |
 | UserRoleAssignments | RoleAssignmentId, AccountId, RoleKey, ScopeType, ScopeBuildingId, ScopeApartmentId, ValidFromUtc, ValidToUtc, GrantedAtUtc, GrantedByAccountId, GrantReason, RevokedAtUtc, RevokedByAccountId, RevocationReason, RowVersion | 15 | Names aligned |
-| ApartmentOwnerships | OwnershipId, BuildingId, ApartmentId, PersonId, OwnershipSharePercent, ValidFromUtc, ValidToUtc, RecordedAtUtc, RecordedByAccountId, EvidenceReference, Notes, RowVersion | 12 | Names aligned |
+| ApartmentOwnerships | OwnershipId, BuildingId, ApartmentId, PersonId, OwnershipSharePercent, CompletenessStatus, ValidFromUtc, ValidToUtc, RecordedAtUtc, RecordedByAccountId, EvidenceReference, CompletenessVerifiedAtUtc, CompletenessVerifiedByAccountId, Notes, RowVersion | 15 | Names aligned |
 | ApartmentOccupancies | OccupancyId, BuildingId, ApartmentId, PersonId, OccupancyType, IsPrimary, ValidFromUtc, ValidToUtc, RecordedAtUtc, RecordedByAccountId, Notes, RowVersion | 12 | Names aligned |
 | ApartmentAccessGrants | GrantId, BuildingId, ApartmentId, PersonId, GrantType, PermissionSetKey, ValidFromUtc, ValidToUtc, GrantedAtUtc, GrantedByAccountId, RevokedAtUtc, RevokedByAccountId, Reason, RowVersion | 14 | Names aligned |
 | AccountPermissionOverrides | OverrideId, AccountId, PermissionKey, Effect, ScopeType, ScopeBuildingId, ScopeApartmentId, ValidFromUtc, ValidToUtc, GrantedAtUtc, GrantedByAccountId, GrantReason, RevokedAtUtc, RevokedByAccountId, RevocationReason, RowVersion | 16 | Names aligned |
@@ -69,9 +69,9 @@ Do not convert `legacy key type` to `nvarchar(64)` in any additional table until
 | RoleDefinitions | PK | Seed/version lifecycle and code-vs-database catalog ownership open |
 | RolePermissions | composite PK, Role FK, Effect CHECK (Deny/Allow) | Permission catalog is code-owned but deployment/version mismatch policy open |
 | UserRoleAssignments | PK, account/role/building/apartment/actor FKs, legal-scope CHECK, validity CHECK, paired revocation actor/time CHECK, indexes | Interval overlap, duplicate active grants, grantor attribution, and system actor policy need transactional rules |
-| ApartmentOwnerships | PK, apartment composite FK, Person FK, actor FK, share CHECK, validity CHECK, period indexes | Aggregate share completeness and overlap need transactional rules; evidence requirements open |
+| ApartmentOwnerships | PK, apartment composite FK, Person and actor FKs, share/validity/completeness CHECKs, period indexes | Period-wide status consistency and aggregate share/overlap validation require transactional rules |
 | ApartmentOccupancies | PK, apartment composite FK, Person FK, actor FK, type CHECK, validity CHECK, filtered unique current-primary index | Historical interval overlap and primary transition rules need transactional tests |
-| ApartmentAccessGrants | PK, apartment composite FK, Person FK, grant/revoke actor FKs, validity CHECK, paired revocation actor/time CHECK, RowVersion, period indexes | GrantType catalog and PermissionSetKey version semantics open |
+| ApartmentAccessGrants | PK, apartment composite FK, Person FK, grant/revoke actor FKs, validity CHECK, paired revocation actor/time CHECK, GrantType and matching PermissionSetKey CHECKs, RowVersion, period indexes | Profile permissions remain fail-closed until evaluator policy is implemented |
 | AccountPermissionOverrides | PK, account/building/apartment/actor FKs, Effect CHECK, scope CHECK, validity CHECK, paired revocation actor/time CHECK, indexes | Permission scope must match actual resource; interval overlap and actor attribution need rules |
 | LegacyIdentityMap | PK, restrictive Person/Account/reviewer FKs, unique source key, source/status CHECKs, resolved-review CHECK, link-target CHECKs, filtered Account uniqueness, Person/status indexes | SQL cannot enforce Account.PersonId = LegacyIdentityMap.PersonId; migration service must verify in one transaction |
 
@@ -105,7 +105,7 @@ A complete pre-existing set of all 13 tables is still not schema-validated by th
 
 ## 7. Remaining design blockers
 
-- Define `ApartmentAccessGrants.GrantType` values and a versioned `PermissionSetKey` registry.
+- Implement and test a permission evaluator before any versioned `ApartmentAccessGrants.PermissionSetKey` can authorize an operation. Profiles currently grant no implicit permissions; defaults are recorded in the Phase06 recheck.
 - Decide whether human grantor is mandatory and define the dedicated system actor for scheduled/system-issued grants.
 - Decide ownership completeness, voting eligibility/delegation, financial rounding, maintenance visibility, preference ownership, audit retention, and ballot assurance.
 - Finalize each permission's resource scope and split composite legacy capabilities.

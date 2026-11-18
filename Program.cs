@@ -133,6 +133,11 @@ try
         o.UseSqlServer(sqlConn, sqlOptions =>
             sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
 
+    builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+    builder.Services.AddSingleton<IAuthorizationPermissionCatalog, DefaultAuthorizationPermissionCatalog>();
+    builder.Services.AddScoped<AuthorizationEvaluator>();
+    builder.Services.AddScoped<ApartmentOwnershipService>();
+
     // ✅ Health Checks (فحص صحة الداتابيز)
     builder.Services.AddHealthChecks()
         .AddDbContextCheck<AppDbContext>("Database", tags: new[] { "ready" });

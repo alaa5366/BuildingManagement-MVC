@@ -1,0 +1,25 @@
+Changed database context to 'BuildingManagement_RestoreTest'.
+TableName,TableRowCount
+---------,-------------
+AccountPermissionOverrides,0
+ApartmentAccessGrants,0
+ApartmentOccupancies,0
+ApartmentOwnerships,0
+LegacyIdentityMap,0
+Persons,0
+RoleDefinitions,0
+RolePermissions,0
+UserAccounts,0
+UserCredentials,0
+UserRecoveryCodes,0
+UserRoleAssignments,0
+UserTwoFactorSettings,0
+
+(13 rows affected)
+TableName,ColumnName,SqlType,is_nullable
+---------,----------,-------,-----------
+ApartmentOwnerships,CompletenessStatus,tinyint,0
+ApartmentOwnerships,CompletenessVerifiedAtUtc,datetime2,1
+ApartmentOwnerships,CompletenessVerifiedByAccountId,uniqueidentifier,1
+
+(3 rows affected)
