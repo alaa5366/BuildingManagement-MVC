@@ -181,3 +181,17 @@ The prior statement that aggregate profiling outputs were still missing is super
 See `Wallet-and-Credential-Code-Review-2026-11-18.md`. The repository FullSchema contains `vw_ApartmentWalletMovements`, and EF maps it, but no checked-in EF migration creates it and no runtime use was found in `WalletService`. Its definition is not a complete balance calculation. No repository definition for `vw_ApartmentWalletBalance` was found. Treat the live absence as schema/model drift pending external dependency confirmation, not as a proven broken runtime path.
 
 The application invokes `PinMigrationService.MigrateLegacySecretsAsync` at startup. It rewrites non-BCrypt-prefixed PIN fields and clears legacy Building/Apartments PIN columns. Residents with any non-prefixed non-empty PinHash are blindly re-hashed as raw PINs. This behavior needs redesign before credential cutover; do not launch the app against the restored database for diagnostics. The new read-only credential-format diagnostic is available; its results are pending. No DDL/DML or credential migration has been executed as part of this review.
+
+
+
+## Wallet and credential diagnostic update — 2026-11-18 15:15 +02:00
+
+Reviewed `Database/Diagnostics/Wallet-Credential-Validation-Results/20261118-151511/` (6 result sets / 15 rows) from the disposable LocalDB restore.
+
+- `vw_ApartmentWalletMovements` and `vw_ApartmentWalletBalance` are both absent; no wallet-named view definitions or SQL-module dependency references were returned.
+- Users PIN: 3 admin + 2 superadmin records, all BCrypt-shaped at 60 characters.
+- Residents.PinHash: 79/79 BCrypt-shaped at 60 characters.
+- Residents.PasswordHash, Apartments.Pin, and Buildings.AdminPin are empty in all inspected rows (79, 79, and 3 respectively).
+- Classification is `BCRYPT_SHAPE_60_UNVERIFIED`, not successful cryptographic verification. No secrets or row-level personal data were exported.
+
+This resolves the diagnostic-pending status for wallet metadata and credential format. It does not establish external view consumers or prove the hashes verify. No DDL/DML, application startup, or credential mutation was performed. Gate A remains blocked by the outstanding redesign and reconciliation decisions.
