@@ -66,7 +66,7 @@ try {
             $resultIndex++
             $rows = New-Object 'System.Collections.Generic.List[object]'
             $fieldCount = $reader.FieldCount
-            $fieldNames = for ($i = 0; $i -lt $fieldCount; $i++) { $reader.GetName($i) }
+            $fieldNames = @(for ($i = 0; $i -lt $fieldCount; $i++) { $reader.GetName($i) })
 
             while ($reader.Read()) {
                 $values = New-Object 'object[]' $fieldCount
