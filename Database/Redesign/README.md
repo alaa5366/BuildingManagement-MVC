@@ -449,3 +449,8 @@ Reviewed `Database/Diagnostics/View-Inventory-Results/20261118-163035/` from the
 This confirms a deployment/source mismatch: the repository SQL artifact declares `vw_ApartmentWalletMovements` and EF maps a keyless projection, but neither wallet view exists in the restored database. The source definition must not be treated as proof of deployment. Query Store's empty matching result is not proof that there are no dynamic-SQL, SQL Agent, SSRS, or external application consumers; these are outside the runner's scope and need separate checks.
 
 Next: reconcile the SQL artifact, EF mapping, migration/deployment process, and all report/export consumers before approving any view creation/removal. No schema/data changes, build, or tests were performed. **Gate A remains NOT AUTHORIZED.**
+
+
+### EF migration-path mismatch confirmed
+
+A source cross-check found the keyless `ApartmentWalletMovementsView` mapping in `AppDbContext` and model snapshot/designer metadata, but none of the four actual EF migration operation files creates the SQL view. The only checked-in SQL definition located is in `BuildingManagement-FullSchema.sql`. Thus EF metadata does not deploy the object, matching the live restore inventory where no views exist. Reconcile the standalone FullSchema deployment path and EF migrations; do not create or remove the view until runtime/report consumers are verified. No source or migration was changed.
