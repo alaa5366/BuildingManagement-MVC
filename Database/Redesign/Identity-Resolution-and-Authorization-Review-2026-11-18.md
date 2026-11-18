@@ -470,3 +470,45 @@ Reviewed `Data/AppDbContext.cs`, `Data/BuildingSqlStore.cs`, `Data/BuildingSqlMa
 - Failure injection at every lifecycle/audit/outbox stage proves atomicity or durable resumability.
 
 This section is source-review evidence only. No application source, schema, database rows, backup files, or runtime state were changed. No build or tests were executed. Gate A remains **NOT AUTHORIZED**.
+
+
+## 16. Runtime configuration, deployment, cryptographic key, and operational-readiness review — 2026-11-18
+
+Reviewed `Program.cs`, `Services/ConfigSecrets.cs`, `Services/PinMigrationService.cs`, `Services/BackupScheduler.cs`, and `Services/SessionRevalidator.cs`.
+
+### Confirmed configuration and deployment behavior
+
+1. **Startup performs data mutation.** `Program.cs` unconditionally invokes `PinMigrationService.MigrateLegacySecretsAsync()` during application startup. That method hashes legacy User and Resident PIN values, clears Building.AdminPin, creates a primary Resident from an Apartment plaintext PIN when no Residents exist for that apartment, then clears Apartment.Pin. The operation is not exposed as a reviewed migration job with a dry-run/approval checkpoint. The startup catch logs failure and allows the application to continue. Some work may already have been saved before a later stage fails. This is a deployment-time write path and must be removed from ordinary startup before the redesigned identity system can be rehearsed safely.
+
+2. **Configuration secrets are required, but key lifecycle is not yet an operational design.** `ConfigSecrets.Require` rejects missing values and placeholder values. The application requires Cloudinary, Excel, QR, encryption, and SuperAdmin allow-list configuration. This is a useful fail-fast baseline. However, the inspected startup wiring does not by itself define secret rotation, key versioning, dual-key decrypt during rotation, emergency key revocation, per-environment isolation, or an audited recovery procedure.
+
+3. **Data Protection keys are persisted to a local filesystem path by default.** The default production path is under the current process user's LocalApplicationData; a configurable `DataProtection:KeysPath` can override it. This may work for one persistent host, but multiple instances need a deliberately shared, access-controlled, durable key ring and identical application name. Instance-local keys can make authentication cookies/session-protected payloads unreadable after load balancing or redeployment. The encryption key protecting the XML key ring also needs a managed rotation/recovery policy.
+
+4. **Distributed cache registration is in-memory.** `AddDistributedMemoryCache` is configured. Despite the interface name, this is process-local and is not a shared distributed store. Session state and pending workflows relying on it cannot be assumed to survive instance changes or restarts. This aligns with the earlier findings for MFA pending challenges, restore sessions, and cross-instance security controls.
+
+5. **Rate limiting is process-local and IP-keyed.** The configured `lookup` and `login` policies use in-process fixed-window limiters keyed by RemoteIpAddress. They do not coordinate across application instances. Correct client-IP attribution depends on trusted forwarded-header configuration at the hosting boundary; never accept arbitrary forwarded headers from untrusted clients. Login policy is only one layer and must be combined with account/device-aware, shared atomic throttling and credential-stuffing detection.
+
+6. **The background backup scheduler is hosted by every application instance.** `BackupScheduler` is registered as a hosted service and wakes every 30 minutes. No distributed leader/lease is present in the worker itself. The previously documented scheduler service lacks a cross-instance atomic claim, so horizontally scaled deployments can trigger duplicate scheduled runs. Use a persisted lease/occurrence key and idempotent operation state.
+
+7. **Authentication/session caches are not uniformly fail-closed.** Admin validation has a two-minute in-memory cache and a last-known-good path for verified-2FA sessions. Resident validation also caches for two minutes and may use a last-known-good result for up to 15 minutes if SQL lookup fails. Impersonation validation deliberately has no last-known-good fallback and uses a shorter cache. The target must apply one explicit policy matrix by operation risk: emergency disable/revoke, financial write, secret access, backup/restore, and ordinary read must not inherit stale authorization accidentally.
+
+8. **Health endpoints distinguish liveness and readiness.** `/health/live` avoids the SQL readiness check; `/health/ready` and the compatibility `/health` endpoint include it. This is a positive deployment pattern. Before exposure, confirm that response details reveal no connection strings, schema names, secrets, or sensitive infrastructure information and that readiness is used by deployment orchestration.
+
+9. **Request protection has useful defaults but needs a deployment contract.** Global automatic antiforgery validation is registered for MVC controllers, and production uses exception handling, HSTS, and HTTPS redirection. The application also configures forwarded headers and a request-size limit. Review the exact trusted proxy/network settings, cookie Secure/HttpOnly/SameSite behavior, CSP exceptions, upload limits by endpoint, and API/anonymous route exceptions as part of the deployment acceptance suite.
+
+10. **Cancellation and operational observability need consistency.** Some persistence paths (notably the aggregate mapper) accept CancellationToken and use it in EF operations, while many service/controller workflows do not expose request cancellation. Long-running import, export, restore, and report operations should propagate cancellation while preserving transactional cleanup and durable operation state. Logs must carry correlation/operation IDs and redact credentials, PINs, tokens, recovery material, connection strings, and financial personal data.
+
+### Required target controls
+
+- Remove all data-changing migration work from application startup. Replace it with an explicit, separately invoked, versioned migration command that supports dry-run, approval, bounded batches, per-record outcome, idempotency, concurrency checks, secure logs, backup verification, and rollback/recovery. Do not clear any source secret until the destination credential is verified and the record outcome is durable.
+- Use a supported secret manager/key vault for production secrets, with versioned keys, controlled rotation, dual-read transition where needed, emergency revocation, access auditing, and documented recovery. Never print secret values or include them in diagnostic exports.
+- Configure a durable shared Data Protection key ring for all instances, protected by managed key encryption, with restricted filesystem/secret-store permissions and a tested restore procedure. Ensure application name and key-ring access are consistent across slots/instances.
+- Replace process-local distributed-memory state with an actual shared store where cross-instance continuity is required: authentication/session challenges, restore previews, rate-limit counters, revocation versions, scheduler leases, and one-time tokens.
+- Define trusted reverse-proxy headers and enforce HTTPS/cookie security at the edge and application layers. Verify the remote IP used by throttling cannot be spoofed.
+- Add a durable scheduler lease, occurrence idempotency key, crash recovery, and backup-file/SQL-history reconciliation.
+- Create an operational runbook for key rotation, secret compromise, account emergency revocation, database outage, restore, partial import, backup corruption, and failed migration.
+- Make readiness/liveness responses safe and deployment-aware; add checks for shared key-ring access, required secret configuration, database schema compatibility, and critical background-worker state without disclosing secret values.
+- Propagate cancellation and operation IDs through long-running workflows; a cancellation must not leave an ambiguous partially committed state.
+- Test multi-instance behavior, restart/redeploy behavior, key-ring recovery, proxy/IP handling, secret rotation, startup with migration disabled, and fail-closed authorization during database outages.
+
+This is a source/configuration review only. No application source, configuration values, secrets, database rows, or runtime state were changed. No application was started and no build/tests were run. Gate A remains **NOT AUTHORIZED**.
