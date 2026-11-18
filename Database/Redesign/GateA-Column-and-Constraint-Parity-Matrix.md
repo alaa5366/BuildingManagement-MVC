@@ -26,15 +26,15 @@ This confirms document-to-script column-name alignment only. It does not validat
 |---|---|---:|---|
 | Persons | PersonId, LegalName, DisplayName, PrimaryEmail, PrimaryPhone, Whatsapp, PhotoUrl, IsArchived, ArchivedAtUtc, CreatedAtUtc, UpdatedAtUtc, RowVersion | 12 | Names aligned |
 | UserAccounts | AccountId, PersonId, AccountStatus, NormalizedEmail, ExternalProvider, ExternalSubject, SecurityStamp, LastLoginAtUtc, CreatedAtUtc, RowVersion | 10 | Names aligned |
-| UserCredentials | CredentialId, AccountId, CredentialType, CredentialHash, HashAlgorithm, CreatedAtUtc, ExpiresAtUtc, RevokedAtUtc, ReplacedByCredentialId | 9 | Names aligned |
-| UserTwoFactorSettings | AccountId, IsEnabled, SecretCiphertext, KeyVersion, LastAcceptedTimeStep, EnrolledAtUtc, LastVerifiedAtUtc, UpdatedAtUtc | 8 | Names aligned |
+| UserCredentials | CredentialId, AccountId, CredentialType, CredentialHash, HashAlgorithm, CreatedAtUtc, ExpiresAtUtc, RevokedAtUtc, ReplacedByCredentialId, RowVersion | 10 | Names aligned |
+| UserTwoFactorSettings | AccountId, IsEnabled, SecretCiphertext, KeyVersion, LastAcceptedTimeStep, EnrolledAtUtc, LastVerifiedAtUtc, UpdatedAtUtc, RowVersion | 9 | Names aligned |
 | UserRecoveryCodes | RecoveryCodeId, AccountId, CodeHash, CreatedAtUtc, UsedAtUtc | 5 | Names aligned |
 | RoleDefinitions | RoleKey, DisplayName, IsSystemRole, IsActive | 4 | Names aligned |
 | RolePermissions | RoleKey, PermissionKey, Effect | 3 | Names aligned |
 | UserRoleAssignments | RoleAssignmentId, AccountId, RoleKey, ScopeType, ScopeBuildingId, ScopeApartmentId, ValidFromUtc, ValidToUtc, GrantedAtUtc, GrantedByAccountId, GrantReason, RevokedAtUtc, RevokedByAccountId, RevocationReason, RowVersion | 15 | Names aligned |
 | ApartmentOwnerships | OwnershipId, BuildingId, ApartmentId, PersonId, OwnershipSharePercent, ValidFromUtc, ValidToUtc, RecordedAtUtc, RecordedByAccountId, EvidenceReference, Notes, RowVersion | 12 | Names aligned |
 | ApartmentOccupancies | OccupancyId, BuildingId, ApartmentId, PersonId, OccupancyType, IsPrimary, ValidFromUtc, ValidToUtc, RecordedAtUtc, RecordedByAccountId, Notes, RowVersion | 12 | Names aligned |
-| ApartmentAccessGrants | GrantId, BuildingId, ApartmentId, PersonId, GrantType, PermissionSetKey, ValidFromUtc, ValidToUtc, GrantedAtUtc, GrantedByAccountId, RevokedAtUtc, RevokedByAccountId, Reason | 13 | Names aligned |
+| ApartmentAccessGrants | GrantId, BuildingId, ApartmentId, PersonId, GrantType, PermissionSetKey, ValidFromUtc, ValidToUtc, GrantedAtUtc, GrantedByAccountId, RevokedAtUtc, RevokedByAccountId, Reason, RowVersion | 14 | Names aligned |
 | AccountPermissionOverrides | OverrideId, AccountId, PermissionKey, Effect, ScopeType, ScopeBuildingId, ScopeApartmentId, ValidFromUtc, ValidToUtc, GrantedAtUtc, GrantedByAccountId, GrantReason, RevokedAtUtc, RevokedByAccountId, RevocationReason, RowVersion | 16 | Names aligned |
 | LegacyIdentityMap | LegacyIdentityMapId, SourceSystem, SourceTable, SourceKey, PersonId, AccountId, MappingStatus, MatchMethod, EvidenceReference, ReviewReason, ReviewedAtUtc, ReviewedByAccountId, CreatedAtUtc, UpdatedAtUtc, RowVersion | 15 | Names aligned |
 
@@ -63,15 +63,15 @@ Do not convert `legacy key type` to `nvarchar(64)` in any additional table until
 |---|---|---|
 | Persons | PK, archive-state CHECK, non-unique email/phone lookup indexes | Identity duplicate resolution remains manual; archive retention policy open |
 | UserAccounts | PK, Person FK, unique PersonId, AccountStatus CHECK, unique provider/subject filtered index, email lookup index | Email login uniqueness policy and normalization policy remain open |
-| UserCredentials | PK, Account FK, replacement self-FK, CredentialType CHECK (Password/PIN), expiry CHECK, account/type lookup | At most one active credential per type must be transactionally enforced or a filtered unique index approved |
-| UserTwoFactorSettings | Account PK/FK, enabled-secret/enrollment CHECK | Disable workflow must revoke recovery codes and invalidate sessions; test atomicity |
+| UserCredentials | PK, Account FK, replacement self-FK, CredentialType CHECK (Password/PIN), expiry CHECK, account/type lookup, RowVersion on revoke/replace | At most one active credential per type must be transactionally enforced or a filtered unique index approved |
+| UserTwoFactorSettings | Account PK/FK, enabled-secret/enrollment CHECK, RowVersion for enrollment/replay-state concurrency | Disable workflow must revoke recovery codes and invalidate sessions; test atomicity |
 | UserRecoveryCodes | PK, Account FK, unique CodeHash, account/unused lookup | Atomic single-use consumption and rotation policy must be tested |
 | RoleDefinitions | PK | Seed/version lifecycle and code-vs-database catalog ownership open |
 | RolePermissions | composite PK, Role FK, Effect CHECK (Deny/Allow) | Permission catalog is code-owned but deployment/version mismatch policy open |
 | UserRoleAssignments | PK, account/role/building/apartment/actor FKs, legal-scope CHECK, validity CHECK, paired revocation actor/time CHECK, indexes | Interval overlap, duplicate active grants, grantor attribution, and system actor policy need transactional rules |
 | ApartmentOwnerships | PK, apartment composite FK, Person FK, actor FK, share CHECK, validity CHECK, period indexes | Aggregate share completeness and overlap need transactional rules; evidence requirements open |
 | ApartmentOccupancies | PK, apartment composite FK, Person FK, actor FK, type CHECK, validity CHECK, filtered unique current-primary index | Historical interval overlap and primary transition rules need transactional tests |
-| ApartmentAccessGrants | PK, apartment composite FK, Person FK, grant/revoke actor FKs, validity CHECK, paired revocation actor/time CHECK, period indexes | GrantType catalog and PermissionSetKey version semantics open |
+| ApartmentAccessGrants | PK, apartment composite FK, Person FK, grant/revoke actor FKs, validity CHECK, paired revocation actor/time CHECK, RowVersion, period indexes | GrantType catalog and PermissionSetKey version semantics open |
 | AccountPermissionOverrides | PK, account/building/apartment/actor FKs, Effect CHECK, scope CHECK, validity CHECK, paired revocation actor/time CHECK, indexes | Permission scope must match actual resource; interval overlap and actor attribution need rules |
 | LegacyIdentityMap | PK, restrictive Person/Account/reviewer FKs, unique source key, source/status CHECKs, resolved-review CHECK, link-target CHECKs, filtered Account uniqueness, Person/status indexes | SQL cannot enforce Account.PersonId = LegacyIdentityMap.PersonId; migration service must verify in one transaction |
 
