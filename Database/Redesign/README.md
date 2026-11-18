@@ -383,3 +383,18 @@ Gate 0 now requires explicit decisions for resident camera access, apartment dis
 
 
 Authorization test review also found that the current reflection tests verify attribute presence and only a small set of role declarations; they do not behavior-test the custom permission filters' non-admin path, the apartment disable permission, or foreign-resource access on exports/mutations. Required additions are recorded in section 13. No tests were run.
+
+
+## Service, import/export and background-job review — 2026-11-18
+
+Section 14 of the identity/authorization review now records service-boundary findings for DVR/secret access, resident PIN and lifecycle commands, wallet aggregate scope, backup/restore, Excel import/export, scheduled backup, and Presence.
+
+Highest-priority items:
+- A public `BackupService.RestoreAsync` overload bypasses the one-use user-bound preview-session path; repository search found tests but no production HTTP caller. Restrict it to an internal/test seam.
+- Backup creation can silently skip unknown collections and still set Success=true when individual collection reads failed; partial output must not be represented as a complete successful backup.
+- Excel ConfirmImport creates the building, saves apartments, then assigns PINs in separate operations; failure can leave partial imported state.
+- Scheduled backup uses a non-atomic ShouldRun-then-Run sequence with no distributed lease/idempotency key, so multiple instances can duplicate work.
+- DVR and resident services rely on controllers to enforce resource ownership; sensitive service APIs should accept verified scope/actor context or be narrowed to internal-only operations.
+- Backup deletion and scheduled execution span filesystem, SQL, schedule state, rotation and audit without one atomic boundary; require durable operation state and reconciliation.
+
+No source code or database was changed. No build or tests were run. Gate A remains NOT AUTHORIZED.
