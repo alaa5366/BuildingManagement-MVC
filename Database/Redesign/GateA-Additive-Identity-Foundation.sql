@@ -398,8 +398,6 @@ BEGIN
         ON dbo.LegacyIdentityMap(AccountId) WHERE AccountId IS NOT NULL;
     CREATE INDEX IX_LegacyIdentityMap_Person
         ON dbo.LegacyIdentityMap(PersonId) WHERE PersonId IS NOT NULL;
-    CREATE INDEX IX_LegacyIdentityMap_Account
-        ON dbo.LegacyIdentityMap(AccountId) WHERE AccountId IS NOT NULL;
     CREATE INDEX IX_LegacyIdentityMap_Status_Source
         ON dbo.LegacyIdentityMap(MappingStatus, SourceTable, SourceSystem);
 END;
