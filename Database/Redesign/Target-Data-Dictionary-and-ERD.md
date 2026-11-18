@@ -173,10 +173,11 @@ Indexes: apartment + effective dates; person + effective dates. A filtered uniqu
 | PermissionSetKey | nvarchar(80) | No | Versioned permission profile |
 | ValidFromUtc | datetime2(3) | No | Start |
 | ValidToUtc | datetime2(3) | Yes | Expiry |
+| GrantedAtUtc | datetime2(3) | No | Record/command timestamp |
 | GrantedByAccountId | uniqueidentifier | No | Granting actor |
 | RevokedAtUtc | datetime2(3) | Yes | Revocation |
 | RevokedByAccountId | uniqueidentifier | Yes | Revoking actor |
-| Reason | nvarchar(500) | Yes | Reason |
+| Reason | nvarchar(500) | Yes | Grant/revocation reason |
 
 No grant itself creates ownership, occupancy, or a login account.
 
@@ -213,9 +214,12 @@ PK(RoleKey, PermissionKey). Permission catalog must be code-owned/versioned or s
 | ScopeApartmentId | legacy key type | Yes | Required only for Apartment |
 | ValidFromUtc | datetime2(3) | No | Start |
 | ValidToUtc | datetime2(3) | Yes | End |
+| GrantedAtUtc | datetime2(3) | No | Record/command timestamp |
 | GrantedByAccountId | uniqueidentifier | Yes | Actor |
+| GrantReason | nvarchar(500) | Yes | Grant rationale |
 | RevokedAtUtc | datetime2(3) | Yes | Revocation |
 | RevokedByAccountId | uniqueidentifier | Yes | Actor |
+| RevocationReason | nvarchar(500) | Yes | Revocation rationale |
 | RowVersion | rowversion | No | Concurrency |
 
 Scope validity rules:
@@ -491,8 +495,10 @@ This table preserves the semantics of legacy `UserPermissions(Uid, Permission)`,
 | ValidToUtc | datetime2(3) | Yes | Exclusive end |
 | GrantedAtUtc | datetime2(3) | No | Audit timestamp |
 | GrantedByAccountId | uniqueidentifier | Yes | Granting actor |
+| GrantReason | nvarchar(500) | Yes | Grant rationale |
 | RevokedAtUtc | datetime2(3) | Yes | Revocation timestamp |
 | RevokedByAccountId | uniqueidentifier | Yes | Revoking actor |
+| RevocationReason | nvarchar(500) | Yes | Revocation rationale |
 | RowVersion | rowversion | No | Concurrency |
 
 Scope combinations must match `UserRoleAssignments`. Restrictive FKs enforce account, building, and apartment scope. The service must evaluate permission overrides with explicit scope and validity; deny takes precedence. Do not create role-wide permissions from account-specific legacy rows. Interval overlap and duplicate active grants are transactionally validated.
