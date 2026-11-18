@@ -181,7 +181,7 @@ These remain proposed SQL/document changes only. The Gate A rehearsal plan requi
 
 A static source-text comparison has now been recorded in `GateA-Column-and-Constraint-Parity-Matrix.md`:
 - 13 CREATE TABLE definitions;
-- 134 column declarations;
+- 137 column declarations (after adding concurrency tokens to mutable credential, MFA, and apartment-access rows);
 - all 13 corresponding data-dictionary table definitions found;
 - no column-name omissions or extras across the script/dictionary pair.
 
