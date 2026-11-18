@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 namespace BuildingManagementMvc.Attributes;
 
 /// <summary>
-/// Authorization filter that requires the signed-in admin to hold a specific permission. Super admins always pass; residents never do.
+/// Authorization filter requiring an authenticated administrator account and an explicit permission claim.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false)]
 public class AdminPermissionAttribute : Attribute, IAuthorizationFilter
@@ -28,13 +28,18 @@ public class AdminPermissionAttribute : Attribute, IAuthorizationFilter
     {
         var user = context.HttpContext.User;
 
-        // مش مسجّل دخول => [Authorize] هو اللي بيتصرف
-        if (user.Identity?.IsAuthenticated != true) return;
-        if (!user.IsInRole("admin")) return;
+        if (user.Identity?.IsAuthenticated != true)
+        {
+            context.Result = new Microsoft.AspNetCore.Mvc.ChallengeResult();
+            return;
+        }
 
-        var config = context.HttpContext.RequestServices.GetRequiredService<IConfiguration>();
-        // الفحص شغال دايمًا. مفتاح طوارئ فقط: Auth:EnforceAdminPermissions=false
-        if (config.GetValue<bool?>("Auth:EnforceAdminPermissions") == false) return;
+        // Roles identify the account class; they never grant permission by themselves.
+        if (!user.IsInRole("admin") && !user.IsInRole("superadmin"))
+        {
+            context.Result = new Microsoft.AspNetCore.Mvc.ForbidResult();
+            return;
+        }
 
         if (user.HasClaim("perm", _permission)) return;
 
