@@ -155,7 +155,8 @@ Current safe boundary:
 
 - `Database/Redesign/Legacy-Class-to-Target-Module-Refactoring-Map.md` — observed legacy Controllers/Services mapped to target modules with Replace/Split/Adapt/Retire dispositions, missing workflows, and migration order.
 
-- `Database/Redesign/GateA-Column-and-Constraint-Parity-Matrix.md` — static comparison of all 13 Gate A tables/134 columns against the data dictionary, plus constraint inventory and remaining blockers. No SQL execution; Gate A remains unauthorized.
+- `Database/Redesign/GateA-Column-and-Constraint-Parity-Matrix.md` — static comparison of all 13 Gate A tables/137 columns against the data dictionary, plus constraint inventory and remaining blockers. No SQL execution; Gate A remains unauthorized.
+- `Database/Redesign/Live-Schema-Parity-Assessment-2026-11-18.md` — assessment of the 15-result-set live restore metadata collection, Gate A absence, legacy key compatibility, FK delete actions, view/migration drift, and remaining blockers. Gate A remains NOT AUTHORIZED.
 
 - `Database/Redesign/GateA-Disposable-Restore-Rehearsal-Plan.md` — hard stops, evidence bundle, local script behavior, postflight acceptance, and rollback for a future disposable-restore rehearsal. It is preparation only; Gate A remains unauthorized.
 
