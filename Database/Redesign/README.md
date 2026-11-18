@@ -561,3 +561,51 @@ Static source review only; no application, database, backup, synchronization, fi
 
 
 Additional Section 28 verification: the RunNow controller currently reports success after the service returns, but the service swallows internal failures and can return early without creating a backup. DeleteBackup can also remove history rows and report success when no file exists. Backup ZIP downloads return decrypted plaintext without an explicit no-store response policy. Require typed run outcomes, strict artifact existence semantics, and no-store headers with durable audit coverage.
+
+
+### Consolidated remediation roadmap — review baseline 2026-11-18
+
+This roadmap orders the findings from Sections 1–29 by risk and dependency. It is a proposed sequence, not an authorization to change the live database.
+
+#### P0 — Stop unsafe startup and establish migration safety
+
+1. Remove or feature-gate startup PIN/legacy-secret mutation; remove startup DDL for LoginThrottle. No application instance should mutate a restore/production database as a side effect of startup.
+2. Freeze and document the authority-of-record for every legacy store and integration. Confirm the retired/external sync feature and reconcile the missing SQL wallet views between FullSchema and EF migrations.
+3. Create a reproducible, disposable restore baseline with verified backup, schema/migration inventory, row counts, checksums, and a rollback rehearsal.
+4. Do not execute Gate A or any backfill/cutover until source-to-target mapping, orphan/duplicate resolution, financial reconciliation, and explicit approval are complete.
+
+#### P1 — Close identity, authorization, and credential risks
+
+1. Approve the Person/UserAccount/credential model and account-linking rules; preserve one interactive account per Person and explicitly model multiple building/apartment relationships.
+2. Fix direct/unified authentication parity, synthetic QR identity validation, account lockout semantics, distributed MFA consumption, mandatory MFA policy, and cross-instance permission/session revocation.
+3. Enforce permission allowlists and service-layer validation; audit every sensitive resident/admin/account operation and replace hard deletes with controlled deactivation/retention where required.
+4. Remove plaintext secret exposure from settings, use encrypted secret storage and write-only secret updates, rotate exposed keys, and verify logs/export/download redaction and no-store behavior.
+5. Resolve resident PIN sharing, QR lifecycle failure handling, DVR/MediaMTX reconciliation, camera authorization, and secret-safe DTO boundaries.
+
+#### P1 — Protect financial integrity and privacy
+
+1. Introduce idempotent, concurrency-safe financial state transitions with immutable ledger/reversal records and explicit actor/reason metadata.
+2. Reconcile historical wallet, deposits, expenses, revenues, carryovers, adjustments, and monthly shares before any migration; resolve identified cent variances and month-specific inconsistencies.
+3. Define private-ballot storage and remove apartment/choice linkage from audit trails if secret voting is required.
+4. Decide apartment-vs-building visibility for maintenance, notifications, presence, and camera access; encode scope in services and database queries rather than relying on UI filtering.
+
+#### P2 — Reliability, performance, and operational controls
+
+1. Add distributed leases/outbox/retry/reconciliation for scheduled backups and MediaMTX side effects; make backup results truthful and verify restore integrity.
+2. Centralize or instance-label logs, bound log-query cost, correct rollover coverage/date validation, and add secret-canary tests.
+3. Use a real shared cache/session/Data Protection key ring and trusted-proxy configuration before multi-instance deployment.
+4. Remove unnecessary CSP unsafe-inline/HTTP sources after dependency inventory; protect health endpoints at the network boundary.
+5. Replace N+1 and aggregate-heavy report/log/auth paths with bounded projections, keyset/paged queries, and measured query plans.
+
+#### P2/P3 — Test, documentation, and rollout
+
+1. Build a layered suite: service invariants, controller authorization/object-scope tests, SQL Server integration tests, concurrency tests, privacy/export tests, and restore/deployment smoke tests.
+2. Require CI to run restore/build/test plus migration-diff and source-integrity checks; capture exact commit and environment for every result.
+3. Use expand → dual-read/dual-write only where safe → backfill → reconcile → cutover → contract. Every stage needs a rollback point and measurable acceptance criteria.
+4. Keep old financial and identity columns until reconciliation is signed off; no destructive drop in the same release as initial identity foundation.
+
+#### Gate status
+
+- Gate A: **NOT AUTHORIZED**.
+- Database DDL/DML, EF migration execution, backfill, cutover, production deployment, and destructive cleanup: **NOT APPROVED**.
+- Evidence reviewed to date includes static source review and the user-run restore-database diagnostic CSVs described in the earlier sections. The assistant has not run the application build, test suite, restore operation, or database migration in this review.
