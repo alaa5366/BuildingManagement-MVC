@@ -689,3 +689,6 @@ The EF reconciliation found that the 30 EF-mapped physical tables and 313 mapped
 - [Financial and Voting Domain Review — 2026-11-18](Financial-and-Voting-Domain-Review-2026-11-18.md)
 
 The domain review identifies incomplete historical carry-forward recalculation, non-deterministic equal-share rounding, mutable/deletable financial source records, and apartment-keyed voting with ballot choice exposed in audit details. It defines the target Finance and Voting boundaries; no application or database changes were made.
+- [Maintenance, Notifications, and Presence Review — 2026-11-18](Maintenance-Notifications-Presence-Review-2026-11-18.md)
+
+The supporting-domain review found missing maintenance-to-expense linkage, apartment-shared notification state, and apartment-level presence projection that collapses multiple accounts. It proposes separate work-order, notification/outbox, and session/presence boundaries.
