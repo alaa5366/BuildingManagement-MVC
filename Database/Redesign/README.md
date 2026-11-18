@@ -406,3 +406,8 @@ Test-source review for section 14: backup tests currently codify unknown-collect
 ### Deletion and retention review — 2026-11-18
 
 Section 15 of `Identity-Resolution-and-Authorization-Review-2026-11-18.md` now records the source findings for building/apartment/resident/admin/poll deletion, aggregate-sync deletion semantics, cascade dependencies, backup rotation, retention requirements, and required failure-injection tests. The current physical-delete/cascade paths are not acceptable as the target lifecycle for financially or legally meaningful history. This remains documentation-only; no code or database changes were made. Gate A remains **NOT AUTHORIZED**.
+
+
+### Runtime and deployment readiness review — 2026-11-18
+
+Section 16 of `Identity-Resolution-and-Authorization-Review-2026-11-18.md` records startup mutation, local Data Protection key-ring defaults, in-memory distributed cache/rate limiting, multi-instance scheduler behavior, fail-closed session policy, and deployment controls. Startup credential migration and instance-local state are material blockers to safe multi-instance rollout. The review changed documentation only; no source/configuration/database values were changed. Gate A remains **NOT AUTHORIZED**.
