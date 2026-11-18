@@ -140,3 +140,76 @@ finally {
     if ($connection.State -ne [System.Data.ConnectionState]::Closed) { $connection.Close() }
     $connection.Dispose()
 }
+
+# Automatically commit and push ONLY this run's result folder.
+# Existing staged changes are treated as a safety stop so they cannot be
+# accidentally included in the generated commit.
+try {
+    $repoRootOutput = & git -C $PSScriptRoot rev-parse --show-toplevel 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "Git repository was not found from script directory. Results remain saved locally. Details: $repoRootOutput"
+    }
+    $repoRoot = ([string]$repoRootOutput).Trim()
+    $repoRootFull = [System.IO.Path]::GetFullPath($repoRoot).TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+    $outputFull = [System.IO.Path]::GetFullPath($outputDir)
+
+    if (-not $outputFull.StartsWith($repoRootFull, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Safety stop: output folder is outside the Git repository. Results remain saved locally."
+    }
+
+    $branchOutput = & git -C $repoRoot branch --show-current 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to determine current Git branch. Details: $branchOutput"
+    }
+    $currentBranch = ([string]$branchOutput).Trim()
+    $expectedBranch = "development/database-redesign-enterprise"
+    if ($currentBranch -ne $expectedBranch) {
+        throw "Safety stop: current branch is '$currentBranch'; switch to '$expectedBranch'. Results remain saved locally."
+    }
+
+    & git -C $repoRoot diff --cached --quiet
+    $cachedExitCode = $LASTEXITCODE
+    if ($cachedExitCode -eq 1) {
+        throw "Safety stop: Git index already contains staged changes. Commit/preserve them separately; preflight results remain saved locally."
+    }
+    elseif ($cachedExitCode -ne 0) {
+        throw "Unable to inspect Git staged changes. Results remain saved locally."
+    }
+
+    $relativeOutputPath = $outputFull.Substring($repoRootFull.Length).Replace('\', '/')
+    Write-Host ""
+    Write-Host "Staging only: $relativeOutputPath" -ForegroundColor Cyan
+    & git -C $repoRoot add -- $relativeOutputPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "git add failed. Results remain saved locally."
+    }
+
+    & git -C $repoRoot diff --cached --quiet
+    $stagedExitCode = $LASTEXITCODE
+    if ($stagedExitCode -eq 0) {
+        Write-Host "No new Git changes to commit for this result folder." -ForegroundColor Yellow
+    }
+    elseif ($stagedExitCode -eq 1) {
+        $commitMessage = "Add Gate A preflight results $stamp"
+        & git -C $repoRoot commit -m $commitMessage
+        if ($LASTEXITCODE -ne 0) {
+            throw "Git commit failed. Results are saved and staged locally; no push was attempted."
+        }
+
+        Write-Host "Pushing $expectedBranch to origin ..." -ForegroundColor Cyan
+        & git -C $repoRoot push origin $expectedBranch
+        if ($LASTEXITCODE -ne 0) {
+            throw "Git push failed. The commit is saved locally; retry: git push origin $expectedBranch"
+        }
+
+        Write-Host "Results committed and pushed successfully." -ForegroundColor Green
+    }
+    else {
+        throw "Unable to inspect staged result changes. Results remain saved locally."
+    }
+}
+catch {
+    Write-Warning ("Automatic Git publish was not completed: " + $_.Exception.Message)
+    Write-Warning "The preflight CSV/README files remain in the output folder shown above. No unrelated files were staged by this script."
+}
+
