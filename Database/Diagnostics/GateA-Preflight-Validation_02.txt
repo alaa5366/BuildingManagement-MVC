@@ -1,0 +1,3 @@
+﻿dbo	Apartments	BuildingId	nvarchar	128	nvarchar	128	SQL_Latin1_General_CP1_CI_AS	0	TYPE_LENGTH_OK_REVIEW_COLLATION
+dbo	Apartments	Id	nvarchar	128	nvarchar	128	SQL_Latin1_General_CP1_CI_AS	0	TYPE_LENGTH_OK_REVIEW_COLLATION
+dbo	Buildings	Id	nvarchar	128	nvarchar	128	SQL_Latin1_General_CP1_CI_AS	0	TYPE_LENGTH_OK_REVIEW_COLLATION

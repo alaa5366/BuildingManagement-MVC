@@ -1,0 +1,5 @@
+﻿dbo	Apartments	PK_Apartments	1	1	BuildingId,Id
+dbo	Apartments	IX_Apartments_BuildingId_Number	0	1	BuildingId,Number
+dbo	Apartments	IX_Apartments_BuildingId_FloorId	0	0	BuildingId,FloorId
+dbo	Buildings	PK_Buildings	1	1	Id
+dbo	Buildings	IX_Buildings_BuildingNumber	0	1	BuildingNumber
