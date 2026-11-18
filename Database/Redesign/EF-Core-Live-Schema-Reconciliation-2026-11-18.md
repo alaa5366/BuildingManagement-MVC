@@ -55,6 +55,20 @@ The live catalog contains 32 FK constraints, and the EF snapshot declares 32 rel
 
 The observed delete actions remain 22 CASCADE, 9 NO_ACTION, and 1 SET_NULL. The existing cascade examples include resident-to-apartment, financial records-to-building, deposit edit history-to-deposit, poll options/votes-to-poll parents, and user permissions-to-users. This confirms schema parity, not policy safety: the current delete actions still require retention review before target redesign or cutover.
 
+### Cascade-retention conflict
+
+The live schema and EF snapshot agree on the existing cascade behavior, but that behavior conflicts with the approved target retention principle:
+
+- Deleting a Building cascades into Apartments, BuildingAdmins, BuildingSettings, Deposits, Dvrs, Expenses, FinancialCategories, Floors, MaintenanceRecords, MonthlyApartmentShares, Notifications, Polls, QrTokens, Revenues, and WalletAdjustments.
+- Deleting an Apartment cascades into Residents.
+- Deleting a Deposit cascades into DepositEditHistory.
+- Deleting a Poll cascades into PollOptions, which in turn cascades into PollVotes.
+- Deleting a User cascades into BuildingAdmins and UserPermissions.
+- Deleting a Dvr cascades into Cameras.
+- AuditLog's BuildingId FK uses SET_NULL rather than deleting audit rows.
+
+This is not merely theoretical referential metadata: the current database explicitly permits physical deletion of substantial financial, voting, resident, and access-related history through parent deletion. The target design must use archive/disable/close workflows and restrictive retention FKs for posted financial records, ballots, identity, and audit evidence. Any legally required erasure must be a separate approved process. Do not physically delete a Building, Apartment, Deposit, Poll, or User as an ordinary lifecycle operation until the application workflows and retention policy are redesigned and tested.
+
 ## 6. Wallet view deployment gap
 
 Evidence:
