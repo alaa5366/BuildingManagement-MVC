@@ -57,7 +57,7 @@ if ($dbCheck.Rows[0].state_desc -ne 'ONLINE') { throw "Target database is not ON
 
 $dbCs = "Server=$Server;Database=$Database;Integrated Security=True;TrustServerCertificate=True;Connect Timeout=15;"
 $tableInventory = Invoke-Sql $dbCs @"
-SELECT t.name AS TableName, SUM(p.rows) AS RowCount
+SELECT t.name AS TableName, SUM(p.rows) AS [RowCount]
 FROM sys.tables t
 JOIN sys.partitions p ON p.object_id=t.object_id AND p.index_id IN (0,1)
 GROUP BY t.name
