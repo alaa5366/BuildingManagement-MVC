@@ -191,3 +191,7 @@ The following read-only source reviews now provide implementation evidence for t
 2. Complete cross-document consistency and target domain contracts, using the new source reviews as acceptance requirements for FIN, POLL, OPS, OBS, SET, and OPS-02.
 3. Resolve only the owner decisions that block a specific domain contract (DEC-15/16/17/31/32/33/37/38/44/45/46 as applicable); independent source review continues while they remain open.
 4. Rehearse any approved schema change against a disposable restore only after explicit authorization. Gate A remains **NOT AUTHORIZED**.
+
+### QR/media source review evidence
+
+[QR Access, DVR, and Media Integration Review — 2026-11-18](QR-DVR-and-Media-Integration-Review-2026-11-18.md) adds concrete acceptance requirements to QR-01, MEDIA-01, AUTH-01, APP-02, and SEC-02: fail-closed QR issuance, bounded/revocable capabilities, account/person-bound access sessions, secret-free DVR DTOs, and an idempotent MediaMTX reconciliation/outbox workflow.
