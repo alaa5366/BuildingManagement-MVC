@@ -91,7 +91,19 @@ WHERE s.name = N'dbo'
     OR (t.name = N'Apartments' AND c.name IN (N'BuildingId', N'Id')))
 ORDER BY t.name, c.name;
 
--- 4. Existing Gate A object names. Any partial/manual objects require manual inspection;
+-- 4. Database default collation. New nvarchar columns inherit this unless explicitly overridden.
+SELECT
+    d.name AS DatabaseName,
+    d.collation_name AS DatabaseDefaultCollation,
+    CASE
+        WHEN d.collation_name = N'SQL_Latin1_General_CP1_CI_AS'
+            THEN 'MATCHES_CURRENT_LEGACY_KEY_COLLATION'
+        ELSE 'REVIEW_REQUIRED_BEFORE_FK_CREATION'
+    END AS CollationStatus
+FROM sys.databases d
+WHERE d.database_id = DB_ID();
+
+-- 5. Existing Gate A object names. Any partial/manual objects require manual inspection;
 -- the deployment script is not a partial-state repair script.
 SELECT
     v.ObjectName,
