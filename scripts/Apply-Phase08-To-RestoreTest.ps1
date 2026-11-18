@@ -42,13 +42,10 @@ function Invoke-Git {
     return (($output | ForEach-Object { $_.ToString() }) -join [Environment]::NewLine).Trim()
 }
 function New-Connection([string]$DatabaseName) {
-    $builder = [System.Data.SqlClient.SqlConnectionStringBuilder]::new()
-    $builder.DataSource = $Server
-    $builder.InitialCatalog = $DatabaseName
-    $builder.IntegratedSecurity = $true
-    $builder.TrustServerCertificate = $true
-    $builder.ConnectTimeout = 15
-    return [System.Data.SqlClient.SqlConnection]::new($builder.ConnectionString)
+    # Use the documented connection-string keywords directly. This avoids
+    # PowerShell/.NET property-name binding differences in SqlConnectionStringBuilder.
+    $connectionString = "Server=$Server;Initial Catalog=$DatabaseName;Integrated Security=True;TrustServerCertificate=True;Connect Timeout=15;"
+    return [System.Data.SqlClient.SqlConnection]::new($connectionString)
 }
 function Invoke-Table([string]$DatabaseName,[string]$Sql) {
     $connection = New-Connection $DatabaseName
