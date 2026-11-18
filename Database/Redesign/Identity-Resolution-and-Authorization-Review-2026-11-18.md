@@ -1135,3 +1135,71 @@ No migration, database write, application startup, build, or test was performed.
 
 - Follow-up inspection of `Program.cs` confirms the web application invokes `PinMigrationService.MigrateLegacySecretsAsync()` during startup inside a try/catch. This is not merely an unused service method: starting the application against a database can execute the credential migration and clear legacy PIN columns. A caught exception does not roll back earlier commits in the method.
 - Operational safeguard: do not start the application against the disposable restore database (or any database whose legacy PIN state must remain unchanged) during this review. First take/verify a disposable restore copy and remove/feature-gate the startup mutation in a separately approved code change; then run the explicit migration workflow only against its designated disposable target.
+
+
+### 28. Runtime orchestration, scheduled backups, application logs, health endpoints, and sync inventory
+
+#### 28.1 Scheduled backup execution and multi-instance safety
+
+- BackupScheduler is registered as a hosted service in Program.cs. Every running application process therefore starts its own scheduler. The loop checks every 30 minutes after an initial 30-second delay.
+- No distributed lease, SQL application lock, unique run record, or conditional claim is visible around ShouldRunAsync and RunScheduledBackupAsync. In a multi-instance deployment, two processes can both observe the same due settings and run concurrently.
+- Scheduled file names have minute precision (scheduled-yyyy-MM-dd-HHmm.zip) and are written with File.WriteAllBytesAsync, which overwrites an existing same-name file. Concurrent runs in the same minute can overwrite one another while each may add a separate BackupHistory row.
+- Scheduling is based on DateTime.UtcNow and the configured hour is interpreted as UTC, but the settings model/UI contract does not visibly make the timezone explicit. Operators may reasonably interpret the hour as local time.
+- Monthly scheduling requires now.Day == DayOfMonth. A setting for day 29, 30, or 31 will not run in months that do not contain that day; day 31 therefore skips February, April, June, September, and November rather than running on the last day.
+- ShouldRunAsync and the subsequent backup are separate read/execute operations. There is no persisted claim/lease to prevent a second process or overlapping manual/scheduled invocation from passing the same due check.
+- The run writes the encrypted file, inserts history, updates last-run settings, rotates files, and writes audit as separate operations. A crash between these steps can leave an orphan file, a history row without a file, or a completed backup whose status/audit was not finalized. Define recoverable states and reconcile files/history at startup or via a maintenance job.
+- RunScheduledBackupAsync catches failures internally. This keeps the hosted loop alive, but callers receive no structured result indicating whether the run succeeded; the method should return a typed outcome and keep the failure reason sanitized.
+- The scheduler checks cancellation on the recurring delay, but the initial 30-second delay is outside the loop's cancellation handling. Verify graceful shutdown behavior with a host-stop test.
+
+#### 28.2 Backup retention and history consistency
+
+- RotateBackupsAsync clamps retention to 1–30 and deletes older scheduled-*.zip files, which is a positive safety control.
+- Rotation does not delete, mark, or reconcile matching BackupHistory rows. The history query later computes FileExists, so retained metadata can accumulate indefinitely with FileExists=false.
+- GetHistoryAsync accepts a caller-provided limit without a service-level clamp; the controller must be checked as the only guard and the service should enforce a bounded maximum itself.
+- DeleteBackupAsync removes matching history rows even when the file path does not exist, then returns success and logs a deletion event. Make the result distinguish file-deleted, history-only cleanup, not-found, and failure; do not report a successful deletion for an unknown artifact.
+- BackupFileProtector.Unprotect deliberately returns non-header files unchanged for legacy compatibility. This means old unencrypted backup files remain accepted. Inventory and migrate legacy files, record encryption version/key ID, and define a retirement date rather than allowing indefinite silent plaintext compatibility.
+- Add integrity/recovery checks for file write completion, decryptability, archive validation, database history insertion, and restore round-trip. Encryption alone does not prove that a backup is complete or restorable.
+
+#### 28.3 Application log query cost and retention visibility
+
+- ApplicationLogQueryService.QueryPageAsync enumerates up to 14 files and scans their contents for every query, then retains the newest bounded result window in memory. This is bounded in retained event count, but the I/O and parsing cost still grows with the size of those files and repeats for each request.
+- The writer uses daily rolling plus a 10 MB size limit and a 14-file retention count. A busy day can produce multiple rollover files; the query service independently takes only the 14 most recently modified files. Consequently, some files still present under the writer's retention policy may be excluded from the explorer when rollover produces more than 14 files.
+- The UI's maximum reachable window is 100 pages × 100 rows, but it still scans the selected files to compute total matches. The per-IP lookup limiter is 120 requests/minute, which may permit expensive repeated full scans. Consider a short-lived parsed-event cache, incremental index, stricter query rate/cost budget, and cancellation/timeout tests.
+- The controller parses date-only filters as UTC midnight/end-of-day. The UI must label this clearly; otherwise a user in a local timezone can misinterpret the selected calendar dates.
+- The controller converts invalid date strings to null rather than returning a validation error. A malformed from or to value can therefore silently remove that filter and broaden the search. Reject malformed non-empty dates.
+- Redaction is a useful defense-in-depth layer for displayed logs (secrets, connection strings, bearer/JWT tokens, email, phone, IP, and filesystem paths). It is regex-based and cannot guarantee removal of arbitrary application-specific secrets or secrets embedded in encoded/structured payloads. Add a structured allowlist at log creation for sensitive events and a secret-canary regression suite.
+- Request logging enriches events with host, scheme, remote IP, and user agent. These values are operationally useful but can be identifying; document access, retention, and purpose, and minimize or pseudonymize where feasible. UI redaction does not remove values from the underlying retained log files.
+- Log queries read local filesystem paths under each instance's content root. In a multi-instance deployment the explorer may show only the current instance's local files, not a centralized view. Either label the instance explicitly or centralize logs with an instance identifier and access controls.
+
+#### 28.4 Health endpoints, rate limiting, and shared runtime state
+
+- /health/live, /health/ready, and backward-compatible /health are mapped without visible authorization metadata. The response is intentionally minimal (overall status, duration, check names/statuses) and does not expose exception text; nevertheless, readiness reveals whether the database check is healthy. Restrict access at the reverse proxy/network boundary when the deployment does not require public probing.
+- The lookup and login fixed-window rate limiters partition by RemoteIpAddress and are in-process. They are not a cross-instance quota. In the default forwarded-header configuration, X-Forwarded-For is not enabled unless known proxies are configured; behind a reverse proxy, multiple clients may therefore share the proxy address and be throttled together. Verify the trusted-proxy configuration in each deployment and never trust arbitrary forwarded headers.
+- AddDistributedMemoryCache is registered, but that implementation is process-local memory, not a distributed cache. Session and other cache-backed state will not be shared across instances and can disappear on recycle. This must be treated as a single-instance limitation unless replaced with a real shared provider.
+- The application persists Data Protection keys to a configured filesystem path (with a local default). Multi-instance deployments must share a protected, durable key ring; otherwise authentication/session-protected payloads and encrypted cookies can fail across nodes or after ephemeral storage loss. Verify filesystem ACLs, backup, key rotation, and cross-node compatibility.
+- CSP is configurable as enforce/report-only/off, but the current policy permits unsafe-inline scripts and allows HTTP origins for media, connections, and frames. This weakens the protection expected from CSP on HTTPS deployments. Inventory actual external dependencies, remove HTTP allowances where possible, use nonces/hashes for inline scripts, and test in report-only before tightening.
+- Liveness/readiness are separated correctly: liveness does not run the database check and readiness does. Preserve this distinction and add deployment smoke tests for database outage, recovery, and proxy behavior.
+
+#### 28.5 Synchronization feature inventory mismatch
+
+- The current branch contains ManageSync in the permission catalog and maps it to a SyncController with SyncAdmins, SyncResidents, SyncPasswords, SyncSql, and ReverseSync actions, and DbSyncService/ReverseSyncService names.
+- The current Controllers and Services directory inventories do not contain SyncController, DbSyncService, or ReverseSyncService. The only directly related data type found is Data/SyncReport.cs, whose summary still describes Firestore-to-SQL synchronization.
+- This is a catalog/documentation/runtime mismatch, not proof that an unlisted external sync process does not exist. Confirm whether synchronization was intentionally retired or moved outside this repository. If retired, remove stale permission mapping and UI claims; if external, document its owner, source of truth, execution mechanism, credentials, idempotency, conflict policy, and monitoring. Do not reintroduce bidirectional sync without an explicit authority-of-record design.
+
+#### 28.6 Required acceptance tests
+
+1. Start two application instances and prove only one scheduler lease can claim a due run; verify no duplicate history rows or same-minute file overwrite.
+2. Test daily/weekly/monthly schedules across UTC boundaries, daylight-saving/local-time expectations, restarts, missed windows, and month lengths 28/29/30/31.
+3. Inject failures after file creation, history insert, last-run update, rotation, and audit; verify deterministic recovery and accurate status.
+4. Verify retention keeps exactly the configured number of scheduled artifacts and reconciles database history without deleting manual backups.
+5. Test missing/corrupt/legacy-unencrypted files, wrong encryption key, truncated ciphertext, and a full decrypt/restore round trip.
+6. Generate more than 14 rolled log files and prove explorer coverage matches the documented retention/visibility policy.
+7. Benchmark log search at maximum retained file size and concurrent lookup traffic; verify cancellation, memory bounds, and query limits.
+8. Submit malformed date filters and verify a validation error rather than an unfiltered search.
+9. Add secret canaries in message, exception, JSON properties, URLs, and multiline events; verify no secret is displayed and document what remains on disk.
+10. Verify health endpoint exposure, reverse-proxy forwarded-header trust, per-IP limiter behavior, and multi-instance limiter semantics.
+11. Run authentication/session/Data Protection tests across two instances and after process restart using the production-like key-ring configuration.
+12. Verify CSP in report-only mode against all required application workflows, then remove unnecessary inline and HTTP allowances.
+13. Confirm whether sync is retired or externally hosted; if retained, produce an authoritative inventory and repeatable end-to-end sync tests.
+
+Static source review only. No application, backup job, synchronization job, database, filesystem artifact, credential, or configuration was changed. No build or tests were run. **Gate A remains NOT AUTHORIZED.**
