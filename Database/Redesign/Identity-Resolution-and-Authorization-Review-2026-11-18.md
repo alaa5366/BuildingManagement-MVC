@@ -1092,3 +1092,40 @@ No application code, schema, data, configuration, credentials, or sessions were 
 - Follow-up inspection of `UsersService.SetAsync` confirms the `"pin"` field is passed through `SecretVerifier.HashIfPlain` before `UserSqlStore.UpsertAsync`. Therefore the raw PIN in `UpdateAdminProfileAsync` is not, by itself, evidence of plaintext persistence on this path; retain a persistence canary test to protect this behavior.
 - The `SettingsController.Own` POST is available to any authenticated role and has no explicit `HasPermission(ManageSettingsOwn)` attribute. This may be an intentional self-service policy, but it differs from the permission catalog's declared mapping. Decide explicitly whether self-service is role-intrinsic or permission-controlled, then align the catalog and authorization tests.
 - The `SettingsController.Own` POST saves preferences and profile data in separate try/catch blocks and reports partial success. This is user-friendly for independent settings, but it is not an atomic profile/credential change. Define which operations may partially succeed; credential changes should have a single authoritative transaction and explicit outcome.
+
+
+## 27. Startup PIN migration and SQL mirror consistency — 2026-11-18
+
+Static review of `PinMigrationService`, `BuildingSqlStore`, `UserSqlStore`, and `SqlMirrorHealth`. The startup migration was inspected as source only; it was not invoked.
+
+### 27.1 Startup migration is a live data mutation
+
+- `MigrateLegacySecretsAsync` performs real writes: hashes plaintext admin/SuperAdmin PINs, hashes resident PIN values, clears all non-empty `Buildings.AdminPin` values, creates a resident row for apartments with a legacy PIN but no resident rows, copies the apartment PIN hash to residents with blank hashes, and clears `Apartments.Pin`.
+- This method has no dry-run mode, no explicit operator approval, no per-row decision report, and no durable migration ledger mapping old source keys to created/updated identities. Generated resident Id/Uid values are random, so they cannot by themselves establish continuity with a known person/account.
+- The operation is split across multiple SaveChanges/ExecuteUpdate boundaries and has no encompassing transaction. Failure can leave users/residents hashed while building PINs or apartment PINs remain, or clear building PINs before apartment migration completes. A second application instance can run the same startup work concurrently; no distributed migration lock or durable one-time migration marker is visible here.
+- The method clears legacy PIN columns as part of application startup. This is a destructive credential cutover and must not run automatically on application startup, especially during restore-database inspection. Replace it with a separate migration command: inventory-only dry run, explicit approval, stable source-to-target mapping, transaction/batches with checkpointing, collision handling, per-row outcome, rollback/recovery plan, and post-migration authentication verification.
+- `MigrateAllAsync(dryRun)` is a different admin/SuperAdmin-only helper. It does not cover resident/apartment/building PIN data and is not a substitute for a complete dry-run of `MigrateLegacySecretsAsync`. Its result detail includes user email; keep PII in protected operator output and avoid broad logs.
+- The BCrypt prefix checks accept only the expected prefixes but do not validate full hash format/cost or verify that the stored value matches a known credential. Treat shape-only counts as unverified, not as proof of successful credential migration.
+
+### 27.2 SQL mirror health and aggregate persistence
+
+- `SqlMirrorHealth` is static in-process state: failure count, last error, and timestamps reset on process restart and are not shared across application instances. It is useful as a local diagnostic signal, not an authoritative system-health or synchronization ledger.
+- `RecordFailure` stores `Exception.Message` as `LastError`. If surfaced to an operational page, database/provider exception text may expose schema, server, query, or connection details. Return sanitized error codes/correlation IDs to ordinary UI and keep detailed exceptions in restricted logs with secret redaction.
+- `BuildingSqlStore.GetAllAsync` first loads IDs then calls the aggregate loader once per building. The source comment documents 16 queries per building; this is an N+1 round-trip pattern for all-building operations. Use summary projections for lists and bounded paging; reserve aggregate loading for a single building workflow.
+- `BuildingSqlStore.SaveFullAsync` delegates whole-aggregate reconciliation to `BuildingSqlMapper.SaveAsync`; warnings are logged, but callers need explicit save outcome and concurrency-conflict semantics. Preserve the existing Buildings.RowVersion optimistic concurrency control and test that a stale aggregate cannot overwrite a newer financial/identity update.
+- `UserSqlStore.UpsertAsync` synchronizes permissions as a replacement set, but building-admin links are additive only: it inserts missing links and does not remove links omitted from the new `BuildingIds` collection. This can retain stale building access after an apparent permission replacement. Introduce explicit grant/revoke semantics and a transactionally audited replacement command.
+- `UserSqlStore.UpsertAsync` uses an in-process `KeyedLock`; this does not serialize writes across multiple application instances. Database unique constraints/rowversion and retry handling remain necessary for cross-instance correctness.
+- `SqlMirrorHealth.RecordSuccess` updates only last-success time; it does not reset failure count/last error. The UI must not present the failure count as current consecutive failures unless the semantics are changed/documented.
+
+### 27.3 Required acceptance tests
+
+1. Startup test proving no migration or destructive PIN clearing runs merely by starting the web application.
+2. Dry-run parity tests proving every row that execution would alter is reported with source key, target identity, decision, and reason without exposing PIN values.
+3. Failure injection at every save/clear boundary and multi-instance concurrency tests; reruns must be idempotent and recoverable.
+4. Mapping tests for apartment PIN to existing resident(s), no resident, multiple residents, conflicting PINs, inactive residents, and source identity continuity.
+5. Authentication verification before/after migration, with rollback/recovery evidence and no plaintext secret in logs/results.
+6. Multi-instance SQL mirror tests for concurrent user/building writes, optimistic concurrency conflicts, and duplicate relationship prevention.
+7. Building-admin link replacement tests proving omitted grants are revoked only when explicit full-replacement semantics are requested.
+8. Health dashboard tests proving process-local status is labeled as instance-local and provider error details are sanitized.
+
+No migration, database write, application startup, build, or test was performed. No code/schema/data/configuration was changed. **Gate A remains NOT AUTHORIZED.**
