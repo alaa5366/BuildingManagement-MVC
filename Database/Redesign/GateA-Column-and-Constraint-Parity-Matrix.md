@@ -14,7 +14,7 @@ A source-text comparison was performed between:
 
 - 13 CREATE TABLE definitions found in the proposed SQL.
 - 13 corresponding data-dictionary definitions found.
-- 134 SQL column declarations identified.
+- 137 SQL column declarations identified (verified by summing the 13 CREATE TABLE column inventories).
 - No missing or extra column names found across the 13 corresponding definitions.
 - The redundant serialized recovery-code column was removed from the data dictionary; `UserRecoveryCodes` is authoritative.
 
