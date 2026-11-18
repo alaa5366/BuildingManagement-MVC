@@ -72,3 +72,17 @@ Before backfill:
 - Define who can approve merges and how corrections are audited.
 
 No DDL/DML, EF migration, identity merge, role backfill, credential rewrite, or application cutover was performed.
+
+
+## 7. Gate A provenance schema correction completed — 2026-11-18
+
+The earlier finding is now reflected in the additive design:
+
+- Added `dbo.LegacyIdentityMap` to `GateA-Additive-Identity-Foundation.sql`.
+- Added it to the read-only Gate A preflight object inventory; expected target object count is now 13.
+- Updated the target data dictionary and legacy mapping document to use the same name and schema.
+- Initial source allow-list is Users and Residents. Resident relationship rows may map many-to-one to a Person. A Users source row maps to a Person and one Account; a filtered unique index prevents duplicate source-user mappings to the same Account.
+- The database FKs independently validate Person and Account existence. The migration service must additionally verify that a linked Users mapping's AccountId belongs to its PersonId in one transaction.
+- Pending/manual-review/rejected source rows remain unresolved; no auto-merge is permitted.
+
+This closes the documentation/schema inventory inconsistency at design level only. The revised preflight has not yet been run, the Gate A DDL has not been executed, and no source rows have been backfilled.
