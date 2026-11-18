@@ -734,3 +734,8 @@ The owner has now explicitly authorized project-wide implementation, including d
 ## Gate A DDL implementation review
 
 See [Gate A DDL Implementation Review — 2026-11-18](GateA-DDL-Implementation-Review-2026-11-18.md). The Gate A SQL was statically reviewed and amended to enforce same-account credential replacement chains. The four-migration baseline and strict disposable-database preflight were verified against repository migration source. The SQL remains a reviewed foundation, not an EF Core migration; EF entities, model configuration, generated migration/snapshot, and disposable restore rehearsal are the next implementation gates. No SQL execution or database mutation is claimed.
+
+
+## Identity EF Core model implementation
+
+The first typed EF Core implementation of the Gate A identity/authorization foundation is now in source control: `Data/IdentityEntities.cs`, `Data/IdentityModelConfiguration.cs`, and the `AppDbContext` registrations. See [Identity EF Core Model Implementation](Identity-EF-Core-Model-Implementation-2026-11-18.md). The migration and snapshot must be generated locally with `Generate-GateA-EF-Migration.ps1`, then reviewed and tested before any database execution.
