@@ -1085,3 +1085,10 @@ Static review of `SettingsController`, `SettingsService`, `GlobalSettings` model
 10. HTTPS deployment tests require Secure cookies and ensure restored permissions/MFA are reloaded from authoritative state.
 
 No application code, schema, data, configuration, credentials, or sessions were changed. No build/tests were run. **Gate A remains NOT AUTHORIZED.**
+
+
+### 26.4 Follow-up verification
+
+- Follow-up inspection of `UsersService.SetAsync` confirms the `"pin"` field is passed through `SecretVerifier.HashIfPlain` before `UserSqlStore.UpsertAsync`. Therefore the raw PIN in `UpdateAdminProfileAsync` is not, by itself, evidence of plaintext persistence on this path; retain a persistence canary test to protect this behavior.
+- The `SettingsController.Own` POST is available to any authenticated role and has no explicit `HasPermission(ManageSettingsOwn)` attribute. This may be an intentional self-service policy, but it differs from the permission catalog's declared mapping. Decide explicitly whether self-service is role-intrinsic or permission-controlled, then align the catalog and authorization tests.
+- The `SettingsController.Own` POST saves preferences and profile data in separate try/catch blocks and reports partial success. This is user-friendly for independent settings, but it is not an atomic profile/credential change. Define which operations may partially succeed; credential changes should have a single authoritative transaction and explicit outcome.
