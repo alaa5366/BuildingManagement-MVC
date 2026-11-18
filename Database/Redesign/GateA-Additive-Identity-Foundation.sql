@@ -41,7 +41,7 @@ BEGIN
     (
         AccountId uniqueidentifier NOT NULL CONSTRAINT PK_UserAccounts PRIMARY KEY,
         PersonId uniqueidentifier NOT NULL,
-        AccountStatus tinyint NOT NULL,
+        AccountStatus tinyint NOT NULL, -- 0 Pending, 1 Active, 2 Locked, 3 Disabled
         NormalizedEmail nvarchar(254) NULL,
         ExternalProvider nvarchar(40) NULL,
         ExternalSubject nvarchar(200) NULL,
@@ -52,7 +52,10 @@ BEGIN
         CONSTRAINT FK_UserAccounts_Persons FOREIGN KEY(PersonId)
             REFERENCES dbo.Persons(PersonId) ON DELETE NO ACTION,
         CONSTRAINT UQ_UserAccounts_PersonId UNIQUE(PersonId),
-        CONSTRAINT CK_UserAccounts_AccountStatus CHECK (AccountStatus IN (0,1,2,3))
+        CONSTRAINT CK_UserAccounts_AccountStatus CHECK (AccountStatus IN (0,1,2,3)),
+        CONSTRAINT CK_UserAccounts_ExternalLoginPair CHECK
+            ((ExternalProvider IS NULL AND ExternalSubject IS NULL)
+             OR (ExternalProvider IS NOT NULL AND ExternalSubject IS NOT NULL))
     );
     CREATE UNIQUE INDEX UX_UserAccounts_ExternalLogin
         ON dbo.UserAccounts(ExternalProvider, ExternalSubject)
@@ -67,7 +70,7 @@ BEGIN
     (
         CredentialId uniqueidentifier NOT NULL CONSTRAINT PK_UserCredentials PRIMARY KEY,
         AccountId uniqueidentifier NOT NULL,
-        CredentialType tinyint NOT NULL,
+        CredentialType tinyint NOT NULL, -- 0 Password, 1 PIN; external provider identity is stored on UserAccounts
         CredentialHash nvarchar(512) NOT NULL,
         HashAlgorithm nvarchar(40) NOT NULL,
         CreatedAtUtc datetime2(3) NOT NULL CONSTRAINT DF_UserCredentials_CreatedAtUtc DEFAULT (SYSUTCDATETIME()),
@@ -78,6 +81,7 @@ BEGIN
             REFERENCES dbo.UserAccounts(AccountId) ON DELETE NO ACTION,
         CONSTRAINT FK_UserCredentials_ReplacedBy FOREIGN KEY(ReplacedByCredentialId)
             REFERENCES dbo.UserCredentials(CredentialId) ON DELETE NO ACTION,
+        CONSTRAINT CK_UserCredentials_Type CHECK (CredentialType IN (0,1)),
         CONSTRAINT CK_UserCredentials_Expiry CHECK (ExpiresAtUtc IS NULL OR ExpiresAtUtc > CreatedAtUtc)
     );
     CREATE INDEX IX_UserCredentials_Account_Type
@@ -99,7 +103,11 @@ BEGIN
         CONSTRAINT FK_UserTwoFactorSettings_UserAccounts FOREIGN KEY(AccountId)
             REFERENCES dbo.UserAccounts(AccountId) ON DELETE NO ACTION,
         CONSTRAINT CK_UserTwoFactorSettings_EnabledSecret CHECK
-            (IsEnabled = 0 OR (SecretCiphertext IS NOT NULL AND KeyVersion IS NOT NULL))
+        (
+            (IsEnabled = 0 AND SecretCiphertext IS NULL AND KeyVersion IS NULL)
+            OR
+            (IsEnabled = 1 AND SecretCiphertext IS NOT NULL AND KeyVersion IS NOT NULL AND EnrolledAtUtc IS NOT NULL)
+        )
     );
 END;
 
@@ -137,7 +145,7 @@ BEGIN
     (
         RoleKey nvarchar(64) NOT NULL,
         PermissionKey nvarchar(100) NOT NULL,
-        Effect tinyint NOT NULL,
+        Effect tinyint NOT NULL, -- 0 Deny, 1 Allow; deny takes precedence
         CONSTRAINT PK_RolePermissions PRIMARY KEY(RoleKey, PermissionKey),
         CONSTRAINT FK_RolePermissions_RoleDefinitions FOREIGN KEY(RoleKey)
             REFERENCES dbo.RoleDefinitions(RoleKey) ON DELETE NO ACTION,
