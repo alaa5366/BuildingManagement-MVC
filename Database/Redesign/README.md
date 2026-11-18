@@ -558,3 +558,6 @@ Key findings:
 Required acceptance tests cover multi-instance scheduler locking, schedule edge dates/timezones, crash recovery, retention/history reconciliation, backup restore integrity, rolled log coverage and performance, redaction canaries, health/proxy/rate-limit behavior, shared Data Protection, CSP, and sync ownership.
 
 Static source review only; no application, database, backup, synchronization, filesystem, credential, or configuration changes were made. No build/tests were run. **Gate A remains NOT AUTHORIZED.**
+
+
+Additional Section 28 verification: the RunNow controller currently reports success after the service returns, but the service swallows internal failures and can return early without creating a backup. DeleteBackup can also remove history rows and report success when no file exists. Backup ZIP downloads return decrypted plaintext without an explicit no-store response policy. Require typed run outcomes, strict artifact existence semantics, and no-store headers with durable audit coverage.
