@@ -711,3 +711,8 @@ The media review was extended to the live camera wall: application checks curren
 - [Identity, Authentication, and Authorization Review — 2026-11-18](Identity-Authentication-and-Authorization-Review-2026-11-18.md)
 
 The identity review is the first active implementation workstream under full-project authorization. It identifies the split Users/Residents model, ambiguous apartment-keyed resident context selection, shared apartment PIN behavior, optional administrator MFA, implicit SuperAdmin permission bypass, and startup credential migration as replacement targets.
+
+
+## Implementation updates
+
+- [P0 Startup Safety Remediation — 2026-11-18](P0-Startup-Safety-Remediation-2026-11-18.md) — removes credential and raw SQL mutation from application startup; documents the temporary in-memory throttle limitation.
