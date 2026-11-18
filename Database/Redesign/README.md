@@ -268,3 +268,15 @@ Run after pulling the branch:
 ```
 
 Do not modify any stored shares based on candidate results alone.
+
+
+## Financial reconciliation results reviewed — 2026-11-18
+
+Reviewed the five result sets (215 rows) under `Database/Diagnostics/Financial-Reconciliation-Results/20261118-152535/`. See `Financial-Reconciliation-Results-Assessment-2026-11-18.md`.
+
+- `LmkUDOJcjlvjiGmluz6c` / 2026-10 has a confirmed stored-share rounding variance: expenses +0.22 and revenues +0.04. All 60 apartment rows exist; the 57 currently open apartments have equal rounded stored shares, so the stored totals exceed the source ledgers. The deterministic candidate assigns the final remainder to one apartment and exactly conserves both totals, but its ApartmentId order is not proof of historical order.
+- `zxhRd7cwZ07rZotXeQ17` / 2026-09..11 has zero expense/revenue ledgers and shares; 15 share rows per month. September's 6,356.00 cancelled deposits remain excluded; 5,119.00 confirmed deposits are attributed to apartment 12. Carry-over totals are 0.00 / 3,319.00 / 1,519.00 across Sep/Oct/Nov and remain apartment-scoped. Negative reconstructed balances elsewhere are not automatically errors.
+- `ZzgYia4qMZ23N8qhiCOV` / 2026-09 and 2026-10 reconciles exactly. November is in progress (run date Nov 18), with no monthly shares or ledger rows and +200.00 adjustments; absence of monthly shares is not treated as a defect.
+- The missing/orphan result set returned no rows for the scoped months.
+
+No financial data was changed. Do not silently recalculate historical shares. Gate A remains blocked pending explicit variance/restatement policy, negative-balance policy, historical fee/eligibility snapshots, month closing rules, credential strategy, identity-link decisions, retention policy, and disposable restore rehearsal/rollback.
