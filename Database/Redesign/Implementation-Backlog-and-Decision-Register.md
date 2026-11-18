@@ -18,6 +18,11 @@
 | ID | Epic | Priority | Dependencies | Completion evidence |
 |---|---|---:|---|---|
 | ARCH-01 | Architecture and domain boundary freeze | P0 | None | Approved module map, dependency rules, aggregate ownership, glossary |
+| ARCH-02 | Domain glossary, aggregate and command/query contract freeze | P0 | ARCH-01 | Canonical terms, use-case catalogue, typed outcomes, actor context, module contracts |
+| DATA-05 | Full target entity inventory and phased schema boundary | P1 | ARCH-02 | Every module entity classified as Gate A, later target, retained legacy, read model, or external artifact |
+| AUTH-02 | Legacy permission-to-resource scope catalogue | P0 | SEC-01, ARCH-02 | All permission keys mapped to resource/action/scope; stale workflows and decomposed privileges resolved |
+| DB-01 | Authoritative SQL deployment and view reconciliation | P0 | DATA-01 | DEC-28 approved; view definition included in the authoritative deployment path; fresh-restore parity |
+| FIN-03 | Financial ledger and wallet domain contract | P0 | DATA-04, ARCH-02 | Wallet semantics, period, rounding, reversal authority, and reconciliation fixtures approved |
 | DATA-01 | Reconcile schema and deployment truth | P0 | ARCH-01 | Live inventory vs EF model/snapshot/history vs FullSchema vs views/triggers report |
 | DATA-02 | Finalize target ERD and data dictionary | P0 | DATA-01 | Key types/lengths/collations, constraints, delete rules, indexes approved |
 | DATA-03 | Identity mapping and provenance contract | P0 | DATA-02 | LegacyIdentityMap rules, uniqueness, review queue, restart semantics |
