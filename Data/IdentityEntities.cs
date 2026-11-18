@@ -73,6 +73,7 @@ public sealed class UserRecoveryCodeEntity
     public DateTime? UsedAtUtc { get; set; }
 }
 
+/// <summary>Defines a stable application role and whether it is a system-managed role.</summary>
 public sealed class RoleDefinitionEntity
 {
     public string RoleKey { get; set; } = "";
@@ -81,6 +82,7 @@ public sealed class RoleDefinitionEntity
     public bool IsActive { get; set; }
 }
 
+/// <summary>Associates a role with an explicit permission effect.</summary>
 public sealed class RolePermissionEntity
 {
     public string RoleKey { get; set; } = "";
