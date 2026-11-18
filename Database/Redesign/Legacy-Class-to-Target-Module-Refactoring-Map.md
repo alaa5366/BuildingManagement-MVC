@@ -66,7 +66,18 @@ No legacy class should be retained merely to avoid changing a view or controller
 | `NotificationsController` | Replace HTTP adapter | Web / Notifications | Separate self-inbox read from building-wide dispatch permission. |
 | `PresenceService` | Replace | Presence | Decide whether presence counts Person/account/device/apartment; handle multiple sessions without overwriting one apartment key. |
 
-## 6. Files, OCR, cameras and integrations
+## 6. QR, capability tokens and import workflows
+
+| Legacy class / area | Target disposition | Target owner(s) | Refactoring notes |
+|---|---|---|---|
+| `QrTokenStoreService` | Replace | QR & Capability Tokens | Verify target and policy before one-time consumption; atomic use limits, revocation, signed authorization fields, replay controls and redacted telemetry. |
+| `QrController` | Replace HTTP adapter | Web / QR & Capability Tokens | Admin issuance and QR management; target scope resolved server-side, strict validity/use limits. |
+| `QrAccessController` | Replace HTTP adapter | Web / QR & Capability Tokens + Sessions | Stable guest/resident session handoff; no synthetic resident UID that fails normal revalidation; no-store/referrer/rate-limit protections. |
+| Quick QR actions in `BuildingsController` / `AdminAptsController` | Split | QR & Capability Tokens | Central issuer/verifier owns token rules; controllers only call use cases. |
+| `ExcelImportService` | Split | Import & Migration Workbench | Staged batch, file digest, target binding, row-level validation, explicit preview/approval, no coercion/defaults, idempotent commit and reconciliation. |
+| `MigrateFromApartmentsAsync` dormant path | Retire or implement as explicit migration use case | Import & Migration Workbench | Empty success result must not be surfaced as successful migration; require typed result and row-level evidence. |
+
+## 7. Files, OCR, cameras and integrations
 
 | Legacy class / area | Target disposition | Target owner(s) | Refactoring notes |
 |---|---|---|---|
@@ -79,7 +90,7 @@ No legacy class should be retained merely to avoid changing a view or controller
 | `WhatsAppTemplateService` | Adapt behind provider port | Integrations | Separate template generation, dispatch permission, provider configuration, secret management and delivery outcome. |
 | `SettingsService` | Split | Settings + Integration Secrets + Preferences | Read-only GET, write-only secrets, separate system/building/person preferences. |
 
-## 7. Backup, audit, logs and runtime orchestration
+## 8. Backup, audit, logs and runtime orchestration
 
 | Legacy class / area | Target disposition | Target owner(s) | Refactoring notes |
 |---|---|---|---|
@@ -92,7 +103,7 @@ No legacy class should be retained merely to avoid changing a view or controller
 | `SqlMirrorHealth` / `BuildingSqlStore` | Adapt then retire where redundant | Infrastructure / Health | Health signals should be typed and safe; remove process-local state assumptions where deployment topology requires shared state. |
 | `Program.cs` startup migration invocation | Replace before runtime testing | Migration Operations | Remove/feature-gate legacy PIN mutation; migrations run only as explicit, approved, checkpointed operations. |
 
-## 8. Legacy workflows currently missing from the reviewed branch inventory
+## 9. Legacy workflows currently missing from the reviewed branch inventory
 
 The permission catalog's BackendInfo references these classes/workflows, but the reviewed branch inventory did not contain the named controllers/services:
 
@@ -102,7 +113,7 @@ The permission catalog's BackendInfo references these classes/workflows, but the
 
 Disposition: do not invent replacements or migrate grants automatically. Confirm whether the workflows are intentionally retired, hidden behind another supported path, or need to be rebuilt as new modules. This is tracked in the permission-scope catalogue and owner decision PERM-05.
 
-## 9. Controller and View redesign contract
+## 10. Controller and View redesign contract
 
 All MVC controllers are HTTP adapters only:
 1. authenticate and bind request;
@@ -120,7 +131,7 @@ All Views receive dedicated view models/read models:
 
 A controller can remain physically named during transition, but its business logic and dependencies must move to the target use cases.
 
-## 10. Migration order for legacy class replacement
+## 11. Migration order for legacy class replacement
 
 1. Build shared Application foundation: actor, clock, correlation, typed results, validation, authorization port, transaction/outbox.
 2. Replace identity/authentication and session validation; keep a narrow compatibility adapter.
@@ -134,7 +145,7 @@ A controller can remain physically named during transition, but its business log
 10. Rebuild MVC views and navigation around new read models/use cases.
 11. Retire old aggregate write paths, old auth paths, and unsupported workflows only after telemetry/parity/rollback acceptance.
 
-## 11. Acceptance evidence per class family
+## 12. Acceptance evidence per class family
 
 - Dependency graph contains no Domain -> EF/HTTP/vendor references.
 - Controller tests prove role + permission + resource scope for allowed and denied cases.
@@ -146,6 +157,6 @@ A controller can remain physically named during transition, but its business log
 - External integration tests prove idempotency, retry, compensation, and reconciliation.
 - Performance tests prove bounded paging and query budgets using representative restored data.
 
-## 12. Status
+## 13. Status
 
 This is a source-to-target refactoring plan. It does not change classes, controllers, views, database objects, or configuration. No build or test run is claimed. Owner decisions remain tracked in the decision register and permission catalogue. Gate A remains **NOT AUTHORIZED**.
