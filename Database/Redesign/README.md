@@ -139,6 +139,8 @@ Current safe boundary:
 
 ## Additional design artifacts
 
+- `Database/Redesign/Implementation-Backlog-and-Decision-Register.md` — sequenced epics, dependencies, phase acceptance evidence, and 30 explicit business/technical decisions with open/proposed/evidence-required/blocked states. Planning only; no implementation authorization.
+
 - `Database/Redesign/Target-Architecture-and-Class-Refactoring-Roadmap.md` — target modular-monolith architecture, module/class responsibilities, dependency rules, cross-cutting patterns, migration/coexistence strategy, delivery phases, acceptance tests, and blocking decisions. This is a design baseline only; it does not authorize implementation or Gate A.
 
 - `Database/Redesign/Enterprise-Database-Redesign-Blueprint.md` — architecture principles, target domains, migration/rollback approach, and unresolved product decisions.
