@@ -512,3 +512,76 @@ Reviewed `Program.cs`, `Services/ConfigSecrets.cs`, `Services/PinMigrationServic
 - Test multi-instance behavior, restart/redeploy behavior, key-ring recovery, proxy/IP handling, secret rotation, startup with migration disabled, and fail-closed authorization during database outages.
 
 This is a source/configuration review only. No application source, configuration values, secrets, database rows, or runtime state were changed. No application was started and no build/tests were run. Gate A remains **NOT AUTHORIZED**.
+
+
+## 17. Final cross-domain consistency, test-gap, and implementation-readiness assessment — 2026-11-18
+
+This final pass reconciles the source reviews in sections 1–16 with the blueprint, target data dictionary, legacy mapping, Gate A SQL, Gate A constraint review, and the test suites. It is a static review; it does not certify runtime behavior or authorize implementation.
+
+### Cross-artifact consistency
+
+- The central target principles are consistent across the blueprint, data dictionary, mapping, and Gate A design: Person-centric identity, at most one interactive account per Person, independent ownership/occupancy/access, scoped authorization, apartment-scoped finance, secret-ballot separation, restrictive historical FKs, and additive migration.
+- The LegacyIdentityMap correction is now reflected in the Gate A SQL, preflight inventory, mapping, and target dictionary. Its remaining service invariant is to validate that a Users source row's AccountId belongs to the same PersonId within one transaction.
+- Account-specific legacy permissions are represented separately from role-wide permissions through AccountPermissionOverrides; the source permission key must still be classified into a verified scope before any backfill.
+- Gate A SQL and the constraint review correctly distinguish database-enforceable rules from transactional service invariants. In particular, interval overlap, ownership-share totals, role/scope compatibility, account/person mapping pairs, and grant revocation cannot be inferred from FKs alone.
+- The schema review still has an explicit unresolved ApartmentAccessGrants GrantType catalogue and lifecycle/revocation policy. Do not freeze the physical schema until this is resolved.
+- The blueprint and target dictionary require archive/retention semantics, but the current legacy code still physically deletes or cascades several of those same domains. The target design is directionally correct; implementation must not inherit the current delete semantics.
+- The checked-in FullSchema SQL, EF model/migrations, and inspected restore database are separate evidence sources. Never treat one as proof of the others. Every proposed migration must reconcile all three against a fresh read-only inventory of the exact disposable restore.
+
+### Product and policy decisions still required before design freeze
+
+1. Identity resolution: who approves Person merges, what evidence is acceptable, and how unresolved/shared-contact cases remain separate.
+2. Ownership: whether shares must total exactly 100%, whether partial/unknown ownership is valid, and how conflicting effective periods are resolved.
+3. Occupancy: trusted effective-date sources, overlap policy, optional primary occupant behavior, and move-in/move-out approval.
+4. Apartment access: final GrantType catalogue, who may grant/revoke, delegation rules, expiry, emergency access, and audit reason requirements.
+5. Authorization: approved role catalogue, role-to-scope compatibility, permission catalogue, direct allow/deny precedence, and resource-level enforcement matrix.
+6. Account lifecycle: disabled/suspended/locked/archived states, account recovery, person retention, duplicate account resolution, and legal erasure authority.
+7. Credentials: legacy PIN reset/re-enrollment policy, resident/admin authentication methods, password policy, external identity provider support, and credential compromise response.
+8. MFA: mandatory administrator/SuperAdmin enrollment timing, resident step-up actions, recovery-code replacement, lost-device recovery, and emergency break-glass process.
+9. Sessions: global versus per-device sign-out, revocation latency across instances, behavior during database outage, impersonation expiry, and actor/target permission separation.
+10. Preferences: apartment defaults versus person-specific language, notification, and payment preferences, including precedence and migration compatibility.
+11. Finance: treatment of carryovers, monthly shares, confirmed/cancelled deposits, adjustments, rounding variances, and any historical wallet-view/report dependencies.
+12. Voting: legacy apartment-attributed vote retention, future eligibility snapshot, representative delegation, and required assurance level for secret-ballot unlinkability.
+13. Retention: legal retention periods/holds by data class, building retirement, financial immutability, audit retention, backup archive and purge policy.
+14. Operational deployment: shared session/cache/key-ring provider, secret manager, key rotation, trusted proxy configuration, scheduler lease, and multi-instance recovery behavior.
+15. Time and money conventions: authoritative business timezone, UTC storage/presentation rules, decimal precision/rounding, and effective-time semantics.
+16. External compatibility: identify any reports, SQL jobs, integrations, mobile clients, exports, or scripts that directly depend on legacy tables/views before retiring or changing them.
+
+These decisions must be recorded as approved business rules, not silently inferred from legacy code or existing row shapes.
+
+### Test coverage gaps confirmed in the current test source
+
+- `BuildingsServiceTests` covers summaries and lookup behavior; no building deletion/retirement test was found.
+- `ResidentsServiceTests.DeleteAsync_RemovesResident` explicitly expects physical deletion. It must be replaced with lifecycle/retention assertions when the new behavior is implemented.
+- `PollsServiceTests.Delete_ExistingPoll_RemovesIt` explicitly expects a poll to be removed. Add a rule that deletion is rejected after opening/ballots and that retained results remain immutable.
+- No cascade-retention or aggregate-partial-payload deletion guard tests were found in the inspected test paths.
+- `SessionRevalidatorCacheInvalidationTests` verifies the local in-process version increments; it does not prove cross-instance revocation. Impersonation tests cover several actor/target and fail-closed cases, but do not replace a distributed security-version test.
+- Controller authorization tests protect metadata and selected permission checks; they do not constitute full route/resource authorization tests across all roles, buildings, apartments, export paths, and direct service calls.
+- The earlier service review found missing/insufficient test suites for DVR authorization, import failure/replay, scheduled backup concurrency, audit/outbox failure, and service-level actor/resource scope.
+- No tests were executed during this review. Test names and assertions were inspected only.
+
+### Consolidated implementation acceptance checklist
+
+Before any application implementation is accepted:
+
+- [ ] Freeze all policy decisions above and approve a versioned ERD/data dictionary.
+- [ ] Reconcile exact SQL Server metadata, EF model, migration history, generated FullSchema, views, triggers, SQL jobs, and external consumers.
+- [ ] Define every domain lifecycle and delete/retention matrix, including all cascade and restrictive FK actions.
+- [ ] Complete identity candidate dispositions without fuzzy auto-merges; preserve provenance.
+- [ ] Approve permission-to-scope mapping and a resource/action authorization matrix.
+- [ ] Finalize ApartmentAccessGrants types and revocation/audit lifecycle.
+- [ ] Define the account security-version, MFA recovery, session revocation, distributed cache, and outage policy.
+- [ ] Define finance reconciliation tolerances and resolve all carryover, deposit, adjustment, and wallet-report dependencies.
+- [ ] Finalize poll eligibility and ballot separation, immutable lifecycle, and legacy-vote treatment.
+- [ ] Remove all startup data migration and replace it with an explicit, reviewed, restartable migration command.
+- [ ] Implement transactional domain mutations plus durable audit/outbox and idempotent background operations.
+- [ ] Add multi-instance, concurrency, failure-injection, retention, foreign-resource, and rollback tests.
+- [ ] Rehearse additive schema, backfill, compatibility, cutover, and reverse recovery on a disposable restored copy.
+- [ ] Run the full build/test/security/regression suite and document actual outputs; then perform user-approved smoke tests.
+- [ ] Obtain separate explicit approval before any Gate A DDL execution, and separate approval again for backfill/cutover. Production changes require their own release approval.
+
+### Final review disposition
+
+The discovery and static source review is now complete through the currently available repository and supplied restore evidence. The design direction is viable, but the application is **not implementation-ready for identity cutover** until the policy decisions, retention model, transactional authorization/security services, finance reconciliation, and deployment controls above are closed.
+
+**Gate A remains NOT AUTHORIZED.** No DDL/DML, EF migration, source-code change, backfill, cutover, production access, or destructive operation was performed. No build, test suite, or runtime validation was executed in this review.
