@@ -214,3 +214,20 @@ Reviewed results: `Database/Diagnostics/Wallet-Credential-Validation-Results/202
 - The diagnostic exports no secret values and makes no database changes.
 
 Do not run the current startup credential migration as a diagnostic step. The next credential gate is non-mutating hash verification with aggregate-only output and an explicit invalid-credential recovery/re-enrollment plan. Gate A remains blocked by credential policy, reviewed identity linking, finance/carry-over reconciliation, external wallet-view dependency confirmation, cascade retention, and disposable rehearsal/rollback. No DDL/DML, EF migration, backfill, or cutover has been authorized or executed.
+
+
+
+## Authentication and credential flow review — 2026-11-18
+
+Added `Authentication-and-Credential-Flow-Review-2026-11-18.md` after reviewing the startup migration, BCrypt verifier, direct/unified login paths, account-context selection, session revalidation, MFA enforcement, and existing verifier tests.
+
+Key decisions/findings:
+- `PinMigrationService.MigrateLegacySecretsAsync()` still runs during application startup and mutates/clears legacy credential fields. Do not start the application against the restore for diagnostics; isolate this migration in an explicit audited workflow.
+- BCrypt detection is prefix-only; existing unit tests currently treat prefix recognition as sufficient. Strict syntax/parseability and actual user-secret verification must remain separate concepts.
+- Direct resident login omits `IsActive` from its initial selection predicate, while unified login filters it. SessionRevalidator later rejects inactive residents, but entry-point behavior should be consistent.
+- Missing-PIN responses differ from generic invalid-credential responses and need an explicit disclosure/timing policy.
+- Unified account choices are stored server-side in Session, and SessionRevalidator provides subsequent state/scope checks; the source review did not establish a direct authentication bypass. Add a fresh state/scope check before cookie issuance as hardening.
+- Current MFA is enforced only for accounts that have enabled it; mandatory admin/SuperAdmin MFA remains a target-policy gap requiring enrollment and recovery rollout.
+- `Users.Pin` currently serves admin PIN and SuperAdmin password semantics; target credentials must be typed explicitly.
+
+No application code was changed, no tests were run, no application was started, and no database or credential values were modified/exported. Gate A remains blocked.
