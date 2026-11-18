@@ -19,3 +19,9 @@
 **Gate A remains NOT AUTHORIZED.** This decision approval does not authorize DDL, EF migrations, database changes, backfill, identity merges, credential rewrites, financial mutations, production changes, or cutover. Those require their own explicit execution approval and rehearsed gate.
 
 Continue read-only reviews and design consolidation without waiting for another decision prompt.
+
+## Full-project change authorization
+
+The owner has explicitly authorized full-project redesign and implementation across all application layers and domains, including source code, persistence/migrations, tests, operations, and documentation. Routine per-file approvals are not required. The scope, safeguards, and separate production execution boundary are documented in [Owner Authorization — Full Project Redesign](Owner-Authorization-Full-Project-Redesign-2026-11-18.md).
+
+Controlled schema/data migration testing is authorized only against a verified disposable restore/test database. Production/live changes, production deployment, irreversible cutover, and destructive actions on non-disposable data still require a specific execution approval. Gate A can be prepared and rehearsed on disposable restore; production application remains separately unauthorized.
