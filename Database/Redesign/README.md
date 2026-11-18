@@ -527,3 +527,14 @@ Priority findings:
 - The self-settings route is available to any authenticated user without explicit enforcement of the catalogued `settings.manage.own` permission; define whether this is intentionally role-intrinsic.
 
 The section includes acceptance tests for secret exposure, key rotation, settings validation, independent resident preferences, impersonation permission/stack/revocation, and durable audit. Static review only; no code, settings, credentials, sessions, schema, or data were changed. No build/tests were run. **Gate A remains NOT AUTHORIZED.**
+
+
+### Startup PIN migration and SQL mirror review — 2026-11-18
+
+Section 27 examines the startup PIN migration and SQL mirror persistence paths.
+
+Critical finding: `MigrateLegacySecretsAsync` performs live credential/data changes at application startup, including hashing user/resident PINs, creating resident rows for apartments with legacy PINs, and clearing legacy Building/Apartment PIN columns. It has no dry-run, explicit approval, durable source mapping, or encompassing transaction, and can partially complete or race across application instances. It must be removed from automatic startup and replaced by a separately approved, checkpointed, auditable migration workflow.
+
+Additional findings: SQL mirror health is process-local and stores raw provider error messages; all-building aggregate loading has a documented 16-query-per-building pattern; user permission rows are replaced while building-admin links are additive only, so omitted building links are not revoked; process-local keyed locks do not coordinate multiple instances.
+
+Static review only. The migration was not invoked, and no database/application changes, build, or tests were performed. **Gate A remains NOT AUTHORIZED.**
