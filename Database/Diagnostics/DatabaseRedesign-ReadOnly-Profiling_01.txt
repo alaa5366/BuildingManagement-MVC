@@ -1,1 +1,0 @@
-﻿BuildingManagement_RestoreTest	ZOS-AAM\LOCALDB#8B6B20E4	17.0.4025.3	Express Edition (64-bit)	2026-11-18 10:30:15.3687540
