@@ -1,5 +1,6 @@
 using BuildingManagementMvc.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace BuildingManagementMvc.Data;
 
