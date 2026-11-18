@@ -336,3 +336,18 @@ A focused controller/action review was performed against the branch source for t
 The permission catalogue must now include a controller/action/resource matrix, a resident camera policy, apartment disable/enable policy, read-vs-write separation for high-impact financial and identity actions, and explicit decisions for building-wide resident maintenance visibility. Any legacy permission with no confirmed consuming endpoint or unclear scope remains unmapped/manual-review; do not automatically grant it at System or all-Buildings scope.
 
 This section records source observations and target requirements only. No application source, schema, database rows, credentials, or sessions were changed. No build or runtime tests were executed.
+
+
+### Existing authorization-test coverage review
+
+Reviewed `Tests/BuildingManagement.Tests/ControllerAuthorizationTests.cs` and `SourceIntegrityTests.cs`.
+
+- The reflection guard verifies that controllers/actions carry `[Authorize]` or `[AllowAnonymous]`; a class-level `[Authorize]` is accepted for every action, but the test does not prove the correct role or resource scope.
+- The sensitive-controller role test currently covers only Expenses, Revenues, Wallet, and Backup.
+- The custom-permission test verifies that selected attributes are declared on AdminResidents, Cameras, and Building Settings. It does not instantiate either custom filter or test what happens for resident/non-admin principals.
+- The audit-log test validates the static role+permission decision helper, but does not exercise query scoping or CSV export against foreign resource IDs.
+- No test in the inspected file asserts that `DisableApartment` / `EnableApartment` requires `apartment.disable`.
+
+**Required test additions:** behavioral filter tests using AuthorizationFilterContext for AdminPermission and HasPermission; action-specific permission tests for apartment disable/enable; table-driven role/scope tests across all sensitive controllers; and endpoint tests for foreign building/apartment/resource identifiers on both read and mutation/export actions. The tests should assert deny-by-default for unsupported authenticated roles, not merely presence of an authorization attribute.
+
+This is test-source inspection only; no tests were executed.
