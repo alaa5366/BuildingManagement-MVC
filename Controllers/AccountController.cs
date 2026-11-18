@@ -709,19 +709,12 @@ public class AccountController : Controller
         if (res.Role is "admin" or "superadmin")
             claims.Add(new Claim("twoFactorVerified", twoFactorVerified ? "true" : "false"));
 
-        if (res.Role == "superadmin")
+        if (res.Role is "admin" or "superadmin")
         {
-            foreach (var p in BuildingManagementMvc.Models.AdminPermissions.SuperAdminAll)
-                claims.Add(new Claim("perm", p));
-        }
-        else if (res.Role == "admin")
-        {
-            var user = await _users.GetByUidAsync(res.Uid!);
-            if (user?.Permissions != null)
-            {
-                foreach (var p in user.Permissions)
-                    claims.Add(new Claim("perm", p));
-            }
+            // Permission claims are sourced from persisted grants for both administrator roles.
+            // A role name or configured SuperAdmin allow-list never manufactures permissions.
+            foreach (var permission in res.Permissions.Distinct(StringComparer.Ordinal))
+                claims.Add(new Claim("perm", permission));
         }
         else if (res.Role == "resident")
         {
