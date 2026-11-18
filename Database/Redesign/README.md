@@ -139,6 +139,8 @@ Current safe boundary:
 
 ## Additional design artifacts
 
+- Read-only local collector: `Database/Diagnostics/Run-Redesign-Schema-Parity.ps1` — exports database identity, tables/row counts, columns, PK/UK/FK/CHECK/default constraints, indexes, views/definitions/dependencies, legacy key metadata, and EF migration history. It requires the exact restore DB/branch/remote and a clean worktree; it does not execute DDL/DML.
+
 - `Database/Redesign/Owner-Decision-Summary.md` — concise owner-facing summary of the highest-impact open decisions with recommended defaults; unrelated design work continues while decisions remain open.
 
 - `Database/Redesign/Audit-Outbox-and-Observability-Target-Design.md` — durable business/security audit, transactional outbox/inbox, diagnostic log separation, scope-based access, retention, redaction, and operational tests.
