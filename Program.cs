@@ -400,19 +400,9 @@ try
 
     BackupFileProtector.Initialize(encryptionSecret);
 
-    try
-    {
-        using var migrationScope = app.Services.CreateScope();
-        var pinMigration = migrationScope.ServiceProvider.GetRequiredService<PinMigrationService>();
-        var (mUsers, mResidents, mCleared) = await pinMigration.MigrateLegacySecretsAsync();
-        Log.Information("Legacy secret migration completed. Users={MigratedUsers}, Residents={MigratedResidents}, BuildingAdminPinsCleared={BuildingAdminPinsCleared}", mUsers, mResidents, mCleared);
-    }
-    catch (Exception ex)
-    {
-        Log.Error(ex, "Legacy secret migration failed during startup");
-    }
-
-    await app.Services.GetRequiredService<LoginThrottle>().InitializeAsync();
+    // Startup must never rewrite credentials or create/clean operational tables.
+    // Legacy PIN reconciliation is handled only by an explicit, checkpointed migration.
+    // Login throttling starts in memory; persistence is enabled only by an EF-managed schema.
 
     // ============================================================
     // Middleware
