@@ -55,13 +55,14 @@
 
 ## 3. First execution sequence
 
-1. **ARCH-01:** freeze module boundaries and shared vocabulary.
-2. **DATA-01:** close the live-schema/EF/FullSchema/view deployment discrepancies. The view inventory finding must be reconciled with the checked-in schema artifact before choosing a deployment mechanism.
-3. **DATA-02:** reconcile exact key metadata; do not infer physical types from the proposed ERD.
-4. **SEC-01:** classify every permission key by its actual controller/service/resource consumer.
-5. **DATA-03:** finalize LegacyIdentityMap and identity review workflow.
-6. **DATA-04:** define the authoritative financial reconciliation baseline, including the already-observed small rounding variances and unexplained source-period cases.
-7. Only after these artifacts are reviewed: prepare a Gate A rehearsal plan and request explicit approval.
+1. **ARCH-01 / ARCH-02:** consolidate the module boundaries, domain glossary, aggregate ownership, and command/query contracts. Draft artifacts are now published; next is a cross-module conflict pass.
+2. **DATA-01 / DB-01:** close live-schema, EF model/snapshot/history, FullSchema, and SQL-view deployment discrepancies. DEC-28 owner confirmation selects the single authoritative deployment path.
+3. **DATA-02 / DATA-05:** reconcile exact key metadata and classify every target entity by phase; do not infer physical types from the proposed ERD.
+4. **SEC-01 / AUTH-02:** classify every legacy permission key by actual endpoint, service operation, resource, and scope; resolve stale workflows and privilege decomposition.
+5. **DATA-03:** finalize LegacyIdentityMap review authority, evidence rubric, and restartable migration workflow.
+6. **DATA-04 / FIN-03:** freeze financial source baselines and wallet parity fixtures; obtain DEC-15/16/17 and finance authority decisions before ledger schema.
+7. Close the technical items in the cross-document consistency review, then prepare the Gate A column/constraint manifest and disposable-restore rehearsal package.
+8. Gate A execution remains a separate explicit approval. Preparing a rehearsal package does not authorize running it.
 
 ## 4. Decision register
 
