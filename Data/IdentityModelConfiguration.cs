@@ -49,7 +49,7 @@ internal static class IdentityModelConfiguration
             Utc3(e.Property(x => x.CreatedAtUtc)).HasDefaultValueSql("SYSUTCDATETIME()");
             e.Property(x => x.RowVersion).IsRowVersion();
             e.HasOne<PersonEntity>().WithMany().HasForeignKey(x => x.PersonId).OnDelete(DeleteBehavior.NoAction);
-            e.HasIndex(x => x.PersonId).IsUnique().HasDatabaseName("UQ_UserAccounts_PersonId");
+            e.HasAlternateKey(x => x.PersonId).HasName("UQ_UserAccounts_PersonId");
             e.HasIndex(x => new { x.ExternalProvider, x.ExternalSubject }).IsUnique()
                 .HasDatabaseName("UX_UserAccounts_ExternalLogin")
                 .HasFilter("[ExternalProvider] IS NOT NULL AND [ExternalSubject] IS NOT NULL");
@@ -307,7 +307,7 @@ internal static class IdentityModelConfiguration
             e.HasOne<PersonEntity>().WithMany().HasForeignKey(x => x.PersonId).OnDelete(DeleteBehavior.NoAction);
             e.HasOne<UserAccountEntity>().WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.NoAction);
             e.HasOne<UserAccountEntity>().WithMany().HasForeignKey(x => x.ReviewedByAccountId).OnDelete(DeleteBehavior.NoAction);
-            e.HasIndex(x => new { x.SourceSystem, x.SourceTable, x.SourceKey }).IsUnique().HasDatabaseName("UQ_LegacyIdentityMap_Source");
+            e.HasAlternateKey(x => new { x.SourceSystem, x.SourceTable, x.SourceKey }).HasName("UQ_LegacyIdentityMap_Source");
             e.HasIndex(x => x.AccountId).IsUnique().HasDatabaseName("UX_LegacyIdentityMap_Account").HasFilter("[AccountId] IS NOT NULL");
             e.HasIndex(x => x.PersonId).HasDatabaseName("IX_LegacyIdentityMap_Person").HasFilter("[PersonId] IS NOT NULL");
             e.HasIndex(x => new { x.MappingStatus, x.SourceTable, x.SourceSystem }).HasDatabaseName("IX_LegacyIdentityMap_Status_Source");
