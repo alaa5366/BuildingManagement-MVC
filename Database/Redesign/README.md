@@ -541,3 +541,20 @@ Static review only. The migration was not invoked, and no database/application c
 
 
 **Startup wiring confirmed:** `Program.cs` calls `MigrateLegacySecretsAsync()` during application startup. Do not start the application against the restore database while preserving its current legacy PIN state is required. The method must be removed/feature-gated in a separately approved code change before any further restore-database application testing.
+
+
+### Runtime orchestration, backups, application logs, health, and sync inventory — 2026-11-18
+
+Section 28 reviews the hosted backup scheduler, backup retention/history, application-log explorer, health endpoints, rate limiting, shared runtime state, Data Protection, CSP, and the synchronization feature inventory.
+
+Key findings:
+- The scheduled backup hosted service runs independently in every app process and has no visible distributed lease. Concurrent instances can run the same due backup; minute-resolution filenames can overwrite while history rows duplicate.
+- Monthly backup day 29/30/31 settings are skipped in months without that date. The configured hour is UTC but the UI contract does not visibly clarify timezone.
+- Retention deletes scheduled files without reconciling BackupHistory; legacy unencrypted backups remain accepted by the compatibility decryptor.
+- Application log search scans files for every query. The explorer independently takes only 14 files, which can omit retained rollover files; malformed date filters silently become no filter.
+- Health endpoints are minimal but have no visible authorization metadata. Rate limiting is process-local and forwarded-IP behavior depends on explicitly trusted proxy configuration. Memory cache/session and Data Protection key-ring configuration need production multi-instance validation.
+- CSP still allows inline scripts and HTTP sources for media/connect/frame. The permission catalog advertises sync controller/services that are absent from the current Controllers/Services inventories; confirm retirement or external ownership.
+
+Required acceptance tests cover multi-instance scheduler locking, schedule edge dates/timezones, crash recovery, retention/history reconciliation, backup restore integrity, rolled log coverage and performance, redaction canaries, health/proxy/rate-limit behavior, shared Data Protection, CSP, and sync ownership.
+
+Static source review only; no application, database, backup, synchronization, filesystem, credential, or configuration changes were made. No build/tests were run. **Gate A remains NOT AUTHORIZED.**
