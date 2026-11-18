@@ -13,10 +13,11 @@ $BackupPath = Join-Path $BackupDir "BuildingManagement_RestoreTest-Phase08-$Stam
 $ReportDir = Join-Path $Repo 'Database\Redesign\Review-Reports'
 $ReportPath = Join-Path $ReportDir "Phase08-RestoreTest-Preflight-$Stamp.md"
 
-function Invoke-Git([string[]]$Args) {
-    $output = & git @Args 2>&1
+function Invoke-Git {
+    param([Parameter(Mandatory = $true)][string[]]$GitArgs)
+    $output = & git @GitArgs 2>&1
     $code = $LASTEXITCODE
-    if ($code -ne 0) { throw "git $($Args -join ' ') failed ($code): $($output -join [Environment]::NewLine)" }
+    if ($code -ne 0) { throw "git $($GitArgs -join ' ') failed ($code): $($output -join [Environment]::NewLine)" }
     return (($output | ForEach-Object { $_.ToString() }) -join [Environment]::NewLine).Trim()
 }
 function Invoke-Sql([string]$ConnectionString, [string]$Sql) {
@@ -37,7 +38,7 @@ function Invoke-Sql([string]$ConnectionString, [string]$Sql) {
 
 Set-Location $Repo
 if (-not (Test-Path '.\BuildingManagementMVC.csproj')) { throw 'Repository path is not the BuildingManagement-MVC project.' }
-if ((Invoke-Git @('branch','--show-current')) -ne $Branch) { throw "Switch to $Branch before running." }
+if ((Invoke-Git -GitArgs @('branch','--show-current')) -ne $Branch) { throw "Switch to $Branch before running." }
 if ((Invoke-Git @('status','--porcelain'))) { throw 'Working tree is not clean. Commit or safely preserve local changes before running; nothing was changed.' }
 Invoke-Git @('fetch','origin',$Branch) | Out-Null
 Invoke-Git @('merge','--ff-only','@{u}') | Out-Null
