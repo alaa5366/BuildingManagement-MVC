@@ -227,3 +227,21 @@ Proceed without routine per-file approvals. Create and validate migrations and r
 ### P0 startup safety remediation — 2026-11-18
 
 **Implemented in source; verification pending.** Normal startup no longer invokes the legacy PIN migration, registers the old migration service, or initializes the SQL-backed LoginThrottle table. The unsafe PIN migration implementation has been removed. LoginThrottle now uses in-process counters only; its counters reset on restart until an EF-managed persistence implementation is delivered. See [P0 Startup Safety Remediation](P0-Startup-Safety-Remediation-2026-11-18.md). No database was changed and no build/tests were run for this change.
+
+
+## 12. Owner implementation authorization — 2026-11-18
+
+The owner explicitly approved changing the project and database. This supersedes the planning-only implementation restriction and the earlier Gate A not-authorized status for disposable/test work.
+
+**Implementation is authorized** for application code, EF Core model/entities, migrations, schema objects, constraints/indexes, and staged/restartable data transformations on the disposable `BuildingManagement_RestoreTest` database. Gate A may proceed to implementation and disposable-restore rehearsal.
+
+Execution controls:
+1. Every database script/migration must hard-stop unless the connected database is exactly `BuildingManagement_RestoreTest` and the expected migration baseline is present.
+2. Capture a recoverable backup/restore point and pre-migration inventory before applying schema changes.
+3. Apply additive schema first; do not drop/rename legacy columns or tables while old application code may still use them.
+4. Backfill only deterministic, evidence-backed mappings. Ambiguous identity, ownership, access, or permission rows are reported for manual review and left unmigrated.
+5. Reconcile row counts, key uniqueness, FK integrity, and domain totals after each migration.
+6. Keep production deployment/cutover, irreversible destructive cleanup, and any financial mutation against a live target outside this authorization; those require target-specific confirmation.
+7. Build/test/runtime claims must be backed by actual execution evidence.
+
+The backlog is now an implementation backlog, not a read-only plan. Work proceeds in dependency order; routine design and implementation choices do not require another approval prompt.
