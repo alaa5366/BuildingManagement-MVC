@@ -58,6 +58,7 @@ public sealed class DefaultAuthorizationPermissionCatalog : IAuthorizationPermis
             ["audit.view.all"] = Define("audit.view.all", AuthorizationScopeType.System, mfa: true),
             ["audit.view.building"] = Define("audit.view.building", AuthorizationScopeType.System, AuthorizationScopeType.Building, systemChildren: true),
             ["audit.view.own"] = Define("audit.view.own", AuthorizationScopeType.Personal),
+            ["apartment.access.grant.manage"] = Define("apartment.access.grant.manage", AuthorizationScopeType.Building, AuthorizationScopeType.Apartment, mfa: true),
             ["system.logs.view"] = Define("system.logs.view", AuthorizationScopeType.System, mfa: true),
             ["settings.manage.global"] = Define("settings.manage.global", AuthorizationScopeType.System, mfa: true),
             ["settings.manage.building"] = Define("settings.manage.building", AuthorizationScopeType.System, AuthorizationScopeType.Building, systemChildren: true),

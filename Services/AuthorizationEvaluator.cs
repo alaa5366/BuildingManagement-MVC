@@ -71,7 +71,16 @@ public sealed class AuthorizationEvaluator
     /// <param name="nowUtc">Current UTC time from the caller's clock.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A generic decision and safe reason code.</returns>
-    public async Task<AuthorizationEvaluationResult> EvaluateAsync(
+    public Task<AuthorizationEvaluationResult> EvaluateAsync(
+        ClaimsPrincipal principal,
+        string permissionKey,
+        ResolvedAuthorizationResource? resource,
+        DateTime nowUtc,
+        CancellationToken cancellationToken = default) =>
+        EvaluateAsync(_db, principal, permissionKey, resource, nowUtc, cancellationToken);
+
+    internal async Task<AuthorizationEvaluationResult> EvaluateAsync(
+        AppDbContext db,
         ClaimsPrincipal principal,
         string permissionKey,
         ResolvedAuthorizationResource? resource,
@@ -92,8 +101,8 @@ public sealed class AuthorizationEvaluator
             return Deny(AuthorizationReason.InvalidResource);
 
         var account = await (
-            from userAccount in _db.UserAccounts.AsNoTracking()
-            join person in _db.Persons.AsNoTracking() on userAccount.PersonId equals person.PersonId
+            from userAccount in db.UserAccounts.AsNoTracking()
+            join person in db.Persons.AsNoTracking() on userAccount.PersonId equals person.PersonId
             where userAccount.AccountId == accountId
             select new
             {
@@ -111,13 +120,13 @@ public sealed class AuthorizationEvaluator
             !string.Equals(sessionStamp, account.SecurityStamp, StringComparison.Ordinal))
             return Deny(AuthorizationReason.StaleSecurityStamp);
 
-        if (!await ResourceExistsAsync(resource!, account.PersonId, cancellationToken))
+        if (!await ResourceExistsAsync(db, resource!, account.PersonId, cancellationToken))
             return Deny(AuthorizationReason.InvalidResource);
 
         var roleGrants = await (
-            from assignment in _db.UserRoleAssignments.AsNoTracking()
-            join role in _db.RoleDefinitions.AsNoTracking() on assignment.RoleKey equals role.RoleKey
-            join rolePermission in _db.RolePermissions.AsNoTracking() on role.RoleKey equals rolePermission.RoleKey
+            from assignment in db.UserRoleAssignments.AsNoTracking()
+            join role in db.RoleDefinitions.AsNoTracking() on assignment.RoleKey equals role.RoleKey
+            join rolePermission in db.RolePermissions.AsNoTracking() on role.RoleKey equals rolePermission.RoleKey
             where assignment.AccountId == accountId
                   && role.IsActive
                   && rolePermission.PermissionKey == definition.Key
@@ -127,7 +136,7 @@ public sealed class AuthorizationEvaluator
             select new GrantCandidate(assignment.ScopeType, assignment.ScopeBuildingId, assignment.ScopeApartmentId, rolePermission.Effect))
             .ToListAsync(cancellationToken);
 
-        var overrides = await _db.AccountPermissionOverrides.AsNoTracking()
+        var overrides = await db.AccountPermissionOverrides.AsNoTracking()
             .Where(item => item.AccountId == accountId
                            && item.PermissionKey == definition.Key
                            && item.ValidFromUtc <= nowUtc
@@ -158,6 +167,7 @@ public sealed class AuthorizationEvaluator
     }
 
     private async Task<bool> ResourceExistsAsync(
+        AppDbContext db,
         ResolvedAuthorizationResource resource,
         Guid actorPersonId,
         CancellationToken cancellationToken)
@@ -165,9 +175,9 @@ public sealed class AuthorizationEvaluator
         return resource.ScopeType switch
         {
             AuthorizationScopeType.System => true,
-            AuthorizationScopeType.Building => await _db.Buildings.AsNoTracking()
+            AuthorizationScopeType.Building => await db.Buildings.AsNoTracking()
                 .AnyAsync(item => item.Id == resource.BuildingId, cancellationToken),
-            AuthorizationScopeType.Apartment => await _db.Apartments.AsNoTracking()
+            AuthorizationScopeType.Apartment => await db.Apartments.AsNoTracking()
                 .AnyAsync(item => item.BuildingId == resource.BuildingId && item.Id == resource.ApartmentId, cancellationToken),
             AuthorizationScopeType.Personal => resource.PersonId == actorPersonId,
             _ => false

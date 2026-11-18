@@ -137,6 +137,7 @@ try
     builder.Services.AddSingleton<IAuthorizationPermissionCatalog, DefaultAuthorizationPermissionCatalog>();
     builder.Services.AddScoped<AuthorizationEvaluator>();
     builder.Services.AddScoped<ApartmentOwnershipService>();
+    builder.Services.AddScoped<ApartmentAccessGrantService>();
 
     // ✅ Health Checks (فحص صحة الداتابيز)
     builder.Services.AddHealthChecks()

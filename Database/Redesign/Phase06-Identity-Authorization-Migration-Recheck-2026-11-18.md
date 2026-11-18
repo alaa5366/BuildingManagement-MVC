@@ -53,9 +53,10 @@ The preflight confirmed that all 13 target tables were absent before the rehears
 
 - Added `AuthorizationPermissionCatalog` and `AuthorizationEvaluator` with code-owned permission keys, active-account and security-stamp checks, server-resolved resource scopes, explicit-deny precedence, and MFA step-up for sensitive operations. Unknown permissions and absent grants deny access.
 - Added `ApartmentOwnershipService` for serializable period writes, active-person and actor checks, evidence/source recording, closure reasons, append-only audit entries, and overlap/share validation. CompleteVerified periods require exactly 100%; incomplete/unknown totals are not normalized.
+- Added `ApartmentAccessGrantService` for serializable grant and revoke operations. It requires a fresh MFA-backed `apartment.access.grant.manage` decision at apartment/building scope, validates active actors and people, requires reasons, and audits changes atomically. Profile keys still do not imply permissions.
 - Added the `OwnershipRecordSource` enum and constraints through `20261118184850_Phase07_OwnershipRecordProvenance`.
 - Build succeeded with 0 warnings and 0 errors. `dotnet ef migrations has-pending-model-changes` reported no model changes.
-- After the service and evaluator test coverage was added, the complete regression suite passed: 507 passed, 0 failed, 0 skipped. The first constrained test-host launch timed out; rerunning outside the restricted shell completed successfully.
+- After the service and evaluator test coverage was added, the complete regression suite passed: 513 passed, 0 failed, 0 skipped. The first constrained test-host launch timed out; rerunning outside the restricted shell completed successfully.
 - A new COPY_ONLY backup at `C:\Users\alaa5\AppData\Local\Temp\BuildingManagement_RestoreTest_Phase07-pre-20261118-204900.bak` passed `RESTORE VERIFYONLY WITH CHECKSUM`.
 - Phase07 was applied to `BuildingManagement_RestoreTest` only. Reconciliation confirmed the migration history row, `RecordSource` as `tinyint NOT NULL` with default 0, both new checks enabled and trusted, and zero ownership rows.
 - Focused SQL is saved as `Database/Redesign/GateA-Phase07-Focused-20261118.sql`.
