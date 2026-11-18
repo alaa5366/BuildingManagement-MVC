@@ -104,6 +104,17 @@ Remaining target gaps:
 
 The target command must validate apartment/building scope, accounting period, amount precision/range, reason, and actor before persistence. Adjustments should be immutable and corrections should be made through linked reversal/replacement entries.
 
+### 2.7A Validation and persistence feedback
+
+The controller/service boundary has inconsistent validation ownership:
+
+- `AddWalletAdjustment` accepts the apartment ID and month key without validating either. The mapper later skips an invalid apartment or malformed month with a warning, while the controller has already emitted an audit event. The current command can therefore appear to have succeeded even though the adjustment row was not persisted.
+- Expense/revenue controllers accept a month string and the mapper silently skips invalid month keys. Their add paths can still emit audit events and success messages after the in-memory mutation.
+- Expense/revenue delete paths ignore the boolean returned by the service. A missing ID can still be followed by a delete audit event and a successful save path.
+- The mapper falls back to the first day of the month when a submitted expense/revenue date cannot be parsed. This converts malformed input into a different valid date instead of rejecting it.
+
+**Target direction:** validate all command inputs before mutation; return typed outcomes (Created, Updated, NotFound, Invalid, Conflict); never emit success audit/outbox events for rejected or unpersisted commands; reject invalid dates rather than silently replacing them.
+
 ### 2.8 Reporting semantics
 
 `GetAllTransactions` intentionally summarizes recurring charges, expense distribution, revenue distribution, and carry-forward for the latest selected month only, while listing deposits and adjustments across the selected month range. This may be a valid statement presentation rule, but it is not a complete historical ledger. Reports must distinguish:
@@ -113,6 +124,9 @@ The target command must validate apartment/building scope, accounting period, am
 - a building-level cash movement report.
 
 Do not reuse one query/result model for all four meanings.
+
+The reports implementation also calculates range `NetBalance` as total confirmed deposits minus expenses plus revenues. It is a cash-movement summary for the selected range, not the sum of apartment wallet balances: it excludes carry-forward, monthly fees, and manual adjustments. Keep these measures separately named and documented in the target reporting contracts.
+
 
 ## 3. Voting domain — current behavior and risks
 
