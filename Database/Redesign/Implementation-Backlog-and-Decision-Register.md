@@ -245,3 +245,11 @@ Execution controls:
 7. Build/test/runtime claims must be backed by actual execution evidence.
 
 The backlog is now an implementation backlog, not a read-only plan. Work proceeds in dependency order; routine design and implementation choices do not require another approval prompt.
+
+
+
+## 13. Gate A DDL review and EF implementation sequence
+
+The Gate A DDL received a static implementation review. A cross-account credential replacement vulnerability was closed by making the replacement FK composite on `(ReplacedByCredentialId, AccountId)` and adding the matching candidate key. The expected four EF migration IDs and hard-stop preflight were checked against repository source. See `GateA-DDL-Implementation-Review-2026-11-18.md`.
+
+**Current status:** DDL source reviewed/amended; EF Core entities/configuration, generated migration and model snapshot, migration tests, and disposable restore rehearsal remain to be completed. Do not run the standalone SQL and a duplicate EF migration against the same database. EF Core migration history must remain the authoritative application schema deployment record.
