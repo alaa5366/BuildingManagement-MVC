@@ -460,3 +460,27 @@ After the product decisions and metadata gates are confirmed, create:
 3. EF Core entity/configuration implementation plan, followed by additive migrations on a disposable restore only.
 
 **No database has been modified by this document.**
+
+### 2.8 AccountPermissionOverrides
+
+This table preserves the semantics of legacy `UserPermissions(Uid, Permission)`, which is account-specific and cannot be safely converted into role-wide `RolePermissions`.
+
+| Column | Proposed SQL type | Null | Rule / purpose |
+|---|---|---:|---|
+| OverrideId | uniqueidentifier | No | PK |
+| AccountId | uniqueidentifier | No | FK UserAccounts |
+| PermissionKey | nvarchar(100) | No | Code-owned permission catalog key |
+| Effect | tinyint | No | 0 Deny, 1 Allow; deny precedence |
+| ScopeType | tinyint | No | System, Building, Apartment, Personal |
+| ScopeBuildingId | legacy key type | Yes | Required for Building/Apartment |
+| ScopeApartmentId | legacy key type | Yes | Required only for Apartment |
+| ValidFromUtc | datetime2(3) | No | Effective start |
+| ValidToUtc | datetime2(3) | Yes | Exclusive end |
+| GrantedAtUtc | datetime2(3) | No | Audit timestamp |
+| GrantedByAccountId | uniqueidentifier | Yes | Granting actor |
+| RevokedAtUtc | datetime2(3) | Yes | Revocation timestamp |
+| RevokedByAccountId | uniqueidentifier | Yes | Revoking actor |
+| RowVersion | rowversion | No | Concurrency |
+
+Scope combinations must match `UserRoleAssignments`. Restrictive FKs enforce account, building, and apartment scope. The service must evaluate permission overrides with explicit scope and validity; deny takes precedence. Do not create role-wide permissions from account-specific legacy rows. Interval overlap and duplicate active grants are transactionally validated.
+
