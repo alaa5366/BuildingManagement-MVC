@@ -52,18 +52,19 @@ if ($dbCheck.Rows.Count -ne 1) { throw "Database $Database was not found on $Ser
 if ($dbCheck.Rows[0].state_desc -ne 'ONLINE') { throw "Target database is not ONLINE. No backup or changes were made." }
 
 $dbCs = "Server=$Server;Database=$Database;Integrated Security=True;TrustServerCertificate=True;Connect Timeout=15;"
-$inventory = Invoke-Sql $dbCs @"
-SET NOCOUNT ON;
+$tableInventory = Invoke-Sql $dbCs @"
 SELECT t.name AS TableName, SUM(p.rows) AS RowCount
 FROM sys.tables t
 JOIN sys.partitions p ON p.object_id=t.object_id AND p.index_id IN (0,1)
 GROUP BY t.name
 ORDER BY t.name;
-
+"@
+$migrationHistory = Invoke-Sql $dbCs @"
 SELECT MigrationId, ProductVersion
 FROM dbo.__EFMigrationsHistory
 ORDER BY MigrationId;
-
+"@
+$financeTables = Invoke-Sql $dbCs @"
 SELECT s.name AS SchemaName, t.name AS TableName
 FROM sys.tables t
 JOIN sys.schemas s ON s.schema_id=t.schema_id
@@ -97,14 +98,14 @@ $lines.Add('- EF migration application: NOT RUN')
 $lines.Add('- Business data changes: NONE')
 $lines.Add('')
 $lines.Add('## Table inventory')
-foreach ($row in $inventory[0].Rows) { $lines.Add("- $($row.TableName): $($row.RowCount)") }
+foreach ($row in $tableInventory.Rows) { $lines.Add("- $($row.TableName): $($row.RowCount)") }
 $lines.Add('')
 $lines.Add('## EF migration history')
-foreach ($row in $inventory[1].Rows) { $lines.Add("- $($row.MigrationId) (EF $($row.ProductVersion))") }
+foreach ($row in $migrationHistory.Rows) { $lines.Add("- $($row.MigrationId) (EF $($row.ProductVersion))") }
 $lines.Add('')
 $lines.Add('## Phase08 finance target tables')
-if ($inventory[2].Rows.Count -eq 0) { $lines.Add('- None found.') }
-foreach ($row in $inventory[2].Rows) { $lines.Add("- $($row.SchemaName).$($row.TableName)") }
+if ($financeTables.Rows.Count -eq 0) { $lines.Add('- None found.') }
+foreach ($row in $financeTables.Rows) { $lines.Add("- $($row.SchemaName).$($row.TableName)") }
 $lines.Add('')
 $lines.Add('## Gate status')
 $lines.Add('- Database identity and ONLINE state verified.')
