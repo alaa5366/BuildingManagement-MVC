@@ -398,3 +398,6 @@ Highest-priority items:
 - Backup deletion and scheduled execution span filesystem, SQL, schedule state, rotation and audit without one atomic boundary; require durable operation state and reconciliation.
 
 No source code or database was changed. No build or tests were run. Gate A remains NOT AUTHORIZED.
+
+
+Test-source review for section 14: backup tests currently codify unknown-collection skip as Success=true; scheduled-backup tests validate settings but not distributed execution; resident service tests do not cover actor/scope authorization; no ExcelImportServiceTests or DvrServiceTests were found at the inspected paths. Existing restore-session one-use/digest tests are valuable and must be preserved. Detailed additions are in section 14. No tests were run.
