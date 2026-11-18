@@ -1203,3 +1203,13 @@ No migration, database write, application startup, build, or test was performed.
 13. Confirm whether sync is retired or externally hosted; if retained, produce an authoritative inventory and repeatable end-to-end sync tests.
 
 Static source review only. No application, backup job, synchronization job, database, filesystem artifact, credential, or configuration was changed. No build or tests were run. **Gate A remains NOT AUTHORIZED.**
+
+
+#### 28.7 Manual backup endpoint outcome and download-cache controls
+
+- BackupController.RunNow awaits RunScheduledBackupAsync and then unconditionally sets the success message. RunScheduledBackupAsync catches its own exceptions and returns normally; it also returns early when scheduling is disabled and forceRun is true but no collections are configured. The UI can therefore report “Backup Created” when no file was created or when the internal run failed. Change the service contract to return a typed result (Created/Skipped/Failed) and map it accurately in the controller.
+- DeleteBackupAsync returns true after deleting any matching history rows even if no corresponding file existed. For an arbitrary safe-looking filename, the file path can be null while the method still deletes history by filename and emits a success audit event. Require an existing owned scheduled artifact or explicitly model history-only cleanup as a separate operation; distinguish NotFound from Deleted.
+- DownloadBackup decrypts the on-disk protected file and returns the plaintext ZIP. The controller does not visibly apply no-store response headers to this download. Apply Cache-Control: no-store, private and Pragma: no-cache to backup downloads and generated backup ZIP responses; ensure reverse proxies/CDNs do not cache them.
+- Backup creation and restore preview/execute are privileged, high-impact operations. Preserve the existing SuperAdmin + ManageBackup authorization and antiforgery protections, and add explicit durable audit outcomes for success, rejection, failure, and download; do not rely solely on generic request logs.
+
+Additional acceptance tests: RunNow with scheduling disabled, empty collection list, injected backup exception, and successful run must produce four distinct accurate outcomes; DeleteBackup for missing, malformed, existing, and history-only records must not falsely report deletion; backup ZIP responses must be verified no-store at the application and proxy layers.
