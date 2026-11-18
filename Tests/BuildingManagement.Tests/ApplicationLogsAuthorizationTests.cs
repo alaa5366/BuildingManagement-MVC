@@ -56,14 +56,15 @@ public sealed class ApplicationLogsAuthorizationTests
     }
 
     [Fact]
-    public void SuperAdmin_BypassesAdminPermissionMatrix()
+    public void SuperAdminWithoutPermission_IsForbidden()
     {
         var context = CreateContext(new Claim(ClaimTypes.Role, "superadmin"));
         var filterContext = CreateFilterContext(context);
 
         new AdminPermissionAttribute(AdminPermissions.ViewApplicationLogs).OnAuthorization(filterContext);
 
-        Assert.Null(filterContext.Result);
+        var result = Assert.IsType<ContentResult>(filterContext.Result);
+        Assert.Equal(StatusCodes.Status403Forbidden, result.StatusCode);
     }
 
     private static DefaultHttpContext CreateContext(params Claim[] claims)
