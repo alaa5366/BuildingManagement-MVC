@@ -186,3 +186,15 @@ A static source-text comparison has now been recorded in `GateA-Column-and-Const
 - no column-name omissions or extras across the script/dictionary pair.
 
 This is not SQL execution or physical schema validation. Legacy-key types remain generalized in the dictionary while the proposed SQL uses nvarchar(64), supported by the supplied preflight for the inspected Buildings/Apartments keys. Fresh metadata and FK parity checks remain mandatory.
+
+
+## 12. Domain coverage extensions
+
+The architecture and application contracts now explicitly include:
+- QR/capability-token issuance, verification, one-time consumption, revocation, and guest-session handoff;
+- staged import/migration batches with actor/target/file-digest binding, row validation, preview, approval, idempotent commit, and reconciliation;
+- a dedicated class disposition for QrTokenStoreService, QrController, QrAccessController, ExcelImportService, and the dormant apartment migration path;
+- centralized authorization evaluation with explicit scope inheritance, Deny precedence, hard security guards, step-up MFA, and revocation/cache requirements;
+- a finance-specific target design covering legacy wallet formula, ledger concepts, command state machines, allocation, rounding, period semantics, and reconciliation.
+
+The ERD now also explicitly shows Person -> PollEligibility for person-mode eligibility. It intentionally continues to show no relationship between PollEligibility and PollBallots.
