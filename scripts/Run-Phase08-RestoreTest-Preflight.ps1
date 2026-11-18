@@ -39,13 +39,11 @@ function Invoke-Sql([string]$ConnectionString, [string]$Sql) {
 Set-Location $Repo
 if (-not (Test-Path '.\BuildingManagementMVC.csproj')) { throw 'Repository path is not the BuildingManagement-MVC project.' }
 if ((Invoke-Git -GitArgs @('branch','--show-current')) -ne $Branch) { throw "Switch to $Branch before running." }
-# Preserve all pre-existing unstaged/untracked work. Refuse only staged changes,
-# because the report-only commit must never include somebody else's staged files.
-$staged = & git diff --cached --name-only
-if ($LASTEXITCODE -ne 0) { throw 'Unable to inspect Git index; nothing was changed.' }
-if ($staged) { throw "Git index contains staged changes. Unstage or commit them separately before running; staged paths: $($staged -join ', ')" }
+# Preserve all pre-existing staged, unstaged, and untracked work.
+# The report is committed with --only so no other project changes can enter its commit.
 $preExistingChanges = & git status --short
 if ($LASTEXITCODE -ne 0) { throw 'Unable to inspect working tree; nothing was changed.' }
+
 # No fetch/merge here: pull the reviewed branch before running this preflight.
 
 $masterCs = "Server=$Server;Database=master;Integrated Security=True;TrustServerCertificate=True;Connect Timeout=15;"
@@ -125,7 +123,7 @@ $lines.Add('- This report is preflight evidence only; it does not authorize migr
 
 $relative = $ReportPath.Substring($Repo.Length + 1).Replace('\','/')
 Invoke-Git -GitArgs @('add','--',$relative) | Out-Null
-Invoke-Git -GitArgs @('commit','-m',"docs: record Phase08 RestoreTest preflight $Stamp") | Out-Null
+Invoke-Git -GitArgs @('commit','--only','-m',"docs: record Phase08 RestoreTest preflight $Stamp",'--',$relative) | Out-Null
 Invoke-Git -GitArgs @('push','origin',$Branch) | Out-Null
 
 Write-Host "Preflight report pushed: $relative" -ForegroundColor Green
