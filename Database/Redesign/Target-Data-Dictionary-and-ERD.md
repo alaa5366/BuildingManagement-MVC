@@ -66,7 +66,7 @@ Indexes: PK(PersonId); optional non-unique normalized email/phone indexes for lo
 |---|---|---:|---|
 | AccountId | uniqueidentifier | No | PK |
 | PersonId | uniqueidentifier | No | FK Persons; unique (one human account per person) |
-| AccountStatus | tinyint | No | Defined status catalog: Pending, Active, Locked, Disabled |
+| AccountStatus | tinyint | No | 0 Pending, 1 Active, 2 Locked, 3 Disabled |
 | NormalizedEmail | nvarchar(254) | Yes | Unique filtered index only if email is the login identifier and duplicates are prohibited |
 | ExternalProvider | nvarchar(40) | Yes | Provider key |
 | ExternalSubject | nvarchar(200) | Yes | Provider subject; unique with provider when populated |
@@ -83,7 +83,7 @@ Constraints: UNIQUE(PersonId); FK PersonId → Persons with NO ACTION. Do not cr
 |---|---|---:|---|
 | CredentialId | uniqueidentifier | No | PK |
 | AccountId | uniqueidentifier | No | FK UserAccounts |
-| CredentialType | tinyint | No | Password, PIN, External, etc. |
+| CredentialType | tinyint | No | 0 Password, 1 PIN; external provider subject is account-level, not a password-hash credential |
 | CredentialHash | nvarchar(512) | No | Encoded password-hash output; never plaintext |
 | HashAlgorithm | nvarchar(40) | No | Versioned algorithm identifier |
 | CreatedAtUtc | datetime2(3) | No | Enrollment time |
@@ -98,7 +98,7 @@ Indexes: AccountId + CredentialType + active-state lookup. Permit multiple crede
 | Column | Proposed SQL type | Null | Rule / purpose |
 |---|---|---:|---|
 | AccountId | uniqueidentifier | No | PK and FK UserAccounts |
-| IsEnabled | bit | No | Default 0 |
+| IsEnabled | bit | No | Default 0; disabling clears the active secret |
 | SecretCiphertext | varbinary(max) | Yes | Authenticator secret encrypted with managed key |
 | KeyVersion | nvarchar(64) | Yes | Key identifier/version |
 | *(no recovery-code payload column)* | — | — | Recovery codes are stored only in the normalized `UserRecoveryCodes` child table; do not duplicate them as JSON on this row |
@@ -107,7 +107,7 @@ Indexes: AccountId + CredentialType + active-state lookup. Permit multiple crede
 | LastVerifiedAtUtc | datetime2(3) | Yes | Last successful verification |
 | UpdatedAtUtc | datetime2(3) | Yes | Update |
 
-Implementation note: Prefer a separate `UserRecoveryCodes` table with one row per hashed code, `UsedAtUtc`, and a unique hash, rather than a JSON array. Never return ciphertext, raw secrets, or recovery codes to browser DTOs. Existing encrypted 2FA values must be migrated only after validating key availability and encryption format.
+Implementation note: An enabled row requires ciphertext, key version, and enrollment timestamp. A disabled row has no active ciphertext/key version. Prefer the separate `UserRecoveryCodes` table with one row per hashed code and atomic one-time consumption. Never return ciphertext, raw secrets, or recovery codes to browser DTOs. Existing encrypted 2FA values must be migrated only after validating key availability and encryption format.
 
 #### UserRecoveryCodes
 
