@@ -538,3 +538,6 @@ Critical finding: `MigrateLegacySecretsAsync` performs live credential/data chan
 Additional findings: SQL mirror health is process-local and stores raw provider error messages; all-building aggregate loading has a documented 16-query-per-building pattern; user permission rows are replaced while building-admin links are additive only, so omitted building links are not revoked; process-local keyed locks do not coordinate multiple instances.
 
 Static review only. The migration was not invoked, and no database/application changes, build, or tests were performed. **Gate A remains NOT AUTHORIZED.**
+
+
+**Startup wiring confirmed:** `Program.cs` calls `MigrateLegacySecretsAsync()` during application startup. Do not start the application against the restore database while preserving its current legacy PIN state is required. The method must be removed/feature-gated in a separately approved code change before any further restore-database application testing.
