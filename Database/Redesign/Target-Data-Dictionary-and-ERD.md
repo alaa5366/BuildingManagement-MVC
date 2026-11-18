@@ -90,6 +90,7 @@ Constraints: UNIQUE(PersonId); FK PersonId → Persons with NO ACTION. Do not cr
 | ExpiresAtUtc | datetime2(3) | Yes | Optional expiry |
 | RevokedAtUtc | datetime2(3) | Yes | Revocation |
 | ReplacedByCredentialId | uniqueidentifier | Yes | Optional self-reference |
+| RowVersion | rowversion | No | Concurrency on revoke/replace |
 
 Indexes: AccountId + CredentialType + active-state lookup. Permit multiple credential history rows; enforce at most one active credential per account/type with a filtered unique index if that is the chosen policy.
 
@@ -106,6 +107,7 @@ Indexes: AccountId + CredentialType + active-state lookup. Permit multiple crede
 | EnrolledAtUtc | datetime2(3) | Yes | Enrollment |
 | LastVerifiedAtUtc | datetime2(3) | Yes | Last successful verification |
 | UpdatedAtUtc | datetime2(3) | Yes | Update |
+| RowVersion | rowversion | No | Concurrency for enrollment and replay-state updates |
 
 Implementation note: An enabled row requires ciphertext, key version, and enrollment timestamp. A disabled row has no active ciphertext/key version. Prefer the separate `UserRecoveryCodes` table with one row per hashed code and atomic one-time consumption. Never return ciphertext, raw secrets, or recovery codes to browser DTOs. Existing encrypted 2FA values must be migrated only after validating key availability and encryption format.
 
@@ -178,6 +180,7 @@ Indexes: apartment + effective dates; person + effective dates. A filtered uniqu
 | RevokedAtUtc | datetime2(3) | Yes | Revocation |
 | RevokedByAccountId | uniqueidentifier | Yes | Revoking actor |
 | Reason | nvarchar(500) | Yes | Grant/revocation reason |
+| RowVersion | rowversion | No | Concurrency on revocation |
 
 No grant itself creates ownership, occupancy, or a login account.
 
