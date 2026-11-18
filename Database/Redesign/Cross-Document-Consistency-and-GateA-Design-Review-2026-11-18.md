@@ -219,5 +219,6 @@ The earlier status rows above describe the review at the time they were written.
 - **CONS-07:** The ownership service now enforces period-wide status consistency, share totals, duplicate-person rules, and serializable writes. Database concurrency tests remain part of the next service integration gate.
 - **DEC-01 through DEC-46:** Apply the approved defaults in `Owner-Approval-Recommended-Defaults-2026-11-18.md`. Approval does not supply missing identity evidence, source mappings, finance semantics, or endpoint/resource evidence.
 - **CONS-14 / legacy permission mapping:** Remains a cutover blocker. Do not migrate legacy grants until each legacy key is matched to its actual consumer and resource scope. The legacy mapping catalogue is an inventory and implementation aid, not proof that existing assignments are safe to backfill.
+- **DEC-40 / finance permissions:** The code-owned catalog now uses separate read, deposit confirm/cancel, adjustment, expense/revenue read/post/reverse, export, and period close/reopen keys. Broad legacy finance keys fail closed.
 
 Phase06 and Phase07 are rehearsed on the disposable restore only. The target identity and grant tables remain empty; existing legacy login and authorization endpoints are intentionally not switched to the target evaluator until reviewed identity mappings and compatibility tests are ready.

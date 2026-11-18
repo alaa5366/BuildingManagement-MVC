@@ -11,6 +11,60 @@ public sealed class AuthorizationEvaluatorTests
 {
     private static readonly DateTime NowUtc = new(2026, 11, 18, 12, 0, 0, DateTimeKind.Utc);
 
+    [Theory]
+    [InlineData("deposit.read")]
+    [InlineData("deposit.confirm")]
+    [InlineData("deposit.cancel")]
+    [InlineData("wallet.adjust")]
+    [InlineData("expense.read")]
+    [InlineData("expense.post")]
+    [InlineData("expense.reverse")]
+    [InlineData("revenue.read")]
+    [InlineData("revenue.post")]
+    [InlineData("revenue.reverse")]
+    [InlineData("finance.export")]
+    [InlineData("finance.period.close")]
+    [InlineData("finance.period.reopen")]
+    public void PermissionCatalog_ContainsTheApprovedSplitFinanceActions(string permissionKey)
+    {
+        var catalog = new DefaultAuthorizationPermissionCatalog();
+
+        Assert.True(catalog.TryGet(permissionKey, out var definition));
+        Assert.Contains(AuthorizationScopeType.System, definition.AllowedGrantScopes);
+        Assert.Contains(AuthorizationScopeType.Building, definition.AllowedGrantScopes);
+    }
+
+    [Theory]
+    [InlineData("wallet.manage")]
+    [InlineData("expenses.manage")]
+    [InlineData("revenues.manage")]
+    [InlineData("expense.create")]
+    [InlineData("expense.update")]
+    [InlineData("revenue.create")]
+    [InlineData("revenue.update")]
+    [InlineData("template.import")]
+    [InlineData("tools.manage")]
+    [InlineData("sync.manage")]
+    public void PermissionCatalog_RejectsBroadOrUnresolvedLegacyKeys(string permissionKey)
+    {
+        var catalog = new DefaultAuthorizationPermissionCatalog();
+
+        Assert.False(catalog.TryGet(permissionKey, out _));
+    }
+
+    [Fact]
+    public void PermissionCatalog_ApartmentAccessManagementRequiresMfaAtBuildingOrApartmentScope()
+    {
+        var catalog = new DefaultAuthorizationPermissionCatalog();
+
+        Assert.True(catalog.TryGet("apartment.access.grant.manage", out var definition));
+        Assert.True(definition.RequiresFreshMfa);
+        Assert.Equal(TimeSpan.FromMinutes(10), definition.MfaFreshnessWindow);
+        Assert.Contains(AuthorizationScopeType.Building, definition.AllowedGrantScopes);
+        Assert.Contains(AuthorizationScopeType.Apartment, definition.AllowedGrantScopes);
+        Assert.DoesNotContain(AuthorizationScopeType.System, definition.AllowedGrantScopes);
+    }
+
     [Fact]
     public async Task EvaluateAsync_DeniesUnauthenticatedPrincipal()
     {
