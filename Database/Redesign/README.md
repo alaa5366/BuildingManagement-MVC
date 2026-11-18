@@ -201,3 +201,16 @@ The profiling evidence is no longer a blocker. Gate A execution is still blocked
 Added `Wallet-and-Credential-Code-Review-2026-11-18.md` and a read-only local runner for wallet-view metadata/dependencies and aggregate credential-format classification. Key findings: the repository defines/maps `vw_ApartmentWalletMovements`, but no EF migration creates it and no runtime consumer was found; it is not a full balance view. No repository definition for `vw_ApartmentWalletBalance` was found. Also, `Program.cs` invokes a startup PIN migration that hashes non-prefixed credential strings and clears legacy Building/Apartments PIN fields. Do not start the application on the restore before the new SQL-only diagnostic is reviewed. Results are pending; no DDL/DML or credential migration was executed.
 
 Run: `Database/Diagnostics/Run-Wallet-and-Credential-ReadOnly-Validation.ps1` after pulling the branch. The script exports aggregate-only credential classifications (never secret values) and commits/pushes only its result folder.
+
+
+
+## Wallet and credential diagnostic results — 2026-11-18
+
+Reviewed results: `Database/Diagnostics/Wallet-Credential-Validation-Results/20261118-151511/` (6 result sets, 15 rows).
+
+- Both requested wallet views are absent from the restored test database; no SQL-module dependency references were returned. External reporting/client dependencies have not been ruled out.
+- All 5 Users PINs and all 79 Residents.PinHash values are BCrypt-shaped, length 60, but remain cryptographically unverified.
+- Apartments.Pin (79), Buildings.AdminPin (3), and Residents.PasswordHash (79) are empty.
+- The diagnostic exports no secret values and makes no database changes.
+
+Do not run the current startup credential migration as a diagnostic step. The next credential gate is non-mutating hash verification with aggregate-only output and an explicit invalid-credential recovery/re-enrollment plan. Gate A remains blocked by credential policy, reviewed identity linking, finance/carry-over reconciliation, external wallet-view dependency confirmation, cascade retention, and disposable rehearsal/rollback. No DDL/DML, EF migration, backfill, or cutover has been authorized or executed.
