@@ -10,6 +10,8 @@ namespace BuildingManagementMvc.Data;
 /// </summary>
 internal static class IdentityModelConfiguration
 {
+    /// <summary>Registers the identity and authorization entity mappings and relational constraints.</summary>
+    /// <param name="mb">The model builder receiving the identity mappings.</param>
     public static void Configure(ModelBuilder mb)
     {
         mb.Entity<PersonEntity>(e =>
