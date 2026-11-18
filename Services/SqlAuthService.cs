@@ -221,7 +221,9 @@ public class SqlAuthService
             email: admin.Email,
             name: admin.Name,
             // الجلسة مربوطة بالعمارة اللي سجّل دخول عليها بس (كان بياخد أول عمارة من القايمة)
-            buildingIds: new List<string> { buildingId });
+            buildingIds: new List<string> { buildingId },
+            permissions: admin.Permissions.Select(p => p.Permission)
+                .Distinct(StringComparer.Ordinal).ToList());
     }
     // ═══════════════════════════════════════════════════════════
     // 3. Super Admin Login
