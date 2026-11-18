@@ -119,6 +119,24 @@ The following gates are mandatory:
 
 No destructive schema change, data migration, production deployment, or live database write is authorized by this discovery artifact alone.
 
+## Current execution status — 2026-11-18
+
+The live inventory result files have now been reviewed:
+- `Database/Diagnostics/DatabaseRedesign-ReadOnly-Profiling_01.txt` through `_07.txt`.
+
+They contain the seven discovery result groups (database identity, row counts, columns, keys, FKs, indexes, and migration history). They are **not** the ten data-profiling result sets emitted by `DatabaseRedesign-ReadOnly-Profiling.sql`. The distinction and the exact missing evidence are documented in `Live-Inventory-Assessment.md`.
+
+A first additive Gate A SQL foundation has been authored:
+- `Database/Redesign/GateA-Additive-Identity-Foundation.sql`.
+
+It creates the new Person/Account/Credential/MFA/Role and dated Apartment Ownership/Occupancy/Access tables only if absent, with restrictive FKs and no legacy-table changes. It performs no data backfill, no legacy-column retirement, and no application cutover. It is a review/rehearsal script, **not an EF Core migration and not yet executed**. Do not run it against production.
+
+Current safe boundary:
+- No database has been modified by this work.
+- No EF Core migration has been generated or applied.
+- Legacy authentication and finance paths remain unchanged.
+- Backfill/cutover remain blocked pending the missing aggregate profiling outputs and a disposable-database rehearsal.
+
 ## Additional design artifacts
 
 - `Database/Redesign/Enterprise-Database-Redesign-Blueprint.md` — architecture principles, target domains, migration/rollback approach, and unresolved product decisions.
