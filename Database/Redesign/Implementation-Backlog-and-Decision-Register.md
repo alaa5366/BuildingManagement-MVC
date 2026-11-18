@@ -222,3 +222,8 @@ Proceed without routine per-file approvals. Create and validate migrations and r
 ### Identity/authentication workstream opened under full-project authorization
 
 [Identity, Authentication, and Authorization Review — 2026-11-18](Identity-Authentication-and-Authorization-Review-2026-11-18.md) now defines the replacement requirements for Person/UserAccount, scoped grants, account-centric authentication, mandatory administrator MFA, session revocation, and per-account credential lifecycle. First implementation gate is characterization tests plus a permission-consumer matrix; legacy flows are not to be removed until target paths and regression coverage are ready.
+
+
+### P0 startup safety remediation — 2026-11-18
+
+**Implemented in source; verification pending.** Normal startup no longer invokes the legacy PIN migration, registers the old migration service, or initializes the SQL-backed LoginThrottle table. The unsafe PIN migration implementation has been removed. LoginThrottle now uses in-process counters only; its counters reset on restart until an EF-managed persistence implementation is delivered. See [P0 Startup Safety Remediation](P0-Startup-Safety-Remediation-2026-11-18.md). No database was changed and no build/tests were run for this change.
