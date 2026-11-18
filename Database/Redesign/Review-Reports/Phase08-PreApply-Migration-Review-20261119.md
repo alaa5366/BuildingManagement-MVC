@@ -77,7 +77,7 @@ The legacy finance tables remain the existing data source until a separately rev
 
 ## 5. Review conclusion
 
-<badge>Conditional rehearsal readiness</badge>
+**Conditional rehearsal readiness**
 
 Static source review found no row-destructive Up() operation in either pending migration. The first migration is additive; the second tightens reversal referential scope. The rollback of the first migration is destructive to all nine new tables and must not be used after Finance data is entered.
 
