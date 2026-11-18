@@ -45,6 +45,34 @@ function Invoke-ReadOnlyQuery {
     }
 }
 
+function Export-DataTableCsv {
+    param(
+        [System.Data.DataTable]$Table,
+        [string]$Path
+    )
+    $records = @(
+        foreach ($row in $Table.Rows) {
+            $values = [ordered]@{}
+            foreach ($column in $Table.Columns) {
+                $value = $row[$column.ColumnName]
+                if ($value -is [System.DBNull]) { $value = $null }
+                $values[$column.ColumnName] = $value
+            }
+            [pscustomobject]$values
+        }
+    )
+
+    if ($records.Count -gt 0) {
+        $records | Export-Csv -LiteralPath $Path -NoTypeInformation -Encoding UTF8
+    }
+    else {
+        $headers = @($Table.Columns | ForEach-Object {
+            '"' + ($_.ColumnName -replace '"', '""') + '"'
+        })
+        Set-Content -LiteralPath $Path -Value ($headers -join ',') -Encoding UTF8
+    }
+}
+
 if (-not (Test-Path -LiteralPath $RepoPath -PathType Container)) {
     throw "Repository path not found: $RepoPath"
 }
@@ -57,7 +85,8 @@ if ($currentBranch -ne $ExpectedBranch) {
     throw "Wrong branch. Expected '$ExpectedBranch'; found '$currentBranch'."
 }
 $status = Invoke-Git -Arguments @("status", "--porcelain")
-if ($status.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace(($status -join ""))) {
+$statusText = @($status) -join ""
+if (-not [string]::IsNullOrWhiteSpace($statusText)) {
     throw "Working tree/index is not clean. Commit or safely stash unrelated work before running. Nothing was changed."
 }
 if (Test-Path -LiteralPath $OutputPath) {
@@ -73,7 +102,7 @@ $csb["Connect Timeout"] = 20
 $csb["Application Name"] = "BuildingManagement-Redesign-SchemaParity-ReadOnly"
 $csb["Encrypt"] = $false
 $csb["TrustServerCertificate"] = $true
-$connection = New-Object System.Data.SqlClient.SqlConnection($csb.ConnectionString)
+$connection = New-Object -TypeName System.Data.SqlClient.SqlConnection -ArgumentList $csb.ConnectionString
 
 $queries = [ordered]@{
 "01-Database-Identity.csv" = @"
@@ -272,14 +301,14 @@ try {
     if ($connection.Database -ne $DatabaseName) {
         throw "Connected to unexpected database '$($connection.Database)'. Expected '$DatabaseName'."
     }
-    if ($connection.DataSource -ne $SqlInstance) {
+    if ($connection.DataSource -ine $SqlInstance) {
         throw "Connected to unexpected SQL instance '$($connection.DataSource)'. Expected '$SqlInstance'."
     }
     foreach ($entry in $queries.GetEnumerator()) {
         try {
             $table = Invoke-ReadOnlyQuery -Connection $connection -Sql $entry.Value
             $filePath = Join-Path $OutputPath $entry.Key
-            $table | Export-Csv -LiteralPath $filePath -NoTypeInformation -Encoding UTF8
+            Export-DataTableCsv -Table $table -Path $filePath
             $exported.Add($entry.Key)
             Write-Host ("  {0}: {1} row(s)" -f $entry.Key, $table.Rows.Count)
         }
@@ -336,7 +365,8 @@ $commitMessage = "Diagnostics: collect redesign schema parity $Timestamp"
 Invoke-Git -Arguments @("commit", "-m", $commitMessage) | Out-Null
 Invoke-Git -Arguments @("push", "origin", $ExpectedBranch) | Out-Null
 $finalStatus = Invoke-Git -Arguments @("status", "--porcelain")
-if ($finalStatus.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace(($finalStatus -join ""))) {
+$finalStatusText = @($finalStatus) -join ""
+if (-not [string]::IsNullOrWhiteSpace($finalStatusText)) {
     throw "Push completed but working tree is not clean. Review Git status manually."
 }
 Write-Host ""
