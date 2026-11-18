@@ -175,3 +175,14 @@ These remain proposed SQL/document changes only. The Gate A rehearsal plan requi
 - Role assignment and permission override grantor fields are nullable in the current proposed schema. Automated grants need a dedicated system actor; human-issued grants should not have missing actor attribution. This remains an owner/security-policy decision.
 - ApartmentAccessGrants `GrantType` values and `PermissionSetKey` registry/version semantics remain open (CONS-01/02).
 - A complete set of pre-existing Gate A tables must be validated column-by-column and constraint-by-constraint before the idempotent script is allowed to skip creation. The current script guard only rejects a partial set.
+
+
+## 11. Gate A column parity matrix completed
+
+A static source-text comparison has now been recorded in `GateA-Column-and-Constraint-Parity-Matrix.md`:
+- 13 CREATE TABLE definitions;
+- 134 column declarations;
+- all 13 corresponding data-dictionary table definitions found;
+- no column-name omissions or extras across the script/dictionary pair.
+
+This is not SQL execution or physical schema validation. Legacy-key types remain generalized in the dictionary while the proposed SQL uses nvarchar(64), supported by the supplied preflight for the inspected Buildings/Apartments keys. Fresh metadata and FK parity checks remain mandatory.
