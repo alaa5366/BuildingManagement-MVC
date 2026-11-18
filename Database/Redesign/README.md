@@ -139,6 +139,8 @@ Current safe boundary:
 
 ## Additional design artifacts
 
+- `Database/Redesign/Owner-Decision-Summary.md` — concise owner-facing summary of the highest-impact open decisions with recommended defaults; unrelated design work continues while decisions remain open.
+
 - `Database/Redesign/Audit-Outbox-and-Observability-Target-Design.md` — durable business/security audit, transactional outbox/inbox, diagnostic log separation, scope-based access, retention, redaction, and operational tests.
 
 - `Database/Redesign/Target-Entity-Inventory-and-Phased-Schema-Roadmap.md` — whole-system target entity inventory, Gate A vs later entities, legacy coexistence, and phased schema delivery boundaries.
