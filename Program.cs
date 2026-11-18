@@ -203,6 +203,7 @@ try
     builder.Services.AddDistributedMemoryCache();
 
     builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
+    builder.Services.AddScoped<IdentityAccountAuthenticationService>();
     builder.Services.AddSingleton<ResidentsService>();
 
     builder.Services.AddSession(options =>

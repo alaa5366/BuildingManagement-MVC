@@ -739,3 +739,11 @@ See [Gate A DDL Implementation Review — 2026-11-18](GateA-DDL-Implementation-R
 ## Identity EF Core model implementation
 
 The first typed EF Core implementation of the Gate A identity/authorization foundation is now in source control: `Data/IdentityEntities.cs`, `Data/IdentityModelConfiguration.cs`, and the `AppDbContext` registrations. See [Identity EF Core Model Implementation](Identity-EF-Core-Model-Implementation-2026-11-18.md). The migration and snapshot must be generated locally with `Generate-GateA-EF-Migration.ps1`, then reviewed and tested before any database execution.
+
+## Target-table login rehearsal — 2026-11-18
+
+Unified resident login now supports accounts from the new identity tables, and target identity sessions are revalidated against `UserAccounts` and `Persons`. A synthetic resident account was seeded in `BuildingManagement_RestoreTest` and successfully signed in through the web login flow. The 84 legacy identity candidates remain Pending and unmapped. Build succeeded and all 549 tests passed. See [Phase06 Identity/Authorization Migration Recheck](Phase06-Identity-Authorization-Migration-Recheck-2026-11-18.md) for the backup and reconciliation evidence. This rehearsal does not enable administrator target-table login or identity cutover.
+
+## Full database migration scope — 2026-11-18
+
+The approved migration objective now covers every legacy domain. The live disposable-restore table counts and source-target delivery boundaries are recorded in [Full Database Migration Baseline](Full-Database-Migration-Baseline-2026-11-18.md). Only the identity foundation has target tables today; finance, voting, operations, media, settings, audit, and backup remain on legacy tables pending coordinated target contracts, additive schema, staged backfills, and reconciliation.

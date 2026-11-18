@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-18  
 **Branch:** development/database-redesign-enterprise  
-**Status:** Target financial design proposal based on review Sections 19 and 25 and the supplied restored-database profiling. No finance schema or data is changed by this document.
+**Status:** The accounting owner has confirmed sign-off is ready for implementing the additive target financial schema on the disposable restore. This permits schema/rehearsal work only; production use, wallet cutover, legacy source edits, and financial correction remain separately gated. No finance data has been migrated by this document.
 
 ## 1. Design objective
 

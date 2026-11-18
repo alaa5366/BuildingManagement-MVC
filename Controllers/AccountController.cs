@@ -21,6 +21,7 @@ namespace BuildingManagementMvc.Controllers;
 public class AccountController : Controller
 {
     private readonly SqlAuthService _sqlAuth;
+    private readonly IdentityAccountAuthenticationService _identityAuth;
     private readonly BuildingsService _buildings;
     private readonly ResidentsService _residents;
     private readonly UsersService _users;
@@ -45,6 +46,7 @@ public class AccountController : Controller
     /// </summary>
     public AccountController(
         SqlAuthService sqlAuth,
+        IdentityAccountAuthenticationService identityAuth,
         BuildingsService buildings,
         UsersService users,
         ResidentsService residents,
@@ -54,6 +56,7 @@ public class AccountController : Controller
         ILogger<AccountController> logger)
     {
         _sqlAuth = sqlAuth;
+        _identityAuth = identityAuth;
         _buildings = buildings;
         _users = users;
         _residents = residents;
@@ -266,6 +269,21 @@ public class AccountController : Controller
         {
             ViewBag.Error = LockedMsg;
             return View(vm);
+        }
+
+        var identityResult = await _identityAuth.AuthenticateResidentAsync(identifier, credential);
+        if (identityResult != null)
+        {
+            if (!identityResult.Success)
+            {
+                _throttle.RegisterFailure(throttleKey, ClientIp);
+                ViewBag.Error = Loc.T("Invalid_Login_Details");
+                return View(vm);
+            }
+
+            _throttle.Reset(throttleKey);
+            await SignInCookieAsync(identityResult);
+            return RedirectBasedOnRole(identityResult.Role!);
         }
 
         var contexts = await _sqlAuth.FindAllContextsAsync(identifier, credential);
@@ -699,6 +717,12 @@ public class AccountController : Controller
             new(ClaimTypes.Email, res.Email ?? ""),
             new(ClaimTypes.Role, res.Role!),
         };
+
+        if (res.UsesTargetIdentity)
+        {
+            claims.Add(new Claim("targetIdentityAccount", "true"));
+            claims.Add(new Claim("securityStamp", res.SecurityStamp ?? ""));
+        }
 
         foreach (var bId in res.BuildingIds)
             claims.Add(new Claim("buildingId", bId));

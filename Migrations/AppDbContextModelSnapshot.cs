@@ -1007,6 +1007,143 @@ namespace BuildingManagementMvc.Migrations
                     b.ToTable("Expenses", (string)null);
                 });
 
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialAllocationBatchEntity", b =>
+                {
+                    b.Property<Guid>("AllocationBatchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AlgorithmVersion")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<decimal>("AllocatedAmount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("decimal(19,4)");
+
+                    b.Property<string>("BasisKey")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("BuildingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<Guid?>("CreatedByAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("char(3)");
+
+                    b.Property<byte[]>("InputFingerprint")
+                        .IsRequired()
+                        .HasColumnType("varbinary(32)");
+
+                    b.Property<Guid>("PeriodId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("SourceAmount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("decimal(19,4)");
+
+                    b.Property<Guid>("SourceTransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("AllocationBatchId");
+
+                    b.HasAlternateKey("AllocationBatchId", "PeriodId", "BuildingId")
+                        .HasName("UQ_FinancialAllocationBatches_Period_Building");
+
+                    b.HasIndex("CreatedByAccountId");
+
+                    b.HasIndex("PeriodId", "BuildingId");
+
+                    b.HasIndex("PeriodId", "SourceTransactionId", "AlgorithmVersion")
+                        .HasDatabaseName("IX_FinancialAllocationBatches_Source");
+
+                    b.HasIndex("SourceTransactionId", "PeriodId", "BuildingId");
+
+                    b.ToTable("FinancialAllocationBatches", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_FinancialAllocationBatches_Amounts", "[SourceAmount] >= 0 AND [AllocatedAmount] >= 0");
+
+                            t.HasCheckConstraint("CK_FinancialAllocationBatches_Fingerprint", "DATALENGTH([InputFingerprint]) = 32");
+
+                            t.HasCheckConstraint("CK_FinancialAllocationBatches_Status", "[Status] IN (0,1,2)");
+                        });
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialAllocationLineEntity", b =>
+                {
+                    b.Property<Guid>("AllocationLineId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("AllocatedAmount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("decimal(19,4)");
+
+                    b.Property<Guid>("AllocationBatchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ApartmentId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("BuildingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<decimal>("ExactShare")
+                        .HasPrecision(19, 8)
+                        .HasColumnType("decimal(19,8)");
+
+                    b.Property<Guid>("PeriodId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("RemainderRank")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Weight")
+                        .HasPrecision(19, 8)
+                        .HasColumnType("decimal(19,8)");
+
+                    b.HasKey("AllocationLineId");
+
+                    b.HasIndex("AllocationBatchId", "ApartmentId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_FinancialAllocationLines_Batch_Apartment");
+
+                    b.HasIndex("BuildingId", "ApartmentId");
+
+                    b.HasIndex("PeriodId", "BuildingId");
+
+                    b.HasIndex("AllocationBatchId", "PeriodId", "BuildingId");
+
+                    b.ToTable("FinancialAllocationLines", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_FinancialAllocationLines_Amounts", "[Weight] >= 0 AND [ExactShare] >= 0 AND [AllocatedAmount] >= 0");
+
+                            t.HasCheckConstraint("CK_FinancialAllocationLines_Rank", "[RemainderRank] >= 0");
+                        });
+                });
+
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialCategoryEntity", b =>
                 {
                     b.Property<string>("BuildingId")
@@ -1038,6 +1175,252 @@ namespace BuildingManagementMvc.Migrations
                     b.HasKey("BuildingId", "Kind", "Id");
 
                     b.ToTable("FinancialCategories", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity", b =>
+                {
+                    b.Property<Guid>("PeriodId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BuildingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("CloseReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ClosedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid?>("ClosedByAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<DateTime>("EndsAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("PeriodKey")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("char(7)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime>("StartsAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("PeriodId");
+
+                    b.HasAlternateKey("PeriodId", "BuildingId")
+                        .HasName("UQ_FinancialPeriods_Period_Building");
+
+                    b.HasIndex("ClosedByAccountId");
+
+                    b.HasIndex("BuildingId", "PeriodKey")
+                        .IsUnique()
+                        .HasDatabaseName("UX_FinancialPeriods_Building_Key");
+
+                    b.ToTable("FinancialPeriods", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_FinancialPeriods_CloseStamp", "([Status] = 0 AND [ClosedAtUtc] IS NULL AND [ClosedByAccountId] IS NULL) OR ([Status] IN (1,2) AND [ClosedAtUtc] IS NOT NULL AND [ClosedByAccountId] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_FinancialPeriods_Key", "[PeriodKey] LIKE '[0-9][0-9][0-9][0-9]-[01][0-9]' AND SUBSTRING([PeriodKey],6,2) BETWEEN '01' AND '12'");
+
+                            t.HasCheckConstraint("CK_FinancialPeriods_Range", "[EndsAtUtc] > [StartsAtUtc]");
+
+                            t.HasCheckConstraint("CK_FinancialPeriods_Status", "[Status] IN (0,1,2)");
+                        });
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialReconciliationDifferenceEntity", b =>
+                {
+                    b.Property<Guid>("ReconciliationDifferenceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ApartmentId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("BuildingId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Classification")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<decimal?>("DifferenceAmount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("decimal(19,4)");
+
+                    b.Property<string>("DifferenceType")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("Disposition")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("PeriodKey")
+                        .HasMaxLength(7)
+                        .HasColumnType("char(7)");
+
+                    b.Property<Guid>("ReconciliationRunId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ReviewedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid?>("ReviewedByAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("SourceAmount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("decimal(19,4)");
+
+                    b.Property<string>("SourceKey")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("SourceType")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<decimal?>("TargetAmount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("decimal(19,4)");
+
+                    b.HasKey("ReconciliationDifferenceId");
+
+                    b.HasIndex("ReviewedByAccountId");
+
+                    b.HasIndex("BuildingId", "ApartmentId");
+
+                    b.HasIndex("ReconciliationRunId", "BuildingId", "PeriodKey")
+                        .HasDatabaseName("IX_FinancialReconciliationDifferences_Run_Scope");
+
+                    b.ToTable("FinancialReconciliationDifferences", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_FinancialReconciliationDifferences_PeriodKey", "[PeriodKey] IS NULL OR ([PeriodKey] LIKE '[0-9][0-9][0-9][0-9]-[01][0-9]' AND SUBSTRING([PeriodKey],6,2) BETWEEN '01' AND '12')");
+
+                            t.HasCheckConstraint("CK_FinancialReconciliationDifferences_Scope", "[ApartmentId] IS NULL OR [BuildingId] IS NOT NULL");
+                        });
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialReconciliationRunEntity", b =>
+                {
+                    b.Property<Guid>("ReconciliationRunId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("RuleVersion")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("SafeSummary")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("SourceSystem")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<DateTime>("StartedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<Guid?>("StartedByAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("ReconciliationRunId");
+
+                    b.HasIndex("StartedByAccountId");
+
+                    b.ToTable("FinancialReconciliationRuns", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_FinancialReconciliationRuns_Completion", "([Status] = 0 AND [CompletedAtUtc] IS NULL) OR ([Status] IN (1,2) AND [CompletedAtUtc] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_FinancialReconciliationRuns_Status", "[Status] IN (0,1,2)");
+                        });
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialSourceLinkEntity", b =>
+                {
+                    b.Property<Guid>("FinancialSourceLinkId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("LedgerTransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("LinkedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<byte[]>("SourceFingerprint")
+                        .HasColumnType("varbinary(32)");
+
+                    b.Property<string>("SourceKey")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("SourceSystem")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.HasKey("FinancialSourceLinkId");
+
+                    b.HasIndex("LedgerTransactionId")
+                        .HasDatabaseName("IX_FinancialSourceLinks_Transaction");
+
+                    b.HasIndex("SourceSystem", "SourceType", "SourceKey")
+                        .IsUnique()
+                        .HasDatabaseName("UX_FinancialSourceLinks_Source");
+
+                    b.ToTable("FinancialSourceLinks", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_FinancialSourceLinks_Fingerprint", "[SourceFingerprint] IS NULL OR DATALENGTH([SourceFingerprint]) = 32");
+                        });
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FloorEntity", b =>
@@ -1126,6 +1509,172 @@ namespace BuildingManagementMvc.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("GlobalSettings", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.LedgerEntryEntity", b =>
+                {
+                    b.Property<Guid>("LedgerEntryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ApartmentId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("BuildingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("CurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("char(3)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("EffectiveAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<byte>("EntryKind")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid>("LedgerTransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PeriodId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("SignedAmount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("decimal(19,4)");
+
+                    b.HasKey("LedgerEntryId");
+
+                    b.HasIndex("LedgerTransactionId")
+                        .HasDatabaseName("IX_LedgerEntries_Transaction");
+
+                    b.HasIndex("PeriodId", "BuildingId");
+
+                    b.HasIndex("LedgerTransactionId", "PeriodId", "BuildingId");
+
+                    b.HasIndex("BuildingId", "ApartmentId", "PeriodId", "EffectiveAtUtc")
+                        .HasDatabaseName("IX_LedgerEntries_Apartment_Period");
+
+                    b.ToTable("LedgerEntries", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_LedgerEntries_Amount", "[SignedAmount] <> 0");
+
+                            t.HasCheckConstraint("CK_LedgerEntries_Kind", "[EntryKind] IN (1,2,3,4,5,6,7)");
+                        });
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.LedgerTransactionEntity", b =>
+                {
+                    b.Property<Guid>("LedgerTransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ActorAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ActorReference")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("BuildingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<byte>("Kind")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid>("PeriodId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("PostedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid?>("ReversesTransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SourceKey")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("SourceSystem")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("SourceType")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("LedgerTransactionId");
+
+                    b.HasAlternateKey("LedgerTransactionId", "PeriodId", "BuildingId")
+                        .HasName("UQ_LedgerTransactions_Period_Building");
+
+                    b.HasIndex("ActorAccountId");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("UX_LedgerTransactions_Idempotency");
+
+                    b.HasIndex("PeriodId", "BuildingId");
+
+                    b.HasIndex("PeriodId", "Status", "CreatedAtUtc")
+                        .HasDatabaseName("IX_LedgerTransactions_Period_Status");
+
+                    b.HasIndex("ReversesTransactionId", "PeriodId", "BuildingId");
+
+                    b.HasIndex("SourceSystem", "SourceType", "SourceKey")
+                        .IsUnique()
+                        .HasDatabaseName("UX_LedgerTransactions_Source")
+                        .HasFilter("[SourceKey] IS NOT NULL");
+
+                    b.ToTable("LedgerTransactions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_LedgerTransactions_Kind", "[Kind] IN (1,2,3,4,5,6,7,8)");
+
+                            t.HasCheckConstraint("CK_LedgerTransactions_PostStamp", "([Status] IN (0,2) AND [PostedAtUtc] IS NULL) OR ([Status] = 1 AND [PostedAtUtc] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_LedgerTransactions_ReversalLink", "([Kind] = 7 AND [ReversesTransactionId] IS NOT NULL) OR ([Kind] <> 7 AND [ReversesTransactionId] IS NULL)");
+
+                            t.HasCheckConstraint("CK_LedgerTransactions_SourcePair", "([SourceSystem] IS NULL AND [SourceType] IS NULL AND [SourceKey] IS NULL) OR ([SourceSystem] IS NOT NULL AND [SourceType] IS NOT NULL AND [SourceKey] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_LedgerTransactions_Status", "[Status] IN (0,1,2)");
+                        });
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.LegacyIdentityMapEntity", b =>
@@ -1356,6 +1905,117 @@ namespace BuildingManagementMvc.Migrations
                     b.HasIndex("BuildingId", "RecipientApartmentId");
 
                     b.ToTable("Notifications", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PaymentDepositEntity", b =>
+                {
+                    b.Property<Guid>("PaymentDepositId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("decimal(19,4)");
+
+                    b.Property<string>("ApartmentId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("BuildingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("CancelledAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid?>("CancelledByAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ConfirmedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid?>("ConfirmedByAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("char(3)");
+
+                    b.Property<Guid>("PeriodId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("PostedTransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ResolutionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid?>("ReversalTransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ReversedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid?>("ReversedByAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SourceKey")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("SourceSystem")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("SubmittedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.HasKey("PaymentDepositId");
+
+                    b.HasIndex("CancelledByAccountId");
+
+                    b.HasIndex("ConfirmedByAccountId");
+
+                    b.HasIndex("ReversedByAccountId");
+
+                    b.HasIndex("PeriodId", "BuildingId");
+
+                    b.HasIndex("SourceSystem", "SourceKey")
+                        .IsUnique()
+                        .HasDatabaseName("UX_PaymentDeposits_Source")
+                        .HasFilter("[SourceKey] IS NOT NULL");
+
+                    b.HasIndex("BuildingId", "ApartmentId", "SubmittedAtUtc")
+                        .HasDatabaseName("IX_PaymentDeposits_Apartment_Submitted");
+
+                    b.HasIndex("BuildingId", "Status", "SubmittedAtUtc")
+                        .HasDatabaseName("IX_PaymentDeposits_Status_Submitted");
+
+                    b.HasIndex("PostedTransactionId", "PeriodId", "BuildingId");
+
+                    b.HasIndex("ReversalTransactionId", "PeriodId", "BuildingId");
+
+                    b.ToTable("PaymentDeposits", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PaymentDeposits_Amount", "[Amount] > 0");
+
+                            t.HasCheckConstraint("CK_PaymentDeposits_Resolution", "([Status] = 0 AND [PostedTransactionId] IS NULL AND [ConfirmedAtUtc] IS NULL AND [ConfirmedByAccountId] IS NULL AND [CancelledAtUtc] IS NULL AND [CancelledByAccountId] IS NULL AND [ReversedAtUtc] IS NULL AND [ReversedByAccountId] IS NULL AND [ReversalTransactionId] IS NULL) OR ([Status] = 1 AND [PostedTransactionId] IS NOT NULL AND [ConfirmedAtUtc] IS NOT NULL AND [ConfirmedByAccountId] IS NOT NULL AND [CancelledAtUtc] IS NULL AND [CancelledByAccountId] IS NULL AND [ReversedAtUtc] IS NULL AND [ReversedByAccountId] IS NULL AND [ReversalTransactionId] IS NULL) OR ([Status] = 2 AND [PostedTransactionId] IS NULL AND [ConfirmedAtUtc] IS NULL AND [ConfirmedByAccountId] IS NULL AND [CancelledAtUtc] IS NOT NULL AND [CancelledByAccountId] IS NOT NULL AND [ReversedAtUtc] IS NULL AND [ReversedByAccountId] IS NULL AND [ReversalTransactionId] IS NULL AND LEN(LTRIM(RTRIM([ResolutionReason]))) > 0) OR ([Status] = 3 AND [PostedTransactionId] IS NOT NULL AND [ConfirmedAtUtc] IS NOT NULL AND [ConfirmedByAccountId] IS NOT NULL AND [CancelledAtUtc] IS NULL AND [CancelledByAccountId] IS NULL AND [ReversedAtUtc] IS NOT NULL AND [ReversedByAccountId] IS NOT NULL AND [ReversalTransactionId] IS NOT NULL AND LEN(LTRIM(RTRIM([ResolutionReason]))) > 0)");
+
+                            t.HasCheckConstraint("CK_PaymentDeposits_Status", "[Status] IN (0,1,2,3)");
+                        });
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PersonEntity", b =>
@@ -2536,6 +3196,51 @@ namespace BuildingManagementMvc.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialAllocationBatchEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.UserAccountEntity", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByAccountId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity", null)
+                        .WithMany()
+                        .HasForeignKey("PeriodId", "BuildingId")
+                        .HasPrincipalKey("PeriodId", "BuildingId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("BuildingManagementMvc.Data.Entities.LedgerTransactionEntity", null)
+                        .WithMany()
+                        .HasForeignKey("SourceTransactionId", "PeriodId", "BuildingId")
+                        .HasPrincipalKey("LedgerTransactionId", "PeriodId", "BuildingId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialAllocationLineEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.ApartmentEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BuildingId", "ApartmentId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity", null)
+                        .WithMany()
+                        .HasForeignKey("PeriodId", "BuildingId")
+                        .HasPrincipalKey("PeriodId", "BuildingId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("BuildingManagementMvc.Data.Entities.FinancialAllocationBatchEntity", null)
+                        .WithMany()
+                        .HasForeignKey("AllocationBatchId", "PeriodId", "BuildingId")
+                        .HasPrincipalKey("AllocationBatchId", "PeriodId", "BuildingId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialCategoryEntity", b =>
                 {
                     b.HasOne("BuildingManagementMvc.Data.Entities.BuildingEntity", "Building")
@@ -2547,6 +3252,61 @@ namespace BuildingManagementMvc.Migrations
                     b.Navigation("Building");
                 });
 
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.BuildingEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BuildingId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("BuildingManagementMvc.Data.Entities.UserAccountEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ClosedByAccountId")
+                        .OnDelete(DeleteBehavior.NoAction);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialReconciliationDifferenceEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.BuildingEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BuildingId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("BuildingManagementMvc.Data.Entities.FinancialReconciliationRunEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ReconciliationRunId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("BuildingManagementMvc.Data.Entities.UserAccountEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ReviewedByAccountId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("BuildingManagementMvc.Data.Entities.ApartmentEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BuildingId", "ApartmentId")
+                        .OnDelete(DeleteBehavior.NoAction);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialReconciliationRunEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.UserAccountEntity", null)
+                        .WithMany()
+                        .HasForeignKey("StartedByAccountId")
+                        .OnDelete(DeleteBehavior.NoAction);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialSourceLinkEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.LedgerTransactionEntity", null)
+                        .WithMany()
+                        .HasForeignKey("LedgerTransactionId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FloorEntity", b =>
                 {
                     b.HasOne("BuildingManagementMvc.Data.Entities.BuildingEntity", "Building")
@@ -2556,6 +3316,50 @@ namespace BuildingManagementMvc.Migrations
                         .IsRequired();
 
                     b.Navigation("Building");
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.LedgerEntryEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.ApartmentEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BuildingId", "ApartmentId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity", null)
+                        .WithMany()
+                        .HasForeignKey("PeriodId", "BuildingId")
+                        .HasPrincipalKey("PeriodId", "BuildingId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("BuildingManagementMvc.Data.Entities.LedgerTransactionEntity", null)
+                        .WithMany()
+                        .HasForeignKey("LedgerTransactionId", "PeriodId", "BuildingId")
+                        .HasPrincipalKey("LedgerTransactionId", "PeriodId", "BuildingId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.LedgerTransactionEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.UserAccountEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ActorAccountId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity", null)
+                        .WithMany()
+                        .HasForeignKey("PeriodId", "BuildingId")
+                        .HasPrincipalKey("PeriodId", "BuildingId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("BuildingManagementMvc.Data.Entities.LedgerTransactionEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ReversesTransactionId", "PeriodId", "BuildingId")
+                        .HasPrincipalKey("LedgerTransactionId", "PeriodId", "BuildingId")
+                        .OnDelete(DeleteBehavior.NoAction);
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.LegacyIdentityMapEntity", b =>
@@ -2616,6 +3420,49 @@ namespace BuildingManagementMvc.Migrations
                         .OnDelete(DeleteBehavior.NoAction);
 
                     b.Navigation("RecipientApartment");
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PaymentDepositEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.UserAccountEntity", null)
+                        .WithMany()
+                        .HasForeignKey("CancelledByAccountId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("BuildingManagementMvc.Data.Entities.UserAccountEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ConfirmedByAccountId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("BuildingManagementMvc.Data.Entities.UserAccountEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ReversedByAccountId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("BuildingManagementMvc.Data.Entities.ApartmentEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BuildingId", "ApartmentId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity", null)
+                        .WithMany()
+                        .HasForeignKey("PeriodId", "BuildingId")
+                        .HasPrincipalKey("PeriodId", "BuildingId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("BuildingManagementMvc.Data.Entities.LedgerTransactionEntity", null)
+                        .WithMany()
+                        .HasForeignKey("PostedTransactionId", "PeriodId", "BuildingId")
+                        .HasPrincipalKey("LedgerTransactionId", "PeriodId", "BuildingId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("BuildingManagementMvc.Data.Entities.LedgerTransactionEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ReversalTransactionId", "PeriodId", "BuildingId")
+                        .HasPrincipalKey("LedgerTransactionId", "PeriodId", "BuildingId")
+                        .OnDelete(DeleteBehavior.NoAction);
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollEntity", b =>

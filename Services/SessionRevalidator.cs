@@ -66,6 +66,9 @@ public class SessionRevalidator
         if (user.HasClaim("impersonated", "true"))
             return await ValidateImpersonatedAsync(user);
 
+        if (user.HasClaim("targetIdentityAccount", "true"))
+            return await ValidateTargetIdentityAccountAsync(user);
+
         // The authenticated role claim is authoritative for normal sign-ins.
         // An allow-listed e-mail must not turn a resident/admin context into a super-admin
         // session; the allow-list is checked inside ValidateSuperAdminPrincipalAsync.
@@ -318,6 +321,32 @@ public class SessionRevalidator
             }
 
             _logger.LogError(ex, "[SessionRevalidator] resident lookup failed for {Uid}; rejecting session", uid);
+            return new Result(false, null);
+        }
+    }
+
+    private async Task<Result> ValidateTargetIdentityAccountAsync(ClaimsPrincipal user)
+    {
+        if (user.FindFirst(ClaimTypes.Role)?.Value != "resident" ||
+            !Guid.TryParse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var accountId))
+            return new Result(false, null);
+
+        try
+        {
+            await using var db = await _sqlFactory.CreateDbContextAsync();
+            var account = await (
+                from item in db.UserAccounts.AsNoTracking()
+                join person in db.Persons.AsNoTracking() on item.PersonId equals person.PersonId
+                where item.AccountId == accountId
+                select new { item.AccountStatus, item.SecurityStamp, person.IsArchived })
+                .SingleOrDefaultAsync();
+            var valid = account is not null && account.AccountStatus == 1 && !account.IsArchived
+                && string.Equals(account.SecurityStamp, user.FindFirst("securityStamp")?.Value, StringComparison.Ordinal);
+            return new Result(valid, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[SessionRevalidator] target identity account validation failed for {AccountId}; rejecting session", accountId);
             return new Result(false, null);
         }
     }

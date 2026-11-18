@@ -1,0 +1,1639 @@
+=== FINANCE CONFIGURATION ===
+
+  Data\FinanceModelConfiguration.cs:12:        mb.Entity<FinancialPeriodEntity>(e =>
+  Data\FinanceModelConfiguration.cs:13:        {
+> Data\FinanceModelConfiguration.cs:14:            e.ToTable("FinancialPeriods", t =>
+  Data\FinanceModelConfiguration.cs:15:            {
+> Data\FinanceModelConfiguration.cs:16:                t.HasCheckConstraint("CK_FinancialPeriods_Key", "[PeriodKey] LIKE '[0-9][0-9][0-9][0-9]-[01][0-9]' AND SUBSTRING([PeriodKey],6,2) BETWEEN '01' AND '12'");
+> Data\FinanceModelConfiguration.cs:17:                t.HasCheckConstraint("CK_FinancialPeriods_Range", "[EndsAtUtc] > [StartsAtUtc]");
+> Data\FinanceModelConfiguration.cs:18:                t.HasCheckConstraint("CK_FinancialPeriods_Status", "[Status] IN (0,1,2)");
+> Data\FinanceModelConfiguration.cs:19:                t.HasCheckConstraint("CK_FinancialPeriods_CloseStamp", "([Status] = 0 AND [ClosedAtUtc] IS NULL AND [ClosedByAccountId] IS NULL) OR ([Status] IN (1,2) AND [ClosedAtUtc] IS NOT NULL AND 
+[ClosedByAccountId] IS NOT NULL)");
+  Data\FinanceModelConfiguration.cs:20:            });
+  Data\FinanceModelConfiguration.cs:21:            e.HasKey(x => x.PeriodId);
+  Data\FinanceModelConfiguration.cs:22:            e.Property(x => x.PeriodId).ValueGeneratedNever();
+> Data\FinanceModelConfiguration.cs:23:            e.HasAlternateKey(x => new { x.PeriodId, x.BuildingId }).HasName("UQ_FinancialPeriods_Period_Building");
+  Data\FinanceModelConfiguration.cs:24:            e.Property(x => x.BuildingId).HasMaxLength(64).IsRequired();
+  Data\FinanceModelConfiguration.cs:25:            e.Property(x => x.PeriodKey).HasColumnType("char(7)").HasMaxLength(7).IsRequired();
+  Data\FinanceModelConfiguration.cs:26:            e.Property(x => x.TimeZoneId).HasMaxLength(100).IsRequired();
+  Data\FinanceModelConfiguration.cs:32:            Utc3(e.Property(x => x.ClosedAtUtc));
+  Data\FinanceModelConfiguration.cs:33:            e.Property(x => x.RowVersion).IsRowVersion();
+> Data\FinanceModelConfiguration.cs:34:            e.HasOne<BuildingEntity>().WithMany().HasForeignKey(x => x.BuildingId).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:35:            e.HasOne<UserAccountEntity>().WithMany().HasForeignKey(x => x.ClosedByAccountId).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:36:            e.HasIndex(x => new { x.BuildingId, x.PeriodKey }).IsUnique().HasDatabaseName("UX_FinancialPeriods_Building_Key");
+  Data\FinanceModelConfiguration.cs:37:        });
+  Data\FinanceModelConfiguration.cs:38:
+  Data\FinanceModelConfiguration.cs:39:        mb.Entity<PaymentDepositEntity>(e =>
+  Data\FinanceModelConfiguration.cs:41:            e.ToTable("PaymentDeposits", t =>
+  Data\FinanceModelConfiguration.cs:42:            {
+> Data\FinanceModelConfiguration.cs:43:                t.HasCheckConstraint("CK_PaymentDeposits_Amount", "[Amount] > 0");
+> Data\FinanceModelConfiguration.cs:44:                t.HasCheckConstraint("CK_PaymentDeposits_Status", "[Status] IN (0,1,2,3)");
+> Data\FinanceModelConfiguration.cs:45:                t.HasCheckConstraint("CK_PaymentDeposits_Resolution", "([Status] = 0 AND [PostedTransactionId] IS NULL AND [ConfirmedAtUtc] IS NULL AND [ConfirmedByAccountId] IS NULL AND 
+[CancelledAtUtc] IS NULL AND [CancelledByAccountId] IS NULL AND [ReversedAtUtc] IS NULL AND [ReversedByAccountId] IS NULL) OR ([Status] = 1 AND [PostedTransactionId] IS NOT NULL AND [ConfirmedAtUtc] IS NOT NULL AND [ConfirmedByAccountId] 
+IS NOT NULL AND [CancelledAtUtc] IS NULL AND [CancelledByAccountId] IS NULL AND [ReversedAtUtc] IS NULL AND [ReversedByAccountId] IS NULL) OR ([Status] = 2 AND [PostedTransactionId] IS NULL AND [ConfirmedAtUtc] IS NULL AND 
+[ConfirmedByAccountId] IS NULL AND [CancelledAtUtc] IS NOT NULL AND [CancelledByAccountId] IS NOT NULL AND [ReversedAtUtc] IS NULL AND [ReversedByAccountId] IS NULL AND LEN(LTRIM(RTRIM([ResolutionReason]))) > 0) OR ([Status] = 3 AND 
+[PostedTransactionId] IS NOT NULL AND [ConfirmedAtUtc] IS NOT NULL AND [ConfirmedByAccountId] IS NOT NULL AND [CancelledAtUtc] IS NULL AND [CancelledByAccountId] IS NULL AND [ReversedAtUtc] IS NOT NULL AND [ReversedByAccountId] IS NOT NULL 
+AND [ReversalTransactionId] IS NOT NULL AND LEN(LTRIM(RTRIM([ResolutionReason]))) > 0)");
+  Data\FinanceModelConfiguration.cs:46:            });
+  Data\FinanceModelConfiguration.cs:47:            e.HasKey(x => x.PaymentDepositId);
+  Data\FinanceModelConfiguration.cs:48:            e.Property(x => x.PaymentDepositId).ValueGeneratedNever();
+  Data\FinanceModelConfiguration.cs:60:            Utc3(e.Property(x => x.ReversedAtUtc));
+  Data\FinanceModelConfiguration.cs:61:            e.Property(x => x.RowVersion).IsRowVersion();
+> Data\FinanceModelConfiguration.cs:62:            e.HasOne<FinancialPeriodEntity>().WithMany().HasForeignKey(x => new { x.PeriodId, x.BuildingId }).HasPrincipalKey(x => new { x.PeriodId, x.BuildingId }).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:63:            e.HasOne<ApartmentEntity>().WithMany().HasForeignKey(x => new { x.BuildingId, x.ApartmentId }).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:64:            e.HasOne<UserAccountEntity>().WithMany().HasForeignKey(x => x.ConfirmedByAccountId).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:65:            e.HasOne<UserAccountEntity>().WithMany().HasForeignKey(x => x.CancelledByAccountId).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:66:            e.HasOne<UserAccountEntity>().WithMany().HasForeignKey(x => x.ReversedByAccountId).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:67:            e.HasOne<LedgerTransactionEntity>().WithMany().HasForeignKey(x => new { x.PostedTransactionId, x.PeriodId, x.BuildingId }).HasPrincipalKey(x => new { LedgerTransactionId = 
+x.LedgerTransactionId, x.PeriodId, x.BuildingId }).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:68:            e.HasOne<LedgerTransactionEntity>().WithMany().HasForeignKey(x => x.ReversalTransactionId).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:69:            e.HasOne<LedgerTransactionEntity>().WithMany().HasForeignKey(x => x.ReversalTransactionId).OnDelete(DeleteBehavior.NoAction);
+  Data\FinanceModelConfiguration.cs:70:            e.HasIndex(x => new { x.BuildingId, x.ApartmentId, x.SubmittedAtUtc }).HasDatabaseName("IX_PaymentDeposits_Apartment_Submitted");
+  Data\FinanceModelConfiguration.cs:71:            e.HasIndex(x => new { x.BuildingId, x.Status, x.SubmittedAtUtc }).HasDatabaseName("IX_PaymentDeposits_Status_Submitted");
+  Data\FinanceModelConfiguration.cs:72:            e.HasIndex(x => new { x.SourceSystem, x.SourceKey }).IsUnique().HasDatabaseName("UX_PaymentDeposits_Source").HasFilter("[SourceKey] IS NOT NULL");
+  Data\FinanceModelConfiguration.cs:77:            e.ToTable("LedgerTransactions", t =>
+  Data\FinanceModelConfiguration.cs:78:            {
+> Data\FinanceModelConfiguration.cs:79:                t.HasCheckConstraint("CK_LedgerTransactions_Kind", "[Kind] IN (1,2,3,4,5,6,7,8)");
+> Data\FinanceModelConfiguration.cs:80:                t.HasCheckConstraint("CK_LedgerTransactions_Status", "[Status] IN (0,1,2)");
+> Data\FinanceModelConfiguration.cs:81:                t.HasCheckConstraint("CK_LedgerTransactions_PostStamp", "([Status] IN (0,2) AND [PostedAtUtc] IS NULL) OR ([Status] = 1 AND [PostedAtUtc] IS NOT NULL)");
+> Data\FinanceModelConfiguration.cs:82:                t.HasCheckConstraint("CK_LedgerTransactions_SourcePair", "([SourceSystem] IS NULL AND [SourceType] IS NULL AND [SourceKey] IS NULL) OR ([SourceSystem] IS NOT NULL AND [SourceType] IS 
+NOT NULL AND [SourceKey] IS NOT NULL)");
+> Data\FinanceModelConfiguration.cs:83:                t.HasCheckConstraint("CK_LedgerTransactions_ReversalLink", "([Kind] = 7 AND [ReversesTransactionId] IS NOT NULL) OR ([Kind] <> 7 AND [ReversesTransactionId] IS NULL)");
+  Data\FinanceModelConfiguration.cs:84:            });
+  Data\FinanceModelConfiguration.cs:85:            e.HasKey(x => x.LedgerTransactionId);
+  Data\FinanceModelConfiguration.cs:86:            e.Property(x => x.LedgerTransactionId).ValueGeneratedNever();
+> Data\FinanceModelConfiguration.cs:87:            e.HasAlternateKey(x => new { x.LedgerTransactionId, x.PeriodId, x.BuildingId }).HasName("UQ_LedgerTransactions_Period_Building");
+  Data\FinanceModelConfiguration.cs:88:            e.Property(x => x.PeriodId);
+  Data\FinanceModelConfiguration.cs:89:            e.Property(x => x.BuildingId).HasMaxLength(64).IsRequired();
+  Data\FinanceModelConfiguration.cs:90:            e.Property(x => x.Kind).HasConversion<byte>();
+  Data\FinanceModelConfiguration.cs:99:            Utc3(e.Property(x => x.PostedAtUtc));
+  Data\FinanceModelConfiguration.cs:100:            e.Property(x => x.RowVersion).IsRowVersion();
+> Data\FinanceModelConfiguration.cs:101:            e.HasOne<FinancialPeriodEntity>().WithMany().HasForeignKey(x => new { x.PeriodId, x.BuildingId }).HasPrincipalKey(x => new { x.PeriodId, x.BuildingId }).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:102:            e.HasOne<UserAccountEntity>().WithMany().HasForeignKey(x => x.ActorAccountId).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:103:            e.HasOne<LedgerTransactionEntity>().WithMany().HasForeignKey(x => x.ReversesTransactionId).OnDelete(DeleteBehavior.NoAction);
+  Data\FinanceModelConfiguration.cs:104:            e.HasIndex(x => x.IdempotencyKey).IsUnique().HasDatabaseName("UX_LedgerTransactions_Idempotency");
+  Data\FinanceModelConfiguration.cs:105:            e.HasIndex(x => new { x.SourceSystem, x.SourceType, x.SourceKey }).IsUnique().HasDatabaseName("UX_LedgerTransactions_Source").HasFilter("[SourceKey] IS NOT NULL");
+  Data\FinanceModelConfiguration.cs:106:            e.HasIndex(x => new { x.PeriodId, x.Status, x.CreatedAtUtc }).HasDatabaseName("IX_LedgerTransactions_Period_Status");
+  Data\FinanceModelConfiguration.cs:111:            e.ToTable("LedgerEntries", t =>
+  Data\FinanceModelConfiguration.cs:112:            {
+> Data\FinanceModelConfiguration.cs:113:                t.HasCheckConstraint("CK_LedgerEntries_Kind", "[EntryKind] IN (1,2,3,4,5,6,7)");
+> Data\FinanceModelConfiguration.cs:114:                t.HasCheckConstraint("CK_LedgerEntries_Amount", "[SignedAmount] <> 0");
+  Data\FinanceModelConfiguration.cs:115:            });
+  Data\FinanceModelConfiguration.cs:116:            e.HasKey(x => x.LedgerEntryId);
+  Data\FinanceModelConfiguration.cs:117:            e.Property(x => x.LedgerEntryId).ValueGeneratedNever();
+  Data\FinanceModelConfiguration.cs:124:            Utc3(e.Property(x => x.EffectiveAtUtc));
+  Data\FinanceModelConfiguration.cs:125:            Utc3(e.Property(x => x.CreatedAtUtc)).HasDefaultValueSql("SYSUTCDATETIME()");
+> Data\FinanceModelConfiguration.cs:126:            e.HasOne<LedgerTransactionEntity>().WithMany().HasForeignKey(x => new { x.LedgerTransactionId, x.PeriodId, x.BuildingId }).HasPrincipalKey(x => new { x.LedgerTransactionId, x.PeriodId, 
+x.BuildingId }).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:127:            e.HasOne<FinancialPeriodEntity>().WithMany().HasForeignKey(x => new { x.PeriodId, x.BuildingId }).HasPrincipalKey(x => new { x.PeriodId, x.BuildingId }).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:128:            e.HasOne<ApartmentEntity>().WithMany().HasForeignKey(x => new { x.BuildingId, x.ApartmentId }).OnDelete(DeleteBehavior.NoAction);
+  Data\FinanceModelConfiguration.cs:129:            e.HasIndex(x => new { x.BuildingId, x.ApartmentId, x.PeriodId, x.EffectiveAtUtc }).HasDatabaseName("IX_LedgerEntries_Apartment_Period");
+  Data\FinanceModelConfiguration.cs:130:            e.HasIndex(x => x.LedgerTransactionId).HasDatabaseName("IX_LedgerEntries_Transaction");
+  Data\FinanceModelConfiguration.cs:131:        });
+  Data\FinanceModelConfiguration.cs:133:        mb.Entity<FinancialSourceLinkEntity>(e =>
+  Data\FinanceModelConfiguration.cs:134:        {
+> Data\FinanceModelConfiguration.cs:135:            e.ToTable("FinancialSourceLinks", t => t.HasCheckConstraint("CK_FinancialSourceLinks_Fingerprint", "[SourceFingerprint] IS NULL OR DATALENGTH([SourceFingerprint]) = 32"));
+  Data\FinanceModelConfiguration.cs:136:            e.HasKey(x => x.FinancialSourceLinkId);
+  Data\FinanceModelConfiguration.cs:137:            e.Property(x => x.FinancialSourceLinkId).ValueGeneratedNever();
+  Data\FinanceModelConfiguration.cs:138:            e.Property(x => x.SourceSystem).HasMaxLength(80).IsRequired();
+  Data\FinanceModelConfiguration.cs:141:            e.Property(x => x.SourceFingerprint).HasColumnType("varbinary(32)");
+  Data\FinanceModelConfiguration.cs:142:            Utc3(e.Property(x => x.LinkedAtUtc)).HasDefaultValueSql("SYSUTCDATETIME()");
+> Data\FinanceModelConfiguration.cs:143:            e.HasOne<LedgerTransactionEntity>().WithMany().HasForeignKey(x => x.LedgerTransactionId).OnDelete(DeleteBehavior.NoAction);
+  Data\FinanceModelConfiguration.cs:144:            e.HasIndex(x => new { x.SourceSystem, x.SourceType, x.SourceKey }).IsUnique().HasDatabaseName("UX_FinancialSourceLinks_Source");
+  Data\FinanceModelConfiguration.cs:145:            e.HasIndex(x => x.LedgerTransactionId).HasDatabaseName("IX_FinancialSourceLinks_Transaction");
+  Data\FinanceModelConfiguration.cs:146:        });
+  Data\FinanceModelConfiguration.cs:150:            e.ToTable("FinancialAllocationBatches", t =>
+  Data\FinanceModelConfiguration.cs:151:            {
+> Data\FinanceModelConfiguration.cs:152:                t.HasCheckConstraint("CK_FinancialAllocationBatches_Status", "[Status] IN (0,1,2)");
+> Data\FinanceModelConfiguration.cs:153:                t.HasCheckConstraint("CK_FinancialAllocationBatches_Amounts", "[SourceAmount] >= 0 AND [AllocatedAmount] >= 0");
+> Data\FinanceModelConfiguration.cs:154:                t.HasCheckConstraint("CK_FinancialAllocationBatches_Fingerprint", "DATALENGTH([InputFingerprint]) = 32");
+  Data\FinanceModelConfiguration.cs:155:            });
+  Data\FinanceModelConfiguration.cs:156:            e.HasKey(x => x.AllocationBatchId);
+  Data\FinanceModelConfiguration.cs:157:            e.Property(x => x.AllocationBatchId).ValueGeneratedNever();
+> Data\FinanceModelConfiguration.cs:158:            e.HasAlternateKey(x => new { x.AllocationBatchId, x.PeriodId, x.BuildingId }).HasName("UQ_FinancialAllocationBatches_Period_Building");
+  Data\FinanceModelConfiguration.cs:159:            e.Property(x => x.BuildingId).HasMaxLength(64).IsRequired();
+  Data\FinanceModelConfiguration.cs:160:            e.Property(x => x.BasisKey).HasMaxLength(80).IsRequired();
+  Data\FinanceModelConfiguration.cs:161:            e.Property(x => x.AlgorithmVersion).HasMaxLength(80).IsRequired();
+  Data\FinanceModelConfiguration.cs:167:            Utc3(e.Property(x => x.CreatedAtUtc)).HasDefaultValueSql("SYSUTCDATETIME()");
+  Data\FinanceModelConfiguration.cs:168:            Utc3(e.Property(x => x.CompletedAtUtc));
+> Data\FinanceModelConfiguration.cs:169:            e.HasOne<FinancialPeriodEntity>().WithMany().HasForeignKey(x => new { x.PeriodId, x.BuildingId }).HasPrincipalKey(x => new { x.PeriodId, x.BuildingId }).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:170:            e.HasOne<LedgerTransactionEntity>().WithMany().HasForeignKey(x => new { x.SourceTransactionId, x.PeriodId, x.BuildingId }).HasPrincipalKey(x => new { LedgerTransactionId = 
+x.LedgerTransactionId, x.PeriodId, x.BuildingId }).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:171:            e.HasOne<UserAccountEntity>().WithMany().HasForeignKey(x => x.CreatedByAccountId).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:172:            e.HasIndex(x => new { x.PeriodId, x.SourceTransactionId, x.AlgorithmVersion }).HasDatabaseName("IX_FinancialAllocationBatches_Source");
+  Data\FinanceModelConfiguration.cs:173:        });
+  Data\FinanceModelConfiguration.cs:174:
+  Data\FinanceModelConfiguration.cs:175:        mb.Entity<FinancialAllocationLineEntity>(e =>
+  Data\FinanceModelConfiguration.cs:176:        {
+> Data\FinanceModelConfiguration.cs:177:            e.ToTable("FinancialAllocationLines", t =>
+  Data\FinanceModelConfiguration.cs:178:            {
+> Data\FinanceModelConfiguration.cs:179:                t.HasCheckConstraint("CK_FinancialAllocationLines_Amounts", "[Weight] >= 0 AND [ExactShare] >= 0 AND [AllocatedAmount] >= 0");
+> Data\FinanceModelConfiguration.cs:180:                t.HasCheckConstraint("CK_FinancialAllocationLines_Rank", "[RemainderRank] >= 0");
+  Data\FinanceModelConfiguration.cs:181:            });
+  Data\FinanceModelConfiguration.cs:182:            e.HasKey(x => x.AllocationLineId);
+  Data\FinanceModelConfiguration.cs:183:            e.Property(x => x.AllocationLineId).ValueGeneratedNever();
+  Data\FinanceModelConfiguration.cs:187:            e.Property(x => x.ExactShare).HasPrecision(19, 8);
+  Data\FinanceModelConfiguration.cs:188:            e.Property(x => x.AllocatedAmount).HasPrecision(19, 4);
+> Data\FinanceModelConfiguration.cs:189:            e.HasOne<FinancialAllocationBatchEntity>().WithMany().HasForeignKey(x => new { x.AllocationBatchId, x.PeriodId, x.BuildingId }).HasPrincipalKey(x => new { x.AllocationBatchId, x.PeriodId, 
+x.BuildingId }).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:190:            e.HasOne<FinancialPeriodEntity>().WithMany().HasForeignKey(x => new { x.PeriodId, x.BuildingId }).HasPrincipalKey(x => new { x.PeriodId, x.BuildingId }).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:191:            e.HasOne<ApartmentEntity>().WithMany().HasForeignKey(x => new { x.BuildingId, x.ApartmentId }).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:192:            e.HasIndex(x => new { x.AllocationBatchId, x.ApartmentId }).IsUnique().HasDatabaseName("UX_FinancialAllocationLines_Batch_Apartment");
+  Data\FinanceModelConfiguration.cs:193:        });
+  Data\FinanceModelConfiguration.cs:194:
+  Data\FinanceModelConfiguration.cs:195:        mb.Entity<FinancialReconciliationRunEntity>(e =>
+  Data\FinanceModelConfiguration.cs:197:            e.ToTable("FinancialReconciliationRuns", t =>
+  Data\FinanceModelConfiguration.cs:198:            {
+> Data\FinanceModelConfiguration.cs:199:                t.HasCheckConstraint("CK_FinancialReconciliationRuns_Status", "[Status] IN (0,1,2)");
+> Data\FinanceModelConfiguration.cs:200:                t.HasCheckConstraint("CK_FinancialReconciliationRuns_Completion", "([Status] = 0 AND [CompletedAtUtc] IS NULL) OR ([Status] IN (1,2) AND [CompletedAtUtc] IS NOT NULL)");
+  Data\FinanceModelConfiguration.cs:201:            });
+  Data\FinanceModelConfiguration.cs:202:            e.HasKey(x => x.ReconciliationRunId);
+  Data\FinanceModelConfiguration.cs:203:            e.Property(x => x.ReconciliationRunId).ValueGeneratedNever();
+  Data\FinanceModelConfiguration.cs:208:            Utc3(e.Property(x => x.StartedAtUtc)).HasDefaultValueSql("SYSUTCDATETIME()");
+  Data\FinanceModelConfiguration.cs:209:            Utc3(e.Property(x => x.CompletedAtUtc));
+> Data\FinanceModelConfiguration.cs:210:            e.HasOne<UserAccountEntity>().WithMany().HasForeignKey(x => x.StartedByAccountId).OnDelete(DeleteBehavior.NoAction);
+  Data\FinanceModelConfiguration.cs:211:        });
+  Data\FinanceModelConfiguration.cs:212:
+  Data\FinanceModelConfiguration.cs:213:        mb.Entity<FinancialReconciliationDifferenceEntity>(e =>
+  Data\FinanceModelConfiguration.cs:215:            e.ToTable("FinancialReconciliationDifferences", t =>
+  Data\FinanceModelConfiguration.cs:216:            {
+> Data\FinanceModelConfiguration.cs:217:                t.HasCheckConstraint("CK_FinancialReconciliationDifferences_PeriodKey", "[PeriodKey] IS NULL OR ([PeriodKey] LIKE '[0-9][0-9][0-9][0-9]-[01][0-9]' AND SUBSTRING([PeriodKey],6,2) 
+BETWEEN '01' AND '12')");
+> Data\FinanceModelConfiguration.cs:218:                t.HasCheckConstraint("CK_FinancialReconciliationDifferences_Scope", "[ApartmentId] IS NULL OR [BuildingId] IS NOT NULL");
+  Data\FinanceModelConfiguration.cs:219:            });
+  Data\FinanceModelConfiguration.cs:220:            e.HasKey(x => x.ReconciliationDifferenceId);
+  Data\FinanceModelConfiguration.cs:221:            e.Property(x => x.ReconciliationDifferenceId).ValueGeneratedNever();
+  Data\FinanceModelConfiguration.cs:233:            Utc3(e.Property(x => x.CreatedAtUtc)).HasDefaultValueSql("SYSUTCDATETIME()");
+  Data\FinanceModelConfiguration.cs:234:            Utc3(e.Property(x => x.ReviewedAtUtc));
+> Data\FinanceModelConfiguration.cs:235:            e.HasOne<FinancialReconciliationRunEntity>().WithMany().HasForeignKey(x => x.ReconciliationRunId).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:236:            e.HasOne<BuildingEntity>().WithMany().HasForeignKey(x => x.BuildingId).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:237:            e.HasOne<ApartmentEntity>().WithMany().HasForeignKey(x => new { x.BuildingId, x.ApartmentId }).OnDelete(DeleteBehavior.NoAction);
+> Data\FinanceModelConfiguration.cs:238:            e.HasOne<UserAccountEntity>().WithMany().HasForeignKey(x => x.ReviewedByAccountId).OnDelete(DeleteBehavior.NoAction);
+  Data\FinanceModelConfiguration.cs:239:            e.HasIndex(x => new { x.ReconciliationRunId, x.BuildingId, x.PeriodKey }).HasDatabaseName("IX_FinancialReconciliationDifferences_Run_Scope");
+  Data\FinanceModelConfiguration.cs:240:        });
+  Data\FinanceModelConfiguration.cs:241:    }
+
+
+
+
+=== SNAPSHOT ===
+
+  Migrations\AppDbContextModelSnapshot.cs:101:                        {
+> Migrations\AppDbContextModelSnapshot.cs:102:                            t.HasCheckConstraint("CK_AccountPermissionOverrides_Effect", "[Effect] IN (0,1)");
+  Migrations\AppDbContextModelSnapshot.cs:103:
+> Migrations\AppDbContextModelSnapshot.cs:104:                            t.HasCheckConstraint("CK_AccountPermissionOverrides_Revocation", "(([RevokedAtUtc] IS NULL AND [RevokedByAccountId] IS NULL AND [RevocationReason] IS NULL) OR 
+([RevokedAtUtc] IS NOT NULL AND [RevokedByAccountId] IS NOT NULL))");
+  Migrations\AppDbContextModelSnapshot.cs:105:
+> Migrations\AppDbContextModelSnapshot.cs:106:                            t.HasCheckConstraint("CK_AccountPermissionOverrides_Scope", "(([ScopeType] IN (0,3) AND [ScopeBuildingId] IS NULL AND [ScopeApartmentId] IS NULL) OR ([ScopeType] = 1 
+AND [ScopeBuildingId] IS NOT NULL AND [ScopeApartmentId] IS NULL) OR ([ScopeType] = 2 AND [ScopeBuildingId] IS NOT NULL AND [ScopeApartmentId] IS NOT NULL))");
+  Migrations\AppDbContextModelSnapshot.cs:107:
+> Migrations\AppDbContextModelSnapshot.cs:108:                            t.HasCheckConstraint("CK_AccountPermissionOverrides_Validity", "[ValidToUtc] IS NULL OR [ValidToUtc] > [ValidFromUtc]");
+  Migrations\AppDbContextModelSnapshot.cs:109:                        });
+  Migrations\AppDbContextModelSnapshot.cs:110:                });
+  Migrations\AppDbContextModelSnapshot.cs:182:                        {
+> Migrations\AppDbContextModelSnapshot.cs:183:                            t.HasCheckConstraint("CK_ApartmentAccessGrants_BoundedUrgentAccess", "([GrantType] NOT IN (4,5) OR [ValidToUtc] IS NOT NULL)");
+  Migrations\AppDbContextModelSnapshot.cs:184:
+> Migrations\AppDbContextModelSnapshot.cs:185:                            t.HasCheckConstraint("CK_ApartmentAccessGrants_GrantType", "[GrantType] IN (1,2,3,4,5)");
+  Migrations\AppDbContextModelSnapshot.cs:186:
+> Migrations\AppDbContextModelSnapshot.cs:187:                            t.HasCheckConstraint("CK_ApartmentAccessGrants_PermissionSet", "(([GrantType] = 1 AND [PermissionSetKey] = N'apartment.access.family.v1') OR ([GrantType] = 2 AND 
+[PermissionSetKey] = N'apartment.access.tenant.v1') OR ([GrantType] = 3 AND [PermissionSetKey] = N'apartment.access.caretaker.v1') OR ([GrantType] = 4 AND [PermissionSetKey] = N'apartment.access.emergency.v1') OR ([GrantType] = 5 AND 
+[PermissionSetKey] = N'apartment.access.temporary.v1'))");
+  Migrations\AppDbContextModelSnapshot.cs:188:
+> Migrations\AppDbContextModelSnapshot.cs:189:                            t.HasCheckConstraint("CK_ApartmentAccessGrants_Reason", "LEN(LTRIM(RTRIM([Reason]))) > 0");
+  Migrations\AppDbContextModelSnapshot.cs:190:
+> Migrations\AppDbContextModelSnapshot.cs:191:                            t.HasCheckConstraint("CK_ApartmentAccessGrants_Revocation", "(([RevokedAtUtc] IS NULL AND [RevokedByAccountId] IS NULL) OR ([RevokedAtUtc] IS NOT NULL AND 
+[RevokedByAccountId] IS NOT NULL))");
+  Migrations\AppDbContextModelSnapshot.cs:192:
+> Migrations\AppDbContextModelSnapshot.cs:193:                            t.HasCheckConstraint("CK_ApartmentAccessGrants_Validity", "[ValidToUtc] IS NULL OR [ValidToUtc] > [ValidFromUtc]");
+  Migrations\AppDbContextModelSnapshot.cs:194:                        });
+  Migrations\AppDbContextModelSnapshot.cs:195:                });
+  Migrations\AppDbContextModelSnapshot.cs:356:                        {
+> Migrations\AppDbContextModelSnapshot.cs:357:                            t.HasCheckConstraint("CK_ApartmentOccupancies_Type", "[OccupancyType] IN (0,1,2,3)");
+  Migrations\AppDbContextModelSnapshot.cs:358:
+> Migrations\AppDbContextModelSnapshot.cs:359:                            t.HasCheckConstraint("CK_ApartmentOccupancies_Validity", "[ValidToUtc] IS NULL OR [ValidToUtc] > [ValidFromUtc]");
+  Migrations\AppDbContextModelSnapshot.cs:360:                        });
+  Migrations\AppDbContextModelSnapshot.cs:361:                });
+  Migrations\AppDbContextModelSnapshot.cs:443:                        {
+> Migrations\AppDbContextModelSnapshot.cs:444:                            t.HasCheckConstraint("CK_ApartmentOwnerships_CompletenessStatus", "[CompletenessStatus] IN (0,1,2)");
+  Migrations\AppDbContextModelSnapshot.cs:445:
+> Migrations\AppDbContextModelSnapshot.cs:446:                            t.HasCheckConstraint("CK_ApartmentOwnerships_CompletenessVerification", "(([CompletenessStatus] = 2 AND [CompletenessVerifiedAtUtc] IS NOT NULL AND 
+[CompletenessVerifiedByAccountId] IS NOT NULL) OR ([CompletenessStatus] IN (0,1) AND [CompletenessVerifiedAtUtc] IS NULL AND [CompletenessVerifiedByAccountId] IS NULL))");
+  Migrations\AppDbContextModelSnapshot.cs:447:
+> Migrations\AppDbContextModelSnapshot.cs:448:                            t.HasCheckConstraint("CK_ApartmentOwnerships_Evidence", "LEN(LTRIM(RTRIM([EvidenceReference]))) > 0");
+  Migrations\AppDbContextModelSnapshot.cs:449:
+> Migrations\AppDbContextModelSnapshot.cs:450:                            t.HasCheckConstraint("CK_ApartmentOwnerships_RecordActor", "([RecordSource] <> 0 OR [RecordedByAccountId] IS NOT NULL)");
+  Migrations\AppDbContextModelSnapshot.cs:451:
+> Migrations\AppDbContextModelSnapshot.cs:452:                            t.HasCheckConstraint("CK_ApartmentOwnerships_RecordSource", "[RecordSource] IN (0,1,2)");
+  Migrations\AppDbContextModelSnapshot.cs:453:
+> Migrations\AppDbContextModelSnapshot.cs:454:                            t.HasCheckConstraint("CK_ApartmentOwnerships_Share", "[OwnershipSharePercent] > 0 AND [OwnershipSharePercent] <= 100");
+  Migrations\AppDbContextModelSnapshot.cs:455:
+> Migrations\AppDbContextModelSnapshot.cs:456:                            t.HasCheckConstraint("CK_ApartmentOwnerships_Validity", "[ValidToUtc] IS NULL OR [ValidToUtc] > [ValidFromUtc]");
+  Migrations\AppDbContextModelSnapshot.cs:457:                        });
+  Migrations\AppDbContextModelSnapshot.cs:458:                });
+  Migrations\AppDbContextModelSnapshot.cs:1068:
+> Migrations\AppDbContextModelSnapshot.cs:1069:                    b.HasAlternateKey("AllocationBatchId", "PeriodId", "BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:1070:                        .HasName("UQ_FinancialAllocationBatches_Period_Building");
+  Migrations\AppDbContextModelSnapshot.cs:1071:
+  Migrations\AppDbContextModelSnapshot.cs:1076:                    b.HasIndex("PeriodId", "SourceTransactionId", "AlgorithmVersion")
+> Migrations\AppDbContextModelSnapshot.cs:1077:                        .HasDatabaseName("IX_FinancialAllocationBatches_Source");
+  Migrations\AppDbContextModelSnapshot.cs:1078:
+  Migrations\AppDbContextModelSnapshot.cs:1079:                    b.HasIndex("SourceTransactionId", "PeriodId", "BuildingId");
+  Migrations\AppDbContextModelSnapshot.cs:1082:                        {
+> Migrations\AppDbContextModelSnapshot.cs:1083:                            t.HasCheckConstraint("CK_FinancialAllocationBatches_Amounts", "[SourceAmount] >= 0 AND [AllocatedAmount] >= 0");
+  Migrations\AppDbContextModelSnapshot.cs:1084:
+> Migrations\AppDbContextModelSnapshot.cs:1085:                            t.HasCheckConstraint("CK_FinancialAllocationBatches_Fingerprint", "DATALENGTH([InputFingerprint]) = 32");
+  Migrations\AppDbContextModelSnapshot.cs:1086:
+> Migrations\AppDbContextModelSnapshot.cs:1087:                            t.HasCheckConstraint("CK_FinancialAllocationBatches_Status", "[Status] IN (0,1,2)");
+  Migrations\AppDbContextModelSnapshot.cs:1088:                        });
+  Migrations\AppDbContextModelSnapshot.cs:1089:                });
+  Migrations\AppDbContextModelSnapshot.cs:1130:                        .IsUnique()
+> Migrations\AppDbContextModelSnapshot.cs:1131:                        .HasDatabaseName("UX_FinancialAllocationLines_Batch_Apartment");
+  Migrations\AppDbContextModelSnapshot.cs:1132:
+  Migrations\AppDbContextModelSnapshot.cs:1133:                    b.HasIndex("BuildingId", "ApartmentId");
+  Migrations\AppDbContextModelSnapshot.cs:1138:
+> Migrations\AppDbContextModelSnapshot.cs:1139:                    b.ToTable("FinancialAllocationLines", null, t =>
+  Migrations\AppDbContextModelSnapshot.cs:1140:                        {
+> Migrations\AppDbContextModelSnapshot.cs:1141:                            t.HasCheckConstraint("CK_FinancialAllocationLines_Amounts", "[Weight] >= 0 AND [ExactShare] >= 0 AND [AllocatedAmount] >= 0");
+  Migrations\AppDbContextModelSnapshot.cs:1142:
+> Migrations\AppDbContextModelSnapshot.cs:1143:                            t.HasCheckConstraint("CK_FinancialAllocationLines_Rank", "[RemainderRank] >= 0");
+  Migrations\AppDbContextModelSnapshot.cs:1144:                        });
+  Migrations\AppDbContextModelSnapshot.cs:1145:                });
+  Migrations\AppDbContextModelSnapshot.cs:1231:
+> Migrations\AppDbContextModelSnapshot.cs:1232:                    b.HasAlternateKey("PeriodId", "BuildingId")
+> Migrations\AppDbContextModelSnapshot.cs:1233:                        .HasName("UQ_FinancialPeriods_Period_Building");
+  Migrations\AppDbContextModelSnapshot.cs:1234:
+  Migrations\AppDbContextModelSnapshot.cs:1235:                    b.HasIndex("ClosedByAccountId");
+  Migrations\AppDbContextModelSnapshot.cs:1238:                        .IsUnique()
+> Migrations\AppDbContextModelSnapshot.cs:1239:                        .HasDatabaseName("UX_FinancialPeriods_Building_Key");
+  Migrations\AppDbContextModelSnapshot.cs:1240:
+> Migrations\AppDbContextModelSnapshot.cs:1241:                    b.ToTable("FinancialPeriods", null, t =>
+  Migrations\AppDbContextModelSnapshot.cs:1242:                        {
+> Migrations\AppDbContextModelSnapshot.cs:1243:                            t.HasCheckConstraint("CK_FinancialPeriods_CloseStamp", "([Status] = 0 AND [ClosedAtUtc] IS NULL AND [ClosedByAccountId] IS NULL) OR ([Status] IN (1,2) AND 
+[ClosedAtUtc] IS NOT NULL AND [ClosedByAccountId] IS NOT NULL)");
+  Migrations\AppDbContextModelSnapshot.cs:1244:
+> Migrations\AppDbContextModelSnapshot.cs:1245:                            t.HasCheckConstraint("CK_FinancialPeriods_Key", "[PeriodKey] LIKE '[0-9][0-9][0-9][0-9]-[01][0-9]' AND SUBSTRING([PeriodKey],6,2) BETWEEN '01' AND '12'");
+  Migrations\AppDbContextModelSnapshot.cs:1246:
+> Migrations\AppDbContextModelSnapshot.cs:1247:                            t.HasCheckConstraint("CK_FinancialPeriods_Range", "[EndsAtUtc] > [StartsAtUtc]");
+  Migrations\AppDbContextModelSnapshot.cs:1248:
+> Migrations\AppDbContextModelSnapshot.cs:1249:                            t.HasCheckConstraint("CK_FinancialPeriods_Status", "[Status] IN (0,1,2)");
+  Migrations\AppDbContextModelSnapshot.cs:1250:                        });
+  Migrations\AppDbContextModelSnapshot.cs:1251:                });
+  Migrations\AppDbContextModelSnapshot.cs:1328:                        {
+> Migrations\AppDbContextModelSnapshot.cs:1329:                            t.HasCheckConstraint("CK_FinancialReconciliationDifferences_PeriodKey", "[PeriodKey] IS NULL OR ([PeriodKey] LIKE '[0-9][0-9][0-9][0-9]-[01][0-9]' AND 
+SUBSTRING([PeriodKey],6,2) BETWEEN '01' AND '12')");
+  Migrations\AppDbContextModelSnapshot.cs:1330:
+> Migrations\AppDbContextModelSnapshot.cs:1331:                            t.HasCheckConstraint("CK_FinancialReconciliationDifferences_Scope", "[ApartmentId] IS NULL OR [BuildingId] IS NOT NULL");
+  Migrations\AppDbContextModelSnapshot.cs:1332:                        });
+  Migrations\AppDbContextModelSnapshot.cs:1333:                });
+  Migrations\AppDbContextModelSnapshot.cs:1373:                        {
+> Migrations\AppDbContextModelSnapshot.cs:1374:                            t.HasCheckConstraint("CK_FinancialReconciliationRuns_Completion", "([Status] = 0 AND [CompletedAtUtc] IS NULL) OR ([Status] IN (1,2) AND [CompletedAtUtc] IS NOT 
+NULL)");
+  Migrations\AppDbContextModelSnapshot.cs:1375:
+> Migrations\AppDbContextModelSnapshot.cs:1376:                            t.HasCheckConstraint("CK_FinancialReconciliationRuns_Status", "[Status] IN (0,1,2)");
+  Migrations\AppDbContextModelSnapshot.cs:1377:                        });
+  Migrations\AppDbContextModelSnapshot.cs:1378:                });
+  Migrations\AppDbContextModelSnapshot.cs:1421:                        {
+> Migrations\AppDbContextModelSnapshot.cs:1422:                            t.HasCheckConstraint("CK_FinancialSourceLinks_Fingerprint", "[SourceFingerprint] IS NULL OR DATALENGTH([SourceFingerprint]) = 32");
+  Migrations\AppDbContextModelSnapshot.cs:1423:                        });
+  Migrations\AppDbContextModelSnapshot.cs:1424:                });
+  Migrations\AppDbContextModelSnapshot.cs:1572:                        {
+> Migrations\AppDbContextModelSnapshot.cs:1573:                            t.HasCheckConstraint("CK_LedgerEntries_Amount", "[SignedAmount] <> 0");
+  Migrations\AppDbContextModelSnapshot.cs:1574:
+> Migrations\AppDbContextModelSnapshot.cs:1575:                            t.HasCheckConstraint("CK_LedgerEntries_Kind", "[EntryKind] IN (1,2,3,4,5,6,7)");
+  Migrations\AppDbContextModelSnapshot.cs:1576:                        });
+  Migrations\AppDbContextModelSnapshot.cs:1577:                });
+  Migrations\AppDbContextModelSnapshot.cs:1618:
+> Migrations\AppDbContextModelSnapshot.cs:1619:                    b.Property<Guid?>("ReversesTransactionId")
+  Migrations\AppDbContextModelSnapshot.cs:1620:                        .HasColumnType("uniqueidentifier");
+  Migrations\AppDbContextModelSnapshot.cs:1621:
+  Migrations\AppDbContextModelSnapshot.cs:1644:
+> Migrations\AppDbContextModelSnapshot.cs:1645:                    b.HasAlternateKey("LedgerTransactionId", "PeriodId", "BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:1646:                        .HasName("UQ_LedgerTransactions_Period_Building");
+  Migrations\AppDbContextModelSnapshot.cs:1647:
+  Migrations\AppDbContextModelSnapshot.cs:1653:
+> Migrations\AppDbContextModelSnapshot.cs:1654:                    b.HasIndex("ReversesTransactionId");
+  Migrations\AppDbContextModelSnapshot.cs:1655:
+  Migrations\AppDbContextModelSnapshot.cs:1656:                    b.HasIndex("PeriodId", "BuildingId");
+  Migrations\AppDbContextModelSnapshot.cs:1667:                        {
+> Migrations\AppDbContextModelSnapshot.cs:1668:                            t.HasCheckConstraint("CK_LedgerTransactions_Kind", "[Kind] IN (1,2,3,4,5,6,7,8)");
+  Migrations\AppDbContextModelSnapshot.cs:1669:
+> Migrations\AppDbContextModelSnapshot.cs:1670:                            t.HasCheckConstraint("CK_LedgerTransactions_PostStamp", "([Status] IN (0,2) AND [PostedAtUtc] IS NULL) OR ([Status] = 1 AND [PostedAtUtc] IS NOT NULL)");
+  Migrations\AppDbContextModelSnapshot.cs:1671:
+> Migrations\AppDbContextModelSnapshot.cs:1672:                            t.HasCheckConstraint("CK_LedgerTransactions_ReversalLink", "([Kind] = 7 AND [ReversesTransactionId] IS NOT NULL) OR ([Kind] <> 7 AND [ReversesTransactionId] IS 
+NULL)");
+  Migrations\AppDbContextModelSnapshot.cs:1673:
+> Migrations\AppDbContextModelSnapshot.cs:1674:                            t.HasCheckConstraint("CK_LedgerTransactions_SourcePair", "([SourceSystem] IS NULL AND [SourceType] IS NULL AND [SourceKey] IS NULL) OR ([SourceSystem] IS NOT NULL 
+AND [SourceType] IS NOT NULL AND [SourceKey] IS NOT NULL)");
+  Migrations\AppDbContextModelSnapshot.cs:1675:
+> Migrations\AppDbContextModelSnapshot.cs:1676:                            t.HasCheckConstraint("CK_LedgerTransactions_Status", "[Status] IN (0,1,2)");
+  Migrations\AppDbContextModelSnapshot.cs:1677:                        });
+  Migrations\AppDbContextModelSnapshot.cs:1678:                });
+  Migrations\AppDbContextModelSnapshot.cs:1742:
+> Migrations\AppDbContextModelSnapshot.cs:1743:                    b.HasAlternateKey("SourceSystem", "SourceTable", "SourceKey")
+  Migrations\AppDbContextModelSnapshot.cs:1744:                        .HasName("UQ_LegacyIdentityMap_Source");
+  Migrations\AppDbContextModelSnapshot.cs:1745:
+  Migrations\AppDbContextModelSnapshot.cs:1761:                        {
+> Migrations\AppDbContextModelSnapshot.cs:1762:                            t.HasCheckConstraint("CK_LegacyIdentityMap_LinkTargets", "(([MappingStatus] IN (0,3,4) AND [PersonId] IS NULL AND [AccountId] IS NULL) OR ([MappingStatus] IN (1,2) 
+AND [PersonId] IS NOT NULL))");
+  Migrations\AppDbContextModelSnapshot.cs:1763:
+> Migrations\AppDbContextModelSnapshot.cs:1764:                            t.HasCheckConstraint("CK_LegacyIdentityMap_ResolvedReview", "([MappingStatus] NOT IN (1,2) OR ([ReviewedAtUtc] IS NOT NULL AND [ReviewedByAccountId] IS NOT NULL AND 
+[ReviewReason] IS NOT NULL AND LEN(LTRIM(RTRIM([ReviewReason]))) > 0))");
+  Migrations\AppDbContextModelSnapshot.cs:1765:
+> Migrations\AppDbContextModelSnapshot.cs:1766:                            t.HasCheckConstraint("CK_LegacyIdentityMap_ReviewStamp", "(([ReviewedAtUtc] IS NULL AND [ReviewedByAccountId] IS NULL) OR ([ReviewedAtUtc] IS NOT NULL AND 
+[ReviewedByAccountId] IS NOT NULL))");
+  Migrations\AppDbContextModelSnapshot.cs:1767:
+> Migrations\AppDbContextModelSnapshot.cs:1768:                            t.HasCheckConstraint("CK_LegacyIdentityMap_SourceTable", "[SourceTable] IN (N'Users', N'Residents')");
+  Migrations\AppDbContextModelSnapshot.cs:1769:
+> Migrations\AppDbContextModelSnapshot.cs:1770:                            t.HasCheckConstraint("CK_LegacyIdentityMap_Status", "[MappingStatus] IN (0,1,2,3,4)");
+  Migrations\AppDbContextModelSnapshot.cs:1771:
+> Migrations\AppDbContextModelSnapshot.cs:1772:                            t.HasCheckConstraint("CK_LegacyIdentityMap_UserAccountTarget", "(([SourceTable] <> N'Users' OR [MappingStatus] NOT IN (1,2) OR [AccountId] IS NOT NULL) AND 
+([SourceTable] <> N'Residents' OR [AccountId] IS NULL))");
+  Migrations\AppDbContextModelSnapshot.cs:1773:                        });
+  Migrations\AppDbContextModelSnapshot.cs:1774:                });
+  Migrations\AppDbContextModelSnapshot.cs:1948:
+> Migrations\AppDbContextModelSnapshot.cs:1949:                    b.Property<Guid?>("PostedTransactionId")
+  Migrations\AppDbContextModelSnapshot.cs:1950:                        .HasColumnType("uniqueidentifier");
+  Migrations\AppDbContextModelSnapshot.cs:1951:
+  Migrations\AppDbContextModelSnapshot.cs:1955:
+> Migrations\AppDbContextModelSnapshot.cs:1956:                    b.Property<Guid?>("ReversalTransactionId")
+  Migrations\AppDbContextModelSnapshot.cs:1957:                        .HasColumnType("uniqueidentifier");
+  Migrations\AppDbContextModelSnapshot.cs:1958:
+  Migrations\AppDbContextModelSnapshot.cs:1991:
+> Migrations\AppDbContextModelSnapshot.cs:1992:                    b.HasIndex("ReversalTransactionId");
+  Migrations\AppDbContextModelSnapshot.cs:1993:
+  Migrations\AppDbContextModelSnapshot.cs:1994:                    b.HasIndex("ReversedByAccountId");
+  Migrations\AppDbContextModelSnapshot.cs:2008:
+> Migrations\AppDbContextModelSnapshot.cs:2009:                    b.HasIndex("PostedTransactionId", "PeriodId", "BuildingId");
+  Migrations\AppDbContextModelSnapshot.cs:2010:
+  Migrations\AppDbContextModelSnapshot.cs:2011:                    b.ToTable("PaymentDeposits", null, t =>
+  Migrations\AppDbContextModelSnapshot.cs:2012:                        {
+> Migrations\AppDbContextModelSnapshot.cs:2013:                            t.HasCheckConstraint("CK_PaymentDeposits_Amount", "[Amount] > 0");
+  Migrations\AppDbContextModelSnapshot.cs:2014:
+> Migrations\AppDbContextModelSnapshot.cs:2015:                            t.HasCheckConstraint("CK_PaymentDeposits_Resolution", "([Status] = 0 AND [PostedTransactionId] IS NULL AND [ConfirmedAtUtc] IS NULL AND [ConfirmedByAccountId] IS 
+NULL AND [CancelledAtUtc] IS NULL AND [CancelledByAccountId] IS NULL AND [ReversedAtUtc] IS NULL AND [ReversedByAccountId] IS NULL) OR ([Status] = 1 AND [PostedTransactionId] IS NOT NULL AND [ConfirmedAtUtc] IS NOT NULL AND 
+[ConfirmedByAccountId] IS NOT NULL AND [CancelledAtUtc] IS NULL AND [CancelledByAccountId] IS NULL AND [ReversedAtUtc] IS NULL AND [ReversedByAccountId] IS NULL) OR ([Status] = 2 AND [PostedTransactionId] IS NULL AND [ConfirmedAtUtc] IS 
+NULL AND [ConfirmedByAccountId] IS NULL AND [CancelledAtUtc] IS NOT NULL AND [CancelledByAccountId] IS NOT NULL AND [ReversedAtUtc] IS NULL AND [ReversedByAccountId] IS NULL AND LEN(LTRIM(RTRIM([ResolutionReason]))) > 0) OR ([Status] = 3 
+AND [PostedTransactionId] IS NOT NULL AND [ConfirmedAtUtc] IS NOT NULL AND [ConfirmedByAccountId] IS NOT NULL AND [CancelledAtUtc] IS NULL AND [CancelledByAccountId] IS NULL AND [ReversedAtUtc] IS NOT NULL AND [ReversedByAccountId] IS NOT 
+NULL AND [ReversalTransactionId] IS NOT NULL AND LEN(LTRIM(RTRIM([ResolutionReason]))) > 0)");
+  Migrations\AppDbContextModelSnapshot.cs:2016:
+> Migrations\AppDbContextModelSnapshot.cs:2017:                            t.HasCheckConstraint("CK_PaymentDeposits_Status", "[Status] IN (0,1,2,3)");
+  Migrations\AppDbContextModelSnapshot.cs:2018:                        });
+  Migrations\AppDbContextModelSnapshot.cs:2019:                });
+  Migrations\AppDbContextModelSnapshot.cs:2082:                        {
+> Migrations\AppDbContextModelSnapshot.cs:2083:                            t.HasCheckConstraint("CK_Persons_ArchiveState", "(([IsArchived] = 0 AND [ArchivedAtUtc] IS NULL) OR ([IsArchived] = 1 AND [ArchivedAtUtc] IS NOT NULL))");
+  Migrations\AppDbContextModelSnapshot.cs:2084:                        });
+  Migrations\AppDbContextModelSnapshot.cs:2085:                });
+  Migrations\AppDbContextModelSnapshot.cs:2465:                        {
+> Migrations\AppDbContextModelSnapshot.cs:2466:                            t.HasCheckConstraint("CK_RolePermissions_Effect", "[Effect] IN (0,1)");
+  Migrations\AppDbContextModelSnapshot.cs:2467:                        });
+  Migrations\AppDbContextModelSnapshot.cs:2468:                });
+  Migrations\AppDbContextModelSnapshot.cs:2606:
+> Migrations\AppDbContextModelSnapshot.cs:2607:                    b.HasAlternateKey("PersonId")
+  Migrations\AppDbContextModelSnapshot.cs:2608:                        .HasName("UQ_UserAccounts_PersonId");
+  Migrations\AppDbContextModelSnapshot.cs:2609:
+  Migrations\AppDbContextModelSnapshot.cs:2620:                        {
+> Migrations\AppDbContextModelSnapshot.cs:2621:                            t.HasCheckConstraint("CK_UserAccounts_AccountStatus", "[AccountStatus] IN (0,1,2,3)");
+  Migrations\AppDbContextModelSnapshot.cs:2622:
+> Migrations\AppDbContextModelSnapshot.cs:2623:                            t.HasCheckConstraint("CK_UserAccounts_ExternalLoginPair", "(([ExternalProvider] IS NULL AND [ExternalSubject] IS NULL) OR ([ExternalProvider] IS NOT NULL AND 
+[ExternalSubject] IS NOT NULL))");
+  Migrations\AppDbContextModelSnapshot.cs:2624:                        });
+  Migrations\AppDbContextModelSnapshot.cs:2625:                });
+  Migrations\AppDbContextModelSnapshot.cs:2669:
+> Migrations\AppDbContextModelSnapshot.cs:2670:                    b.HasAlternateKey("CredentialId", "AccountId")
+  Migrations\AppDbContextModelSnapshot.cs:2671:                        .HasName("UQ_UserCredentials_Credential_Account");
+  Migrations\AppDbContextModelSnapshot.cs:2672:
+  Migrations\AppDbContextModelSnapshot.cs:2679:                        {
+> Migrations\AppDbContextModelSnapshot.cs:2680:                            t.HasCheckConstraint("CK_UserCredentials_Expiry", "[ExpiresAtUtc] IS NULL OR [ExpiresAtUtc] > [CreatedAtUtc]");
+  Migrations\AppDbContextModelSnapshot.cs:2681:
+> Migrations\AppDbContextModelSnapshot.cs:2682:                            t.HasCheckConstraint("CK_UserCredentials_Type", "[CredentialType] IN (0,1)");
+  Migrations\AppDbContextModelSnapshot.cs:2683:                        });
+  Migrations\AppDbContextModelSnapshot.cs:2684:                });
+  Migrations\AppDbContextModelSnapshot.cs:2886:                        {
+> Migrations\AppDbContextModelSnapshot.cs:2887:                            t.HasCheckConstraint("CK_UserRoleAssignments_Revocation", "(([RevokedAtUtc] IS NULL AND [RevokedByAccountId] IS NULL AND [RevocationReason] IS NULL) OR 
+([RevokedAtUtc] IS NOT NULL AND [RevokedByAccountId] IS NOT NULL))");
+  Migrations\AppDbContextModelSnapshot.cs:2888:
+> Migrations\AppDbContextModelSnapshot.cs:2889:                            t.HasCheckConstraint("CK_UserRoleAssignments_Scope", "(([ScopeType] IN (0,3) AND [ScopeBuildingId] IS NULL AND [ScopeApartmentId] IS NULL) OR ([ScopeType] = 1 AND 
+[ScopeBuildingId] IS NOT NULL AND [ScopeApartmentId] IS NULL) OR ([ScopeType] = 2 AND [ScopeBuildingId] IS NOT NULL AND [ScopeApartmentId] IS NOT NULL))");
+  Migrations\AppDbContextModelSnapshot.cs:2890:
+> Migrations\AppDbContextModelSnapshot.cs:2891:                            t.HasCheckConstraint("CK_UserRoleAssignments_Validity", "[ValidToUtc] IS NULL OR [ValidToUtc] > [ValidFromUtc]");
+  Migrations\AppDbContextModelSnapshot.cs:2892:                        });
+  Migrations\AppDbContextModelSnapshot.cs:2893:                });
+  Migrations\AppDbContextModelSnapshot.cs:2931:                        {
+> Migrations\AppDbContextModelSnapshot.cs:2932:                            t.HasCheckConstraint("CK_UserTwoFactorSettings_EnabledSecret", "(([IsEnabled] = 0 AND [SecretCiphertext] IS NULL AND [KeyVersion] IS NULL) OR ([IsEnabled] = 1 AND 
+[SecretCiphertext] IS NOT NULL AND [KeyVersion] IS NOT NULL AND [EnrolledAtUtc] IS NOT NULL))");
+  Migrations\AppDbContextModelSnapshot.cs:2933:                        });
+  Migrations\AppDbContextModelSnapshot.cs:2934:                });
+  Migrations\AppDbContextModelSnapshot.cs:2981:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:2982:                        .HasForeignKey("AccountId")
+  Migrations\AppDbContextModelSnapshot.cs:2983:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:2984:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:2987:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:2988:                        .HasForeignKey("GrantedByAccountId")
+  Migrations\AppDbContextModelSnapshot.cs:2989:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:2990:
+  Migrations\AppDbContextModelSnapshot.cs:2992:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:2993:                        .HasForeignKey("RevokedByAccountId")
+  Migrations\AppDbContextModelSnapshot.cs:2994:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:2995:
+  Migrations\AppDbContextModelSnapshot.cs:2997:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:2998:                        .HasForeignKey("ScopeBuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:2999:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3000:
+  Migrations\AppDbContextModelSnapshot.cs:3002:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3003:                        .HasForeignKey("ScopeBuildingId", "ScopeApartmentId")
+  Migrations\AppDbContextModelSnapshot.cs:3004:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3005:                });
+  Migrations\AppDbContextModelSnapshot.cs:3010:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3011:                        .HasForeignKey("GrantedByAccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3012:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3013:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3016:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3017:                        .HasForeignKey("PersonId")
+  Migrations\AppDbContextModelSnapshot.cs:3018:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3019:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3022:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3023:                        .HasForeignKey("RevokedByAccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3024:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3025:
+  Migrations\AppDbContextModelSnapshot.cs:3027:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3028:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\AppDbContextModelSnapshot.cs:3029:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3030:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3036:                        .WithMany("Apartments")
+> Migrations\AppDbContextModelSnapshot.cs:3037:                        .HasForeignKey("BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3038:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3039:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3042:                        .WithMany("Apartments")
+> Migrations\AppDbContextModelSnapshot.cs:3043:                        .HasForeignKey("BuildingId", "FloorId")
+  Migrations\AppDbContextModelSnapshot.cs:3044:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3045:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3055:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3056:                        .HasForeignKey("PersonId")
+  Migrations\AppDbContextModelSnapshot.cs:3057:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3058:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3061:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3062:                        .HasForeignKey("RecordedByAccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3063:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3064:
+  Migrations\AppDbContextModelSnapshot.cs:3066:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3067:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\AppDbContextModelSnapshot.cs:3068:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3069:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3075:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3076:                        .HasForeignKey("CompletenessVerifiedByAccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3077:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3078:
+  Migrations\AppDbContextModelSnapshot.cs:3080:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3081:                        .HasForeignKey("PersonId")
+  Migrations\AppDbContextModelSnapshot.cs:3082:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3083:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3086:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3087:                        .HasForeignKey("RecordedByAccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3088:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3089:
+  Migrations\AppDbContextModelSnapshot.cs:3091:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3092:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\AppDbContextModelSnapshot.cs:3093:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3094:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3100:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3101:                        .HasForeignKey("BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3102:                        .OnDelete(DeleteBehavior.SetNull);
+  Migrations\AppDbContextModelSnapshot.cs:3103:                });
+  Migrations\AppDbContextModelSnapshot.cs:3108:                        .WithMany("BuildingAdmins")
+> Migrations\AppDbContextModelSnapshot.cs:3109:                        .HasForeignKey("AdminUid")
+  Migrations\AppDbContextModelSnapshot.cs:3110:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3111:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3114:                        .WithMany("Admins")
+> Migrations\AppDbContextModelSnapshot.cs:3115:                        .HasForeignKey("BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3116:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3117:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3127:                        .WithOne("Settings")
+> Migrations\AppDbContextModelSnapshot.cs:3128:                        .HasForeignKey("BuildingManagementMvc.Data.Entities.BuildingSettingsEntity", "BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3129:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3130:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3138:                        .WithMany("Cameras")
+> Migrations\AppDbContextModelSnapshot.cs:3139:                        .HasForeignKey("DvrId")
+  Migrations\AppDbContextModelSnapshot.cs:3140:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3141:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3149:                        .WithMany("EditHistory")
+> Migrations\AppDbContextModelSnapshot.cs:3150:                        .HasForeignKey("BuildingId", "DepositId")
+  Migrations\AppDbContextModelSnapshot.cs:3151:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3152:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3160:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3161:                        .HasForeignKey("BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3162:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3163:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3166:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3167:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\AppDbContextModelSnapshot.cs:3168:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3169:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3177:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3178:                        .HasForeignKey("BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3179:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3180:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3186:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3187:                        .HasForeignKey("BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3188:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3189:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3192:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3193:                        .HasForeignKey("BuildingId", "CategoryKind", "CategoryId")
+  Migrations\AppDbContextModelSnapshot.cs:3194:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3195:
+  Migrations\AppDbContextModelSnapshot.cs:3202:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3203:                        .HasForeignKey("CreatedByAccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3204:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3205:
+  Migrations\AppDbContextModelSnapshot.cs:3207:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3208:                        .HasForeignKey("PeriodId", "BuildingId")
+> Migrations\AppDbContextModelSnapshot.cs:3209:                        .HasPrincipalKey("PeriodId", "BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3210:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3211:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3214:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3215:                        .HasForeignKey("SourceTransactionId", "PeriodId", "BuildingId")
+> Migrations\AppDbContextModelSnapshot.cs:3216:                        .HasPrincipalKey("LedgerTransactionId", "PeriodId", "BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3217:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3218:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3224:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3225:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\AppDbContextModelSnapshot.cs:3226:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3227:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3230:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3231:                        .HasForeignKey("PeriodId", "BuildingId")
+> Migrations\AppDbContextModelSnapshot.cs:3232:                        .HasPrincipalKey("PeriodId", "BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3233:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3234:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3237:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3238:                        .HasForeignKey("AllocationBatchId", "PeriodId", "BuildingId")
+> Migrations\AppDbContextModelSnapshot.cs:3239:                        .HasPrincipalKey("AllocationBatchId", "PeriodId", "BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3240:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3241:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3247:                        .WithMany("Categories")
+> Migrations\AppDbContextModelSnapshot.cs:3248:                        .HasForeignKey("BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3249:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3250:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3258:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3259:                        .HasForeignKey("BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3260:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3261:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3264:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3265:                        .HasForeignKey("ClosedByAccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3266:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3267:                });
+  Migrations\AppDbContextModelSnapshot.cs:3272:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3273:                        .HasForeignKey("BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3274:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3275:
+  Migrations\AppDbContextModelSnapshot.cs:3277:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3278:                        .HasForeignKey("ReconciliationRunId")
+  Migrations\AppDbContextModelSnapshot.cs:3279:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3280:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3283:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3284:                        .HasForeignKey("ReviewedByAccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3285:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3286:
+  Migrations\AppDbContextModelSnapshot.cs:3288:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3289:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\AppDbContextModelSnapshot.cs:3290:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3291:                });
+  Migrations\AppDbContextModelSnapshot.cs:3296:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3297:                        .HasForeignKey("StartedByAccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3298:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3299:                });
+  Migrations\AppDbContextModelSnapshot.cs:3304:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3305:                        .HasForeignKey("LedgerTransactionId")
+  Migrations\AppDbContextModelSnapshot.cs:3306:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3307:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3313:                        .WithMany("Floors")
+> Migrations\AppDbContextModelSnapshot.cs:3314:                        .HasForeignKey("BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3315:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3316:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3324:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3325:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\AppDbContextModelSnapshot.cs:3326:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3327:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3330:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3331:                        .HasForeignKey("PeriodId", "BuildingId")
+> Migrations\AppDbContextModelSnapshot.cs:3332:                        .HasPrincipalKey("PeriodId", "BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3333:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3334:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3337:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3338:                        .HasForeignKey("LedgerTransactionId", "PeriodId", "BuildingId")
+> Migrations\AppDbContextModelSnapshot.cs:3339:                        .HasPrincipalKey("LedgerTransactionId", "PeriodId", "BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3340:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3341:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3347:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3348:                        .HasForeignKey("ActorAccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3349:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3350:
+  Migrations\AppDbContextModelSnapshot.cs:3352:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3353:                        .HasForeignKey("ReversesTransactionId")
+  Migrations\AppDbContextModelSnapshot.cs:3354:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3355:
+  Migrations\AppDbContextModelSnapshot.cs:3357:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3358:                        .HasForeignKey("PeriodId", "BuildingId")
+> Migrations\AppDbContextModelSnapshot.cs:3359:                        .HasPrincipalKey("PeriodId", "BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3360:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3361:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3367:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3368:                        .HasForeignKey("AccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3369:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3370:
+  Migrations\AppDbContextModelSnapshot.cs:3372:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3373:                        .HasForeignKey("PersonId")
+  Migrations\AppDbContextModelSnapshot.cs:3374:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3375:
+  Migrations\AppDbContextModelSnapshot.cs:3377:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3378:                        .HasForeignKey("ReviewedByAccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3379:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3380:                });
+  Migrations\AppDbContextModelSnapshot.cs:3385:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3386:                        .HasForeignKey("BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3387:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3388:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3394:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3395:                        .HasForeignKey("BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3396:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3397:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3400:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3401:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\AppDbContextModelSnapshot.cs:3402:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3403:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3411:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3412:                        .HasForeignKey("BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3413:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3414:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3417:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3418:                        .HasForeignKey("BuildingId", "RecipientApartmentId")
+  Migrations\AppDbContextModelSnapshot.cs:3419:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3420:
+  Migrations\AppDbContextModelSnapshot.cs:3427:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3428:                        .HasForeignKey("CancelledByAccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3429:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3430:
+  Migrations\AppDbContextModelSnapshot.cs:3432:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3433:                        .HasForeignKey("ConfirmedByAccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3434:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3435:
+  Migrations\AppDbContextModelSnapshot.cs:3437:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3438:                        .HasForeignKey("ReversalTransactionId")
+  Migrations\AppDbContextModelSnapshot.cs:3439:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3440:
+  Migrations\AppDbContextModelSnapshot.cs:3442:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3443:                        .HasForeignKey("ReversedByAccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3444:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3445:
+  Migrations\AppDbContextModelSnapshot.cs:3447:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3448:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\AppDbContextModelSnapshot.cs:3449:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3450:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3453:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3454:                        .HasForeignKey("PeriodId", "BuildingId")
+> Migrations\AppDbContextModelSnapshot.cs:3455:                        .HasPrincipalKey("PeriodId", "BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3456:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3457:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3460:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3461:                        .HasForeignKey("PostedTransactionId", "PeriodId", "BuildingId")
+> Migrations\AppDbContextModelSnapshot.cs:3462:                        .HasPrincipalKey("LedgerTransactionId", "PeriodId", "BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3463:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3464:                });
+  Migrations\AppDbContextModelSnapshot.cs:3469:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3470:                        .HasForeignKey("BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3471:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3472:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3478:                        .WithMany("Options")
+> Migrations\AppDbContextModelSnapshot.cs:3479:                        .HasForeignKey("BuildingId", "PollId")
+  Migrations\AppDbContextModelSnapshot.cs:3480:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3481:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3489:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3490:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\AppDbContextModelSnapshot.cs:3491:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3492:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3495:                        .WithMany("Votes")
+> Migrations\AppDbContextModelSnapshot.cs:3496:                        .HasForeignKey("BuildingId", "PollId", "OptionId")
+  Migrations\AppDbContextModelSnapshot.cs:3497:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3498:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3508:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3509:                        .HasForeignKey("BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3510:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3511:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3514:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3515:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\AppDbContextModelSnapshot.cs:3516:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3517:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3525:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3526:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\AppDbContextModelSnapshot.cs:3527:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3528:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3536:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3537:                        .HasForeignKey("BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3538:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3539:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3542:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3543:                        .HasForeignKey("BuildingId", "CategoryKind", "CategoryId")
+  Migrations\AppDbContextModelSnapshot.cs:3544:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3545:
+  Migrations\AppDbContextModelSnapshot.cs:3552:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3553:                        .HasForeignKey("RoleKey")
+  Migrations\AppDbContextModelSnapshot.cs:3554:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3555:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3561:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3562:                        .HasForeignKey("PersonId")
+  Migrations\AppDbContextModelSnapshot.cs:3563:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3564:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3570:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3571:                        .HasForeignKey("AccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3572:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3573:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3576:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3577:                        .HasForeignKey("ReplacedByCredentialId", "AccountId")
+> Migrations\AppDbContextModelSnapshot.cs:3578:                        .HasPrincipalKey("CredentialId", "AccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3579:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3580:                });
+  Migrations\AppDbContextModelSnapshot.cs:3585:                        .WithMany("Permissions")
+> Migrations\AppDbContextModelSnapshot.cs:3586:                        .HasForeignKey("Uid")
+  Migrations\AppDbContextModelSnapshot.cs:3587:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3588:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3596:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3597:                        .HasForeignKey("AccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3598:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3599:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3605:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3606:                        .HasForeignKey("AccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3607:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3608:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3611:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3612:                        .HasForeignKey("GrantedByAccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3613:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3614:
+  Migrations\AppDbContextModelSnapshot.cs:3616:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3617:                        .HasForeignKey("RevokedByAccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3618:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3619:
+  Migrations\AppDbContextModelSnapshot.cs:3621:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3622:                        .HasForeignKey("RoleKey")
+  Migrations\AppDbContextModelSnapshot.cs:3623:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3624:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3627:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3628:                        .HasForeignKey("ScopeBuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3629:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3630:
+  Migrations\AppDbContextModelSnapshot.cs:3632:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3633:                        .HasForeignKey("ScopeBuildingId", "ScopeApartmentId")
+  Migrations\AppDbContextModelSnapshot.cs:3634:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\AppDbContextModelSnapshot.cs:3635:                });
+  Migrations\AppDbContextModelSnapshot.cs:3640:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3641:                        .HasForeignKey("AccountId")
+  Migrations\AppDbContextModelSnapshot.cs:3642:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3643:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3649:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3650:                        .HasForeignKey("BuildingId")
+  Migrations\AppDbContextModelSnapshot.cs:3651:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\AppDbContextModelSnapshot.cs:3652:                        .IsRequired();
+  Migrations\AppDbContextModelSnapshot.cs:3655:                        .WithMany()
+> Migrations\AppDbContextModelSnapshot.cs:3656:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\AppDbContextModelSnapshot.cs:3657:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\AppDbContextModelSnapshot.cs:3658:                        .IsRequired();
+
+
+
+
+=== MIGRATION DESIGNER ===
+
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:104:                        {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:105:                            t.HasCheckConstraint("CK_AccountPermissionOverrides_Effect", "[Effect] IN (0,1)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:106:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:107:                            t.HasCheckConstraint("CK_AccountPermissionOverrides_Revocation", "(([RevokedAtUtc] IS NULL AND [RevokedByAccountId] IS NULL AND 
+[RevocationReason] IS NULL) OR ([RevokedAtUtc] IS NOT NULL AND [RevokedByAccountId] IS NOT NULL))");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:108:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:109:                            t.HasCheckConstraint("CK_AccountPermissionOverrides_Scope", "(([ScopeType] IN (0,3) AND [ScopeBuildingId] IS NULL AND 
+[ScopeApartmentId] IS NULL) OR ([ScopeType] = 1 AND [ScopeBuildingId] IS NOT NULL AND [ScopeApartmentId] IS NULL) OR ([ScopeType] = 2 AND [ScopeBuildingId] IS NOT NULL AND [ScopeApartmentId] IS NOT NULL))");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:110:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:111:                            t.HasCheckConstraint("CK_AccountPermissionOverrides_Validity", "[ValidToUtc] IS NULL OR [ValidToUtc] > [ValidFromUtc]");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:112:                        });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:113:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:185:                        {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:186:                            t.HasCheckConstraint("CK_ApartmentAccessGrants_BoundedUrgentAccess", "([GrantType] NOT IN (4,5) OR [ValidToUtc] IS NOT NULL)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:187:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:188:                            t.HasCheckConstraint("CK_ApartmentAccessGrants_GrantType", "[GrantType] IN (1,2,3,4,5)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:189:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:190:                            t.HasCheckConstraint("CK_ApartmentAccessGrants_PermissionSet", "(([GrantType] = 1 AND [PermissionSetKey] = 
+N'apartment.access.family.v1') OR ([GrantType] = 2 AND [PermissionSetKey] = N'apartment.access.tenant.v1') OR ([GrantType] = 3 AND [PermissionSetKey] = N'apartment.access.caretaker.v1') OR ([GrantType] = 4 AND [PermissionSetKey] = 
+N'apartment.access.emergency.v1') OR ([GrantType] = 5 AND [PermissionSetKey] = N'apartment.access.temporary.v1'))");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:191:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:192:                            t.HasCheckConstraint("CK_ApartmentAccessGrants_Reason", "LEN(LTRIM(RTRIM([Reason]))) > 0");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:193:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:194:                            t.HasCheckConstraint("CK_ApartmentAccessGrants_Revocation", "(([RevokedAtUtc] IS NULL AND [RevokedByAccountId] IS NULL) OR 
+([RevokedAtUtc] IS NOT NULL AND [RevokedByAccountId] IS NOT NULL))");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:195:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:196:                            t.HasCheckConstraint("CK_ApartmentAccessGrants_Validity", "[ValidToUtc] IS NULL OR [ValidToUtc] > [ValidFromUtc]");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:197:                        });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:198:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:359:                        {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:360:                            t.HasCheckConstraint("CK_ApartmentOccupancies_Type", "[OccupancyType] IN (0,1,2,3)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:361:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:362:                            t.HasCheckConstraint("CK_ApartmentOccupancies_Validity", "[ValidToUtc] IS NULL OR [ValidToUtc] > [ValidFromUtc]");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:363:                        });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:364:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:446:                        {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:447:                            t.HasCheckConstraint("CK_ApartmentOwnerships_CompletenessStatus", "[CompletenessStatus] IN (0,1,2)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:448:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:449:                            t.HasCheckConstraint("CK_ApartmentOwnerships_CompletenessVerification", "(([CompletenessStatus] = 2 AND [CompletenessVerifiedAtUtc] 
+IS NOT NULL AND [CompletenessVerifiedByAccountId] IS NOT NULL) OR ([CompletenessStatus] IN (0,1) AND [CompletenessVerifiedAtUtc] IS NULL AND [CompletenessVerifiedByAccountId] IS NULL))");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:450:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:451:                            t.HasCheckConstraint("CK_ApartmentOwnerships_Evidence", "LEN(LTRIM(RTRIM([EvidenceReference]))) > 0");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:452:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:453:                            t.HasCheckConstraint("CK_ApartmentOwnerships_RecordActor", "([RecordSource] <> 0 OR [RecordedByAccountId] IS NOT NULL)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:454:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:455:                            t.HasCheckConstraint("CK_ApartmentOwnerships_RecordSource", "[RecordSource] IN (0,1,2)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:456:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:457:                            t.HasCheckConstraint("CK_ApartmentOwnerships_Share", "[OwnershipSharePercent] > 0 AND [OwnershipSharePercent] <= 100");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:458:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:459:                            t.HasCheckConstraint("CK_ApartmentOwnerships_Validity", "[ValidToUtc] IS NULL OR [ValidToUtc] > [ValidFromUtc]");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:460:                        });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:461:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1071:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1072:                    b.HasAlternateKey("AllocationBatchId", "PeriodId", "BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1073:                        .HasName("UQ_FinancialAllocationBatches_Period_Building");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1074:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1079:                    b.HasIndex("PeriodId", "SourceTransactionId", "AlgorithmVersion")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1080:                        .HasDatabaseName("IX_FinancialAllocationBatches_Source");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1081:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1082:                    b.HasIndex("SourceTransactionId", "PeriodId", "BuildingId");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1085:                        {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1086:                            t.HasCheckConstraint("CK_FinancialAllocationBatches_Amounts", "[SourceAmount] >= 0 AND [AllocatedAmount] >= 0");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1087:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1088:                            t.HasCheckConstraint("CK_FinancialAllocationBatches_Fingerprint", "DATALENGTH([InputFingerprint]) = 32");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1089:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1090:                            t.HasCheckConstraint("CK_FinancialAllocationBatches_Status", "[Status] IN (0,1,2)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1091:                        });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1092:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1133:                        .IsUnique()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1134:                        .HasDatabaseName("UX_FinancialAllocationLines_Batch_Apartment");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1135:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1136:                    b.HasIndex("BuildingId", "ApartmentId");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1141:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1142:                    b.ToTable("FinancialAllocationLines", null, t =>
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1143:                        {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1144:                            t.HasCheckConstraint("CK_FinancialAllocationLines_Amounts", "[Weight] >= 0 AND [ExactShare] >= 0 AND [AllocatedAmount] >= 0");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1145:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1146:                            t.HasCheckConstraint("CK_FinancialAllocationLines_Rank", "[RemainderRank] >= 0");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1147:                        });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1148:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1234:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1235:                    b.HasAlternateKey("PeriodId", "BuildingId")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1236:                        .HasName("UQ_FinancialPeriods_Period_Building");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1237:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1238:                    b.HasIndex("ClosedByAccountId");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1241:                        .IsUnique()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1242:                        .HasDatabaseName("UX_FinancialPeriods_Building_Key");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1243:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1244:                    b.ToTable("FinancialPeriods", null, t =>
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1245:                        {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1246:                            t.HasCheckConstraint("CK_FinancialPeriods_CloseStamp", "([Status] = 0 AND [ClosedAtUtc] IS NULL AND [ClosedByAccountId] IS NULL) OR 
+([Status] IN (1,2) AND [ClosedAtUtc] IS NOT NULL AND [ClosedByAccountId] IS NOT NULL)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1247:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1248:                            t.HasCheckConstraint("CK_FinancialPeriods_Key", "[PeriodKey] LIKE '[0-9][0-9][0-9][0-9]-[01][0-9]' AND SUBSTRING([PeriodKey],6,2) 
+BETWEEN '01' AND '12'");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1249:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1250:                            t.HasCheckConstraint("CK_FinancialPeriods_Range", "[EndsAtUtc] > [StartsAtUtc]");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1251:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1252:                            t.HasCheckConstraint("CK_FinancialPeriods_Status", "[Status] IN (0,1,2)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1253:                        });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1254:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1331:                        {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1332:                            t.HasCheckConstraint("CK_FinancialReconciliationDifferences_PeriodKey", "[PeriodKey] IS NULL OR ([PeriodKey] LIKE 
+'[0-9][0-9][0-9][0-9]-[01][0-9]' AND SUBSTRING([PeriodKey],6,2) BETWEEN '01' AND '12')");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1333:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1334:                            t.HasCheckConstraint("CK_FinancialReconciliationDifferences_Scope", "[ApartmentId] IS NULL OR [BuildingId] IS NOT NULL");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1335:                        });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1336:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1376:                        {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1377:                            t.HasCheckConstraint("CK_FinancialReconciliationRuns_Completion", "([Status] = 0 AND [CompletedAtUtc] IS NULL) OR ([Status] IN (1,2) 
+AND [CompletedAtUtc] IS NOT NULL)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1378:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1379:                            t.HasCheckConstraint("CK_FinancialReconciliationRuns_Status", "[Status] IN (0,1,2)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1380:                        });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1381:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1424:                        {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1425:                            t.HasCheckConstraint("CK_FinancialSourceLinks_Fingerprint", "[SourceFingerprint] IS NULL OR DATALENGTH([SourceFingerprint]) = 32");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1426:                        });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1427:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1575:                        {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1576:                            t.HasCheckConstraint("CK_LedgerEntries_Amount", "[SignedAmount] <> 0");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1577:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1578:                            t.HasCheckConstraint("CK_LedgerEntries_Kind", "[EntryKind] IN (1,2,3,4,5,6,7)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1579:                        });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1580:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1621:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1622:                    b.Property<Guid?>("ReversesTransactionId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1623:                        .HasColumnType("uniqueidentifier");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1624:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1647:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1648:                    b.HasAlternateKey("LedgerTransactionId", "PeriodId", "BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1649:                        .HasName("UQ_LedgerTransactions_Period_Building");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1650:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1656:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1657:                    b.HasIndex("ReversesTransactionId");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1658:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1659:                    b.HasIndex("PeriodId", "BuildingId");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1670:                        {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1671:                            t.HasCheckConstraint("CK_LedgerTransactions_Kind", "[Kind] IN (1,2,3,4,5,6,7,8)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1672:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1673:                            t.HasCheckConstraint("CK_LedgerTransactions_PostStamp", "([Status] IN (0,2) AND [PostedAtUtc] IS NULL) OR ([Status] = 1 AND 
+[PostedAtUtc] IS NOT NULL)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1674:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1675:                            t.HasCheckConstraint("CK_LedgerTransactions_ReversalLink", "([Kind] = 7 AND [ReversesTransactionId] IS NOT NULL) OR ([Kind] <> 7 AND 
+[ReversesTransactionId] IS NULL)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1676:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1677:                            t.HasCheckConstraint("CK_LedgerTransactions_SourcePair", "([SourceSystem] IS NULL AND [SourceType] IS NULL AND [SourceKey] IS NULL) 
+OR ([SourceSystem] IS NOT NULL AND [SourceType] IS NOT NULL AND [SourceKey] IS NOT NULL)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1678:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1679:                            t.HasCheckConstraint("CK_LedgerTransactions_Status", "[Status] IN (0,1,2)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1680:                        });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1681:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1745:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1746:                    b.HasAlternateKey("SourceSystem", "SourceTable", "SourceKey")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1747:                        .HasName("UQ_LegacyIdentityMap_Source");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1748:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1764:                        {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1765:                            t.HasCheckConstraint("CK_LegacyIdentityMap_LinkTargets", "(([MappingStatus] IN (0,3,4) AND [PersonId] IS NULL AND [AccountId] IS 
+NULL) OR ([MappingStatus] IN (1,2) AND [PersonId] IS NOT NULL))");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1766:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1767:                            t.HasCheckConstraint("CK_LegacyIdentityMap_ResolvedReview", "([MappingStatus] NOT IN (1,2) OR ([ReviewedAtUtc] IS NOT NULL AND 
+[ReviewedByAccountId] IS NOT NULL AND [ReviewReason] IS NOT NULL AND LEN(LTRIM(RTRIM([ReviewReason]))) > 0))");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1768:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1769:                            t.HasCheckConstraint("CK_LegacyIdentityMap_ReviewStamp", "(([ReviewedAtUtc] IS NULL AND [ReviewedByAccountId] IS NULL) OR 
+([ReviewedAtUtc] IS NOT NULL AND [ReviewedByAccountId] IS NOT NULL))");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1770:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1771:                            t.HasCheckConstraint("CK_LegacyIdentityMap_SourceTable", "[SourceTable] IN (N'Users', N'Residents')");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1772:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1773:                            t.HasCheckConstraint("CK_LegacyIdentityMap_Status", "[MappingStatus] IN (0,1,2,3,4)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1774:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1775:                            t.HasCheckConstraint("CK_LegacyIdentityMap_UserAccountTarget", "(([SourceTable] <> N'Users' OR [MappingStatus] NOT IN (1,2) OR 
+[AccountId] IS NOT NULL) AND ([SourceTable] <> N'Residents' OR [AccountId] IS NULL))");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1776:                        });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1777:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1951:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1952:                    b.Property<Guid?>("PostedTransactionId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1953:                        .HasColumnType("uniqueidentifier");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1954:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1958:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1959:                    b.Property<Guid?>("ReversalTransactionId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1960:                        .HasColumnType("uniqueidentifier");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1961:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1994:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1995:                    b.HasIndex("ReversalTransactionId");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1996:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:1997:                    b.HasIndex("ReversedByAccountId");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2011:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2012:                    b.HasIndex("PostedTransactionId", "PeriodId", "BuildingId");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2013:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2014:                    b.ToTable("PaymentDeposits", null, t =>
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2015:                        {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2016:                            t.HasCheckConstraint("CK_PaymentDeposits_Amount", "[Amount] > 0");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2017:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2018:                            t.HasCheckConstraint("CK_PaymentDeposits_Resolution", "([Status] = 0 AND [PostedTransactionId] IS NULL AND [ConfirmedAtUtc] IS NULL 
+AND [ConfirmedByAccountId] IS NULL AND [CancelledAtUtc] IS NULL AND [CancelledByAccountId] IS NULL AND [ReversedAtUtc] IS NULL AND [ReversedByAccountId] IS NULL) OR ([Status] = 1 AND [PostedTransactionId] IS NOT NULL AND [ConfirmedAtUtc] 
+IS NOT NULL AND [ConfirmedByAccountId] IS NOT NULL AND [CancelledAtUtc] IS NULL AND [CancelledByAccountId] IS NULL AND [ReversedAtUtc] IS NULL AND [ReversedByAccountId] IS NULL) OR ([Status] = 2 AND [PostedTransactionId] IS NULL AND 
+[ConfirmedAtUtc] IS NULL AND [ConfirmedByAccountId] IS NULL AND [CancelledAtUtc] IS NOT NULL AND [CancelledByAccountId] IS NOT NULL AND [ReversedAtUtc] IS NULL AND [ReversedByAccountId] IS NULL AND LEN(LTRIM(RTRIM([ResolutionReason]))) > 
+0) OR ([Status] = 3 AND [PostedTransactionId] IS NOT NULL AND [ConfirmedAtUtc] IS NOT NULL AND [ConfirmedByAccountId] IS NOT NULL AND [CancelledAtUtc] IS NULL AND [CancelledByAccountId] IS NULL AND [ReversedAtUtc] IS NOT NULL AND 
+[ReversedByAccountId] IS NOT NULL AND [ReversalTransactionId] IS NOT NULL AND LEN(LTRIM(RTRIM([ResolutionReason]))) > 0)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2019:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2020:                            t.HasCheckConstraint("CK_PaymentDeposits_Status", "[Status] IN (0,1,2,3)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2021:                        });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2022:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2085:                        {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2086:                            t.HasCheckConstraint("CK_Persons_ArchiveState", "(([IsArchived] = 0 AND [ArchivedAtUtc] IS NULL) OR ([IsArchived] = 1 AND 
+[ArchivedAtUtc] IS NOT NULL))");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2087:                        });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2088:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2468:                        {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2469:                            t.HasCheckConstraint("CK_RolePermissions_Effect", "[Effect] IN (0,1)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2470:                        });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2471:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2609:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2610:                    b.HasAlternateKey("PersonId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2611:                        .HasName("UQ_UserAccounts_PersonId");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2612:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2623:                        {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2624:                            t.HasCheckConstraint("CK_UserAccounts_AccountStatus", "[AccountStatus] IN (0,1,2,3)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2625:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2626:                            t.HasCheckConstraint("CK_UserAccounts_ExternalLoginPair", "(([ExternalProvider] IS NULL AND [ExternalSubject] IS NULL) OR 
+([ExternalProvider] IS NOT NULL AND [ExternalSubject] IS NOT NULL))");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2627:                        });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2628:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2672:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2673:                    b.HasAlternateKey("CredentialId", "AccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2674:                        .HasName("UQ_UserCredentials_Credential_Account");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2675:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2682:                        {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2683:                            t.HasCheckConstraint("CK_UserCredentials_Expiry", "[ExpiresAtUtc] IS NULL OR [ExpiresAtUtc] > [CreatedAtUtc]");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2684:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2685:                            t.HasCheckConstraint("CK_UserCredentials_Type", "[CredentialType] IN (0,1)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2686:                        });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2687:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2889:                        {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2890:                            t.HasCheckConstraint("CK_UserRoleAssignments_Revocation", "(([RevokedAtUtc] IS NULL AND [RevokedByAccountId] IS NULL AND 
+[RevocationReason] IS NULL) OR ([RevokedAtUtc] IS NOT NULL AND [RevokedByAccountId] IS NOT NULL))");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2891:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2892:                            t.HasCheckConstraint("CK_UserRoleAssignments_Scope", "(([ScopeType] IN (0,3) AND [ScopeBuildingId] IS NULL AND [ScopeApartmentId] IS 
+NULL) OR ([ScopeType] = 1 AND [ScopeBuildingId] IS NOT NULL AND [ScopeApartmentId] IS NULL) OR ([ScopeType] = 2 AND [ScopeBuildingId] IS NOT NULL AND [ScopeApartmentId] IS NOT NULL))");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2893:
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2894:                            t.HasCheckConstraint("CK_UserRoleAssignments_Validity", "[ValidToUtc] IS NULL OR [ValidToUtc] > [ValidFromUtc]");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2895:                        });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2896:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2934:                        {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2935:                            t.HasCheckConstraint("CK_UserTwoFactorSettings_EnabledSecret", "(([IsEnabled] = 0 AND [SecretCiphertext] IS NULL AND [KeyVersion] IS 
+NULL) OR ([IsEnabled] = 1 AND [SecretCiphertext] IS NOT NULL AND [KeyVersion] IS NOT NULL AND [EnrolledAtUtc] IS NOT NULL))");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2936:                        });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2937:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2984:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2985:                        .HasForeignKey("AccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2986:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2987:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2990:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2991:                        .HasForeignKey("GrantedByAccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2992:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2993:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2995:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2996:                        .HasForeignKey("RevokedByAccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2997:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:2998:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3000:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3001:                        .HasForeignKey("ScopeBuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3002:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3003:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3005:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3006:                        .HasForeignKey("ScopeBuildingId", "ScopeApartmentId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3007:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3008:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3013:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3014:                        .HasForeignKey("GrantedByAccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3015:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3016:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3019:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3020:                        .HasForeignKey("PersonId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3021:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3022:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3025:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3026:                        .HasForeignKey("RevokedByAccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3027:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3028:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3030:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3031:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3032:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3033:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3039:                        .WithMany("Apartments")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3040:                        .HasForeignKey("BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3041:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3042:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3045:                        .WithMany("Apartments")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3046:                        .HasForeignKey("BuildingId", "FloorId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3047:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3048:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3058:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3059:                        .HasForeignKey("PersonId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3060:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3061:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3064:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3065:                        .HasForeignKey("RecordedByAccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3066:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3067:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3069:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3070:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3071:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3072:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3078:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3079:                        .HasForeignKey("CompletenessVerifiedByAccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3080:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3081:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3083:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3084:                        .HasForeignKey("PersonId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3085:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3086:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3089:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3090:                        .HasForeignKey("RecordedByAccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3091:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3092:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3094:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3095:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3096:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3097:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3103:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3104:                        .HasForeignKey("BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3105:                        .OnDelete(DeleteBehavior.SetNull);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3106:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3111:                        .WithMany("BuildingAdmins")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3112:                        .HasForeignKey("AdminUid")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3113:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3114:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3117:                        .WithMany("Admins")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3118:                        .HasForeignKey("BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3119:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3120:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3130:                        .WithOne("Settings")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3131:                        .HasForeignKey("BuildingManagementMvc.Data.Entities.BuildingSettingsEntity", "BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3132:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3133:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3141:                        .WithMany("Cameras")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3142:                        .HasForeignKey("DvrId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3143:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3144:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3152:                        .WithMany("EditHistory")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3153:                        .HasForeignKey("BuildingId", "DepositId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3154:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3155:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3163:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3164:                        .HasForeignKey("BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3165:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3166:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3169:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3170:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3171:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3172:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3180:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3181:                        .HasForeignKey("BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3182:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3183:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3189:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3190:                        .HasForeignKey("BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3191:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3192:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3195:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3196:                        .HasForeignKey("BuildingId", "CategoryKind", "CategoryId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3197:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3198:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3205:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3206:                        .HasForeignKey("CreatedByAccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3207:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3208:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3210:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3211:                        .HasForeignKey("PeriodId", "BuildingId")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3212:                        .HasPrincipalKey("PeriodId", "BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3213:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3214:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3217:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3218:                        .HasForeignKey("SourceTransactionId", "PeriodId", "BuildingId")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3219:                        .HasPrincipalKey("LedgerTransactionId", "PeriodId", "BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3220:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3221:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3227:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3228:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3229:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3230:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3233:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3234:                        .HasForeignKey("PeriodId", "BuildingId")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3235:                        .HasPrincipalKey("PeriodId", "BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3236:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3237:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3240:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3241:                        .HasForeignKey("AllocationBatchId", "PeriodId", "BuildingId")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3242:                        .HasPrincipalKey("AllocationBatchId", "PeriodId", "BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3243:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3244:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3250:                        .WithMany("Categories")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3251:                        .HasForeignKey("BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3252:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3253:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3261:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3262:                        .HasForeignKey("BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3263:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3264:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3267:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3268:                        .HasForeignKey("ClosedByAccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3269:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3270:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3275:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3276:                        .HasForeignKey("BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3277:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3278:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3280:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3281:                        .HasForeignKey("ReconciliationRunId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3282:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3283:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3286:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3287:                        .HasForeignKey("ReviewedByAccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3288:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3289:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3291:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3292:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3293:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3294:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3299:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3300:                        .HasForeignKey("StartedByAccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3301:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3302:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3307:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3308:                        .HasForeignKey("LedgerTransactionId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3309:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3310:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3316:                        .WithMany("Floors")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3317:                        .HasForeignKey("BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3318:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3319:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3327:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3328:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3329:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3330:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3333:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3334:                        .HasForeignKey("PeriodId", "BuildingId")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3335:                        .HasPrincipalKey("PeriodId", "BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3336:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3337:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3340:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3341:                        .HasForeignKey("LedgerTransactionId", "PeriodId", "BuildingId")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3342:                        .HasPrincipalKey("LedgerTransactionId", "PeriodId", "BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3343:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3344:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3350:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3351:                        .HasForeignKey("ActorAccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3352:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3353:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3355:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3356:                        .HasForeignKey("ReversesTransactionId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3357:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3358:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3360:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3361:                        .HasForeignKey("PeriodId", "BuildingId")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3362:                        .HasPrincipalKey("PeriodId", "BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3363:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3364:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3370:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3371:                        .HasForeignKey("AccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3372:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3373:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3375:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3376:                        .HasForeignKey("PersonId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3377:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3378:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3380:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3381:                        .HasForeignKey("ReviewedByAccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3382:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3383:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3388:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3389:                        .HasForeignKey("BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3390:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3391:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3397:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3398:                        .HasForeignKey("BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3399:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3400:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3403:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3404:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3405:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3406:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3414:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3415:                        .HasForeignKey("BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3416:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3417:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3420:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3421:                        .HasForeignKey("BuildingId", "RecipientApartmentId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3422:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3423:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3430:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3431:                        .HasForeignKey("CancelledByAccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3432:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3433:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3435:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3436:                        .HasForeignKey("ConfirmedByAccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3437:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3438:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3440:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3441:                        .HasForeignKey("ReversalTransactionId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3442:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3443:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3445:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3446:                        .HasForeignKey("ReversedByAccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3447:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3448:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3450:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3451:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3452:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3453:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3456:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3457:                        .HasForeignKey("PeriodId", "BuildingId")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3458:                        .HasPrincipalKey("PeriodId", "BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3459:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3460:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3463:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3464:                        .HasForeignKey("PostedTransactionId", "PeriodId", "BuildingId")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3465:                        .HasPrincipalKey("LedgerTransactionId", "PeriodId", "BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3466:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3467:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3472:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3473:                        .HasForeignKey("BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3474:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3475:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3481:                        .WithMany("Options")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3482:                        .HasForeignKey("BuildingId", "PollId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3483:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3484:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3492:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3493:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3494:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3495:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3498:                        .WithMany("Votes")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3499:                        .HasForeignKey("BuildingId", "PollId", "OptionId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3500:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3501:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3511:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3512:                        .HasForeignKey("BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3513:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3514:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3517:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3518:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3519:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3520:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3528:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3529:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3530:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3531:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3539:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3540:                        .HasForeignKey("BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3541:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3542:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3545:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3546:                        .HasForeignKey("BuildingId", "CategoryKind", "CategoryId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3547:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3548:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3555:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3556:                        .HasForeignKey("RoleKey")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3557:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3558:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3564:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3565:                        .HasForeignKey("PersonId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3566:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3567:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3573:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3574:                        .HasForeignKey("AccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3575:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3576:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3579:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3580:                        .HasForeignKey("ReplacedByCredentialId", "AccountId")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3581:                        .HasPrincipalKey("CredentialId", "AccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3582:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3583:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3588:                        .WithMany("Permissions")
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3589:                        .HasForeignKey("Uid")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3590:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3591:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3599:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3600:                        .HasForeignKey("AccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3601:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3602:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3608:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3609:                        .HasForeignKey("AccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3610:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3611:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3614:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3615:                        .HasForeignKey("GrantedByAccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3616:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3617:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3619:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3620:                        .HasForeignKey("RevokedByAccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3621:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3622:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3624:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3625:                        .HasForeignKey("RoleKey")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3626:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3627:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3630:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3631:                        .HasForeignKey("ScopeBuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3632:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3633:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3635:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3636:                        .HasForeignKey("ScopeBuildingId", "ScopeApartmentId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3637:                        .OnDelete(DeleteBehavior.NoAction);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3638:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3643:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3644:                        .HasForeignKey("AccountId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3645:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3646:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3652:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3653:                        .HasForeignKey("BuildingId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3654:                        .OnDelete(DeleteBehavior.Cascade)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3655:                        .IsRequired();
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3658:                        .WithMany()
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3659:                        .HasForeignKey("BuildingId", "ApartmentId")
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3660:                        .OnDelete(DeleteBehavior.NoAction)
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.Designer.cs:3661:                        .IsRequired();
+
+
+
+
+=== MIGRATION CONSTRAINTS ===
+
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:13:        {
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:14:            migrationBuilder.CreateTable(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:15:                name: "FinancialPeriods",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:16:                columns: table => new
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:17:                {
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:18:                    PeriodId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:31:                constraints: table =>
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:32:                {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:33:                    table.PrimaryKey("PK_FinancialPeriods", x => x.PeriodId);
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:34:                    table.UniqueConstraint("UQ_FinancialPeriods_Period_Building", x => new { x.PeriodId, x.BuildingId });
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:35:                    table.CheckConstraint("CK_FinancialPeriods_CloseStamp", "([Status] = 0 AND [ClosedAtUtc] IS NULL AND [ClosedByAccountId] IS NULL) OR ([Status] IN (1,2) 
+AND [ClosedAtUtc] IS NOT NULL AND [ClosedByAccountId] IS NOT NULL)");
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:36:                    table.CheckConstraint("CK_FinancialPeriods_Key", "[PeriodKey] LIKE '[0-9][0-9][0-9][0-9]-[01][0-9]' AND SUBSTRING([PeriodKey],6,2) BETWEEN '01' AND 
+'12'");
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:37:                    table.CheckConstraint("CK_FinancialPeriods_Range", "[EndsAtUtc] > [StartsAtUtc]");
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:38:                    table.CheckConstraint("CK_FinancialPeriods_Status", "[Status] IN (0,1,2)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:39:                    table.ForeignKey(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:40:                        name: "FK_FinancialPeriods_Buildings_BuildingId",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:41:                        column: x => x.BuildingId,
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:42:                        principalTable: "Buildings",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:43:                        principalColumn: "Id");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:44:                    table.ForeignKey(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:45:                        name: "FK_FinancialPeriods_UserAccounts_ClosedByAccountId",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:46:                        column: x => x.ClosedByAccountId,
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:47:                        principalTable: "UserAccounts",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:48:                        principalColumn: "AccountId");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:87:                    SourceType = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: true),
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:88:                    SourceKey = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:89:                    ReversesTransactionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:90:                    ActorAccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:91:                    ActorReference = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:92:                    Reason = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:101:                    table.CheckConstraint("CK_LedgerTransactions_Kind", "[Kind] IN (1,2,3,4,5,6,7,8)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:102:                    table.CheckConstraint("CK_LedgerTransactions_PostStamp", "([Status] IN (0,2) AND [PostedAtUtc] IS NULL) OR ([Status] = 1 AND [PostedAtUtc] IS NOT 
+NULL)");
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:103:                    table.CheckConstraint("CK_LedgerTransactions_ReversalLink", "([Kind] = 7 AND [ReversesTransactionId] IS NOT NULL) OR ([Kind] <> 7 AND 
+[ReversesTransactionId] IS NULL)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:104:                    table.CheckConstraint("CK_LedgerTransactions_SourcePair", "([SourceSystem] IS NULL AND [SourceType] IS NULL AND [SourceKey] IS NULL) OR 
+([SourceSystem] IS NOT NULL AND [SourceType] IS NOT NULL AND [SourceKey] IS NOT NULL)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:105:                    table.CheckConstraint("CK_LedgerTransactions_Status", "[Status] IN (0,1,2)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:106:                    table.ForeignKey(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:107:                        name: "FK_LedgerTransactions_FinancialPeriods_PeriodId_BuildingId",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:108:                        columns: x => new { x.PeriodId, x.BuildingId },
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:109:                        principalTable: "FinancialPeriods",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:110:                        principalColumns: new[] { "PeriodId", "BuildingId" });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:111:                    table.ForeignKey(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:112:                        name: "FK_LedgerTransactions_LedgerTransactions_ReversesTransactionId",
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:113:                        column: x => x.ReversesTransactionId,
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:114:                        principalTable: "LedgerTransactions",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:115:                        principalColumn: "LedgerTransactionId");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:116:                    table.ForeignKey(
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:196:                    table.CheckConstraint("CK_FinancialAllocationBatches_Status", "[Status] IN (0,1,2)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:197:                    table.ForeignKey(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:198:                        name: "FK_FinancialAllocationBatches_FinancialPeriods_PeriodId_BuildingId",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:199:                        columns: x => new { x.PeriodId, x.BuildingId },
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:200:                        principalTable: "FinancialPeriods",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:201:                        principalColumns: new[] { "PeriodId", "BuildingId" });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:202:                    table.ForeignKey(
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:203:                        name: "FK_FinancialAllocationBatches_LedgerTransactions_SourceTransactionId_PeriodId_BuildingId",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:262:                        principalColumns: new[] { "BuildingId", "Id" });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:263:                    table.ForeignKey(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:264:                        name: "FK_LedgerEntries_FinancialPeriods_PeriodId_BuildingId",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:265:                        columns: x => new { x.PeriodId, x.BuildingId },
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:266:                        principalTable: "FinancialPeriods",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:267:                        principalColumns: new[] { "PeriodId", "BuildingId" });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:268:                    table.ForeignKey(
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:269:                        name: "FK_LedgerEntries_LedgerTransactions_LedgerTransactionId_PeriodId_BuildingId",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:281:                    BuildingId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:282:                    ApartmentId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:283:                    PostedTransactionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:284:                    Amount = table.Column<decimal>(type: "decimal(19,4)", precision: 19, scale: 4, nullable: false),
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:285:                    CurrencyCode = table.Column<string>(type: "char(3)", maxLength: 3, nullable: false),
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:286:                    Status = table.Column<byte>(type: "tinyint", nullable: false),
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:292:                    ReversedAtUtc = table.Column<DateTime>(type: "datetime2(3)", nullable: true),
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:293:                    ReversedByAccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:294:                    ReversalTransactionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:295:                    ResolutionReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:296:                    SourceSystem = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: false),
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:297:                    SourceKey = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:302:                    table.PrimaryKey("PK_PaymentDeposits", x => x.PaymentDepositId);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:303:                    table.CheckConstraint("CK_PaymentDeposits_Amount", "[Amount] > 0");
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:304:                    table.CheckConstraint("CK_PaymentDeposits_Resolution", "([Status] = 0 AND [PostedTransactionId] IS NULL AND [ConfirmedAtUtc] IS NULL AND 
+[ConfirmedByAccountId] IS NULL AND [CancelledAtUtc] IS NULL AND [CancelledByAccountId] IS NULL AND [ReversedAtUtc] IS NULL AND [ReversedByAccountId] IS NULL) OR ([Status] = 1 AND [PostedTransactionId] IS NOT NULL AND [ConfirmedAtUtc] IS 
+NOT NULL AND [ConfirmedByAccountId] IS NOT NULL AND [CancelledAtUtc] IS NULL AND [CancelledByAccountId] IS NULL AND [ReversedAtUtc] IS NULL AND [ReversedByAccountId] IS NULL) OR ([Status] = 2 AND [PostedTransactionId] IS NULL AND 
+[ConfirmedAtUtc] IS NULL AND [ConfirmedByAccountId] IS NULL AND [CancelledAtUtc] IS NOT NULL AND [CancelledByAccountId] IS NOT NULL AND [ReversedAtUtc] IS NULL AND [ReversedByAccountId] IS NULL AND LEN(LTRIM(RTRIM([ResolutionReason]))) > 
+0) OR ([Status] = 3 AND [PostedTransactionId] IS NOT NULL AND [ConfirmedAtUtc] IS NOT NULL AND [ConfirmedByAccountId] IS NOT NULL AND [CancelledAtUtc] IS NULL AND [CancelledByAccountId] IS NULL AND [ReversedAtUtc] IS NOT NULL AND 
+[ReversedByAccountId] IS NOT NULL AND [ReversalTransactionId] IS NOT NULL AND LEN(LTRIM(RTRIM([ResolutionReason]))) > 0)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:305:                    table.CheckConstraint("CK_PaymentDeposits_Status", "[Status] IN (0,1,2,3)");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:306:                    table.ForeignKey(
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:307:                        name: "FK_PaymentDeposits_Apartments_BuildingId_ApartmentId",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:310:                        principalColumns: new[] { "BuildingId", "Id" });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:311:                    table.ForeignKey(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:312:                        name: "FK_PaymentDeposits_FinancialPeriods_PeriodId_BuildingId",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:313:                        columns: x => new { x.PeriodId, x.BuildingId },
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:314:                        principalTable: "FinancialPeriods",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:315:                        principalColumns: new[] { "PeriodId", "BuildingId" });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:316:                    table.ForeignKey(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:317:                        name: "FK_PaymentDeposits_LedgerTransactions_PostedTransactionId_PeriodId_BuildingId",
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:318:                        columns: x => new { x.PostedTransactionId, x.PeriodId, x.BuildingId },
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:319:                        principalTable: "LedgerTransactions",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:320:                        principalColumns: new[] { "LedgerTransactionId", "PeriodId", "BuildingId" });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:321:                    table.ForeignKey(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:322:                        name: "FK_PaymentDeposits_LedgerTransactions_ReversalTransactionId",
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:323:                        column: x => x.ReversalTransactionId,
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:324:                        principalTable: "LedgerTransactions",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:325:                        principalColumn: "LedgerTransactionId");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:326:                    table.ForeignKey(
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:342:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:343:            migrationBuilder.CreateTable(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:344:                name: "FinancialAllocationLines",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:345:                columns: table => new
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:346:                {
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:347:                    AllocationLineId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:357:                constraints: table =>
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:358:                {
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:359:                    table.PrimaryKey("PK_FinancialAllocationLines", x => x.AllocationLineId);
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:360:                    table.CheckConstraint("CK_FinancialAllocationLines_Amounts", "[Weight] >= 0 AND [ExactShare] >= 0 AND [AllocatedAmount] >= 0");
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:361:                    table.CheckConstraint("CK_FinancialAllocationLines_Rank", "[RemainderRank] >= 0");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:362:                    table.ForeignKey(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:363:                        name: "FK_FinancialAllocationLines_Apartments_BuildingId_ApartmentId",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:364:                        columns: x => new { x.BuildingId, x.ApartmentId },
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:365:                        principalTable: "Apartments",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:366:                        principalColumns: new[] { "BuildingId", "Id" });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:367:                    table.ForeignKey(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:368:                        name: "FK_FinancialAllocationLines_FinancialAllocationBatches_AllocationBatchId_PeriodId_BuildingId",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:369:                        columns: x => new { x.AllocationBatchId, x.PeriodId, x.BuildingId },
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:370:                        principalTable: "FinancialAllocationBatches",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:371:                        principalColumns: new[] { "AllocationBatchId", "PeriodId", "BuildingId" });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:372:                    table.ForeignKey(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:373:                        name: "FK_FinancialAllocationLines_FinancialPeriods_PeriodId_BuildingId",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:374:                        columns: x => new { x.PeriodId, x.BuildingId },
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:375:                        principalTable: "FinancialPeriods",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:376:                        principalColumns: new[] { "PeriodId", "BuildingId" });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:377:                });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:378:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:388:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:389:            migrationBuilder.CreateIndex(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:390:                name: "IX_FinancialAllocationBatches_Source",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:391:                table: "FinancialAllocationBatches",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:392:                columns: new[] { "PeriodId", "SourceTransactionId", "AlgorithmVersion" });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:393:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:394:            migrationBuilder.CreateIndex(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:395:                name: "IX_FinancialAllocationBatches_SourceTransactionId_PeriodId_BuildingId",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:396:                table: "FinancialAllocationBatches",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:397:                columns: new[] { "SourceTransactionId", "PeriodId", "BuildingId" });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:398:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:399:            migrationBuilder.CreateIndex(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:400:                name: "IX_FinancialAllocationLines_AllocationBatchId_PeriodId_BuildingId",
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:401:                table: "FinancialAllocationLines",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:402:                columns: new[] { "AllocationBatchId", "PeriodId", "BuildingId" });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:403:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:404:            migrationBuilder.CreateIndex(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:405:                name: "IX_FinancialAllocationLines_BuildingId_ApartmentId",
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:406:                table: "FinancialAllocationLines",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:407:                columns: new[] { "BuildingId", "ApartmentId" });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:408:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:409:            migrationBuilder.CreateIndex(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:410:                name: "IX_FinancialAllocationLines_PeriodId_BuildingId",
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:411:                table: "FinancialAllocationLines",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:412:                columns: new[] { "PeriodId", "BuildingId" });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:413:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:414:            migrationBuilder.CreateIndex(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:415:                name: "UX_FinancialAllocationLines_Batch_Apartment",
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:416:                table: "FinancialAllocationLines",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:417:                columns: new[] { "AllocationBatchId", "ApartmentId" },
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:418:                unique: true);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:419:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:420:            migrationBuilder.CreateIndex(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:421:                name: "IX_FinancialPeriods_ClosedByAccountId",
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:422:                table: "FinancialPeriods",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:423:                column: "ClosedByAccountId");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:424:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:425:            migrationBuilder.CreateIndex(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:426:                name: "UX_FinancialPeriods_Building_Key",
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:427:                table: "FinancialPeriods",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:428:                columns: new[] { "BuildingId", "PeriodKey" },
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:429:                unique: true);
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:430:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:496:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:497:            migrationBuilder.CreateIndex(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:498:                name: "IX_LedgerTransactions_ReversesTransactionId",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:499:                table: "LedgerTransactions",
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:500:                column: "ReversesTransactionId");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:501:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:502:            migrationBuilder.CreateIndex(
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:503:                name: "UX_LedgerTransactions_Idempotency",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:534:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:535:            migrationBuilder.CreateIndex(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:536:                name: "IX_PaymentDeposits_PostedTransactionId_PeriodId_BuildingId",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:537:                table: "PaymentDeposits",
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:538:                columns: new[] { "PostedTransactionId", "PeriodId", "BuildingId" });
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:539:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:540:            migrationBuilder.CreateIndex(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:541:                name: "IX_PaymentDeposits_ReversalTransactionId",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:542:                table: "PaymentDeposits",
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:543:                column: "ReversalTransactionId");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:544:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:545:            migrationBuilder.CreateIndex(
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:546:                name: "IX_PaymentDeposits_ReversedByAccountId",
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:565:        {
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:566:            migrationBuilder.DropTable(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:567:                name: "FinancialAllocationLines");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:568:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:569:            migrationBuilder.DropTable(
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:570:                name: "FinancialReconciliationDifferences");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:589:
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:590:            migrationBuilder.DropTable(
+> Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:591:                name: "FinancialPeriods");
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:592:        }
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:593:    }
+  Migrations\20261118213732_Phase08_FinancialLedgerFoundation.cs:594:}
+
+
+

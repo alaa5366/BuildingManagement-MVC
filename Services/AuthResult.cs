@@ -40,6 +40,10 @@ public class AuthResult
     /// Gets or sets the display name.
     /// </summary>
     public string? Name { get; set; }
+    /// <summary>Marks a principal issued from the target identity schema.</summary>
+    public bool UsesTargetIdentity { get; set; }
+    /// <summary>Target account security stamp for session revalidation.</summary>
+    public string? SecurityStamp { get; set; }
     /// <summary>
     /// Gets or sets the building IDs.
     /// </summary>

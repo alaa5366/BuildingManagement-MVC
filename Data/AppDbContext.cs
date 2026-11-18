@@ -187,6 +187,15 @@ public class AppDbContext : DbContext
     public DbSet<ApartmentAccessGrantEntity> ApartmentAccessGrants => Set<ApartmentAccessGrantEntity>();
     public DbSet<AccountPermissionOverrideEntity> AccountPermissionOverrides => Set<AccountPermissionOverrideEntity>();
     public DbSet<LegacyIdentityMapEntity> LegacyIdentityMaps => Set<LegacyIdentityMapEntity>();
+    public DbSet<FinancialPeriodEntity> FinancialPeriods => Set<FinancialPeriodEntity>();
+    public DbSet<PaymentDepositEntity> PaymentDeposits => Set<PaymentDepositEntity>();
+    public DbSet<LedgerTransactionEntity> LedgerTransactions => Set<LedgerTransactionEntity>();
+    public DbSet<LedgerEntryEntity> LedgerEntries => Set<LedgerEntryEntity>();
+    public DbSet<FinancialSourceLinkEntity> FinancialSourceLinks => Set<FinancialSourceLinkEntity>();
+    public DbSet<FinancialAllocationBatchEntity> FinancialAllocationBatches => Set<FinancialAllocationBatchEntity>();
+    public DbSet<FinancialAllocationLineEntity> FinancialAllocationLines => Set<FinancialAllocationLineEntity>();
+    public DbSet<FinancialReconciliationRunEntity> FinancialReconciliationRuns => Set<FinancialReconciliationRunEntity>();
+    public DbSet<FinancialReconciliationDifferenceEntity> FinancialReconciliationDifferences => Set<FinancialReconciliationDifferenceEntity>();
     protected override void ConfigureConventions(ModelConfigurationBuilder cb)
     {
         cb.Properties<decimal>().HavePrecision(18, 2);
@@ -198,6 +207,7 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder mb)
     {
         IdentityModelConfiguration.Configure(mb);
+        FinanceModelConfiguration.Configure(mb);
 
         // -----------------------------------------------------------------
         // Phase 04: Explicit SQL Server lengths for PK/FK and key columns.

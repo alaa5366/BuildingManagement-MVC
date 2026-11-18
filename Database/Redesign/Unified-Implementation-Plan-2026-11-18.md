@@ -3,7 +3,7 @@
 **Repository:** `alaa5366/BuildingManagement-MVC`  
 **Branch:** `development/database-redesign-enterprise`  
 **Approval recorded:** 2026-11-18 — approval to consolidate the completed discovery into one coordinated implementation program.  
-**Execution status:** Additive identity/authorization schema rehearsal completed through Phase07; service foundation is implemented but not yet connected to legacy endpoints.
+**Execution status:** Identity/authorization schema rehearsal completed through Phase07; resident login can authenticate from target identity tables. Full legacy-domain backfill has not started.
 **Database boundary:** Only `BuildingManagement_RestoreTest` has been changed. Production is excluded.
 
 ## 1. Purpose and delivery rule
@@ -216,7 +216,7 @@ These gates are checkpoints inside the single program, not separate feature phas
 
 - **G0 — Design freeze:** WP0 decisions, ERD, data dictionary, retention matrix, permission matrix, and external dependency register approved.
 - **G1 — Fresh read-only preflight:** exact database identity, metadata, migration history, all target objects absent, no partial prior Gate A creation, verified backup and restore target.
-- **G2 — Additive schema approval:** separate explicit approval to run the reviewed additive DDL/EF migration against the disposable restore only. Gate A is not authorized by this plan.
+- **G2 — Additive schema approval:** owner authorization permits reviewed additive DDL/EF migrations against `BuildingManagement_RestoreTest` only. Production and destructive legacy retirement remain separately gated.
 - **G3 — Service invariants:** transactions, concurrency, evaluator, revocation, audit/outbox, credential/MFA, and lifecycle tests.
 - **G4 — Migration rehearsal:** human identity dispositions, dry-run, staged backfill, row-level reconciliation, rollback/restore.
 - **G5 — Compatibility/cutover rehearsal:** dual-path behavior, no permission widening, finance/vote continuity, rollback window.
@@ -227,10 +227,10 @@ A failed gate stops the dependent work. Never use a partially created Gate A sch
 
 ## 7. Immediate next execution task
 
-Start WP0 by creating a **Decision Register** and completing a single focused decision workshop/document pass. For each decision record: chosen rule, alternatives rejected, data impact, affected services/tables, migration impact, tests, owner, and approval date. In parallel, prepare the exact source-of-truth reconciliation checklist for the fresh disposable restore.
+This was the original pre-authorization next task and is now historical. Current work continues from the owner-approved defaults, the full table inventory, and the staged migration baseline in `Full-Database-Migration-Baseline-2026-11-18.md`.
 
 Do not start WP1 DDL yet. In particular:
-- The latest preflight reviewed was `Database/Diagnostics/GateA-Preflight-Results/20261118-155025/`; rerun the preflight before any future schema operation.
+- Rerun exact-target preflight and capture a verified backup before each data-bearing rehearsal.
 - `ApartmentAccessGrants.GrantType` and PermissionSetKey values are owner-approved; profiles have no implicit permissions until the evaluator and lifecycle policy are implemented.
 - Identity candidates require human disposition; no fuzzy auto-link.
 - Credential hashes are BCrypt-shaped but not cryptographically verified.
@@ -246,7 +246,7 @@ Do not start WP1 DDL yet. In particular:
 
 ## 9. Current implementation status — 2026-11-18
 
-- The owner later authorized implementation and rehearsal against `BuildingManagement_RestoreTest`, with the recommended defaults approved. This supersedes the older “Plan approved; implementation has not started” and “Gate A is not authorized” statements above.
-- Phase06 and Phase07 migrations have been applied to the named disposable restore database with verified COPY_ONLY backups and post-migration reconciliation. Eighty-four exact-source identity candidates are staged as Pending; no target Persons/UserAccounts, credential migration, permission backfill, or authentication cutover occurred.
-- Code-owned permission evaluation, transactional ownership-period recording, transactional apartment-access grant/revoke, and human-reviewed legacy identity disposition are implemented and registered. Legacy login and endpoints are not yet migrated to use the new evaluator; permission profile keys still grant no apartment-level operations.
-- Section 7's “Immediate next execution task” describes the original pre-authorization plan and is historical. Continue implementation with explicit compatibility, lifecycle, and regression gates. Production remains out of scope without separate approval.
+- The owner authorized implementation and rehearsal against `BuildingManagement_RestoreTest`, with recommended defaults approved. Production changes and destructive legacy retirement remain separately gated.
+- Phase06 and Phase07 are applied to the disposable restore. The full-database baseline covers 44 application tables; only identity/authorization target tables currently exist. All 84 legacy identity candidates remain Pending.
+- A synthetic target resident was added without any legacy link or apartment data. Unified login and cookie revalidation now work through `Persons`, `UserAccounts`, `UserCredentials`, and `UserRoleAssignments`; build and all 549 tests passed.
+- No legacy identity, financial, poll, operations, media, settings, audit, or backup business rows have been backfilled. Start target-domain work from the full-database baseline and preserve the legacy tables until each domain's mapping and reconciliation gates pass.
