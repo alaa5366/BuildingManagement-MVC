@@ -418,3 +418,16 @@ Section 16 of `Identity-Resolution-and-Authorization-Review-2026-11-18.md` recor
 Sections 15–17 complete the static review of deletion/retention, runtime/deployment readiness, cross-artifact consistency, unresolved product policies, test gaps, and implementation acceptance criteria. The discovery review is complete for the currently available repository and supplied restore evidence, but identity cutover is not implementation-ready. All unresolved decisions and required tests are listed in the main review document.
 
 The latest read-only Gate A preflight reviewed for this work is `Database/Diagnostics/GateA-Preflight-Results/20261118-155025/`; its metadata pass does not authorize DDL. **Gate A remains NOT AUTHORIZED.** No source code, schema, rows, credentials, backups, or runtime state were changed, and no build/tests were executed.
+
+
+## Unified implementation plan approved — 2026-11-18
+
+The completed discovery and static reviews have been consolidated into one coordinated delivery program:
+
+- `Database/Redesign/Unified-Implementation-Plan-2026-11-18.md`
+
+The plan groups implementation into WP0–WP7: policy/source-of-truth freeze; additive identity foundation; centralized authorization and relationship lifecycle; credentials/MFA/session security; finance/voting/retention compatibility; audit/import/export/backup/background operations; runtime/deployment foundation; and controlled migration rehearsal/cutover.
+
+The user approved this unified plan and continuation of the work. This is **plan approval only**. It does not authorize Gate A DDL, EF migration execution, DML/backfill, authentication cutover, destructive operations, or production changes. The next task is WP0 Decision Register and source-of-truth reconciliation. Gate A remains **NOT AUTHORIZED** until a separate explicit approval after G0/G1 evidence is complete.
+
+No application source, schema, database rows, credentials, backups, or runtime state were changed while preparing this plan. No build or tests were executed.
