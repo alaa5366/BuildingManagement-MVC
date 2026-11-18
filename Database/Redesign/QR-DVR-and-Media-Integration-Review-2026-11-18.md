@@ -120,6 +120,26 @@ Persist the effective normalized RTSP path used to provision MediaMTX, not the r
 
 `DvrNetworkPolicy` requires IP literals in RFC1918 IPv4 or IPv6 ULA ranges, rejects loopback/unspecified/link-local/multicast, and rejects absolute/traversal RTSP paths. This is a strong SSRF baseline. Keep the allowlist explicit and additionally constrain permitted ports and target subnets by deployment/network policy. Avoid allowing a general admin to point the media server at arbitrary internal services.
 
+## 3A. Live camera authorization and HLS delivery
+
+Evidence:
+- `Controllers/CamerasController.cs`
+- `Views/Cameras/Live.cshtml`
+- `appsettings.json`
+
+The application checks role/building scope before returning the HLS URL. Residents can view all active cameras belonging to their building; there is no per-apartment, per-camera, or purpose-specific resident access check in this controller. This is a building-wide resident visibility rule and must be explicitly approved as product policy.
+
+More importantly, `GetHlsUrl` returns a predictable direct MediaMTX URL (`{HlsBaseUrl}/cam_{CameraId}/index.m3u8`). The browser then fetches the playlist and segments directly from MediaMTX, not through an authenticated application proxy. The application authorization check therefore protects URL discovery only; it does not, by itself, protect the playlist/segments after the URL is issued or shared.
+
+The repository code reviewed here does not establish whether MediaMTX itself enforces authenticated, expiring, building/camera-scoped access on every playlist, segment, and key request. Treat that as an **unverified external security boundary**, not as a confirmed vulnerability or a confirmed protection.
+
+**Target direction:**
+- Require MediaMTX-side authorization for every HLS playlist, segment, and key request, using short-lived signed claims bound to user/session, building, camera, and expiry; or proxy HLS through an authenticated gateway that enforces the same policy.
+- Never rely solely on hiding a predictable HLS URL behind `GetHlsUrl`.
+- Revalidate active account/session, building scope, and camera policy at stream authorization time.
+- Decide whether residents should see every camera in a building or only cameras mapped to their apartment/common areas, and capture that as DEC-24 policy.
+- Ensure stream URLs and query credentials are not cached or leaked through referrers/logs.
+
 ## 4. Target boundaries
 
 ### QR and access capabilities
