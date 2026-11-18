@@ -7,6 +7,8 @@ alter, or delete objects and does not read application rows or secret values.
 Review every result set before considering the Gate A rehearsal script.
 */
 USE [BuildingManagement_RestoreTest];
+IF DB_NAME() <> N'BuildingManagement_RestoreTest'
+    THROW 51000, 'Wrong database. Gate A preflight is allowed only on BuildingManagement_RestoreTest.', 1;
 SET NOCOUNT ON;
 
 SELECT
