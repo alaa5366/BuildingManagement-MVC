@@ -381,17 +381,16 @@ BEGIN
         CONSTRAINT CK_LegacyIdentityMap_ReviewStamp CHECK
         (
             (ReviewedAtUtc IS NULL AND ReviewedByAccountId IS NULL)
-            OR ReviewedAtUtc IS NOT NULL
+            OR (ReviewedAtUtc IS NOT NULL AND ReviewedByAccountId IS NOT NULL)
         ),
         CONSTRAINT CK_LegacyIdentityMap_LinkTargets CHECK
         (
-            (MappingStatus IN (0,3,4))
-            OR (MappingStatus = 1 AND PersonId IS NOT NULL)
-            OR (MappingStatus = 2 AND PersonId IS NOT NULL)
+            (MappingStatus IN (0,3,4) AND PersonId IS NULL AND AccountId IS NULL)
+            OR (MappingStatus IN (1,2) AND PersonId IS NOT NULL)
         ),
         CONSTRAINT CK_LegacyIdentityMap_UserAccountTarget CHECK
         (
-            (SourceTable <> N'Users' OR MappingStatus <> 1 OR AccountId IS NOT NULL)
+            (SourceTable <> N'Users' OR MappingStatus NOT IN (1,2) OR AccountId IS NOT NULL)
             AND (SourceTable <> N'Residents' OR AccountId IS NULL)
         )
     );
