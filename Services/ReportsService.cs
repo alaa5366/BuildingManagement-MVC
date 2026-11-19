@@ -140,6 +140,12 @@ public sealed class ReportsService
         };
     }
 
+    public static List<string> GetReportMonths(
+        IReadOnlyList<string> allKeys,
+        string range,
+        string currentMonth) =>
+        SelectMonths(allKeys, range, currentMonth);
+
     private static List<string> SelectMonths(
         IReadOnlyList<string> allKeys,
         string range,
