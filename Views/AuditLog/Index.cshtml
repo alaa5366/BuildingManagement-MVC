@@ -56,10 +56,9 @@
         </div>
     </header>
 
-    <nav class="audit-observability-nav" aria-label="Log sections">
-        <a asp-controller="ApplicationLogs" asp-action="Index"><i class="bi bi-terminal"></i> Application Logs</a>
-        <a class="active" asp-controller="AuditLog" asp-action="Index"><i class="bi bi-shield-check"></i> Audit Trail</a>
-        <span><i class="bi bi-graph-up"></i> Analytics <small>Coming with telemetry pipeline</small></span>
+    <nav class="observability-nav" aria-label="Observability sections">
+        <a asp-controller="ApplicationLogs" asp-action="Index"><i class="bi bi-terminal"></i><span>Application Logs</span><small>Runtime events</small></a>
+        <a class="active" asp-controller="AuditLog" asp-action="Index"><i class="bi bi-shield-check"></i><span>Audit Trail</span><small>Business activity</small></a>
     </nav>
 
     <section class="log-metrics audit-kpi-grid" aria-label="Audit event levels">
