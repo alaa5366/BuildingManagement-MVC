@@ -194,7 +194,7 @@ WHERE LOWER(LTRIM(RTRIM(u.Role))) IN(N'admin',N'buildingadmin')
 
 IF (SELECT COUNT(*) FROM @admins)<>3 OR (SELECT COUNT(DISTINCT BuildingId) FROM @admins)<>3
 BEGIN
-    ;THROW 51038, 'Admin/building mapping changed after preflight.', 1;
+    RAISERROR(N'Admin/building mapping changed after preflight.',16,1); RETURN;
 END;
 
 IF NOT EXISTS (SELECT 1 FROM dbo.RoleDefinitions WHERE [RoleKey]=@buildingAdminRoleKey)
@@ -226,7 +226,7 @@ WHERE NOT EXISTS(SELECT 1 FROM dbo.[RolePermissions] rp WHERE rp.[RoleKey]=@buil
 IF EXISTS (SELECT 1 FROM dbo.[RolePermissions] rp
  WHERE rp.[RoleKey]=@buildingAdminRoleKey AND rp.[Effect]<>1)
 BEGIN
-    ;THROW 51038, 'Building admin role contains a non-Allow permission effect.', 1;
+    RAISERROR(N'Building admin role contains a non-Allow permission effect.',16,1); RETURN;
 END;
 
 IF EXISTS (SELECT 1 FROM dbo.[RolePermissions] rp
@@ -240,7 +240,7 @@ IF EXISTS (SELECT 1 FROM dbo.[RolePermissions] rp
   N'finance.period.reopen',N'notification.dispatch',N'integration.whatsapp.send',
   N'integration.whatsapp.configure',N'apartment.access.grant.manage))
 BEGIN
-    ;THROW 51038, 'Building admin role contains permissions outside the approved building-only set.', 1;
+    RAISERROR(N'Building admin role contains permissions outside the approved building-only set.',16,1); RETURN;
 END;
 
 INSERT dbo.UserRoleAssignments
@@ -260,14 +260,14 @@ IF (SELECT COUNT(*) FROM dbo.UserRoleAssignments a
    AND a.ScopeBuildingId=x.BuildingId AND a.ScopeApartmentId IS NULL
    AND a.RevokedAtUtc IS NULL AND (a.ValidToUtc IS NULL OR a.ValidToUtc>@now))<>3
 BEGIN
-    ;THROW 51038, 'Post-write verification did not find exactly three active building-scoped assignments.', 1;
+    RAISERROR(N'Post-write verification did not find exactly three active building-scoped assignments.',16,1); RETURN;
 END;
 
 IF EXISTS (SELECT 1 FROM dbo.UserRoleAssignments a JOIN @admins x ON x.AccountId=a.AccountId
  WHERE a.RevokedAtUtc IS NULL AND (a.ValidToUtc IS NULL OR a.ValidToUtc>@now)
  AND (a.ScopeType<>1 OR a.ScopeBuildingId<>x.BuildingId OR a.ScopeApartmentId IS NOT NULL))
 BEGIN
-    ;THROW 51038, 'Cross-building or system-wide active assignment detected for a Building Admin.', 1;
+    RAISERROR(N'Cross-building or system-wide active assignment detected for a Building Admin.',16,1); RETURN;
 END;
 
 COMMIT;
