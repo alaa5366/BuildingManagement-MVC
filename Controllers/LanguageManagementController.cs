@@ -20,6 +20,16 @@ public sealed class LanguageManagementController : Controller
     }
 
     [HttpPost,ValidateAntiForgeryToken]
+    public async Task<IActionResult> ScanSources(CancellationToken ct)
+    {
+        if(User.HasClaim("impersonated","true")) return Forbid();
+        var actor=User.FindFirstValue(ClaimTypes.NameIdentifier); if(string.IsNullOrWhiteSpace(actor)) return Forbid();
+        var count=await _service.ScanSourceFilesAsync(Directory.GetCurrentDirectory(),actor,ct);
+        TempData["Message"]="تم فحص ملفات المصدر واستيراد الموارد الحالية. عدد المفاتيح المكتشفة: "+count+".";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost,ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveLanguage(string culture,string englishName,string nativeName,string direction,string? fallback,string? flag,bool enabled,bool isDefault,int sortOrder,CancellationToken ct)
     {
         if(User.HasClaim("impersonated","true")) return Forbid();
