@@ -72,6 +72,7 @@
     <form method="post" asp-action="CreateDeposit" enctype="multipart/form-data"
           class="row g-2 align-items-end" id="depositForm">
         <input type="hidden" name="month" value="@month" />
+        <input type="hidden" name="commandId" value="@Guid.NewGuid()" />
 
         <div class="col-md-4">
             <label class="form-label small">@Loc.T("Amount")</label>
