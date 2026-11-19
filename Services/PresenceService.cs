@@ -22,6 +22,7 @@ public class PresenceService
         _logger = logger;
     }
 
+    /// <summary>Builds a stable document identifier for a presence record.</summary>
     public static string BuildDocId(string uid, string aptId, string buildingId) =>
         !string.IsNullOrEmpty(buildingId) && !string.IsNullOrEmpty(aptId)
             ? $"{buildingId}_{aptId}"
@@ -127,6 +128,7 @@ public class PresenceService
         }
     }
 
+    /// <summary>Gets the number of users currently online in the requested scope.</summary>
     public async Task<int> GetOnlineCountAsync(string buildingId)
     {
         try
@@ -147,6 +149,7 @@ public class PresenceService
         }
     }
 
+    /// <summary>Gets recent presence records for the specified building.</summary>
     public async Task<Dictionary<string, Presence>> GetByBuildingAsync(string buildingId)
     {
         var result = new Dictionary<string, Presence>();
@@ -181,6 +184,7 @@ public class PresenceService
         return result;
     }
 
+    /// <summary>Determines whether the supplied presence timestamp represents an online user.</summary>
     public static bool IsOnline(Presence? p)
     {
         if (p == null || p.Ts <= 0) return false;
@@ -188,6 +192,7 @@ public class PresenceService
         return DateTime.UtcNow - lastSeen <= OnlineThreshold;
     }
 
+    /// <summary>Determines whether a presence timestamp falls within the recent activity window.</summary>
     public static bool IsRecent(Presence? p)
     {
         if (p == null || p.Ts <= 0) return false;
@@ -195,6 +200,7 @@ public class PresenceService
         return DateTime.UtcNow - lastSeen < TimeSpan.FromHours(24);
     }
 
+    /// <summary>Formats a presence timestamp as a human-readable elapsed-time label.</summary>
     public static string TimeAgo(Presence? p)
     {
         if (p == null || p.Ts <= 0) return Loc.T("Never_Logged_In");
