@@ -701,9 +701,12 @@ public class AccountController : Controller
     private async Task RefreshTwoFactorVerifiedCookieAsync()
     {
         var claims = User.Claims
-            .Where(c => c.Type != "twoFactorVerified")
+            .Where(c => c.Type is not ("twoFactorVerified" or "mfaVerifiedAtUtc"))
             .ToList();
         claims.Add(new Claim("twoFactorVerified", "true"));
+        claims.Add(new Claim(
+            "mfaVerifiedAtUtc",
+            DateTime.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture)));
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var properties = new AuthenticationProperties
