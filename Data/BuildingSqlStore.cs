@@ -83,6 +83,7 @@ public class BuildingSqlStore
     /// </summary>
     /// <param name="page">رقم الصفحة (يبدأ من 1).</param>
     /// <param name="pageSize">عدد العناصر في الصفحة.</param>
+    /// <param name="ct">رمز إلغاء العملية.</param>
     /// <returns>صفحة من ملخصات المباني.</returns>
     public virtual async Task<BuildingManagementMvc.Models.PagedResult<Building>> GetSummariesPagedAsync(int page, int pageSize, CancellationToken ct = default)
     {
