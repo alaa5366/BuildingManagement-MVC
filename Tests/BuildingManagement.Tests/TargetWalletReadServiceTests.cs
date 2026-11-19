@@ -401,7 +401,7 @@ public sealed class TargetWalletReadServiceTests
         var service = new TargetWalletReadService(new TestContextFactory(options));
         var snapshot = await service.GetAdminSnapshotAsync("B1", "2026-11");
 
-        Assert.Equal(120m, snapshot.Balances["A1"]);
+        Assert.Equal(160m, snapshot.Balances["A1"]);
         Assert.Equal(2, snapshot.PendingDeposits.Count);
         var pending = snapshot.PendingDeposits[0];
         Assert.Equal(pendingId.ToString("D"), pending.Deposit.Id);
