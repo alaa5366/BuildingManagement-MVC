@@ -10,13 +10,11 @@ namespace BuildingManagementMvc.Controllers;
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManagePolls)]
 public class PollsController : Controller
 {
-    private readonly BuildingsService _buildings;
     private readonly TargetPollsService _polls;
     private readonly ILogger<PollsController> _logger;
 
-    public PollsController(BuildingsService buildings, TargetPollsService polls, ILogger<PollsController> logger)
+    public PollsController(TargetPollsService polls, ILogger<PollsController> logger)
     {
-        _buildings = buildings;
         _polls = polls;
         _logger = logger;
     }
@@ -26,11 +24,12 @@ public class PollsController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(int page = 1, int pageSize = 50)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
+        var summary = await _polls.GetBuildingSummaryAsync(BuildingId, HttpContext.RequestAborted);
+        if (summary is null) return NotFound();
 
         var paged = await _polls.GetPageAsync(BuildingId, page, pageSize, activeOnly: false, HttpContext.RequestAborted);
-        ViewBag.Building = building;
+        ViewBag.BuildingName = summary.Value.Name;
+        ViewBag.OpenApartmentCount = summary.Value.ActiveApartmentCount;
         ViewBag.RouteValues = new Dictionary<string, string?> { ["pageSize"] = paged.PageSize.ToString() };
         return View(paged);
     }
