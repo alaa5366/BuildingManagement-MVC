@@ -194,7 +194,7 @@ WHERE LOWER(LTRIM(RTRIM(u.Role))) IN(N'admin',N'buildingadmin')
 
 IF (SELECT COUNT(*) FROM @admins)<>3 OR (SELECT COUNT(DISTINCT BuildingId) FROM @admins)<>3
 BEGIN
-    RAISERROR(N'Admin/building mapping changed after preflight.',16,1); RETURN;
+    SELECT N'Admin/building mapping changed after preflight.' AS Phase37Error; RETURN;
 END;
 
 IF NOT EXISTS (SELECT 1 FROM dbo.RoleDefinitions WHERE [RoleKey]=@buildingAdminRoleKey)
@@ -226,7 +226,7 @@ WHERE NOT EXISTS(SELECT 1 FROM dbo.[RolePermissions] rp WHERE rp.[RoleKey]=@buil
 IF EXISTS (SELECT 1 FROM dbo.[RolePermissions] rp
  WHERE rp.[RoleKey]=@buildingAdminRoleKey AND rp.[Effect]<>1)
 BEGIN
-    RAISERROR(N'Building admin role contains a non-Allow permission effect.',16,1); RETURN;
+    SELECT N'Building admin role contains a non-Allow permission effect.' AS Phase37Error; RETURN;
 END;
 
 IF EXISTS (SELECT 1 FROM dbo.[RolePermissions] rp
@@ -240,7 +240,7 @@ IF EXISTS (SELECT 1 FROM dbo.[RolePermissions] rp
   N'finance.period.reopen',N'notification.dispatch',N'integration.whatsapp.send',
   N'integration.whatsapp.configure',N'apartment.access.grant.manage))
 BEGIN
-    RAISERROR(N'Building admin role contains permissions outside the approved building-only set.',16,1); RETURN;
+    SELECT N'Building admin role contains permissions outside the approved building-only set.' AS Phase37Error; RETURN;
 END;
 
 INSERT dbo.UserRoleAssignments
@@ -260,20 +260,22 @@ IF (SELECT COUNT(*) FROM dbo.UserRoleAssignments a
    AND a.ScopeBuildingId=x.BuildingId AND a.ScopeApartmentId IS NULL
    AND a.RevokedAtUtc IS NULL AND (a.ValidToUtc IS NULL OR a.ValidToUtc>@now))<>3
 BEGIN
-    RAISERROR(N'Post-write verification did not find exactly three active building-scoped assignments.',16,1); RETURN;
+    SELECT N'Post-write verification did not find exactly three active building-scoped assignments.' AS Phase37Error; RETURN;
 END;
 
 IF EXISTS (SELECT 1 FROM dbo.UserRoleAssignments a JOIN @admins x ON x.AccountId=a.AccountId
  WHERE a.RevokedAtUtc IS NULL AND (a.ValidToUtc IS NULL OR a.ValidToUtc>@now)
  AND (a.ScopeType<>1 OR a.ScopeBuildingId<>x.BuildingId OR a.ScopeApartmentId IS NOT NULL))
 BEGIN
-    RAISERROR(N'Cross-building or system-wide active assignment detected for a Building Admin.',16,1); RETURN;
+    SELECT N'Cross-building or system-wide active assignment detected for a Building Admin.' AS Phase37Error; RETURN;
 END;
 
 COMMIT;
+SELECT N'PHASE37_COMMITTED' AS Phase37Result;
 "@
             $applyCommand = New-Command $connection $transaction $sql
-            [void]$applyCommand.ExecuteNonQuery()
+            $applyResult = [string]$applyCommand.ExecuteScalar()
+            if ($applyResult -ne 'PHASE37_COMMITTED') { throw "Phase37 validation failed; transaction was not committed: $applyResult" }
             Log 'APPLY TRANSACTION COMMITTED.'
         }
         catch {
