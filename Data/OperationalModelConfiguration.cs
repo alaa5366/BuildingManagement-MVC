@@ -10,8 +10,7 @@ internal static class OperationalModelConfiguration
     {
         mb.Entity<AuditEventEntity>(e =>
         {
-            e.ToTable("AuditEvents", t =>
-                t.HasCheckConstraint("CK_AuditEvents_Outcome", "[Outcome] IN (0,1,2,3)"));
+            e.ToTable("AuditEvents");
             e.HasKey(x => x.AuditEventId);
             e.Property(x => x.AuditEventId).ValueGeneratedNever();
             e.Property(x => x.ActorReference).HasMaxLength(160);
