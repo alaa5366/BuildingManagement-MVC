@@ -102,7 +102,7 @@ public sealed class AccountManagementServiceTests
         Assert.True(result.Success);
         Assert.NotNull(result.TemporaryPin);
         Assert.Equal(6, result.TemporaryPin!.Length);
-        Assert.All(result.TemporaryPin, character => Assert.True(char.IsDigit(character)));
+        Assert.All(result.TemporaryPin!, character => Assert.True(char.IsDigit(character)));
 
         await using var verify = await factory.CreateDbContextAsync();
         var account = await verify.UserAccounts.SingleAsync(x => x.AccountId == accountId);
