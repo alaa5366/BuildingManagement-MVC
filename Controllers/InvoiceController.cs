@@ -17,7 +17,7 @@ namespace BuildingManagementMvc.Controllers;
 [Authorize(Roles = "superadmin,admin,resident")]
 public class InvoiceController : Controller
 {
-    private readonly BuildingsService _buildings;
+    private readonly TargetWalletReadService _targetWallet;
     private readonly InvoiceService _invoice;
     private readonly InvoicePdfService _pdf;
     private readonly IAuditLogger _audit;
@@ -25,10 +25,10 @@ public class InvoiceController : Controller
     /// <summary>
     /// Initializes a new instance of the <see cref="InvoiceController"/> class.
     /// </summary>
-    public InvoiceController(BuildingsService buildings, InvoiceService invoice,
+    public InvoiceController(TargetWalletReadService targetWallet, InvoiceService invoice,
         InvoicePdfService pdf, IAuditLogger audit)
     {
-        _buildings = buildings;
+        _targetWallet = targetWallet;
         _invoice = invoice;
         _pdf = pdf;
         _audit = audit;
@@ -52,10 +52,12 @@ public class InvoiceController : Controller
         if (string.IsNullOrEmpty(buildingId) && !string.IsNullOrEmpty(aptId))
         {
             // SuperAdmin: نجيب العمارة من الشقة بدل ما نحمّل كل العمارات
-            var foundBuildingId = await _buildings.FindBuildingIdByApartmentAsync(aptId);
+            var foundBuildingId = await _targetWallet.FindBuildingIdByApartmentAsync(
+                aptId, HttpContext.RequestAborted);
             if (string.IsNullOrEmpty(foundBuildingId)) return NotFound();
 
-            var foundBuilding = await _buildings.GetByIdAsync(foundBuildingId);
+            var foundBuilding = await _targetWallet.GetBuildingShellAsync(
+                foundBuildingId, aptId, HttpContext.RequestAborted);
             var foundApt = foundBuilding?.Apartments.FirstOrDefault(a => a.Id == aptId);
 
             if (foundBuilding == null || foundApt == null) return NotFound();
@@ -66,11 +68,13 @@ public class InvoiceController : Controller
         // الأدمن أو الساكن
         if (string.IsNullOrEmpty(buildingId)) return NotFound();
 
-        var building = await _buildings.GetByIdAsync(buildingId);
-        if (building == null) return NotFound();
-
         var isResident = User.IsInRole("resident");
         var targetAptId = isResident ? User.FindFirstValue("apartmentId") : aptId;
+        if (string.IsNullOrEmpty(targetAptId) && isResident) return Forbid();
+
+        var building = await _targetWallet.GetBuildingShellAsync(
+            buildingId, isResident ? targetAptId : null, HttpContext.RequestAborted);
+        if (building == null) return NotFound();
 
         if (string.IsNullOrEmpty(targetAptId)) return NotFound();
 
