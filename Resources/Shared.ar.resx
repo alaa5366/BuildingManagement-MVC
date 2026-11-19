@@ -4696,12 +4696,8 @@
   <data name="Temporary_PIN_Replace_Notice" xml:space="preserve">
     <value>يجب تغيير الرقم السري المؤقت قبل المتابعة.</value>
   </data>
-  <data name="New_PIN" xml:space="preserve">
-    <value>الرقم السري الجديد</value>
-  </data>
-  <data name="Confirm_New_PIN" xml:space="preserve">
-    <value>تأكيد الرقم السري الجديد</value>
-  </data>
+
+
   <data name="PIN_4_12_Digits" xml:space="preserve">
     <value>استخدم رقمًا سريًا من 4 إلى 12 رقمًا.</value>
   </data>
