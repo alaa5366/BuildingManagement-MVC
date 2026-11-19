@@ -166,7 +166,6 @@ public sealed class TargetWalletReadService
                     : "",
                 Amount = entry.SignedAmount,
                 Note = entry.DepositNote ?? entry.Description ?? "",
-                HasReceipt = receipt?.Success == true,
                 ReceiptUrl = receipt?.Url ?? "",
                 CreatedAt = entry.EffectiveAtUtc.ToString("O")
             };
