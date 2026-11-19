@@ -144,6 +144,75 @@ public sealed class TargetWalletReadServiceTests
         Assert.Empty(snapshot.PendingDeposits);
     }
 
+
+    [Fact]
+    public async Task GetApartmentAsync_KeepsCumulativeBalanceWhenStatementIsMonthFiltered()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        var priorPeriodId = Guid.NewGuid();
+        var currentPeriodId = Guid.NewGuid();
+        var priorTransactionId = Guid.NewGuid();
+        var currentTransactionId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.FinancialPeriods.AddRange(
+                new FinancialPeriodEntity
+                {
+                    PeriodId = priorPeriodId, BuildingId = "B1", PeriodKey = "2026-10",
+                    TimeZoneId = "Africa/Cairo", StartsAtUtc = now.AddMonths(-1).AddDays(-10),
+                    EndsAtUtc = now.AddDays(-10), CreatedAtUtc = now.AddMonths(-1)
+                },
+                new FinancialPeriodEntity
+                {
+                    PeriodId = currentPeriodId, BuildingId = "B1", PeriodKey = "2026-11",
+                    TimeZoneId = "Africa/Cairo", StartsAtUtc = now.AddDays(-10),
+                    EndsAtUtc = now.AddMonths(1), CreatedAtUtc = now
+                });
+            seed.LedgerTransactions.AddRange(
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = priorTransactionId, PeriodId = priorPeriodId,
+                    BuildingId = "B1", Kind = LedgerTransactionKind.Deposit,
+                    Status = LedgerTransactionStatus.Posted, IdempotencyKey = "prior",
+                    CreatedAtUtc = now.AddDays(-20), PostedAtUtc = now.AddDays(-20)
+                },
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = currentTransactionId, PeriodId = currentPeriodId,
+                    BuildingId = "B1", Kind = LedgerTransactionKind.Deposit,
+                    Status = LedgerTransactionStatus.Posted, IdempotencyKey = "current",
+                    CreatedAtUtc = now, PostedAtUtc = now
+                });
+            seed.LedgerEntries.AddRange(
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = priorTransactionId,
+                    PeriodId = priorPeriodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.Deposit, SignedAmount = 100m, CurrencyCode = "EGP",
+                    EffectiveAtUtc = now.AddDays(-20), CreatedAtUtc = now.AddDays(-20)
+                },
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = currentTransactionId,
+                    PeriodId = currentPeriodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.Deposit, SignedAmount = 50m, CurrencyCode = "EGP",
+                    EffectiveAtUtc = now, CreatedAtUtc = now
+                });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetWalletReadService(new TestContextFactory(options));
+        var result = await service.GetApartmentAsync("B1", "A1", "2026-11", "2026-11");
+
+        Assert.Equal(150m, result.Balance);
+        var statementEntry = Assert.Single(result.Transactions);
+        Assert.Equal(50m, statementEntry.Amount);
+    }
+
     [Fact]
     public async Task GetApartmentAsync_RejectsInvalidMonthAndCurrency()
     {
