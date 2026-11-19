@@ -566,6 +566,81 @@ public class BackupServiceTests
     }
 
     [Fact]
+    public async Task Localization_BackupAndRestore_RestoresLanguagesEntriesAndValues()
+    {
+        const string culture = "ar-EG";
+        const string translationKey = "Backup.Restore.RoundTrip";
+        _db.Languages.Add(new LanguageEntity
+        {
+            CultureCode = culture,
+            EnglishName = "Arabic (Egypt)",
+            NativeName = "العربية (مصر)",
+            Direction = "RTL",
+            IsEnabled = true,
+            IsDefault = false,
+            SortOrder = 7,
+            UpdatedAtUtc = DateTime.UtcNow,
+            UpdatedBy = "localization-test"
+        });
+        _db.TranslationEntries.Add(new TranslationEntryEntity
+        {
+            Key = translationKey,
+            Category = "Tests",
+            SourceGroup = "BackupRestore",
+            Description = "Localization backup round-trip",
+            IsArchived = false,
+            UpdatedAtUtc = DateTime.UtcNow,
+            UpdatedBy = "localization-test"
+        });
+        _db.TranslationValues.Add(new TranslationValueEntity
+        {
+            Key = translationKey,
+            CultureCode = culture,
+            Value = "القيمة الأصلية",
+            UpdatedAtUtc = DateTime.UtcNow,
+            UpdatedBy = "localization-test"
+        });
+        await _db.SaveChangesAsync();
+
+        var selected = new List<string> { "languages", "translationEntries", "translationValues" };
+        var (bytes, backup) = await _service.CreateBackupAsync(selected, "localization-test");
+        Assert.True(backup.Success, string.Join("; ", backup.Errors));
+        Assert.Equal(3, backup.TotalCollections);
+        Assert.Equal(3, backup.TotalDocuments);
+
+        var language = await _db.Languages.SingleAsync(x => x.CultureCode == culture);
+        language.NativeName = "Changed language";
+        var entry = await _db.TranslationEntries.SingleAsync(x => x.Key == translationKey);
+        entry.Description = "Changed description";
+        var value = await _db.TranslationValues.SingleAsync(x => x.Key == translationKey && x.CultureCode == culture);
+        value.Value = "قيمة معدّلة";
+        await _db.SaveChangesAsync();
+
+        using var upload = new MemoryStream(bytes);
+        var preview = await _service.PreviewRestoreAsync(upload, "localization.zip", "localization-test");
+        Assert.True(preview.Success, string.Join("; ", preview.Errors));
+        Assert.NotNull(preview.RestoreSessionId);
+
+        var restored = await _service.RestoreSessionAsync(
+            preview.RestoreSessionId!, selected, overwrite: true, "localization-test");
+        Assert.True(restored.Success, string.Join("; ", restored.Errors));
+
+        _db.ChangeTracker.Clear();
+        var restoredLanguage = await _db.Languages.SingleAsync(x => x.CultureCode == culture);
+        Assert.Equal("العربية (مصر)", restoredLanguage.NativeName);
+        Assert.Equal("RTL", restoredLanguage.Direction);
+
+        var restoredEntry = await _db.TranslationEntries.SingleAsync(x => x.Key == translationKey);
+        Assert.Equal("Localization backup round-trip", restoredEntry.Description);
+        Assert.NotEmpty(restoredEntry.RowVersion);
+
+        var restoredValue = await _db.TranslationValues.SingleAsync(
+            x => x.Key == translationKey && x.CultureCode == culture);
+        Assert.Equal("القيمة الأصلية", restoredValue.Value);
+        Assert.False(File.Exists(preview.TempFilePath));
+    }
+
+    [Fact]
     public void GetKnownCollections_DoesNotExposeRetiredLegacyCollections()
     {
         var collections = BackupService.GetKnownCollections();
