@@ -25,6 +25,29 @@ public sealed class AccountManagementService
                               IsArchived = person.IsArchived, LastLoginAtUtc = account.LastLoginAtUtc
                           }).ToListAsync(ct);
 
+        // SuperAdmin authentication is still backed by the legacy Users store and remains email/password-only.
+        // Keep those identities visible as a separate source; never attach them to phone/PIN login.
+        var legacySuperAdmins = await db.Users.AsNoTracking()
+            .Where(user => user.Role == "superadmin")
+            .Select(user => new
+            {
+                user.Uid, user.Name, user.Email, user.IsActive, user.IsDisabled, user.LastLoginAt
+            }).ToListAsync(ct);
+        rows.AddRange(legacySuperAdmins.Select(user => new AccountManagementRow
+        {
+            LegacyUserId = user.Uid,
+            IsLegacyAccount = true,
+            Name = user.Name,
+            Email = user.Email,
+            Phone = null,
+            AccountStatus = user.IsDisabled ? (byte)2 : user.IsActive ? (byte)1 : (byte)0,
+            StatusLabel = user.IsDisabled ? "موقوف / مقفل" : user.IsActive ? "نشط" : "غير نشط",
+            Roles = "superadmin",
+            RoleContexts = "مخزن الدخول القديم — البريد وكلمة المرور فقط",
+            ActiveRoleCount = 1,
+            LastLoginAtUtc = user.LastLoginAt
+        }));
+
         var grants = await (from grant in db.UserRoleAssignments.AsNoTracking()
                             join definition in db.RoleDefinitions.AsNoTracking() on grant.RoleKey equals definition.RoleKey
                             where grant.ValidFromUtc <= now && (grant.ValidToUtc == null || grant.ValidToUtc > now)
@@ -69,7 +92,8 @@ public sealed class AccountManagementService
                 || (x.Phone?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false)
                 || (x.Email?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false)
                 || x.AccountId.ToString().Contains(term, StringComparison.OrdinalIgnoreCase)
-                || x.PersonId.ToString().Contains(term, StringComparison.OrdinalIgnoreCase));
+                || (!x.IsLegacyAccount && x.PersonId.ToString().Contains(term, StringComparison.OrdinalIgnoreCase))
+                || (x.LegacyUserId?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false));
         }
         if (!string.IsNullOrWhiteSpace(role))
             query = query.Where(x => x.Roles.Split(", ", StringSplitOptions.RemoveEmptyEntries).Contains(role, StringComparer.OrdinalIgnoreCase));
@@ -88,6 +112,7 @@ public sealed class AccountManagementService
             ActiveAccounts = rows.Count(x => x.AccountStatus == 1),
             InactiveAccounts = rows.Count(x => x.AccountStatus != 1),
             DuplicatePhoneAccounts = rows.Count(x => x.IsDuplicatePhone),
+            LegacySuperAdminAccounts = rows.Count(x => x.IsLegacyAccount),
             AccountsWithoutActiveRole = rows.Count(x => x.ActiveRoleCount == 0),
             Rows = result.Skip((page - 1) * pageSize).Take(pageSize).ToList()
         };
@@ -107,6 +132,7 @@ public sealed class AccountManagementPage
     public int ActiveAccounts { get; init; }
     public int InactiveAccounts { get; init; }
     public int DuplicatePhoneAccounts { get; init; }
+    public int LegacySuperAdminAccounts { get; init; }
     public int AccountsWithoutActiveRole { get; init; }
     public List<AccountManagementRow> Rows { get; init; } = new();
 }
@@ -115,6 +141,8 @@ public sealed class AccountManagementRow
 {
     public Guid AccountId { get; set; }
     public Guid PersonId { get; set; }
+    public string? LegacyUserId { get; set; }
+    public bool IsLegacyAccount { get; set; }
     public string Name { get; set; } = "";
     public string? Phone { get; set; }
     public string? Email { get; set; }
