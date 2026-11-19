@@ -125,14 +125,20 @@ public sealed class AccountManagementService
         await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
         var account = await db.UserAccounts.SingleOrDefaultAsync(x => x.AccountId == accountId, ct);
         if (account is null) return AccountManagementMutationResult.Fail("الحساب غير موجود.");
-        if (await db.Persons.AnyAsync(x => x.PersonId == account.PersonId && x.IsArchived, ct))
+        var personArchived = await db.Persons.AnyAsync(x => x.PersonId == account.PersonId && x.IsArchived, ct);
+        if (activate && personArchived)
             return AccountManagementMutationResult.Fail("لا يمكن تفعيل حساب شخص مؤرشف.");
         var now = DateTime.UtcNow;
         var hasResidentRole = await db.UserRoleAssignments.AnyAsync(x => x.AccountId == accountId
             && x.RoleKey == "resident" && x.ValidFromUtc <= now
             && (x.ValidToUtc == null || x.ValidToUtc > now) && x.RevokedAtUtc == null, ct);
-        if (!hasResidentRole)
-            return AccountManagementMutationResult.Fail("إدارة حالة الحساب من هذه الشاشة متاحة حاليًا لحسابات السكان المرتبطة بدور resident فقط. حسابات الإدمن تُدار من مسارها الحالي لحين اكتمال تحويل تسجيل دخول الإدمن.");
+        var hasAdminRole = await db.UserRoleAssignments.AnyAsync(x => x.AccountId == accountId
+            && x.RoleKey == "admin" && x.ValidFromUtc <= now
+            && (x.ValidToUtc == null || x.ValidToUtc > now) && x.RevokedAtUtc == null, ct);
+        var hasSuperAdminRole = await db.UserRoleAssignments.AnyAsync(x => x.AccountId == accountId
+            && x.RoleKey == "superadmin" && x.RevokedAtUtc == null, ct);
+        if (!hasResidentRole || hasAdminRole || hasSuperAdminRole)
+            return AccountManagementMutationResult.Fail("إدارة الحالة من هذه الشاشة متاحة فقط لحساب resident مستقل. حسابات الإدمن وSuperAdmin تُدار من مساراتها المختصة.");
         if (account.AccountStatus is not (0 or 1))
             return AccountManagementMutationResult.Fail("الحساب موقوف/معلق بحالة خاصة؛ لا تغيّر حالته من هذه الشاشة.");
         var next = activate ? (byte)1 : (byte)0;
@@ -155,11 +161,19 @@ public sealed class AccountManagementService
         if (await db.Persons.AnyAsync(x => x.PersonId == account.PersonId && x.IsArchived, ct))
             return AccountManagementMutationResult.Fail("لا يمكن إعادة تعيين PIN لشخص مؤرشف.");
         var now = DateTime.UtcNow;
+        var personArchived = await db.Persons.AnyAsync(x => x.PersonId == account.PersonId && x.IsArchived, ct);
+        if (personArchived)
+            return AccountManagementMutationResult.Fail("لا يمكن إعادة تعيين PIN لشخص مؤرشف.");
         var hasResidentRole = await db.UserRoleAssignments.AnyAsync(x => x.AccountId == accountId
             && x.RoleKey == "resident" && x.ValidFromUtc <= now
             && (x.ValidToUtc == null || x.ValidToUtc > now) && x.RevokedAtUtc == null, ct);
-        if (!hasResidentRole)
-            return AccountManagementMutationResult.Fail("إعادة تعيين PIN من هذه الشاشة متاحة حاليًا لحسابات السكان فقط.");
+        var hasAdminRole = await db.UserRoleAssignments.AnyAsync(x => x.AccountId == accountId
+            && x.RoleKey == "admin" && x.ValidFromUtc <= now
+            && (x.ValidToUtc == null || x.ValidToUtc > now) && x.RevokedAtUtc == null, ct);
+        var hasSuperAdminRole = await db.UserRoleAssignments.AnyAsync(x => x.AccountId == accountId
+            && x.RoleKey == "superadmin" && x.RevokedAtUtc == null, ct);
+        if (!hasResidentRole || hasAdminRole || hasSuperAdminRole)
+            return AccountManagementMutationResult.Fail("إعادة تعيين PIN من هذه الشاشة متاحة فقط لحساب resident مستقل.");
         if (account.AccountStatus != 1)
             return AccountManagementMutationResult.Fail("فعّل الحساب أولًا قبل إعادة تعيين PIN.");
         var pin = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString(System.Globalization.CultureInfo.InvariantCulture);
