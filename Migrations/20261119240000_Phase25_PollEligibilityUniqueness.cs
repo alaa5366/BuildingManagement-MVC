@@ -36,6 +36,17 @@ BEGIN
     CREATE UNIQUE INDEX UX_PollEligibility_Subject
         ON dbo.PollEligibility(BuildingId, PollId, SubjectReference);
 END;
+
+IF OBJECT_ID(N'dbo.PollBallots', N'U') IS NULL
+    THROW 52402, 'PollBallots table is missing; apply Phase09 first.', 1;
+IF NOT EXISTS
+(
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.PollBallots')
+      AND name = N'IX_PollBallots_Building_Poll_CastAt'
+)
+    CREATE INDEX IX_PollBallots_Building_Poll_CastAt
+        ON dbo.PollBallots(BuildingId, PollId, CastAtUtc);
 """);
     }
 
