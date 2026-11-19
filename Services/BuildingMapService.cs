@@ -229,8 +229,7 @@ public class BuildingMapService
         vm.Balance = walletSnapshot.Balance;
 
         var monthDeposits = walletSnapshot.Transactions
-            .Where(item => item.Type == "deposit" &&
-                item.CreatedAt.StartsWith(currentMonth, StringComparison.Ordinal))
+            .Where(item => item.Type == "deposit")
             .ToList();
         var pendingDeposits = walletSnapshot.PendingDeposits;
         vm.PendingDepositsCount = pendingDeposits.Count;
