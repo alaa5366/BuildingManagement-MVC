@@ -75,7 +75,8 @@ public sealed class IdentityAccountAuthenticationService
             }
         }
 
-        if (matches.Count == 0 && string.Equals(credential, "1234", StringComparison.Ordinal))
+        if (matches.Count == 0 && !string.IsNullOrEmpty(phone) &&
+            string.Equals(credential, "1234", StringComparison.Ordinal))
         {
             // First-time resident activation is deliberately limited to one unique,
             // active Person.PrimaryPhone with at least one current occupancy.
