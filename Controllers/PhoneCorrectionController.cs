@@ -60,7 +60,7 @@ public sealed class PhoneCorrectionController : Controller
         if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var reviewerId))
             return Forbid();
         var superAdmin = User.IsInRole("superadmin");
-        var buildingId = Request.Form["buildingId"].FirstOrDefault();
+        var buildingId = HttpContext.Request.Form["buildingId"].FirstOrDefault();
         var success = await _service.ReviewAsync(requestId, reviewerId, approve, reason ?? "", superAdmin, buildingId);
         TempData[success ? "Message" : "Error"] = success
             ? "تم تسجيل قرار مراجعة طلب تغيير الهاتف."
