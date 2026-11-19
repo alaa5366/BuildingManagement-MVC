@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace BuildingManagementMvc.Controllers;
 
+/// <summary>ExpensesController coordinates the corresponding application controller actions.</summary>
 [Authorize(Roles = "admin")]
 [AdminPermission(AdminPermissions.ManageExpenses)]
 public class ExpensesController : Controller
