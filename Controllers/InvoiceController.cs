@@ -17,7 +17,6 @@ namespace BuildingManagementMvc.Controllers;
 [Authorize(Roles = "superadmin,admin,resident")]
 public class InvoiceController : Controller
 {
-    private readonly TargetWalletReadService _targetWallet;
     private readonly InvoiceService _invoice;
     private readonly InvoicePdfService _pdf;
     private readonly IAuditLogger _audit;
@@ -25,10 +24,8 @@ public class InvoiceController : Controller
     /// <summary>
     /// Initializes a new instance of the <see cref="InvoiceController"/> class.
     /// </summary>
-    public InvoiceController(TargetWalletReadService targetWallet, InvoiceService invoice,
-        InvoicePdfService pdf, IAuditLogger audit)
+    public InvoiceController(InvoiceService invoice, InvoicePdfService pdf, IAuditLogger audit)
     {
-        _targetWallet = targetWallet;
         _invoice = invoice;
         _pdf = pdf;
         _audit = audit;
