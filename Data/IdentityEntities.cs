@@ -87,6 +87,7 @@ public sealed class UserAccountEntity
     public Guid AccountId { get; set; }
     public Guid PersonId { get; set; }
     public byte AccountStatus { get; set; }
+    public bool MustChangePin { get; set; }
     public string? NormalizedEmail { get; set; }
     public string? ExternalProvider { get; set; }
     public string? ExternalSubject { get; set; }
