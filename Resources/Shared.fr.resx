@@ -5170,4 +5170,5 @@ Cette opération peut prendre quelques secondes.</value>
   <data name="Backup_Collection_cameras" xml:space="preserve"><value>Caméras</value></data>
   <data name="Backup_Collection_qrTokens" xml:space="preserve"><value>Jetons QR</value></data>
   <data name="Backup_Collection_qrUsages" xml:space="preserve"><value>Utilisation des jetons QR</value></data>
+  <data name="Backup_Collection_savedWhatsAppTemplates" xml:space="preserve"><value>Modèles WhatsApp enregistrés</value></data>
 </root>
