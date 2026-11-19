@@ -826,6 +826,10 @@ public class AccountController : Controller
             claims.Add(new Claim("targetIdentityAccount", "true"));
             claims.Add(new Claim("securityStamp", res.SecurityStamp ?? ""));
         }
+        else if (res.Role == "superadmin")
+        {
+            claims.Add(new Claim("legacySuperAdminSecurityStamp", res.SecurityStamp ?? ""));
+        }
 
         foreach (var bId in res.BuildingIds)
             claims.Add(new Claim("buildingId", bId));
