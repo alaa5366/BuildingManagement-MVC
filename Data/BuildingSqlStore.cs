@@ -180,7 +180,7 @@ public class BuildingSqlStore
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
 
-        var entity = await db.BuildingSettings.FirstOrDefaultAsync(x => x.BuildingId == buildingId);
+        var entity = await db.BuildingSettings.FirstOrDefaultAsync(x => x.BuildingId == buildingId, ct);
         if (entity == null)
         {
             entity = new BuildingSettingsEntity { BuildingId = buildingId };
