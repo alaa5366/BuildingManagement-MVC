@@ -24,7 +24,7 @@ DECLARE @Tables TABLE(
     SchemaName sysname NOT NULL,
     TableName sysname NOT NULL,
     ObjectId int NOT NULL,
-    RowCount bigint NOT NULL,
+    TotalRowCount bigint NOT NULL,
     PrimaryKeyColumns nvarchar(max) NULL,
     ForeignKeyCount int NOT NULL,
     ColumnCount int NOT NULL
@@ -43,7 +43,7 @@ BEGIN
     SET @Count=0;
     SET @Sql=N'SELECT @N=COUNT_BIG(*) FROM '+QUOTENAME(@Schema)+N'.'+QUOTENAME(@Table)+N';';
     EXEC sys.sp_executesql @Sql,N'@N bigint OUTPUT',@N=@Count OUTPUT;
-    INSERT @Tables(SchemaName,TableName,ObjectId,RowCount,PrimaryKeyColumns,ForeignKeyCount,ColumnCount)
+    INSERT @Tables(SchemaName,TableName,ObjectId,TotalRowCount,PrimaryKeyColumns,ForeignKeyCount,ColumnCount)
     SELECT @Schema,@Table,@ObjectId,@Count,
       (SELECT STRING_AGG(QUOTENAME(c.name),N', ') WITHIN GROUP(ORDER BY ic.key_ordinal)
        FROM sys.indexes i
@@ -55,10 +55,10 @@ BEGIN
     FETCH NEXT FROM cur INTO @Schema,@Table,@ObjectId;
 END
 CLOSE cur; DEALLOCATE cur;
-SELECT SchemaName,TableName,RowCount,PrimaryKeyColumns,ForeignKeyCount,ColumnCount
+SELECT SchemaName,TableName,TotalRowCount,PrimaryKeyColumns,ForeignKeyCount,ColumnCount
 FROM @Tables ORDER BY SchemaName,TableName;
-SELECT COUNT(*) TableCount, SUM(RowCount) TotalRows,
-       SUM(CASE WHEN RowCount>0 THEN 1 ELSE 0 END) NonEmptyTables
+SELECT COUNT(*) TableCount, SUM(TotalRowCount) TotalRows,
+       SUM(CASE WHEN TotalRowCount>0 THEN 1 ELSE 0 END) NonEmptyTables
 FROM @Tables;
 SELECT s.name SchemaName,t.name TableName,c.name ColumnName,ty.name DataType,
        c.max_length MaxLength,c.precision,c.scale,c.is_nullable,c.is_identity
@@ -94,7 +94,7 @@ ORDER BY ps.name,pt.name,fk.name,fkc.constraint_column_id;
     Log 'TABLE INVENTORY (row counts, primary keys, relationships, and column metadata):'
     foreach ($r in $ds.Tables[0].Rows) {
         $pk = if ([string]::IsNullOrWhiteSpace([string]$r.PrimaryKeyColumns)) { '(NO PRIMARY KEY)' } else { [string]$r.PrimaryKeyColumns }
-        Log ("{0}.{1}: rows={2}; PK={3}; FK references={4}; columns={5}" -f $r.SchemaName,$r.TableName,$r.RowCount,$pk,$r.ForeignKeyCount,$r.ColumnCount)
+        Log ("{0}.{1}: rows={2}; PK={3}; FK references={4}; columns={5}" -f $r.SchemaName,$r.TableName,$r.TotalRowCount,$pk,$r.ForeignKeyCount,$r.ColumnCount)
     }
     Log "Column metadata rows: $($ds.Tables[2].Rows.Count)"
     Log "Foreign-key relationship rows: $($ds.Tables[3].Rows.Count)"
@@ -104,7 +104,7 @@ ORDER BY ps.name,pt.name,fk.name,fkc.constraint_column_id;
     $lines += '|---|---|---:|---|---:|---:|'
     foreach ($r in $ds.Tables[0].Rows) {
         $pk = if ([string]::IsNullOrWhiteSpace([string]$r.PrimaryKeyColumns)) { 'NO PRIMARY KEY' } else { ([string]$r.PrimaryKeyColumns).Replace('|','\|') }
-        $lines += "| $($r.SchemaName) | $($r.TableName) | $($r.RowCount) | $pk | $($r.ForeignKeyCount) | $($r.ColumnCount) |"
+        $lines += "| $($r.SchemaName) | $($r.TableName) | $($r.TotalRowCount) | $pk | $($r.ForeignKeyCount) | $($r.ColumnCount) |"
     }
     $lines += @('','## Column inventory','')
     $lines += '| Schema | Table | Column | SQL type | Max length | Precision | Scale | Nullable | Identity |'
