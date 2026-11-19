@@ -61,7 +61,8 @@ public class BackupService
         ["dvrs"] = Loc.T("Backup_Collection_dvrs"),
         ["cameras"] = Loc.T("Backup_Collection_cameras"),
         ["qrTokens"] = Loc.T("Backup_Collection_qrTokens"),
-        ["qrUsages"] = Loc.T("Backup_Collection_qrUsages")
+        ["qrUsages"] = Loc.T("Backup_Collection_qrUsages"),
+        ["savedWhatsAppTemplates"] = Loc.T("Backup_Collection_savedWhatsAppTemplates")
     };
 
     /// <summary>
@@ -142,6 +143,7 @@ public class BackupService
                     "cameras" => await db.Cameras.CountAsync(),
                     "qrTokens" => await db.QrTokens.CountAsync(),
                     "qrUsages" => await db.QrUsages.CountAsync(),
+                    "savedWhatsAppTemplates" => await db.SavedWhatsAppTemplates.CountAsync(),
                     _ => 0
                 };
             }
@@ -374,6 +376,10 @@ By: {userId}
                 foreach (var q in await db.QrUsages.AsNoTracking().ToListAsync())
                     result.Add(ToDict(q.Id, q));
                 break;
+            case "savedWhatsAppTemplates":
+                foreach (var template in await db.SavedWhatsAppTemplates.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(template.Id.ToString("D"), template));
+                break;
         }
 
         return result;
@@ -501,7 +507,8 @@ By: {userId}
             "dvrs",
             "cameras",
             "qrTokens",
-            "qrUsages"
+            "qrUsages",
+            "savedWhatsAppTemplates"
         };
 
         // نحتفظ فقط بالجداول اللي المستخدم اختارها
@@ -1004,6 +1011,22 @@ By: {userId}
                     }
                     var entity = JsonSerializer.Deserialize<Data.Entities.QrUsageEntity>(data.GetRawText(), RestoreJsonOptions);
                     if (entity != null) { entity.Id = id; ApplyOrAdd(db, db.QrUsages, existing, entity); }
+                    return true;
+                }
+
+            case "savedWhatsAppTemplates":
+                {
+                    if (!Guid.TryParse(id, out var templateId)) return false;
+                    var existing = await db.SavedWhatsAppTemplates
+                        .FirstOrDefaultAsync(x => x.Id == templateId);
+                    if (existing != null && !overwrite) return false;
+
+                    var entity = JsonSerializer.Deserialize<Data.Entities.SavedWhatsAppTemplateEntity>(
+                        data.GetRawText(), RestoreJsonOptions);
+                    if (entity == null) return false;
+
+                    entity.Id = templateId;
+                    ApplyOrAdd(db, db.SavedWhatsAppTemplates, existing, entity);
                     return true;
                 }
 
