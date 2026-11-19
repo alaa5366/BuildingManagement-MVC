@@ -101,6 +101,9 @@ public sealed class TargetWalletReadService
             from entry in db.LedgerEntries.AsNoTracking()
             join transaction in db.LedgerTransactions.AsNoTracking()
                 on entry.LedgerTransactionId equals transaction.LedgerTransactionId
+            join depositRow in db.PaymentDeposits.AsNoTracking()
+                on transaction.LedgerTransactionId equals depositRow.PostedTransactionId into depositRows
+            from deposit in depositRows.DefaultIfEmpty()
             where entry.BuildingId == buildingId && entry.ApartmentId == apartmentId
                 && periodIds.Contains(entry.PeriodId)
                 && transaction.BuildingId == buildingId
@@ -114,7 +117,9 @@ public sealed class TargetWalletReadService
                 entry.SignedAmount,
                 entry.CurrencyCode,
                 entry.Description,
-                entry.EffectiveAtUtc
+                entry.EffectiveAtUtc,
+                DepositNote = deposit == null ? null : deposit.Note,
+                ReceiptMetadataJson = deposit == null ? null : deposit.ReceiptMetadataJson
             }).ToListAsync(cancellationToken);
 
         var pendingRows = await db.PaymentDeposits.AsNoTracking()
@@ -146,14 +151,20 @@ public sealed class TargetWalletReadService
             CreatedBy = ""
         }).ToList();
 
-        var transactions = posted.Select(entry => new WalletTransactionVm
+        var transactions = posted.Select(entry =>
         {
-            Type = ToLegacyType(entry.EntryKind),
-            Status = "confirmed",
-            Id = entry.LedgerEntryId.ToString("D"),
-            Amount = entry.SignedAmount,
-            Note = entry.Description ?? "",
-            CreatedAt = entry.EffectiveAtUtc.ToString("O")
+            var receipt = DeserializeReceipt(entry.ReceiptMetadataJson);
+            return new WalletTransactionVm
+            {
+                Type = ToLegacyType(entry.EntryKind),
+                Status = "confirmed",
+                Id = entry.LedgerEntryId.ToString("D"),
+                Amount = entry.SignedAmount,
+                Note = entry.DepositNote ?? entry.Description ?? "",
+                HasReceipt = receipt?.Success == true,
+                ReceiptUrl = receipt?.Url ?? "",
+                CreatedAt = entry.EffectiveAtUtc.ToString("O")
+            };
         }).ToList();
 
         // Cancelled submissions do not create ledger entries, but remain part of
