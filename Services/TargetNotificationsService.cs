@@ -191,18 +191,28 @@ public sealed class TargetNotificationsService
         else
             query = query.Where(item => item.RecipientApartmentId == apartmentId);
 
-        var items = await query.ToListAsync(cancellationToken);
-        if (items.Count == 0) return 0;
-
-        var now = DateTime.UtcNow;
-        foreach (var item in items)
+        if (!db.Database.IsRelational())
         {
-            item.IsRead = true;
-            item.ReadAt = now;
+            var items = await query.ToListAsync(cancellationToken);
+            if (items.Count == 0) return 0;
+
+            var now = DateTime.UtcNow;
+            foreach (var item in items)
+            {
+                item.IsRead = true;
+                item.ReadAt = now;
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
+            return items.Count;
         }
 
-        await db.SaveChangesAsync(cancellationToken);
-        return items.Count;
+        var updatedAt = DateTime.UtcNow;
+        return await query.ExecuteUpdateAsync(
+            setters => setters
+                .SetProperty(item => item.IsRead, true)
+                .SetProperty(item => item.ReadAt, updatedAt),
+            cancellationToken);
     }
 
     private static Notification ToModel(NotificationEntity item) => new()
