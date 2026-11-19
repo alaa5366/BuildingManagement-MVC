@@ -164,7 +164,7 @@ builder.Services.AddScoped<TargetAccountIdentityResolver>();
     builder.Services.AddSingleton<ExpensesService>();
     builder.Services.AddSingleton<RevenuesService>();
     builder.Services.AddSingleton<AuditLogService>();
-    builder.Services.AddSingleton<ReportsService>();
+    builder.Services.AddScoped<ReportsService>();
     builder.Services.AddSingleton<InvoiceService>();
     builder.Services.AddSingleton<InvoicePdfService>();
     builder.Services.AddSingleton<OcrService>();
