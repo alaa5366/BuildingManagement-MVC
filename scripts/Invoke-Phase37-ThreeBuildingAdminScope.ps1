@@ -277,10 +277,18 @@ COMMIT;
         }
         catch {
             try { $transaction.Rollback() } catch {}
-            if ($_.Exception -is [System.Data.SqlClient.SqlException]) {
-                foreach ($sqlError in $_.Exception.Errors) {
-                    Log ("SQL ERROR Number={0}; State={1}; Line={2}; Procedure={3}; Message={4}" -f $sqlError.Number,$sqlError.State,$sqlError.LineNumber,$sqlError.Procedure,$sqlError.Message)
+            $caught = $_.Exception
+            $depth = 0
+            while ($null -ne $caught -and $depth -lt 8) {
+                Log ("EXCEPTION LAYER {0}: {1}: {2}" -f $depth,$caught.GetType().FullName,$caught.Message)
+                if ($caught -is [System.Data.SqlClient.SqlException]) {
+                    foreach ($sqlError in $caught.Errors) {
+                        Log ("SQL ERROR Number={0}; State={1}; Class={2}; Line={3}; Procedure={4}; Server={5}; Message={6}" -f $sqlError.Number,$sqlError.State,$sqlError.Class,$sqlError.LineNumber,$sqlError.Procedure,$sqlError.Server,$sqlError.Message)
+                    }
+                    break
                 }
+                $caught = $caught.InnerException
+                $depth++
             }
             throw
         }
