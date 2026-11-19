@@ -92,7 +92,7 @@ public class PresenceService
             return await db.PresenceSessions
                 .Where(x => x.BuildingId == buildingId && x.Status == 0 &&
                     x.EndedAtUtc == null && x.LastSeenAtUtc >= cutoff)
-                .Select(x => x.ApartmentId)
+                .Select(x => x.ApartmentId ?? x.LegacyUid)
                 .Distinct()
                 .CountAsync();
         }
@@ -175,7 +175,7 @@ public class PresenceService
                 .Where(x => x.Status == 0 && x.LastSeenAtUtc < cutoff)
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(x => x.Status, (byte)1)
-                    .SetProperty(x => x.EndedAtUtc, cutoff));
+                    .SetProperty(x => x.EndedAtUtc, x => x.LastSeenAtUtc));
         }
         catch (Exception ex)
         {
