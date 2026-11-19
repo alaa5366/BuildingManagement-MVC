@@ -5,12 +5,10 @@
     @if (TempData["Error"] is string accountError) { <div class="alert alert-danger" role="alert">@accountError</div> }
     @if (TempData["TemporaryResidentPin"] is string temporaryPin) { <div class="alert alert-warning" role="alert"><strong>PIN مؤقت — يظهر مرة واحدة فقط:</strong> <code class="fs-4">@temporaryPin</code><br />انقله للمستخدم بأمان واطلب منه تغييره عند أول دخول.</div> }
     @if (TempData["TemporaryManagedAccountPin"] is string temporaryManagedPin) { <div class="alert alert-warning" role="alert"><strong>PIN مؤقت — يظهر مرة واحدة فقط:</strong> <code class="fs-4">@temporaryManagedPin</code><br />انقله للمستخدم بأمان واطلب منه تغييره عند أول دخول.</div> }
-    @if (TempData["TemporarySuperAdminPassword"] is string temporaryPassword) { <div class="alert alert-warning" role="alert"><strong>كلمة مرور SuperAdmin الجديدة — تظهر مرة واحدة فقط:</strong> <code class="fs-5">@temporaryPassword</code><br />سلّمها لصاحب الحساب عبر قناة آمنة، واطلب منه تغييرها فورًا.</div> }
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div><h2 class="mb-1">مركز إدارة الحسابات</h2><div class="text-muted">مراجعة حسابات الهوية الموحدة ونطاقات صلاحياتها</div></div>
         <div class="d-flex flex-wrap gap-2">
             <a asp-controller="ResidentAccountProvisioning" asp-action="Index" class="btn btn-outline-primary">تجهيز حسابات السكان</a>
-            <a asp-controller="Admins" asp-action="Index" class="btn btn-outline-secondary">إدارة الإدمن القديم</a>
             <a asp-controller="AdminResidents" asp-action="Index" class="btn btn-outline-secondary">إدارة السكان القديمة</a>
         </div>
     </div>
@@ -19,7 +17,6 @@
         <div class="col-sm-6 col-xl-3"><div class="card card-body h-100"><span>نشطة</span><strong class="fs-3 text-success">@Model.ActiveAccounts</strong></div></div>
         <div class="col-sm-6 col-xl-3"><div class="card card-body h-100"><span>غير نشطة / حالات أخرى</span><strong class="fs-3">@Model.InactiveAccounts</strong></div></div>
         <div class="col-sm-6 col-xl-3"><div class="card card-body h-100"><span>حسابات بأرقام مكررة</span><strong class="fs-3 text-warning">@Model.DuplicatePhoneAccounts</strong></div></div>
-        <div class="col-sm-6 col-xl-3"><div class="card card-body h-100"><span>SuperAdmin (مخزن منفصل)</span><strong class="fs-3">@Model.LegacySuperAdminAccounts</strong></div></div>
     </div>
     @if (Model.AccountsWithoutActiveRole > 0)
     {
@@ -30,7 +27,7 @@
             <div class="col-md-5"><label class="form-label" for="account-search">بحث بالاسم أو الموبايل أو الإيميل أو Account ID أو Person ID</label><input id="account-search" class="form-control" name="search" value="@Model.Search" /></div>
             <div class="col-md-3"><label class="form-label" for="account-role">الدور</label><select id="account-role" class="form-select" name="role">
                 <option value="">كل الأدوار</option>
-                @foreach (var item in new[] { "resident", "admin", "superadmin" }) { <option value="@item" selected="@(Model.Role == item)">@item</option> }
+                @foreach (var item in new[] { "resident", "admin", "building-admin", "superadmin" }) { <option value="@item" selected="@(Model.Role == item)">@item</option> }
             </select></div>
             <div class="col-md-2"><label class="form-label" for="account-status">الحالة</label><select id="account-status" class="form-select" name="status">
                 <option value="">كل الحالات</option><option value="active" selected="@(Model.Status == "active")">نشط</option><option value="inactive" selected="@(Model.Status == "inactive")">غير نشط / أخرى</option>
@@ -65,31 +62,26 @@
                 <td>@(account.LastLoginAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "لم يسجل")</td>
                 <td>
                     @if (account.IsArchived) { <span class="badge bg-secondary">شخص مؤرشف</span> }
-                    @if (account.IsLegacyAccount && !account.IsSuperAdminEmailAllowed) { <span class="badge bg-warning text-dark">البريد غير مدرج بقائمة السماح</span> }
                     @if (account.IsDuplicatePhone) { <span class="badge bg-warning text-dark">موبايل مكرر</span> }
                     @if (account.ActiveRoleCount == 0) { <span class="badge bg-danger">بدون دور نشط</span> }
                 </td>
                 <td>
-                    @if (account.IsLegacyAccount && account.IsSuperAdminEmailAllowed)
+                    @if (!account.IsArchived && account.Roles is "resident" or "admin" or "building-admin")
                     {
-                        var currentActorId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-                        if (!string.Equals(account.LegacyUserId, currentActorId, StringComparison.Ordinal))
-                        {
-                            <div class="d-flex flex-wrap gap-1">
-                                @if (account.AccountStatus == 1)
-                                {
-                                    <form asp-action="SetLegacySuperAdminStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="legacyUserId" value="@account.LegacyUserId" /><input type="hidden" name="activate" value="false" /><button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm(&quot;إيقاف حساب SuperAdmin؟&quot;)">إيقاف</button></form>
-                                    <form asp-action="ResetLegacySuperAdminPassword" method="post">@Html.AntiForgeryToken()<input type="hidden" name="legacyUserId" value="@account.LegacyUserId" /><button type="submit" class="btn btn-sm btn-outline-primary" onclick="return confirm(&quot;إصدار كلمة مرور مؤقتة جديدة؟&quot;)">إعادة تعيين كلمة المرور</button></form>
-                                }
-                                else
-                                {
-                                    <form asp-action="SetLegacySuperAdminStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="legacyUserId" value="@account.LegacyUserId" /><input type="hidden" name="activate" value="true" /><button type="submit" class="btn btn-sm btn-outline-success">تفعيل</button></form>
-                                }
-                            </div>
-                        }
-                        else { <span class="text-muted small">لا يمكن إدارة حسابك الحالي من هنا</span> }
+                        <div class="d-flex flex-wrap gap-1">
+                            @if (account.AccountStatus == 1)
+                            {
+                                <form asp-action="SetManagedAccountStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="accountId" value="@account.AccountId" /><input type="hidden" name="activate" value="false" /><button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm(&quot;إيقاف حساب المستخدم؟&quot;)">إيقاف</button></form>
+                                <form asp-action="ResetManagedAccountPin" method="post">@Html.AntiForgeryToken()<input type="hidden" name="accountId" value="@account.AccountId" /><button type="submit" class="btn btn-sm btn-outline-primary" onclick="return confirm(&quot;إصدار PIN مؤقت جديد وإلغاء الحالي؟&quot;)">إعادة تعيين PIN</button></form>
+                            }
+                            else if (account.AccountStatus == 0)
+                            {
+                                <form asp-action="SetManagedAccountStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="accountId" value="@account.AccountId" /><input type="hidden" name="activate" value="true" /><button type="submit" class="btn btn-sm btn-outline-success">تفعيل</button></form>
+                            }
+                        </div>
                     }
-                    else if (!account.IsLegacyAccount && !account.IsArchived && account.Roles is "resident" or "admin")
+                    else { <span class="text-muted small">إدارة من المسار المختص</span> }
+
                     {
                         <div class="d-flex flex-wrap gap-1">
                             @if (account.AccountStatus == 1)
