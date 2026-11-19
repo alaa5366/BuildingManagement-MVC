@@ -14,6 +14,7 @@ public sealed class TargetAccountIdentityResolver
 
     public TargetAccountIdentityResolver(IDbContextFactory<AppDbContext> factory) => _factory = factory;
 
+    /// <summary>Resolves the target-system account corresponding to the current principal.</summary>
     public async Task<Guid?> ResolveAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(principal);
