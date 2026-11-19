@@ -1,4 +1,5 @@
 using BuildingManagementMvc.Models;
+using BuildingManagementMvc.Attributes;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,10 +11,12 @@ namespace BuildingManagementMvc.Controllers;
 public class NotificationsController : Controller
 {
     private readonly TargetNotificationsService _notifications;
+    private readonly TargetWhatsAppService _whatsApp;
 
-    public NotificationsController(TargetNotificationsService notifications)
+    public NotificationsController(TargetNotificationsService notifications, TargetWhatsAppService whatsApp)
     {
         _notifications = notifications;
+        _whatsApp = whatsApp;
     }
 
     private string? BuildingId => User.FindFirstValue("buildingId");
@@ -37,6 +40,52 @@ public class NotificationsController : Controller
             ["pageSize"] = paged.PageSize.ToString()
         };
         return View(paged);
+    }
+
+    [HttpGet]
+    [AdminPermission(AdminPermissions.UseWhatsApp)]
+    public async Task<IActionResult> Compose()
+    {
+        if (!User.IsInRole("admin") || string.IsNullOrWhiteSpace(BuildingId)) return Forbid();
+        var model = await _whatsApp.GetIndexAsync(BuildingId, HttpContext.RequestAborted);
+        if (model is null) return NotFound();
+        return View(model);
+    }
+
+    [HttpPost]
+    [AdminPermission(AdminPermissions.UseWhatsApp)]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Publish(string aptId, string title, string body)
+    {
+        if (!User.IsInRole("admin") || string.IsNullOrWhiteSpace(BuildingId)) return Forbid();
+        if (string.IsNullOrWhiteSpace(title) || title.Length > 200 ||
+            string.IsNullOrWhiteSpace(body) || body.Length > 800)
+        {
+            TempData["Error"] = "العنوان مطلوب (حتى 200 حرف) ونص الإشعار مطلوب (حتى 800 حرف).";
+            return RedirectToAction(nameof(Compose));
+        }
+
+        try
+        {
+            var baseUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}";
+            var result = await _whatsApp.GenerateAsync(
+                BuildingId, aptId, "general", new Dictionary<string, string> { ["message"] = body.Trim() },
+                baseUrl, HttpContext.RequestAborted);
+            if (result is null) return NotFound();
+
+            await _notifications.CreateResidentNotificationAsync(
+                BuildingId, aptId, title.Trim(), body.Trim(), "general", "📢", HttpContext.RequestAborted);
+            return View("~/Views/WhatsApp/Result.cshtml", result);
+        }
+        catch (ArgumentException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        return RedirectToAction(nameof(Compose));
     }
 
     [HttpPost]
