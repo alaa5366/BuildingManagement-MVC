@@ -167,6 +167,7 @@ public class WalletController : Controller
         return RedirectToAction("Index", new { month = mk });
     }
 
+    /// <summary>Cancels a pending deposit and records the supplied reason.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CancelDeposit(string month, string depositId, string? reason)
@@ -214,6 +215,7 @@ public class WalletController : Controller
         return RedirectToAction("Index", new { month = mk });
     }
 
+    /// <summary>Applies a wallet adjustment through the controlled adjustment workflow.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddAdjustment(
