@@ -39,6 +39,7 @@ public sealed class IdentityAccountAuthenticationServiceTests
             db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
             {
                 RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "resident",
+                ScopeType = 2, ScopeBuildingId = "building-1", ScopeApartmentId = "apt-1",
                 ValidFromUtc = now.AddMinutes(-1), GrantedAtUtc = now.AddMinutes(-1)
             });
             db.UserCredentials.Add(new UserCredentialEntity
@@ -84,6 +85,7 @@ public sealed class IdentityAccountAuthenticationServiceTests
             db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
             {
                 RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "resident",
+                ScopeType = 2, ScopeBuildingId = "building-1", ScopeApartmentId = "apt-1",
                 ValidFromUtc = now.AddMinutes(-1), GrantedAtUtc = now.AddMinutes(-1)
             });
             await db.SaveChangesAsync();
@@ -130,6 +132,7 @@ public sealed class IdentityAccountAuthenticationServiceTests
             db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
             {
                 RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "resident",
+                ScopeType = 2, ScopeBuildingId = "building-1", ScopeApartmentId = "apt-1",
                 ValidFromUtc = now.AddMinutes(-1), GrantedAtUtc = now.AddMinutes(-1)
             });
             db.ApartmentOccupancies.Add(new ApartmentOccupancyEntity
@@ -188,6 +191,9 @@ public sealed class IdentityAccountAuthenticationServiceTests
                 RoleAssignmentId = Guid.NewGuid(),
                 AccountId = accountId,
                 RoleKey = "resident",
+                ScopeType = 2,
+                ScopeBuildingId = "building-1",
+                ScopeApartmentId = "apt-1",
                 ValidFromUtc = now.AddDays(-1),
                 GrantedAtUtc = now.AddDays(-1)
             });
