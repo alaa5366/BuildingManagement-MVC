@@ -49,6 +49,7 @@ public class ReportsController : Controller
         return View(vm);
     }
 
+    /// <summary>Exports the selected financial report as a CSV file.</summary>
     [HttpGet]
     public async Task<IActionResult> ExportCsv(string? range)
     {
