@@ -458,6 +458,80 @@ public sealed class IdentityAccountAuthenticationServiceTests
         Assert.False(wrongBuilding.Success);
     }
 
+    [Fact]
+    public async Task AuthenticateSuperAdminAsync_AuthenticatesTwoIndependentTargetAccounts()
+    {
+        SqlAuthService.ConfigureSuperAdmins("alaa5366@hotmail.com,alaa5366@gmail.com");
+        var factory = new TestContextFactory();
+        var hasher = new BcryptPasswordHasher();
+        var now = DateTime.UtcNow;
+        var hotmailAccountId = Guid.NewGuid();
+        var gmailAccountId = Guid.NewGuid();
+        await using (var db = await factory.CreateDbContextAsync())
+        {
+            db.RoleDefinitions.Add(new RoleDefinitionEntity
+            {
+                RoleKey = "superadmin", DisplayName = "Super Administrator",
+                IsSystemRole = true, IsActive = true
+            });
+            db.RolePermissions.Add(new RolePermissionEntity
+            {
+                RoleKey = "superadmin", PermissionKey = "system.manage", Effect = 1
+            });
+
+            var accounts = new[]
+            {
+                (Id: hotmailAccountId, Email: "ALAA5366@HOTMAIL.COM", Password: "Hotmail-Unique-Test-Password-42!"),
+                (Id: gmailAccountId, Email: "ALAA5366@GMAIL.COM", Password: "Gmail-Unique-Test-Password-73!")
+            };
+            foreach (var item in accounts)
+            {
+                var personId = Guid.NewGuid();
+                db.Persons.Add(new PersonEntity
+                {
+                    PersonId = personId, DisplayName = "Super Admin",
+                    PrimaryEmail = item.Email, IsArchived = false, CreatedAtUtc = now
+                });
+                db.UserAccounts.Add(new UserAccountEntity
+                {
+                    AccountId = item.Id, PersonId = personId, AccountStatus = 1,
+                    NormalizedEmail = item.Email, SecurityStamp = Guid.NewGuid().ToString("N"),
+                    CreatedAtUtc = now
+                });
+                db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+                {
+                    RoleAssignmentId = Guid.NewGuid(), AccountId = item.Id,
+                    RoleKey = "superadmin", ScopeType = 0, ValidFromUtc = now.AddMinutes(-1),
+                    GrantedAtUtc = now.AddMinutes(-1)
+                });
+                db.UserCredentials.Add(new UserCredentialEntity
+                {
+                    CredentialId = Guid.NewGuid(), AccountId = item.Id, CredentialType = 0,
+                    CredentialHash = hasher.Hash(item.Password), HashAlgorithm = "BCrypt.Net-Next",
+                    CreatedAtUtc = now.AddMinutes(-1)
+                });
+            }
+            await db.SaveChangesAsync();
+        }
+
+        var service = new IdentityAccountAuthenticationService(factory, hasher);
+        var hotmail = await service.AuthenticateSuperAdminAsync(
+            "alaa5366@hotmail.com", "Hotmail-Unique-Test-Password-42!");
+        var gmail = await service.AuthenticateSuperAdminAsync(
+            "alaa5366@gmail.com", "Gmail-Unique-Test-Password-73!");
+        var crossed = await service.AuthenticateSuperAdminAsync(
+            "alaa5366@gmail.com", "Hotmail-Unique-Test-Password-42!");
+
+        Assert.True(hotmail.Success);
+        Assert.True(gmail.Success);
+        Assert.True(hotmail.UsesTargetIdentity);
+        Assert.True(gmail.UsesTargetIdentity);
+        Assert.Equal(hotmailAccountId.ToString("D"), hotmail.Uid);
+        Assert.Equal(gmailAccountId.ToString("D"), gmail.Uid);
+        Assert.Contains("system.manage", hotmail.Permissions);
+        Assert.False(crossed.Success);
+    }
+
     private sealed class TestContextFactory : IDbContextFactory<AppDbContext>
     {
         private readonly DbContextOptions<AppDbContext> _options = new DbContextOptionsBuilder<AppDbContext>()
