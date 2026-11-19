@@ -8,6 +8,7 @@ public static class FinancialAllocationCalculator
 {
     public const string AlgorithmVersion = "equal-largest-remainder-v1";
 
+    /// <summary>Allocates an amount equally across the supplied targets while preserving the total.</summary>
     public static IReadOnlyList<FinancialAllocationResult> AllocateEqually(
         decimal amount,
         IEnumerable<string> apartmentIds)
