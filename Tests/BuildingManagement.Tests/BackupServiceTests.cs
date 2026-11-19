@@ -447,6 +447,10 @@ public class BackupServiceTests
         Assert.Contains("languages", collections.Keys);
         Assert.Contains("translationEntries", collections.Keys);
         Assert.Contains("translationValues", collections.Keys);
+        Assert.Contains("maintenanceRequests", collections.Keys);
+        Assert.Contains("maintenanceAssignments", collections.Keys);
+        Assert.Contains("maintenanceComments", collections.Keys);
+        Assert.Contains("maintenanceStatusEvents", collections.Keys);
     }
 
     [Fact]
@@ -639,6 +643,76 @@ public class BackupServiceTests
         var restoredValue = await _db.TranslationValues.SingleAsync(
             x => x.Key == translationKey && x.CultureCode == culture);
         Assert.Equal("القيمة الأصلية", restoredValue.Value);
+        Assert.False(File.Exists(preview.TempFilePath));
+    }
+
+    [Fact]
+    public async Task Maintenance_BackupAndRestore_RestoresRequestsAndOperationalHistory()
+    {
+        var requestId = Guid.NewGuid();
+        var assignmentId = Guid.NewGuid();
+        var commentId = Guid.NewGuid();
+        var statusEventId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        _db.MaintenanceRequests.Add(new MaintenanceRequestEntity
+        {
+            RequestId = requestId, BuildingId = "maintenance-backup-building", ApartmentId = "APT-12",
+            Title = "Water leak", Description = "Original description", Category = "Plumbing",
+            Status = 2, Priority = 1, RequestedByReference = "resident-12", CreatedAtUtc = now
+        });
+        _db.MaintenanceAssignments.Add(new MaintenanceAssignmentEntity
+        {
+            AssignmentId = assignmentId, RequestId = requestId, AssigneeReference = "technician-7",
+            VendorName = "Original vendor", AssignedAtUtc = now, Notes = "Original assignment"
+        });
+        _db.MaintenanceComments.Add(new MaintenanceCommentEntity
+        {
+            CommentId = commentId, RequestId = requestId, AuthorReference = "admin-1",
+            Visibility = 1, Body = "Original maintenance comment", CreatedAtUtc = now
+        });
+        _db.MaintenanceStatusEvents.Add(new MaintenanceStatusEventEntity
+        {
+            StatusEventId = statusEventId, RequestId = requestId, FromStatus = 1, ToStatus = 2,
+            ActorReference = "admin-1", Reason = "Technician assigned", OccurredAtUtc = now
+        });
+        await _db.SaveChangesAsync();
+
+        var selected = new List<string>
+        {
+            "maintenanceRequests", "maintenanceAssignments", "maintenanceComments", "maintenanceStatusEvents"
+        };
+        var (bytes, backup) = await _service.CreateBackupAsync(selected, "maintenance-backup-test");
+        Assert.True(backup.Success, string.Join("; ", backup.Errors));
+        Assert.Equal(4, backup.TotalCollections);
+        Assert.Equal(4, backup.TotalDocuments);
+
+        (await _db.MaintenanceRequests.SingleAsync(x => x.RequestId == requestId)).Title = "Changed title";
+        (await _db.MaintenanceAssignments.SingleAsync(x => x.AssignmentId == assignmentId)).VendorName = "Changed vendor";
+        (await _db.MaintenanceComments.SingleAsync(x => x.CommentId == commentId)).Body = "Changed comment";
+        (await _db.MaintenanceStatusEvents.SingleAsync(x => x.StatusEventId == statusEventId)).Reason = "Changed reason";
+        await _db.SaveChangesAsync();
+
+        using var upload = new MemoryStream(bytes);
+        var preview = await _service.PreviewRestoreAsync(upload, "maintenance.zip", "maintenance-backup-test");
+        Assert.True(preview.Success, string.Join("; ", preview.Errors));
+        var restored = await _service.RestoreSessionAsync(
+            preview.RestoreSessionId!, selected, overwrite: true, "maintenance-backup-test");
+        Assert.True(restored.Success, string.Join("; ", restored.Errors));
+
+        _db.ChangeTracker.Clear();
+        var request = await _db.MaintenanceRequests.SingleAsync(x => x.RequestId == requestId);
+        Assert.Equal("Water leak", request.Title);
+        Assert.Equal("maintenance-backup-building", request.BuildingId);
+        var assignment = await _db.MaintenanceAssignments.SingleAsync(x => x.AssignmentId == assignmentId);
+        Assert.Equal(requestId, assignment.RequestId);
+        Assert.Equal("Original vendor", assignment.VendorName);
+        var comment = await _db.MaintenanceComments.SingleAsync(x => x.CommentId == commentId);
+        Assert.Equal(requestId, comment.RequestId);
+        Assert.Equal("Original maintenance comment", comment.Body);
+        var statusEvent = await _db.MaintenanceStatusEvents.SingleAsync(x => x.StatusEventId == statusEventId);
+        Assert.Equal(requestId, statusEvent.RequestId);
+        Assert.Equal("Technician assigned", statusEvent.Reason);
         Assert.False(File.Exists(preview.TempFilePath));
     }
 
