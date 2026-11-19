@@ -223,7 +223,7 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
     public async Task QueryPageAsync_ExtractsHttpStatusAndResponseLatency()
     {
         WriteLog(
-            "2026-11-17 10:00:00.000 +00:00 [INF] HTTP GET /AuditLog responded 200 in 12.3456 ms {\\"SourceContext\\":\\"Serilog.AspNetCore.RequestLoggingMiddleware\\",\\"CorrelationId\\":\\"request-42\\"}");
+            "2026-11-17 10:00:00.000 +00:00 [INF] HTTP GET /AuditLog responded 200 in 12.3456 ms {\"SourceContext\":\"Serilog.AspNetCore.RequestLoggingMiddleware\",\"CorrelationId\":\"request-42\"}");
 
         var item = Assert.Single((await CreateService().QueryPageAsync(new ApplicationLogQuery())).Items);
 
