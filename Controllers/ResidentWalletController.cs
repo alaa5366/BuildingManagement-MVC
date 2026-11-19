@@ -20,7 +20,6 @@ namespace BuildingManagementMvc.Controllers;
 [Authorize(Roles = "resident")]
 public class ResidentWalletController : Controller
 {
-    private readonly BuildingsService _buildings;
     private readonly TargetWalletReadService _targetWallet;
     private readonly TargetDepositWorkflowService _depositWorkflow;
     private readonly TargetAccountIdentityResolver _identityResolver;
@@ -29,12 +28,10 @@ public class ResidentWalletController : Controller
     /// Initializes a new instance of the <see cref="ResidentWalletController"/> class.
     /// </summary>
     public ResidentWalletController(
-        BuildingsService buildings,
         TargetWalletReadService targetWallet,
         TargetDepositWorkflowService depositWorkflow,
         TargetAccountIdentityResolver identityResolver)
     {
-        _buildings = buildings;
         _targetWallet = targetWallet;
         _depositWorkflow = depositWorkflow;
         _identityResolver = identityResolver;
@@ -60,7 +57,7 @@ public class ResidentWalletController : Controller
         int page = 1,
         int pageSize = 50)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
+        var building = await _targetWallet.GetBuildingShellAsync(BuildingId, HttpContext.RequestAborted);
         if (building == null) return NotFound();
 
         var apt = building.Apartments.FirstOrDefault(a => a.Id == ApartmentId);
