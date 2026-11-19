@@ -26,6 +26,7 @@ public class DvrService
         _enc = enc;
         _log = log;
     }
+    /// <summary>Gets the DVR summary for the specified building.</summary>
 
     public async Task< DvrBuildingSummary?> GetBuildingSummaryAsync(
         string buildingId, CancellationToken cancellationToken = default)
@@ -45,6 +46,7 @@ public class DvrService
             BuildingNumber = building.BuildingNumber,
             ApartmentsCount = count
         };
+    /// <summary>Gets DVR summaries for the requested buildings.</summary>
     }
 
     public async Task<List<DvrBuildingSummary>> GetBuildingSummariesAsync(CancellationToken cancellationToken = default)
