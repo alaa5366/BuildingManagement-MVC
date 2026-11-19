@@ -69,6 +69,11 @@
             <div><small>Process started (UTC)</small><strong>@Model.ProcessStartedAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</strong></div>
             <div><small>Process uptime</small><strong>@((DateTimeOffset.UtcNow - Model.ProcessStartedAtUtc).ToString(@"d.hh:mm:ss"))</strong></div>
             <div><small>Last health check (UTC)</small><strong>@Model.CheckedAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</strong></div>
+            <div><small>Working set</small><strong>@((Model.WorkingSetBytes / 1024d / 1024d).ToString("N1")) MB</strong></div>
+            <div><small>Private memory</small><strong>@((Model.PrivateMemoryBytes / 1024d / 1024d).ToString("N1")) MB</strong></div>
+            <div><small>Managed heap</small><strong>@((Model.ManagedMemoryBytes / 1024d / 1024d).ToString("N1")) MB</strong></div>
+            <div><small>Threads</small><strong>@Model.ThreadCount.ToString("N0")</strong></div>
+            <div><small>Handles</small><strong>@Model.HandleCount.ToString("N0")</strong></div>
         </div>
     </section>
 </div>
