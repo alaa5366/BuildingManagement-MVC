@@ -84,7 +84,7 @@ public class InvoicePdfService
                         });
 
                         // ✅ الرسم الشهري (دايماً لو > 0)
-                        if (d.MonthFee > 0)
+                        if (d.MonthFee != 0)
                         {
                             c.Item().Row(r =>
                             {
@@ -93,7 +93,7 @@ public class InvoicePdfService
                             });
                         }
 
-                        if (d.MonthRevenuesShare > 0)
+                        if (d.MonthRevenuesShare != 0)
                         {
                             c.Item().Row(r =>
                             {
