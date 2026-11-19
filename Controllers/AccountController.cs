@@ -972,6 +972,9 @@ public class AccountController : Controller
         string token,
         [FromServices] QrSecurityService qrSecurity)
     {
+        Response.Headers["Cache-Control"] = "no-store, no-cache, max-age=0";
+        Response.Headers["Pragma"] = "no-cache";
+        Response.Headers["Referrer-Policy"] = "no-referrer";
         if (string.IsNullOrEmpty(token))
             return RedirectToAction("LoginChoice");
 
@@ -1003,6 +1006,9 @@ public class AccountController : Controller
         string token,
         [FromServices] QrSecurityService qrSecurity)
     {
+        Response.Headers["Cache-Control"] = "no-store, no-cache, max-age=0";
+        Response.Headers["Pragma"] = "no-cache";
+        Response.Headers["Referrer-Policy"] = "no-referrer";
         if (string.IsNullOrEmpty(token))
             return RedirectToAction("LoginChoice");
 
@@ -1177,8 +1183,12 @@ public class AccountController : Controller
             return new QuickLoginContext { Error = Loc.T("The_Apartment_Does_Not_Exist") };
 
         var residents = await _residents.GetByApartmentAsync(payload.BuildingId, payload.AptId);
-        var resident = residents.FirstOrDefault(r => r.IsPrimary && !r.IsDisabled && r.IsActive)
-                    ?? residents.FirstOrDefault(r => !r.IsDisabled && r.IsActive);
+        // Recovery must resolve to the explicitly designated primary resident;
+        // it must never fall back to another occupant's identity.
+        var resident = string.Equals(payload.Purpose, "recovery", StringComparison.OrdinalIgnoreCase)
+            ? residents.FirstOrDefault(r => r.IsPrimary && !r.IsDisabled && r.IsActive)
+            : residents.FirstOrDefault(r => r.IsPrimary && !r.IsDisabled && r.IsActive)
+                ?? residents.FirstOrDefault(r => !r.IsDisabled && r.IsActive);
         if (resident == null)
             return new QuickLoginContext { Error = Loc.T("The_Apartment_Does_Not_Exist") };
 
