@@ -77,7 +77,7 @@ CREATE TABLE #Ops(
 );
 INSERT #Ops
 SELECT e.BuildingId,e.MonthKey,2,COUNT(*),SUM(e.Amount),
- CAST(MIN(e.ExpenseDate) AT TIME ZONE N'Egypt Standard Time' AT TIME ZONE N'UTC' AS datetime2(3)),
+ CAST(CAST(MIN(e.ExpenseDate) AS datetime2(3)) AT TIME ZONE N'Egypt Standard Time' AT TIME ZONE N'UTC' AS datetime2(3)),
  CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONVERT(varbinary(max),CONCAT(N'legacy.finance.period.v1|',e.BuildingId,N'|',e.MonthKey))),1,16)),
  CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONVERT(varbinary(max),CONCAT(N'legacy.finance.expense-ledger.v1|',e.BuildingId,N'|',e.MonthKey))),1,16)),
  admin.AccountId
@@ -91,7 +91,7 @@ GROUP BY e.BuildingId,e.MonthKey,admin.AccountId;
 
 INSERT #Ops
 SELECT r.BuildingId,r.MonthKey,3,COUNT(*),SUM(r.Amount),
- CAST(MIN(r.RevenueDate) AT TIME ZONE N'Egypt Standard Time' AT TIME ZONE N'UTC' AS datetime2(3)),
+ CAST(CAST(MIN(r.RevenueDate) AS datetime2(3)) AT TIME ZONE N'Egypt Standard Time' AT TIME ZONE N'UTC' AS datetime2(3)),
  CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONVERT(varbinary(max),CONCAT(N'legacy.finance.period.v1|',r.BuildingId,N'|',r.MonthKey))),1,16)),
  CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONVERT(varbinary(max),CONCAT(N'legacy.finance.revenue-ledger.v1|',r.BuildingId,N'|',r.MonthKey))),1,16)),
  admin.AccountId
