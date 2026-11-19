@@ -1,141 +1,99 @@
+using System.Security.Claims;
 using BuildingManagementMvc.Attributes;
+using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
-// ============================================================
-//  RevenuesController	الإيرادات الشهرية
-// ============================================================
-/// <summary>
-/// Monthly revenue entry for the current building: list, add and delete.
-/// </summary>
-/// <remarks>
-/// Access: requires one of the roles <c>admin</c>.
-/// </remarks>
+
 [Authorize(Roles = "admin")]
-[AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageRevenues)]
+[AdminPermission(AdminPermissions.ManageRevenues)]
 public class RevenuesController : Controller
 {
     private readonly BuildingsService _buildings;
-    private readonly WalletService _wallet;
-    private readonly RevenuesService _revenues;
-    private readonly AuditLogService _audit;
+    private readonly TargetFinanceReadService _financeRead;
+    private readonly TargetExpenseRevenueWorkflowService _financeWorkflow;
+    private readonly TargetAccountIdentityResolver _identityResolver;
     private readonly ILogger<RevenuesController> _logger;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="RevenuesController"/> class.
-    /// </summary>
     public RevenuesController(
         BuildingsService buildings,
-        WalletService wallet,
-        RevenuesService revenues,
-        AuditLogService audit,
+        TargetFinanceReadService financeRead,
+        TargetExpenseRevenueWorkflowService financeWorkflow,
+        TargetAccountIdentityResolver identityResolver,
         ILogger<RevenuesController> logger)
     {
         _buildings = buildings;
-        _wallet = wallet;
-        _revenues = revenues;
-        _audit = audit;
+        _financeRead = financeRead;
+        _financeWorkflow = financeWorkflow;
+        _identityResolver = identityResolver;
         _logger = logger;
     }
 
-    private string BuildingId => User.FindFirstValue("buildingId")!;
+    private string BuildingId => User.FindFirstValue("buildingId") ?? "";
 
-    /// <summary>
-    /// Shows the main page of the revenues screen.
-    /// </summary>
-    /// <remarks>
-    /// HTTP GET.
-    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Index(string? month, int page = 1, int pageSize = 50)
     {
+        if (string.IsNullOrWhiteSpace(BuildingId)) return Forbid();
         var building = await _buildings.GetByIdAsync(BuildingId);
         if (building == null) return NotFound();
-
-        var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
-        var m = _wallet.GetOrCreateMonth(building, mk);
-
-        var allRevenues = m.Revenues.OrderByDescending(r => r.Date).ToList();
-        var pagedRevenues = PagedResult<BuildingManagementMvc.Models.Revenue>
-            .Create(allRevenues, page, pageSize);
-
+        var monthKey = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
+        var snapshot = await _financeRead.GetMonthAsync(BuildingId, monthKey, "revenue", HttpContext.RequestAborted);
+        var revenues = PagedResult<Revenue>.Create(snapshot.Revenues.ToList(), page, pageSize);
         ViewBag.Building = building;
-        ViewBag.Month = mk;
-        ViewBag.Categories = building.RevenueCategories.Where(c => c.Active).OrderBy(c => c.Order).ToList();
-        ViewBag.Total = m.Revenues.Sum(r => r.Amount);
-        ViewBag.RouteValues = new Dictionary<string, string?>
-        {
-            ["month"] = mk,
-            ["pageSize"] = pageSize.ToString()
-        };
-
-        return View(pagedRevenues);
+        ViewBag.Month = monthKey;
+        ViewBag.Categories = snapshot.Categories.ToList();
+        ViewBag.Total = snapshot.Total;
+        ViewBag.RouteValues = new Dictionary<string, string?> { ["month"] = monthKey, ["pageSize"] = pageSize.ToString() };
+        return View(revenues);
     }
 
-    /// <summary>
-    /// Handles the add form submission of the revenues screen.
-    /// </summary>
-    /// <remarks>
-    /// HTTP POST.
-    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Add(string month, string categoryId, string note, decimal amount, string date)
+    public async Task<IActionResult> Add(string month, string categoryId, string note, decimal amount,
+        string date, Guid commandId)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
-        var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
-
+        var buildingId = BuildingId;
+        var monthKey = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
         try
         {
-            if (amount > 0 && !string.IsNullOrWhiteSpace(categoryId))
-            {
-                _revenues.AddRevenue(building, categoryId, note, amount, date, mk);
-                _wallet.RecalculateRevenueDistribution(building, mk);
-                _audit.Push(building, "revenue_add", $"{amount:0.##} ج.م — {note}", "admin", User.Identity?.Name ?? "admin");
-                await _buildings.SaveFullAsync(building);
-                TempData["Message"] = Loc.T("Revenue_Added");
-            }
+            var actorId = await _identityResolver.ResolveAsync(User, HttpContext.RequestAborted);
+            if (actorId is null) return Forbid();
+            if (commandId == Guid.Empty) throw new ArgumentException("Invalid submission token.");
+            await _financeWorkflow.AddRevenueAsync(buildingId, monthKey, categoryId, note, amount,
+                date, commandId, actorId.Value, HttpContext.RequestAborted);
+            TempData["Message"] = Loc.T("Revenue_Added");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to add revenue for building {BuildingId}", BuildingId);
+            _logger.LogError(ex, "Target finance revenue posting failed for building {BuildingId}", buildingId);
             TempData["Error"] = Loc.T("Failed_To_Add_Revenue");
         }
-
-        return RedirectToAction("Index", new { month = mk });
+        return RedirectToAction(nameof(Index), new { month = monthKey });
     }
 
-    /// <summary>
-    /// Handles the delete form submission of the revenues screen.
-    /// </summary>
-    /// <remarks>
-    /// HTTP POST.
-    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string month, string id)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
-
+        var buildingId = BuildingId;
+        var monthKey = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
         try
         {
-            _revenues.DeleteRevenue(building, id, month);
-            _wallet.RecalculateRevenueDistribution(building, month);
-            _audit.Push(building, "revenue_delete", "حذف إيراد", "admin", User.Identity?.Name ?? "admin");
-            await _buildings.SaveFullAsync(building);
+            var actorId = await _identityResolver.ResolveAsync(User, HttpContext.RequestAborted);
+            if (actorId is null) return Forbid();
+            await _financeWorkflow.ReverseAsync(true, buildingId, id,
+                "Reversed by building administrator", Guid.NewGuid(), actorId.Value, HttpContext.RequestAborted);
+            TempData["Message"] = "تم عكس قيد الإيراد دون حذف سجل المصدر.";
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete revenue {RevenueId}", id);
+            _logger.LogError(ex, "Target finance revenue reversal failed for {RevenueId}", id);
             TempData["Error"] = Loc.T("Failed_To_Delete_Revenue");
         }
-
-        return RedirectToAction("Index", new { month });
+        return RedirectToAction(nameof(Index), new { month = monthKey });
     }
 }
