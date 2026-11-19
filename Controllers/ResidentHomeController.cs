@@ -143,7 +143,8 @@ public class ResidentHomeController : Controller
         var allNotifications = await _targetNotifications.GetForResidentAsync(
             building.Id, apt.Id, 100, HttpContext.RequestAborted);
         var notifications = allNotifications.Take(3).ToList();
-        var unreadCount = allNotifications.Count(notification => !notification.Read);
+        var unreadCount = await _targetNotifications.GetUnreadCountForResidentAsync(
+            building.Id, apt.Id, HttpContext.RequestAborted);
 
         // ============================================================
         // 8. آخر 3 صيانة
