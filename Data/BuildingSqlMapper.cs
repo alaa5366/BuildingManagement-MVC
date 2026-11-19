@@ -213,6 +213,7 @@ public static class BuildingSqlMapper
         // The target ledger is the financial source of truth. Build the legacy
         // presentation DTOs from posted ledger transactions without touching
         // retired detail tables. Ledger entries are per-apartment signed movements.
+        var transactionById = postedTransactions.ToDictionary(x => x.LedgerTransactionId);
         foreach (var transaction in postedTransactions)
         {
             if (!periods.TryGetValue(transaction.PeriodId, out var monthKey) ||
@@ -227,31 +228,42 @@ public static class BuildingSqlMapper
             var month = b.Months.TryGetValue(monthKey, out var existingMonth)
                 ? existingMonth
                 : (b.Months[monthKey] = new MonthData());
-
             var transactionId = transaction.LedgerTransactionId.ToString("N");
             var effectiveDate = entries is { Count: > 0 }
                 ? entries.Min(x => x.EffectiveAtUtc).ToString("yyyy-MM-dd", Inv)
                 : transaction.CreatedAtUtc.ToString("yyyy-MM-dd", Inv);
 
-            if (transaction.Kind == LedgerTransactionKind.Expense)
+            var sourceKind = transaction.Kind;
+            var isReversal = transaction.Kind == LedgerTransactionKind.Reversal;
+            if (isReversal && transaction.ReversesTransactionId is Guid originalId &&
+                transactionById.TryGetValue(originalId, out var original))
+                sourceKind = original.Kind;
+
+            // A reversal is represented as a signed negative detail row in the
+            // same financial category stream. Never leave the original amount
+            // looking unreversed in the aggregate read model.
+            var displayAmount = isReversal ? -amount : amount;
+            if (sourceKind == LedgerTransactionKind.Expense)
             {
                 month.Expenses.Add(new Expense
                 {
                     Id = transactionId,
                     CategoryId = "",
-                    Note = transaction.Reason ?? "Expense",
-                    Amount = amount,
+                    Note = isReversal ? "Reversal: " + (transaction.Reason ?? "Expense reversal")
+                        : transaction.Reason ?? "Expense",
+                    Amount = displayAmount,
                     Date = effectiveDate
                 });
             }
-            else if (transaction.Kind == LedgerTransactionKind.Revenue)
+            else if (sourceKind == LedgerTransactionKind.Revenue)
             {
                 month.Revenues.Add(new Revenue
                 {
                     Id = transactionId,
                     CategoryId = "",
-                    Note = transaction.Reason ?? "Revenue",
-                    Amount = amount,
+                    Note = isReversal ? "Reversal: " + (transaction.Reason ?? "Revenue reversal")
+                        : transaction.Reason ?? "Revenue",
+                    Amount = displayAmount,
                     Date = effectiveDate
                 });
             }
