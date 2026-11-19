@@ -226,6 +226,7 @@ public sealed class InvoiceServiceTests
         Assert.Equal(25m, invoice.MonthExpensesShare);
         var categoryShare = Assert.Single(invoice.CategoryShares);
         Assert.Equal("Cleaning", categoryShare.Name);
+        Assert.Equal(1, categoryShare.AptCount);
         Assert.Equal(25m, categoryShare.Total);
         Assert.Equal(25m, categoryShare.Share);
         Assert.Equal("12345", invoice.Payment.AccountNumber);
