@@ -67,6 +67,18 @@ public sealed class ApplicationLogsAuthorizationTests
         Assert.Equal(StatusCodes.Status403Forbidden, result.StatusCode);
     }
 
+    [Fact]
+    public void ExportCsv_IsReadOnlyGetAndUsesSameProtectedControllerBoundary()
+    {
+        var method = typeof(ApplicationLogsController).GetMethod(nameof(ApplicationLogsController.ExportCsv));
+        Assert.NotNull(method);
+        Assert.NotNull(method!.GetCustomAttribute<HttpGetAttribute>());
+        Assert.NotNull(method.GetCustomAttribute<EnableRateLimitingAttribute>());
+        Assert.Equal("superadmin,admin", typeof(ApplicationLogsController)
+            .GetCustomAttribute<AuthorizeAttribute>()?.Roles);
+        Assert.NotNull(typeof(ApplicationLogsController).GetCustomAttribute<AdminPermissionAttribute>());
+    }
+
     private static DefaultHttpContext CreateContext(params Claim[] claims)
     {
         var context = new DefaultHttpContext
