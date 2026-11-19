@@ -28,7 +28,8 @@ public sealed class IdentityAccountAuthenticationService
     /// This is used after a valid, single-use QR capability has been consumed; no legacy Resident/UID store is consulted.
     /// </summary>
     public async Task<AuthResult> AuthenticateResidentWithQuickQrAsync(
-        string buildingId, string apartmentId, CancellationToken cancellationToken = default)
+        string buildingId, string apartmentId, bool requirePinChange = false,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(buildingId) || string.IsNullOrWhiteSpace(apartmentId))
             return AuthResult.Fail("wrong-credentials");
@@ -71,6 +72,12 @@ public sealed class IdentityAccountAuthenticationService
             return AuthResult.Fail("wrong-credentials");
 
         match.Account.LastLoginAtUtc = now;
+        if (requirePinChange)
+        {
+            // Recovery invalidates existing sessions and forces the resident to choose a new PIN.
+            match.Account.MustChangePin = true;
+            match.Account.SecurityStamp = Guid.NewGuid().ToString("N");
+        }
         await db.SaveChangesAsync(cancellationToken);
 
         var result = AuthResult.Ok(
