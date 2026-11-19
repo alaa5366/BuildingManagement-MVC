@@ -4201,4 +4201,7 @@ This operation can take a few seconds.</value>
   <data name="Backup_Collection_notificationDeliveries" xml:space="preserve"><value>Notification delivery attempts</value></data>
   <data name="Backup_Collection_notificationReadStates" xml:space="preserve"><value>Notification read states</value></data>
   <data name="Backup_Collection_notificationPreferences" xml:space="preserve"><value>Notification preferences</value></data>
+  <data name="Backup_Collection_languages" xml:space="preserve"><value>Languages</value></data>
+  <data name="Backup_Collection_translationEntries" xml:space="preserve"><value>Translation keys</value></data>
+  <data name="Backup_Collection_translationValues" xml:space="preserve"><value>Translation values</value></data>
 </root>
