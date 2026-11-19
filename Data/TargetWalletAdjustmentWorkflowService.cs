@@ -57,8 +57,12 @@ public sealed class TargetWalletAdjustmentWorkflowService
         {
             var existingEntry = await db.LedgerEntries.AsNoTracking().SingleOrDefaultAsync(
                 item => item.LedgerTransactionId == existing.LedgerTransactionId, cancellationToken);
+            var existingPeriodKey = await db.FinancialPeriods.AsNoTracking()
+                .Where(item => item.PeriodId == existing.PeriodId)
+                .Select(item => item.PeriodKey)
+                .SingleOrDefaultAsync(cancellationToken);
             if (existing.Kind != LedgerTransactionKind.WalletAdjustment ||
-                existing.ActorAccountId != actorAccountId ||
+                existing.ActorAccountId != actorAccountId || existingPeriodKey != periodKey ||
                 existingEntry is null || existingEntry.BuildingId != buildingId ||
                 existingEntry.ApartmentId != apartmentId ||
                 existingEntry.SignedAmount != amount || existing.Reason != reason.Trim())
