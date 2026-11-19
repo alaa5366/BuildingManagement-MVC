@@ -3,6 +3,7 @@ using BuildingManagementMvc.Attributes;
 using BuildingManagementMvc.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace BuildingManagementMvc.Controllers;
@@ -25,6 +26,7 @@ public sealed class SystemHealthController : Controller
     }
 
     [HttpGet]
+    [EnableRateLimiting("lookup")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         var report = await _healthChecks.CheckHealthAsync(cancellationToken: cancellationToken);
