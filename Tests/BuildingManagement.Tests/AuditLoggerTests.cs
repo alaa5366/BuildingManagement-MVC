@@ -1,4 +1,4 @@
-﻿using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Services;
 using System.Diagnostics;
@@ -13,7 +13,7 @@ namespace BuildingManagement.Tests;
 public class AuditLoggerTests
 {
     [Fact]
-    public async Task QueryPage_FiltersByApartmentAndSeverityInDatabaseQuery()
+    public async Task QueryPage_FiltersByApartmentAndSeverityInTargetAuditEvents()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
@@ -23,12 +23,13 @@ public class AuditLoggerTests
         await using (var db = new AppDbContext(options))
         {
             db.Buildings.Add(new BuildingEntity { Id = "b1", Name = "Test Building", BuildingNumber = "BLD-901" });
-            db.AuditLog.AddRange(
-                new AuditLogEntity { BuildingId = "b1", ApartmentId = "a1", Severity = "warning", Action = "x", Ts = DateTime.UtcNow },
-                new AuditLogEntity { BuildingId = "b1", ApartmentId = "a2", Severity = "warning", Action = "x", Ts = DateTime.UtcNow },
-                new AuditLogEntity { BuildingId = "b1", ApartmentId = "a1", Severity = "info", Action = "x", Ts = DateTime.UtcNow });
+            db.AuditEvents.AddRange(
+                Event("b1", "a1", 1, "x"),
+                Event("b1", "a2", 1, "x"),
+                Event("b1", "a1", 0, "x"));
             await db.SaveChangesAsync();
         }
+
         var logger = new AuditLogger(factory.Object, NullLogger<AuditLogger>.Instance);
         var page = await logger.QueryPageAsync("b1", "a1", null, null, null, null, "warning", 1, 10);
         Assert.Single(page.Items);
@@ -37,7 +38,7 @@ public class AuditLoggerTests
     }
 
     [Fact]
-    public async Task LogAsync_IncludesRequestCorrelationIdInAuditMetadata()
+    public async Task LogAsync_PersistsCorrelationAndActorRoleInSafeAuditMetadata()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
@@ -47,51 +48,64 @@ public class AuditLoggerTests
 
         using var activity = new Activity("audit-test").Start();
         activity!.SetTag(CorrelationIdMiddleware.ActivityTagName, "0123456789abcdef0123456789abcdef");
-
         var logger = new AuditLogger(factory.Object, NullLogger<AuditLogger>.Instance);
-        await logger.LogAsync("backup.restore", metadata: new { result = "success" });
+        await logger.LogAsync("backup.restore", userRole: "superadmin",
+            metadata: new { result = "success", apiToken = "must-not-persist" });
 
         await using var db = new AppDbContext(options);
-        var entry = await db.AuditLog.SingleAsync();
-        var details = JObject.Parse(entry.Details);
+        var entry = await db.AuditEvents.SingleAsync();
+        var details = JObject.Parse(entry.SafeDetailsJson!);
         Assert.Equal("0123456789abcdef0123456789abcdef", details["correlationId"]?.Value<string>());
+        Assert.Equal("superadmin", details["actorRole"]?.Value<string>());
         Assert.Equal("success", details["result"]?.Value<string>());
+        Assert.Equal("[REDACTED]", details["apiToken"]?.Value<string>());
+        Assert.Equal("Business", entry.EventCategory);
     }
 
     [Fact]
-    public async Task SaveChangesAsync_RejectsAuditLogUpdates()
+    public async Task SaveChangesAsync_RejectsAuditEventUpdates()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
         await using (var seed = new AppDbContext(options))
         {
-            seed.AuditLog.Add(new AuditLogEntity { Action = "original", Ts = DateTime.UtcNow });
+            seed.AuditEvents.Add(Event(null, null, 0, "original"));
             await seed.SaveChangesAsync();
         }
 
         await using var db = new AppDbContext(options);
-        var entry = await db.AuditLog.SingleAsync();
-        entry.Action = "tampered";
-
+        var entry = await db.AuditEvents.SingleAsync();
+        entry.EventType = "tampered";
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() => db.SaveChangesAsync());
         Assert.Contains("append-only", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task SaveChangesAsync_RejectsAuditLogDeletes()
+    public async Task SaveChangesAsync_RejectsAuditEventDeletes()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
         await using (var seed = new AppDbContext(options))
         {
-            seed.AuditLog.Add(new AuditLogEntity { Action = "keep", Ts = DateTime.UtcNow });
+            seed.AuditEvents.Add(Event(null, null, 0, "keep"));
             await seed.SaveChangesAsync();
         }
 
         await using var db = new AppDbContext(options);
-        var entry = await db.AuditLog.SingleAsync();
-        db.AuditLog.Remove(entry);
-
+        var entry = await db.AuditEvents.SingleAsync();
+        db.AuditEvents.Remove(entry);
         await Assert.ThrowsAsync<InvalidOperationException>(() => db.SaveChangesAsync());
     }
+
+    private static AuditEventEntity Event(string? buildingId, string? apartmentId, byte outcome, string action) => new()
+    {
+        AuditEventId = Guid.NewGuid(),
+        BuildingId = buildingId,
+        ResourceType = apartmentId == null ? null : "Apartment",
+        ResourceReference = apartmentId,
+        Outcome = outcome,
+        EventType = action,
+        EventCategory = "Business",
+        OccurredAtUtc = DateTime.UtcNow
+    };
 }
