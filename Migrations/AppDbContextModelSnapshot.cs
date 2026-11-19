@@ -2770,6 +2770,24 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                         });
                 });
 
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.SavedWhatsAppTemplateEntity", b =>
+                {
+                    b.Property<Guid>("Id").HasColumnType("uniqueidentifier");
+                    b.Property<string>("BuildingId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
+                    b.Property<string>("Name").IsRequired().HasMaxLength(100).HasColumnType("nvarchar(100)");
+                    b.Property<string>("Message").IsRequired().HasMaxLength(4000).HasColumnType("nvarchar(4000)");
+                    b.Property<bool>("IsActive").HasColumnType("bit");
+                    b.Property<DateTime>("CreatedAtUtc").ValueGeneratedOnAdd().HasColumnType("datetime2(3)").HasDefaultValueSql("SYSUTCDATETIME()");
+                    b.Property<DateTime>("UpdatedAtUtc").ValueGeneratedOnAdd().HasColumnType("datetime2(3)").HasDefaultValueSql("SYSUTCDATETIME()");
+                    b.Property<string>("CreatedByUid").HasMaxLength(128).HasColumnType("nvarchar(128)");
+                    b.HasKey("Id");
+                    b.HasIndex("BuildingId", "IsActive", "Name").HasDatabaseName("IX_SavedWhatsAppTemplates_Building_Active_Name");
+                    b.ToTable("SavedWhatsAppTemplates", t =>
+                    {
+                        t.HasCheckConstraint("CK_SavedWhatsAppTemplates_Name", "LEN(LTRIM(RTRIM([Name]))) > 0");
+                    });
+                });
+
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.UserEntity", b =>
                 {
                     b.Property<string>("Uid")
