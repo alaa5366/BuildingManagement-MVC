@@ -7,7 +7,7 @@ New-Item -ItemType Directory -Force -Path $dir|Out-Null
 $report=Join-Path $dir ("Phase10-Notification-Backfill-"+(Get-Date -Format 'yyyyMMdd-HHmmss')+".md")
 $log=[System.Collections.Generic.List[string]]::new()
 function Log([string]$x){$log.Add($x);Write-Host $x}
-function Query($c,[string]$s){$cmd=$c.CreateCommand();$cmd.CommandText=$s;$cmd.CommandTimeout=180;$dt=[System.Data.DataTable]::new();$da=[System.Data.SqlClient.SqlDataAdapter]::new($cmd);[void]$da.Fill($dt);$dt}
+function Query($c,[string]$s){$cmd=$c.CreateCommand();$cmd.CommandText=$s;$cmd.CommandTimeout=180;$dt=[System.Data.DataTable]::new();$da=[System.Data.SqlClient.SqlDataAdapter]::new($cmd);[void]$da.Fill($dt);return ,$dt}
 $c=[System.Data.SqlClient.SqlConnection]::new($ConnectionString)
 try{
 $c.Open()
