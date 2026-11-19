@@ -20,10 +20,12 @@ public class AppDbContext : DbContext
     {
         ChangeTracker.DetectChanges();
         if (ChangeTracker.Entries<AuditLogEntity>()
+            .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted) ||
+            ChangeTracker.Entries<AuditEventEntity>()
             .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
         {
             throw new InvalidOperationException(
-                "Audit log entries are append-only and cannot be updated or deleted by the application.");
+                "Business audit events are append-only and cannot be updated or deleted by the application.");
         }
     }
 
@@ -175,6 +177,7 @@ public class AppDbContext : DbContext
 
     public DbSet<PresenceSessionEntity> PresenceSessions => Set<PresenceSessionEntity>();
     public DbSet<PresenceHeartbeatEntity> PresenceHeartbeats => Set<PresenceHeartbeatEntity>();
+    public DbSet<AuditEventEntity> AuditEvents => Set<AuditEventEntity>();
 
     // Canonical identity and authorization foundation (Gate A).
     public DbSet<PersonEntity> Persons => Set<PersonEntity>();
