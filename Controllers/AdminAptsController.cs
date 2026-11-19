@@ -137,6 +137,10 @@ public class AdminAptsController : Controller
         if (User.HasClaim("impersonated", "true"))
             return Forbid();
 
+        Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+        Response.Headers.Pragma = "no-cache";
+        Response.Headers["Referrer-Policy"] = "no-referrer";
+
         var apt = await _targetQr.GetApartmentAsync(
             BuildingId, aptId, requireActive: true, HttpContext.RequestAborted);
         if (apt is null) return NotFound();
