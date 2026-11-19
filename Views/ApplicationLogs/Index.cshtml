@@ -14,6 +14,11 @@
     var errorCount = visibleItems.Count(x => x.Level is "Error" or "Fatal");
     var warningCount = visibleItems.Count(x => x.Level == "Warning");
     var informationCount = visibleItems.Count(x => x.Level == "Information");
+    var durations = visibleItems.Where(x => x.DurationMs.HasValue)
+        .Select(x => x.DurationMs!.Value).OrderBy(x => x).ToArray();
+    var averageDuration = durations.Length == 0 ? 0 : durations.Average();
+    var p95Duration = durations.Length == 0 ? 0 : durations[Math.Clamp((int)Math.Ceiling(durations.Length * .95) - 1, 0, durations.Length - 1)];
+    var slowRequestCount = durations.Count(x => x >= 1000);
     var isArabic = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ar";
 }
 @section Styles {
@@ -94,6 +99,30 @@
             </div>
             <strong>@sourceCount.ToString("N0")</strong>
             <small>@Loc.T("Log_Distinct_Sources")</small>
+        </article>
+        <article class="log-metric-card metric-blue">
+            <div class="log-metric-top">
+                <span class="log-metric-icon"><i class="bi bi-stopwatch"></i></span>
+                <span class="log-metric-caption">@(isArabic ? "متوسط زمن الاستجابة" : "Average response")</span>
+            </div>
+            <strong>@averageDuration.ToString("N1") ms</strong>
+            <small>@durations.Length @(isArabic ? "طلب HTTP في الصفحة" : "HTTP requests on this page")</small>
+        </article>
+        <article class="log-metric-card metric-amber">
+            <div class="log-metric-top">
+                <span class="log-metric-icon"><i class="bi bi-speedometer2"></i></span>
+                <span class="log-metric-caption">P95 response time</span>
+            </div>
+            <strong>@p95Duration.ToString("N1") ms</strong>
+            <small>@(isArabic ? "المئين 95 للطلبات الظاهرة" : "95th percentile of visible requests")</small>
+        </article>
+        <article class="log-metric-card metric-red">
+            <div class="log-metric-top">
+                <span class="log-metric-icon"><i class="bi bi-hourglass-split"></i></span>
+                <span class="log-metric-caption">@(isArabic ? "طلبات بطيئة" : "Slow requests")</span>
+            </div>
+            <strong>@slowRequestCount.ToString("N0")</strong>
+            <small>≥ 1,000 ms · @(isArabic ? "في الصفحة الحالية" : "current page only")</small>
         </article>
     </section>
 
