@@ -82,12 +82,12 @@ SELECT e.BuildingId,e.MonthKey,2,COUNT(*),SUM(e.Amount),
  CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONVERT(varbinary(max),CONCAT(N'legacy.finance.expense-ledger.v1|',e.BuildingId,N'|',e.MonthKey))),1,16)),
  admin.AccountId
 FROM dbo.Expenses e
-WHERE e.MonthKey IN(N'2026-09',N'2026-10')
 CROSS APPLY(SELECT TOP(1) a.AccountId FROM dbo.UserRoleAssignments a
  WHERE a.RoleKey=N'building-admin' AND a.ScopeType=1 AND a.ScopeBuildingId=e.BuildingId
  AND a.ScopeApartmentId IS NULL AND a.RevokedAtUtc IS NULL
  AND (a.ValidToUtc IS NULL OR a.ValidToUtc>SYSUTCDATETIME())
  ORDER BY a.GrantedAtUtc DESC,a.RoleAssignmentId) admin
+WHERE e.MonthKey IN(N'2026-09',N'2026-10')
 GROUP BY e.BuildingId,e.MonthKey,admin.AccountId;
 
 INSERT #Ops
@@ -97,12 +97,12 @@ SELECT r.BuildingId,r.MonthKey,3,COUNT(*),SUM(r.Amount),
  CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONVERT(varbinary(max),CONCAT(N'legacy.finance.revenue-ledger.v1|',r.BuildingId,N'|',r.MonthKey))),1,16)),
  admin.AccountId
 FROM dbo.Revenues r
-WHERE r.MonthKey IN(N'2026-09',N'2026-10')
 CROSS APPLY(SELECT TOP(1) a.AccountId FROM dbo.UserRoleAssignments a
  WHERE a.RoleKey=N'building-admin' AND a.ScopeType=1 AND a.ScopeBuildingId=r.BuildingId
  AND a.ScopeApartmentId IS NULL AND a.RevokedAtUtc IS NULL
  AND (a.ValidToUtc IS NULL OR a.ValidToUtc>SYSUTCDATETIME())
  ORDER BY a.GrantedAtUtc DESC,a.RoleAssignmentId) admin
+WHERE r.MonthKey IN(N'2026-09',N'2026-10')
 GROUP BY r.BuildingId,r.MonthKey,admin.AccountId;
 
 CREATE TABLE #Shares(
