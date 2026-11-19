@@ -64,6 +64,9 @@ public sealed class TargetMaintenanceServiceTests
             service.UpdateAsync("B1", recordId, "Changed", null, "2026-11-02",
                 200m, null, "done"));
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.UpdateAsync("B1", recordId, "Posted repair", null, "2026-11-01",
+                100m, null, "cancelled"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
             service.DeleteAsync("B1", recordId));
     }
 
