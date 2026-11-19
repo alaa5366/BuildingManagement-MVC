@@ -39,8 +39,7 @@
             <input name="date" type="date" class="form-control" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" />
         </div>
         <div class="col-md-2">
-            <label class="form-label small">@Loc.T("Cost")</label>
-            <input name="cost" type="number" step="0.01" class="form-control" />
+            <div class="form-text">تُسجّل التكلفة عند ترحيل المصروف إلى دفتر الأستاذ.</div>
         </div>
         <div class="col-md-2">
             <label class="form-label small">@Loc.T("Supplier")</label>
@@ -104,9 +103,10 @@ else
                 <div class="d-flex gap-1 flex-wrap">
                     @if (m.Cost > 0 && !m.AddedToExpense)
                     {
-                        <form method="post" asp-action="AddToExpenses">
+                        <form method="post" asp-action="AddToExpenses" class="d-flex gap-1 align-items-center">
                             <input type="hidden" name="id" value="@m.Id" />
-                            <button class="btn btn-sm btn-outline-success">@Loc.T("Add_To_Expenses")</button>
+                            <input name="cost" type="number" min="0.01" step="0.01" required class="form-control form-control-sm" style="max-width:110px" placeholder="@Loc.T("Cost")" />
+                            <button class="btn btn-sm btn-outline-success text-nowrap">@Loc.T("Add_To_Expenses")</button>
                         </form>
                     }
                     else if (m.AddedToExpense)
