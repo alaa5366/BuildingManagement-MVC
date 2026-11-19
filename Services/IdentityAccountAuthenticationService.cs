@@ -24,6 +24,70 @@ public sealed class IdentityAccountAuthenticationService
     }
 
     /// <summary>
+    /// Issues a resident sign-in result only for the active primary occupant and an active target-schema resident account.
+    /// This is used after a valid, single-use QR capability has been consumed; no legacy Resident/UID store is consulted.
+    /// </summary>
+    public async Task<AuthResult> AuthenticateResidentWithQuickQrAsync(
+        string buildingId, string apartmentId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(buildingId) || string.IsNullOrWhiteSpace(apartmentId))
+            return AuthResult.Fail("wrong-credentials");
+
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var now = DateTime.UtcNow;
+        var matches = await (
+            from occupancy in db.ApartmentOccupancies
+            join person in db.Persons on occupancy.PersonId equals person.PersonId
+            join account in db.UserAccounts on person.PersonId equals account.PersonId
+            where occupancy.BuildingId == buildingId
+                && occupancy.ApartmentId == apartmentId
+                && occupancy.IsPrimary
+                && occupancy.ValidFromUtc <= now
+                && (occupancy.ValidToUtc == null || occupancy.ValidToUtc > now)
+                && account.AccountStatus == 1
+                && !person.IsArchived
+            select new { Occupancy = occupancy, Person = person, Account = account })
+            .Take(2)
+            .ToListAsync(cancellationToken);
+
+        if (matches.Count != 1)
+            return AuthResult.Fail("wrong-credentials");
+
+        var match = matches[0];
+        var hasResidentRole = await (
+            from assignment in db.UserRoleAssignments.AsNoTracking()
+            join role in db.RoleDefinitions.AsNoTracking() on assignment.RoleKey equals role.RoleKey
+            where assignment.AccountId == match.Account.AccountId
+                && assignment.RoleKey == "resident"
+                && role.IsActive
+                && assignment.ValidFromUtc <= now
+                && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
+                && assignment.RevokedAtUtc == null
+                && ((assignment.ScopeType == 1 && assignment.ScopeBuildingId == buildingId && assignment.ScopeApartmentId == null)
+                    || (assignment.ScopeType == 2 && assignment.ScopeBuildingId == buildingId && assignment.ScopeApartmentId == apartmentId))
+            select assignment.RoleAssignmentId)
+            .AnyAsync(cancellationToken);
+        if (!hasResidentRole)
+            return AuthResult.Fail("wrong-credentials");
+
+        match.Account.LastLoginAtUtc = now;
+        await db.SaveChangesAsync(cancellationToken);
+
+        var result = AuthResult.Ok(
+            uid: match.Account.AccountId.ToString("D"),
+            role: "resident",
+            email: match.Account.NormalizedEmail ?? "",
+            name: match.Person.DisplayName,
+            buildingIds: new List<string> { buildingId },
+            aptId: apartmentId);
+        result.UsesTargetIdentity = true;
+        result.SecurityStamp = match.Account.SecurityStamp;
+        result.MustChangePin = match.Account.MustChangePin;
+        result.Phone = match.Person.PrimaryPhone;
+        return result;
+    }
+
+    /// <summary>
     /// Returns null only when no target account matches the identifier. A matching but
     /// inactive, unauthorized, or incorrectly credentialed account fails closed.
     /// </summary>
