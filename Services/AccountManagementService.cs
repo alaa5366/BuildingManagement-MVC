@@ -7,7 +7,8 @@ namespace BuildingManagementMvc.Services;
 public sealed class AccountManagementService
 {
     private readonly IDbContextFactory<AppDbContext> _factory;
-    public AccountManagementService(IDbContextFactory<AppDbContext> factory) => _factory = factory;
+    private readonly IAuditLogger _audit;
+    public AccountManagementService(IDbContextFactory<AppDbContext> factory, IAuditLogger audit) { _factory = factory; _audit = audit; }
 
     public async Task<AccountManagementPage> GetPageAsync(string? search, string? role, string? status,
         int page, int pageSize, CancellationToken ct = default)
@@ -180,6 +181,7 @@ public sealed class AccountManagementRow
         account.SecurityStamp = Guid.NewGuid().ToString("N");
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await _audit.LogAsync(activate ? "identity.resident.account.activated" : "identity.resident.account.deactivated", userId: actorId, userRole: "superadmin", metadata: new { AccountId = accountId });
         return AccountManagementMutationResult.Ok(activate ? "تم تفعيل حساب الساكن." : "تم إيقاف حساب الساكن.");
     }
 
@@ -210,6 +212,7 @@ public sealed class AccountManagementRow
         account.SecurityStamp = Guid.NewGuid().ToString("N");
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await _audit.LogAsync("identity.resident.pin.reset", userId: actorId, userRole: "superadmin", metadata: new { AccountId = accountId, MustChangePin = true });
         return AccountManagementMutationResult.Ok("تم إصدار PIN مؤقت. اعرضه للمستخدم مرة واحدة واطلب تغييره عند أول دخول.", pin);
     }
 }
