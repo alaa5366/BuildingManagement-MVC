@@ -181,6 +181,90 @@ public sealed class TargetWalletReadService
         return buildingIds.Count == 1 ? buildingIds[0] : null;
     }
 
+    public async Task<IReadOnlyList<string>> GetFinancialPeriodKeysAsync(
+        string buildingId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(buildingId))
+            throw new ArgumentException("Building is required.", nameof(buildingId));
+
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        return await db.FinancialPeriods.AsNoTracking()
+            .Where(period => period.BuildingId == buildingId)
+            .Select(period => period.PeriodKey)
+            .Distinct()
+            .OrderBy(key => key)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<string, TargetWalletPeriodTotals>> GetPeriodTotalsAsync(
+        string buildingId,
+        IReadOnlyCollection<string> monthKeys,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(buildingId))
+            throw new ArgumentException("Building is required.", nameof(buildingId));
+        ArgumentNullException.ThrowIfNull(monthKeys);
+        if (monthKeys.Count > 120)
+            throw new ArgumentOutOfRangeException(nameof(monthKeys), "At most 120 report months can be queried.");
+        foreach (var monthKey in monthKeys)
+            ValidateMonth(monthKey, nameof(monthKeys));
+
+        var keys = monthKeys.Distinct(StringComparer.Ordinal).ToList();
+        if (keys.Count == 0)
+            return new Dictionary<string, TargetWalletPeriodTotals>(StringComparer.Ordinal);
+
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        var currencyCode = await db.BuildingSettings.AsNoTracking()
+            .Where(settings => settings.BuildingId == buildingId)
+            .Select(settings => settings.Currency)
+            .SingleOrDefaultAsync(cancellationToken) ?? "EGP";
+        if (string.IsNullOrWhiteSpace(currencyCode) || currencyCode.Length != 3 ||
+            currencyCode.Any(character => !char.IsAsciiLetter(character)))
+            throw new InvalidOperationException("Building currency configuration is invalid.");
+        currencyCode = currencyCode.ToUpperInvariant();
+
+        var rows = await (
+            from entry in db.LedgerEntries.AsNoTracking()
+            join transaction in db.LedgerTransactions.AsNoTracking()
+                on entry.LedgerTransactionId equals transaction.LedgerTransactionId
+            join period in db.FinancialPeriods.AsNoTracking()
+                on entry.PeriodId equals period.PeriodId
+            where entry.BuildingId == buildingId && transaction.BuildingId == buildingId &&
+                period.BuildingId == buildingId && keys.Contains(period.PeriodKey) &&
+                entry.CurrencyCode == currencyCode &&
+                transaction.Status == LedgerTransactionStatus.Posted
+            select new
+            {
+                period.PeriodKey,
+                entry.EntryKind,
+                transaction.SourceType,
+                entry.SignedAmount
+            }).ToListAsync(cancellationToken);
+
+        var result = new Dictionary<string, TargetWalletPeriodTotals>(StringComparer.Ordinal);
+        foreach (var monthKey in keys)
+        {
+            var monthRows = rows.Where(row => row.PeriodKey == monthKey).ToList();
+            var collected = monthRows.Where(row =>
+                row.EntryKind == LedgerEntryKind.Deposit ||
+                row.EntryKind == LedgerEntryKind.Reversal && row.SourceType == "PaymentDepositReversal")
+                .Sum(row => row.SignedAmount);
+            var expenseNet = monthRows.Where(row =>
+                row.EntryKind == LedgerEntryKind.ExpenseAllocation ||
+                row.EntryKind == LedgerEntryKind.Reversal && row.SourceType == "ExpenseReversal")
+                .Sum(row => row.SignedAmount);
+            var revenues = monthRows.Where(row =>
+                row.EntryKind == LedgerEntryKind.RevenueAllocation ||
+                row.EntryKind == LedgerEntryKind.Reversal && row.SourceType == "RevenueReversal")
+                .Sum(row => row.SignedAmount);
+            result[monthKey] = new TargetWalletPeriodTotals(
+                collected, Math.Abs(expenseNet), revenues);
+        }
+
+        return result;
+    }
+
     public async Task<TargetWalletAdminSnapshot> GetAdminSnapshotAsync(
         string buildingId,
         string month,
@@ -531,6 +615,11 @@ public sealed record TargetPendingDeposit(
     string PeriodKey);
 
 public sealed record TargetPendingWalletDeposit(Deposit Deposit, string ApartmentId, string MonthKey);
+
+public sealed record TargetWalletPeriodTotals(
+    decimal Collected,
+    decimal Expenses,
+    decimal Revenues);
 
 public sealed record TargetWalletAdminSnapshot(
     IReadOnlyDictionary<string, decimal> Balances,
