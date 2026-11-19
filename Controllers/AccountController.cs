@@ -136,7 +136,7 @@ public class AccountController : Controller
 
         _throttle.Reset(throttleKey);
         if (res.MustChangePin)
-            return StartPinChangeChallenge(res, vm.Whatsapp);
+            return StartPinChangeChallenge(res, vm.Whatsapp, vm.BuildingId, vm.AptId);
         await SignInCookieAsync(res);
         return RedirectToAction("Index", "ResidentHome");
     }
@@ -436,12 +436,16 @@ public class AccountController : Controller
         }
     }
 
-    private IActionResult StartPinChangeChallenge(AuthResult result, string identifier)
+    private IActionResult StartPinChangeChallenge(AuthResult result, string identifier, string? buildingId = null, string? apartmentId = null)
     {
         HttpContext.Session.Clear();
         HttpContext.Session.SetString("resident_pin_change_account", result.Uid!);
         HttpContext.Session.SetString("resident_pin_change_stamp", result.SecurityStamp ?? "");
         HttpContext.Session.SetString("resident_pin_change_identifier", identifier);
+        if (!string.IsNullOrWhiteSpace(buildingId))
+            HttpContext.Session.SetString("resident_pin_change_building", buildingId);
+        if (!string.IsNullOrWhiteSpace(apartmentId))
+            HttpContext.Session.SetString("resident_pin_change_apartment", apartmentId);
         HttpContext.Session.SetString("resident_pin_change_expires",
             DateTimeOffset.UtcNow.AddMinutes(10).ToUnixTimeSeconds().ToString(
                 System.Globalization.CultureInfo.InvariantCulture));
@@ -479,6 +483,8 @@ public class AccountController : Controller
         var accountText = HttpContext.Session.GetString("resident_pin_change_account")!;
         var stamp = HttpContext.Session.GetString("resident_pin_change_stamp")!;
         var identifier = HttpContext.Session.GetString("resident_pin_change_identifier")!;
+        var buildingId = HttpContext.Session.GetString("resident_pin_change_building");
+        var apartmentId = HttpContext.Session.GetString("resident_pin_change_apartment");
         if (!Guid.TryParse(accountText, out var accountId) ||
             !await _identityAuth.ChangeResidentPinAsync(accountId, stamp, vm.NewPin))
         {
@@ -487,7 +493,7 @@ public class AccountController : Controller
             return RedirectToAction(nameof(UnifiedLogin));
         }
 
-        var result = await _identityAuth.AuthenticateResidentAsync(identifier, vm.NewPin);
+        var result = await _identityAuth.AuthenticateResidentAsync(identifier, vm.NewPin, buildingId, apartmentId);
         if (result == null || !result.Success || result.MustChangePin)
         {
             HttpContext.Session.Clear();
