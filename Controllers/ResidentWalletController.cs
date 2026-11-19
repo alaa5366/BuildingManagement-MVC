@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.Text.Json;
+using BuildingManagementMvc.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using BuildingManagementMvc.Services;
@@ -19,23 +21,23 @@ namespace BuildingManagementMvc.Controllers;
 public class ResidentWalletController : Controller
 {
     private readonly BuildingsService _buildings;
-    private readonly WalletService _wallet;
     private readonly TargetWalletReadService _targetWallet;
-    private readonly AuditLogService _audit;
+    private readonly TargetDepositWorkflowService _depositWorkflow;
+    private readonly TargetAccountIdentityResolver _identityResolver;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ResidentWalletController"/> class.
     /// </summary>
     public ResidentWalletController(
         BuildingsService buildings,
-        WalletService wallet,
         TargetWalletReadService targetWallet,
-        AuditLogService audit)
+        TargetDepositWorkflowService depositWorkflow,
+        TargetAccountIdentityResolver identityResolver)
     {
         _buildings = buildings;
-        _wallet = wallet;
         _targetWallet = targetWallet;
-        _audit = audit;
+        _depositWorkflow = depositWorkflow;
+        _identityResolver = identityResolver;
     }
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
@@ -171,7 +173,7 @@ public class ResidentWalletController : Controller
     [RequestSizeLimit(15 * 1024 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = 15 * 1024 * 1024)]
     public async Task<IActionResult> CreateDeposit(string month, decimal amount, string? note,
-        IFormFile? receiptImage,
+        Guid commandId, IFormFile? receiptImage,
         [FromServices] CloudinaryService cloudinary)
     {
         var building = await _buildings.GetByIdAsync(BuildingId);
@@ -180,36 +182,80 @@ public class ResidentWalletController : Controller
         if (apt == null) return NotFound();
 
         var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
-
-        if (amount > 0)
+        if (amount <= 0)
         {
-            ReceiptData? receipt = null;
-            if (receiptImage != null && receiptImage.Length > 0)
-            {
-                using var stream = receiptImage.OpenReadStream();
-                if (!ImageSniffer.IsAllowedImage(stream))
-                {
-                    TempData["Error"] = Loc.T("Invalid_Image_File");
-                    return RedirectToAction("Index", new { month = mk });
-                }
+            TempData["Error"] = "يجب إدخال مبلغ أكبر من صفر.";
+            return RedirectToAction("Index", new { month = mk });
+        }
+        if (amount > 999999999999999m || decimal.Round(amount, 4, MidpointRounding.AwayFromZero) != amount)
+        {
+            TempData["Error"] = "قيمة المبلغ غير صالحة.";
+            return RedirectToAction("Index", new { month = mk });
+        }
 
-                receipt = await cloudinary.UploadReceiptAsync(
-                    stream,
-                    receiptImage.FileName,
-                    building.Id,
-                    apt.Id);
+        var actorAccountId = await _identityResolver.ResolveAsync(User, HttpContext.RequestAborted);
+        if (actorAccountId is null)
+        {
+            TempData["Error"] = "تعذر ربط حسابك بهوية النظام الجديدة. لم يتم تسجيل الدفعة.";
+            return RedirectToAction("Index", new { month = mk });
+        }
+
+        var submissionContext = await _targetWallet.GetSubmissionContextAsync(
+            BuildingId, mk, HttpContext.RequestAborted);
+        if (submissionContext is null)
+        {
+            TempData["Error"] = "لا توجد فترة مالية مستهدفة لهذا الشهر.";
+            return RedirectToAction("Index", new { month = mk });
+        }
+
+        ReceiptData? receipt = null;
+        if (receiptImage != null && receiptImage.Length > 0)
+        {
+            if (receiptImage.Length > 12 * 1024 * 1024)
+            {
+                TempData["Error"] = "حجم صورة الإيصال أكبر من الحد المسموح.";
+                return RedirectToAction("Index", new { month = mk });
             }
 
-            var d = _wallet.CreateDeposit(building, apt.Id, amount, note, "resident", mk, receipt);
+            using var stream = receiptImage.OpenReadStream();
+            if (!ImageSniffer.IsAllowedImage(stream))
+            {
+                TempData["Error"] = Loc.T("Invalid_Image_File");
+                return RedirectToAction("Index", new { month = mk });
+            }
 
-            var auditDetails = $"دفعة جديدة {d.Number} — {amount:0.##} ج.م";
-            if (receipt != null) auditDetails += " (مع صورة إيصال)";
+            receipt = await cloudinary.UploadReceiptAsync(
+                stream, receiptImage.FileName, building.Id, apt.Id);
+        }
 
-            _audit.Push(building, "deposit_create", auditDetails, "resident",
-                User.Identity?.Name ?? "resident", apt.Number.ToString());
+        try
+        {
+            if (commandId == Guid.Empty) commandId = Guid.NewGuid();
+            await _depositWorkflow.CreatePendingAsync(
+                BuildingId,
+                ApartmentId,
+                submissionContext.PeriodId,
+                actorAccountId.Value,
+                amount,
+                submissionContext.CurrencyCode,
+                commandId.ToString("N"),
+                HttpContext.RequestAborted,
+                note,
+                receipt is null ? null : JsonSerializer.Serialize(receipt));
 
-            await _buildings.SaveFullAsync(building);
             TempData["Message"] = Loc.T("The_Payment_Was_Submitted_Awaiting_Admin");
+        }
+        catch (ArgumentException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        catch (Exception)
+        {
+            TempData["Error"] = "تعذر تسجيل الدفعة. لم يتم تغيير رصيد المحفظة.";
         }
 
         return RedirectToAction("Index", new { month = mk });
