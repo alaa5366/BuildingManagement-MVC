@@ -152,6 +152,8 @@ public sealed class AccountManagementService
         await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
         var account = await db.UserAccounts.SingleOrDefaultAsync(x => x.AccountId == accountId, ct);
         if (account is null) return AccountManagementMutationResult.Fail("الحساب غير موجود.");
+        if (await db.Persons.AnyAsync(x => x.PersonId == account.PersonId && x.IsArchived, ct))
+            return AccountManagementMutationResult.Fail("لا يمكن إعادة تعيين PIN لشخص مؤرشف.");
         var now = DateTime.UtcNow;
         var hasResidentRole = await db.UserRoleAssignments.AnyAsync(x => x.AccountId == accountId
             && x.RoleKey == "resident" && x.ValidFromUtc <= now
