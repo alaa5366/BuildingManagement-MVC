@@ -205,7 +205,7 @@ public class AuditLogController : Controller
         void Row(params string[] cells) => sb.AppendLine(string.Join(",", cells.Select(CsvExportSafety.Cell)));
 
         Row(Loc.T("Date"), Loc.T("Action"), Loc.T("Description"), Loc.T("Severity"),
-            Loc.T("User"), Loc.T("Role"), Loc.T("Building"), Loc.T("Apartment"));
+            Loc.T("User"), Loc.T("Role"), Loc.T("Building"), Loc.T("Apartment"), "Correlation ID");
 
         foreach (var e in entries)
         {
@@ -217,7 +217,8 @@ public class AuditLogController : Controller
                 e.UserId ?? "",
                 e.UserRole ?? "",
                 e.BuildingId ?? "",
-                e.ApartmentId ?? "");
+                e.ApartmentId ?? "",
+                e.CorrelationId ?? "");
         }
 
         var bytes = Encoding.UTF8.GetBytes(sb.ToString());
