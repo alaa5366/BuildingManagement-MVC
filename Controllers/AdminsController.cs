@@ -38,22 +38,12 @@ public class AdminsController : Controller
     /// <summary>
     /// Shows the main page of the admins screen.
     /// </summary>
-    public async Task<IActionResult> Index(string? buildingId, int page = 1, int pageSize = 50)
+    public IActionResult Index(string? buildingId, int page = 1, int pageSize = 50)
     {
-        ViewBag.Buildings = await _buildings.GetSummariesAsync();
-
-        var allAdmins = await _admins.GetAdminsAsync(buildingId);
-        var paged = BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.AppUserDoc>
-            .Create(allAdmins, page, pageSize);
-
-        ViewBag.SelectedBuildingId = buildingId;
-        ViewBag.RouteValues = new Dictionary<string, string?>
-        {
-            ["buildingId"] = buildingId,
-            ["pageSize"] = pageSize.ToString()
-        };
-
-        return View(paged);
+        // The legacy Users table has been retired. Keep the old URL as a compatibility
+        // entry point, but send administrators to the canonical UserAccounts inventory.
+        // Do not fall back to recreating or querying the retired Users table.
+        return RedirectToAction("Index", "AccountManagement");
     }
 
     /// <summary>
