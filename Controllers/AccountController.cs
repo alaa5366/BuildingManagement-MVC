@@ -28,6 +28,7 @@ public class AccountController : Controller
     private readonly LoginThrottle _throttle;
     private readonly TwoFactorService _twoFactor;
     private readonly QrGeneratorService _qrGenerator;
+    private readonly TargetQrService _targetQr;
     private readonly ILogger<AccountController> _log;
     private string? ClientIp => HttpContext.Connection.RemoteIpAddress?.ToString();
     // مفتاح قفل موحّد لكل طرق الدخول: الرقم بعد التطبيع (0100.. = +20100.. = 20100..) أو الإيميل
@@ -53,6 +54,7 @@ public class AccountController : Controller
         LoginThrottle throttle,
         TwoFactorService twoFactor,
         QrGeneratorService qrGenerator,
+        TargetQrService targetQr,
         ILogger<AccountController> logger)
     {
         _sqlAuth = sqlAuth;
@@ -63,6 +65,7 @@ public class AccountController : Controller
         _throttle = throttle;
         _twoFactor = twoFactor;
         _qrGenerator = qrGenerator;
+        _targetQr = targetQr;
         _log = logger;
     }
 
@@ -981,8 +984,8 @@ public class AccountController : Controller
         }
 
         ViewBag.Token = token;
-        ViewBag.AptNumber = ctx.Apt!.Number;
-        ViewBag.BuildingName = ctx.Building!.Name;
+        ViewBag.AptNumber = ctx.Apartment!.ApartmentNumber;
+        ViewBag.BuildingName = ctx.Apartment!.BuildingName;
         return View("QuickLoginConfirm");
     }
 
@@ -1010,8 +1013,7 @@ public class AccountController : Controller
         }
 
         var payload = ctx.Payload!;
-        var building = ctx.Building!;
-        var apt = ctx.Apt!;
+        var apartment = ctx.Apartment!;
         var resident = ctx.Resident!;
 
         // ✅ استهلاك atomic قبل تسجيل الدخول — لو طلب تاني سبقنا يفشل هنا
@@ -1027,15 +1029,15 @@ public class AccountController : Controller
             role: "resident",
             email: resident.Email ?? "",
             name: string.IsNullOrWhiteSpace(resident.Name)
-                ? Loc.T("Resident_Of_Apartment_N", apt.Number) : resident.Name,
-            buildingIds: new List<string> { building.Id },
+                ? Loc.T("Resident_Of_Apartment_N", apartment.ApartmentNumber) : resident.Name,
+            buildingIds: new List<string> { apartment.BuildingId },
             aptId: resident.ApartmentId,
-            aptNumber: apt.Number);
+            aptNumber: apartment.ApartmentNumber);
 
         await SignInCookieAsync(result);
 
         _log.LogInformation("[QuickLogin] Resident logged in: {Name} (apt {Apt})",
-            resident.Name, apt.Number);
+            resident.Name, apartment.ApartmentNumber);
 
         return RedirectToAction("Index", "ResidentHome");
     }
@@ -1061,8 +1063,8 @@ public class AccountController : Controller
         }
 
         ViewBag.Token = token;
-        ViewBag.AptNumber = ctx.Apt!.Number;
-        ViewBag.BuildingName = ctx.Building!.Name;
+        ViewBag.AptNumber = ctx.Apartment!.ApartmentNumber;
+        ViewBag.BuildingName = ctx.Apartment!.BuildingName;
         return View("SetPin");
     }
 
@@ -1087,8 +1089,8 @@ public class AccountController : Controller
         }
 
         ViewBag.Token = token;
-        ViewBag.AptNumber = ctx.Apt!.Number;
-        ViewBag.BuildingName = ctx.Building!.Name;
+        ViewBag.AptNumber = ctx.Apartment!.ApartmentNumber;
+        ViewBag.BuildingName = ctx.Apartment!.BuildingName;
 
         if (string.IsNullOrEmpty(newPin) || newPin.Length != 4 || !newPin.All(char.IsDigit))
         {
@@ -1113,7 +1115,7 @@ public class AccountController : Controller
         {
             await _residents.SetApartmentPinAsync(ctx.Payload!.BuildingId, ctx.Payload.AptId, newPin, "setpin-link");
             _log.LogInformation("[SetPin] PIN set via link for apartment {Apt} in building {B}",
-                ctx.Apt.Number, ctx.Payload.BuildingId);
+                ctx.Apartment.ApartmentNumber, ctx.Payload.BuildingId);
         }
         catch (Exception ex)
         {
@@ -1139,23 +1141,19 @@ public class AccountController : Controller
         if (!string.Equals(payload.Purpose, "setpin", StringComparison.OrdinalIgnoreCase))
             return new QuickLoginContext { Error = Loc.T("Invalid_Token") };
 
-        var building = await _buildings.GetByIdAsync(payload.BuildingId);
-        if (building == null)
-            return new QuickLoginContext { Error = Loc.T("The_Building_Does_Not_Exist") };
-
-        var apt = building.Apartments.FirstOrDefault(a => a.Id == payload.AptId);
-        if (apt == null)
+        var apartment = await _targetQr.GetApartmentAsync(
+            payload.BuildingId, payload.AptId, requireActive: true, HttpContext.RequestAborted);
+        if (apartment is null)
             return new QuickLoginContext { Error = Loc.T("The_Apartment_Does_Not_Exist") };
 
-        return new QuickLoginContext { Payload = payload, Building = building, Apt = apt };
+        return new QuickLoginContext { Payload = payload, Apartment = apartment };
     }
 
     private sealed class QuickLoginContext
     {
         public string? Error { get; init; }
         public QuickTokenPayload? Payload { get; init; }
-        public Building? Building { get; init; }
-        public Apartment? Apt { get; init; }
+        public QrApartmentInfo? Apartment { get; init; }
         public BuildingManagementMvc.Data.Entities.ResidentEntity? Resident { get; init; }
     }
 
@@ -1171,12 +1169,9 @@ public class AccountController : Controller
         if (!string.Equals(payload.Purpose, "login", StringComparison.OrdinalIgnoreCase))
             return new QuickLoginContext { Error = Loc.T("Invalid_Token") };
 
-        var building = await _buildings.GetByIdAsync(payload.BuildingId);
-        if (building == null)
-            return new QuickLoginContext { Error = Loc.T("The_Building_Does_Not_Exist") };
-
-        var apt = building.Apartments.FirstOrDefault(a => a.Id == payload.AptId);
-        if (apt == null)
+        var apartment = await _targetQr.GetApartmentAsync(
+            payload.BuildingId, payload.AptId, requireActive: true, HttpContext.RequestAborted);
+        if (apartment is null)
             return new QuickLoginContext { Error = Loc.T("The_Apartment_Does_Not_Exist") };
 
         var residents = await _residents.GetByApartmentAsync(payload.BuildingId, payload.AptId);
@@ -1188,8 +1183,7 @@ public class AccountController : Controller
         return new QuickLoginContext
         {
             Payload = payload,
-            Building = building,
-            Apt = apt,
+            Apartment = apartment,
             Resident = resident
         };
     }
