@@ -44,6 +44,30 @@ public sealed class TargetWalletReadService
         if (toMonth is not null) periodQuery = periodQuery.Where(p => string.Compare(p.PeriodKey, toMonth) <= 0);
 
         var periodIds = await periodQuery.Select(p => p.PeriodId).ToListAsync(cancellationToken);
+
+        // The displayed balance is cumulative through the selected end month.
+        // A statement range may start later, but earlier posted movements still
+        // contribute to the apartment's carried-forward balance.
+        var balancePeriodQuery = db.FinancialPeriods.AsNoTracking()
+            .Where(p => p.BuildingId == buildingId);
+        if (toMonth is not null)
+            balancePeriodQuery = balancePeriodQuery.Where(p => string.Compare(p.PeriodKey, toMonth) <= 0);
+        var balancePeriodIds = await balancePeriodQuery
+            .Select(p => p.PeriodId)
+            .ToListAsync(cancellationToken);
+
+        var cumulativeBalance = await (
+            from entry in db.LedgerEntries.AsNoTracking()
+            join transaction in db.LedgerTransactions.AsNoTracking()
+                on entry.LedgerTransactionId equals transaction.LedgerTransactionId
+            where entry.BuildingId == buildingId && entry.ApartmentId == apartmentId
+                && balancePeriodIds.Contains(entry.PeriodId)
+                && transaction.BuildingId == buildingId
+                && transaction.Status == LedgerTransactionStatus.Posted
+                && entry.CurrencyCode == currencyCode
+            select (decimal?)entry.SignedAmount)
+            .SumAsync(cancellationToken) ?? 0m;
+
         var posted = await (
             from entry in db.LedgerEntries.AsNoTracking()
             join transaction in db.LedgerTransactions.AsNoTracking()
@@ -124,7 +148,7 @@ public sealed class TargetWalletReadService
             .ToList();
 
         return new TargetWalletSnapshot(
-            posted.Sum(x => x.SignedAmount),
+            cumulativeBalance,
             transactions,
             pending);
     }
