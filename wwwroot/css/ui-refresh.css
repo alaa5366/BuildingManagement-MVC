@@ -341,3 +341,44 @@ body.no-sidebar .auth-content .btn { min-height: 42px; }
   .content-wrapper .rh-maint-card { flex-wrap: wrap; }
   .content-wrapper .rh-maint-status { margin-inline-start: 53px; }
 }
+
+
+/* Building map cards and apartment details */
+.content-wrapper .apt-card {
+  border: 1px solid var(--ui-border) !important; border-radius: 13px;
+  padding: 13px; background: #fff; box-shadow: 0 2px 10px rgba(24,45,54,.035);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.content-wrapper .apt-card:hover { transform: translateY(-3px); box-shadow: var(--ui-shadow-hover); }
+.content-wrapper .apt-header { padding-top: 5px; }
+.content-wrapper .apt-number { color: var(--ui-text); font-size: .88rem; }
+.content-wrapper .apt-avatar-lg {
+  width: 46px; height: 46px; border: 3px solid #fff;
+  box-shadow: 0 2px 9px rgba(20,40,50,.14);
+}
+.content-wrapper .apt-owner { color: var(--ui-text); font-weight: 650; }
+.content-wrapper .apt-balance { font-variant-numeric: tabular-nums; }
+.content-wrapper .apt-pending { background: #fff6df; color: #815f1e; padding: 4px 9px; }
+.content-wrapper .apt-lastseen { color: var(--ui-muted); }
+.content-wrapper .apartment-details-modal .apt-details-header {
+  border-radius: 13px; border-inline-start: 4px solid var(--ui-primary);
+  border-inline-end: 0; background: linear-gradient(135deg,#f2f8f5,#fff);
+}
+.content-wrapper .apartment-details-modal .details-section-title {
+  color: var(--ui-primary); border-bottom: 1px solid var(--ui-border);
+  padding-bottom: 9px;
+}
+.content-wrapper .apartment-details-modal .detail-item {
+  border: 1px solid var(--ui-border); border-inline-start: 3px solid var(--ui-primary);
+  border-inline-end: 0; border-radius: 10px; background: var(--ui-surface-muted);
+}
+.content-wrapper .apartment-details-modal .fin-card {
+  border: 1px solid var(--ui-border); border-top: 3px solid var(--ui-primary);
+  border-radius: 11px; background: #fff;
+}
+.content-wrapper .qa-btn {
+  border: 1px solid var(--ui-border); border-radius: 12px; color: var(--ui-text);
+  box-shadow: 0 2px 8px rgba(24,45,54,.025); background: #fff;
+}
+.content-wrapper .qa-btn:hover { border-color: rgba(23,107,91,.35); color: var(--ui-primary); box-shadow: var(--ui-shadow); }
+.content-wrapper .pin-value { background: var(--ui-primary); border-radius: 7px; }
