@@ -27,6 +27,7 @@ public class AdminAptsController : Controller
     private readonly QrGeneratorService _qrGen;
     private readonly TargetWhatsAppService _targetWhatsApp;
     private readonly TargetNotificationsService _targetNotifications;
+    private readonly IdentityAccountAuthenticationService _identityAuth;
     private readonly Microsoft.Extensions.Logging.ILogger<AdminAptsController> _logger;
     private readonly IAuditLogger _auditLogger;
 
@@ -42,6 +43,7 @@ public class AdminAptsController : Controller
         TargetWhatsAppService targetWhatsApp,
         IAuditLogger auditLogger,
         TargetNotificationsService targetNotifications,
+        IdentityAccountAuthenticationService identityAuth,
         Microsoft.Extensions.Logging.ILogger<AdminAptsController> logger)
     {
         _buildings = buildings;
@@ -52,6 +54,7 @@ public class AdminAptsController : Controller
         _targetWhatsApp = targetWhatsApp;
         _auditLogger = auditLogger;
         _targetNotifications = targetNotifications;
+        _identityAuth = identityAuth;
         _logger = logger;
     }
 
@@ -161,6 +164,13 @@ public class AdminAptsController : Controller
         if (duplicatePhone)
         {
             TempData["Error"] = "رقم الهاتف مكرر في شقة أخرى؛ راجع بيانات الهاتف قبل إصدار رمز الدخول.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        if (!await _identityAuth.IsPrimaryResidentPhoneMatchAsync(
+            apt.BuildingId, apt.ApartmentId, phone, HttpContext.RequestAborted))
+        {
+            TempData["Error"] = "رقم هاتف الشقة لا يطابق الهاتف الأساسي لحساب الساكن الرئيسي في قاعدة الهوية؛ راجع البيانات قبل إصدار QR.";
             return RedirectToAction(nameof(Index));
         }
 
