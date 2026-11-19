@@ -26,5 +26,6 @@ public sealed class OperationalAuditIndexModelTests
                 nameof(AuditEventEntity.ResourceType), nameof(AuditEventEntity.OccurredAtUtc),
                 nameof(AuditEventEntity.AuditEventId) },
             index.Properties.Select(x => x.Name));
+        Assert.Equal(new[] { false, false, false, true, true }, index.IsDescending);
     }
 }
