@@ -33,8 +33,6 @@ public sealed class TargetExpenseRevenueWorkflowServiceTests
         Assert.Single(await verify.Expenses.ToListAsync());
         Assert.Single(await verify.FinancialSourceLinks.ToListAsync());
         Assert.Contains(await verify.AuditEvents.ToListAsync(), x => x.EventType == "ExpensePosted");
-        await verify.DisposeAsync();
-
         var reversalId = await service.ReverseAsync(false, "B1", commandId.ToString("N"),
             "Test reversal", Guid.NewGuid(), actorId);
         await using var reversed = factory.CreateDbContext();
