@@ -95,6 +95,7 @@
                             <form method="post" asp-action="CancelDeposit" onsubmit="return confirm('@Loc.Js("Cancel_The_Payment")');">
                                 <input type="hidden" name="month" value="@depMonth" />
                                 <input type="hidden" name="depositId" value="@dep.Id" />
+                                <input type="hidden" name="reason" value="Cancelled by building administrator" />
                                 <button class="btn btn-sm btn-outline-danger">@Loc.T("Cancel")</button>
                             </form>
 
