@@ -24,10 +24,10 @@ public sealed class ExplicitPermissionAuthorizationTests
     [Theory]
     [InlineData("admin")]
     [InlineData("superadmin")]
-    public void AdminPermission_RequiresExplicitGrantForEveryAdministratorRole(string role)
+    public async Task AdminPermission_RequiresExplicitGrantForEveryAdministratorRole(string role)
     {
         var context = CreateContext(role);
-        new AdminPermissionAttribute("backup.manage").OnAuthorization(context);
+        await new AdminPermissionAttribute("backup.manage").OnAuthorizationAsync(context);
         var denied = Assert.IsType<ContentResult>(context.Result);
         Assert.Equal(StatusCodes.Status403Forbidden, denied.StatusCode);
         Assert.False(string.IsNullOrWhiteSpace(denied.Content));
@@ -36,7 +36,7 @@ public sealed class ExplicitPermissionAuthorizationTests
     [Theory]
     [InlineData("admin")]
     [InlineData("superadmin")]
-    public void AdminPermission_AllowsExplicitGrant(string role)
+    public async Task AdminPermission_AllowsExplicitGrant(string role)
     {
         var context = CreateContext(role, "backup.manage");
         new AdminPermissionAttribute("backup.manage").OnAuthorization(context);
@@ -44,7 +44,7 @@ public sealed class ExplicitPermissionAuthorizationTests
     }
 
     [Fact]
-    public void AdminPermission_RejectsResidentEvenWhenPermissionClaimExists()
+    public async Task AdminPermission_RejectsResidentEvenWhenPermissionClaimExists()
     {
         var context = CreateContext("resident", "backup.manage");
         new AdminPermissionAttribute("backup.manage").OnAuthorization(context);
@@ -52,7 +52,7 @@ public sealed class ExplicitPermissionAuthorizationTests
     }
 
     [Fact]
-    public void AdminPermission_ChallengesAnonymousPrincipal()
+    public async Task AdminPermission_ChallengesAnonymousPrincipal()
     {
         var context = CreateContext(null);
         new AdminPermissionAttribute("backup.manage").OnAuthorization(context);
@@ -60,7 +60,7 @@ public sealed class ExplicitPermissionAuthorizationTests
     }
 
     [Fact]
-    public void HasPermission_DoesNotBypassSuperAdminRole()
+    public async Task HasPermission_DoesNotBypassSuperAdminRole()
     {
         var context = CreateContext("superadmin");
         new HasPermissionAttribute("secret.access").OnAuthorization(context);
@@ -68,7 +68,7 @@ public sealed class ExplicitPermissionAuthorizationTests
     }
 
     [Fact]
-    public void HasPermission_AllowsExplicitSuperAdminGrant()
+    public async Task HasPermission_AllowsExplicitSuperAdminGrant()
     {
         var context = CreateContext("superadmin", "secret.access");
         new HasPermissionAttribute("secret.access").OnAuthorization(context);
