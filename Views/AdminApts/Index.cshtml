@@ -70,6 +70,15 @@
                                         <span class="label">إرسال QR لاستعادة الدخول</span>
                                     </button>
                                 </form>
+                                <form method="post" asp-action="CancelRecoveryQr" class="d-inline"
+                                      onsubmit="return confirm('هل تريد إلغاء رمز الاستعادة الحالي لهذه الشقة فوراً؟');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="aptId" value="@apt.Id" />
+                                    <button type="submit" class="apt-action-btn btn-danger">
+                                        <span class="icon">⛔</span>
+                                        <span class="label">إلغاء QR الحالي</span>
+                                    </button>
+                                </form>
 
                                 @* 2. ترحيب *@
                                 <form method="post" asp-action="GenerateWelcome" class="d-inline">
