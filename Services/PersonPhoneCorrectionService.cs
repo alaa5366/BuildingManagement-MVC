@@ -71,7 +71,7 @@ public sealed class PersonPhoneCorrectionService
 
     public async Task<bool> ReviewAsync(Guid requestId, Guid reviewerAccountId, bool approve, string reason, bool superAdmin, string? buildingId)
     {
-        if (approve && string.IsNullOrWhiteSpace(reason)) return false;
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500) return false;
         await using var db = await _factory.CreateDbContextAsync();
         await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
         var request = await db.PersonPhoneChangeRequests.SingleOrDefaultAsync(r => r.RequestId == requestId && r.Status == 0);
@@ -112,7 +112,7 @@ public sealed class PersonPhoneCorrectionService
         request.Status = approve ? (byte)1 : (byte)2;
         request.ReviewedByAccountId = reviewerAccountId;
         request.ReviewedAtUtc = now;
-        request.ReviewReason = string.IsNullOrWhiteSpace(reason) ? (approve ? "Identity verified by building administration." : "Request declined by building administration.") : reason.Trim();
+        request.ReviewReason = reason.Trim();
         await db.SaveChangesAsync();
         await tx.CommitAsync();
 
