@@ -11,64 +11,31 @@ public sealed class TargetNotificationsServiceTests
     [Fact]
     public async Task GetForAdminAsync_IsScopedToBuildingAndAdminRecipient()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString("N")).Options;
+        var options = CreateOptions();
         await using (var seed = new AppDbContext(options))
         {
-            seed.Buildings.AddRange(
-                new BuildingEntity { Id = "B1", BuildingNumber = "1", Name = "One" },
-                new BuildingEntity { Id = "B2", BuildingNumber = "2", Name = "Two" });
-            seed.Notifications.AddRange(
-                Create("B1", "admin-1", "admin", null),
-                Create("B1", "resident-1", "resident", "A1"),
-                Create("B2", "admin-2", "admin", null));
+            seed.Buildings.AddRange(Building("B1"), Building("B2"));
+            seed.NotificationMessages.AddRange(
+                Message("B1", "admin-1", 0, null),
+                Message("B1", "resident-1", 1, "A1"),
+                Message("B2", "admin-2", 0, null));
             await seed.SaveChangesAsync();
         }
 
         var service = new TargetNotificationsService(new TestContextFactory(options));
         var items = await service.GetForAdminAsync("B1");
-
         var item = Assert.Single(items);
-        Assert.Equal("admin-1", item.Id);
+        Assert.Equal("admin-1", item.Title);
         Assert.Equal("admin", item.RecipientType);
     }
 
     [Fact]
-    public async Task MarkReadAsync_RequiresExactBuildingAndRecipientScope()
+    public async Task CreateResidentDepositNoticeAsync_WritesNormalizedMessageAndRecipient()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString("N")).Options;
+        var options = CreateOptions();
         await using (var seed = new AppDbContext(options))
         {
-            seed.Buildings.Add(new BuildingEntity { Id = "B1", BuildingNumber = "1", Name = "One" });
-            seed.Notifications.AddRange(
-                Create("B1", "admin-1", "admin", null),
-                Create("B1", "resident-1", "resident", "A1"),
-                Create("B1", "resident-2", "resident", "A2"));
-            await seed.SaveChangesAsync();
-        }
-
-        var service = new TargetNotificationsService(new TestContextFactory(options));
-        Assert.False(await service.MarkReadAsync("B1", "resident-1", "resident", "A2"));
-        Assert.False(await service.MarkReadAsync("B2", "admin-1", "admin"));
-        Assert.True(await service.MarkReadAsync("B1", "resident-1", "resident", "A1"));
-
-        await using var verify = new AppDbContext(options);
-        Assert.True(await verify.Notifications.Where(item => item.Id == "resident-1")
-            .Select(item => item.IsRead).SingleAsync());
-        Assert.False(await verify.Notifications.Where(item => item.Id == "resident-2")
-            .Select(item => item.IsRead).SingleAsync());
-    }
-
-
-    [Fact]
-    public async Task CreateResidentDepositNoticeAsync_PersistsOnlyWithinExistingApartmentScope()
-    {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString("N")).Options;
-        await using (var seed = new AppDbContext(options))
-        {
-            seed.Buildings.Add(new BuildingEntity { Id = "B1", BuildingNumber = "1", Name = "One" });
+            seed.Buildings.Add(Building("B1"));
             seed.Apartments.Add(new ApartmentEntity
             {
                 BuildingId = "B1", Id = "A1", FloorId = "F1", Number = 1
@@ -77,27 +44,26 @@ public sealed class TargetNotificationsServiceTests
         }
 
         var service = new TargetNotificationsService(new TestContextFactory(options));
-        await service.CreateResidentDepositNoticeAsync(
-            "B1", "A1", "Deposit confirmed", "Your payment was confirmed.");
+        await service.CreateResidentDepositNoticeAsync("B1", "A1", "Deposit confirmed", "Payment confirmed.");
 
         await using var verify = new AppDbContext(options);
-        var notice = await verify.Notifications.SingleAsync();
-        Assert.Equal("B1", notice.BuildingId);
-        Assert.Equal("A1", notice.RecipientApartmentId);
-        Assert.Equal("resident", notice.RecipientType);
-        Assert.Equal("deposit", notice.Type);
-        Assert.Equal("Your payment was confirmed.", notice.Body);
-        Assert.False(notice.IsRead);
+        var message = await verify.NotificationMessages.Include(x => x.Recipients).SingleAsync();
+        var recipient = Assert.Single(message.Recipients);
+        Assert.Equal("B1", message.BuildingId);
+        Assert.Equal("Deposit confirmed", message.Title);
+        Assert.Equal("Payment confirmed.", message.Body);
+        Assert.Equal((byte)1, recipient.RecipientType);
+        Assert.Equal("A1", recipient.ApartmentId);
+        Assert.Null(await verify.NotificationReadStates.SingleOrDefaultAsync());
     }
 
     [Fact]
-    public async Task CreateResidentDepositNoticeAsync_RejectsApartmentOutsideBuilding()
+    public async Task CreateResidentNotificationAsync_RejectsApartmentOutsideBuilding()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString("N")).Options;
+        var options = CreateOptions();
         await using (var seed = new AppDbContext(options))
         {
-            seed.Buildings.Add(new BuildingEntity { Id = "B1", BuildingNumber = "1", Name = "One" });
+            seed.Buildings.Add(Building("B1"));
             seed.Apartments.Add(new ApartmentEntity
             {
                 BuildingId = "B1", Id = "A1", FloorId = "F1", Number = 1
@@ -107,58 +73,69 @@ public sealed class TargetNotificationsServiceTests
 
         var service = new TargetNotificationsService(new TestContextFactory(options));
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            service.CreateResidentDepositNoticeAsync("B2", "A1", "Deposit", "Notice"));
+            service.CreateResidentNotificationAsync("B2", "A1", "Deposit", "Notice"));
     }
 
-
     [Fact]
-    public async Task MarkAllReadAsync_ChangesOnlyTheExactResidentApartmentScope()
+    public async Task MarkReadAndMarkAllRead_ChangeOnlyTheExactRecipientScope()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString("N")).Options;
+        var options = CreateOptions();
+        var resident1 = Message("B1", "A1 notice", 1, "A1");
+        var resident2 = Message("B1", "A2 notice", 1, "A2");
+        var admin = Message("B1", "admin notice", 0, null);
         await using (var seed = new AppDbContext(options))
         {
-            seed.Buildings.AddRange(
-                new BuildingEntity { Id = "B1", BuildingNumber = "1", Name = "One" },
-                new BuildingEntity { Id = "B2", BuildingNumber = "2", Name = "Two" });
-            seed.Notifications.AddRange(
-                Create("B1", "a1-unread", "resident", "A1"),
-                Create("B1", "a2-unread", "resident", "A2"),
-                Create("B1", "admin-unread", "admin", null),
-                Create("B2", "other-building", "resident", "A1"));
+            seed.Buildings.AddRange(Building("B1"), Building("B2"));
+            seed.NotificationMessages.AddRange(resident1, resident2, admin,
+                Message("B2", "other building", 1, "A1"));
             await seed.SaveChangesAsync();
         }
 
         var service = new TargetNotificationsService(new TestContextFactory(options));
-        Assert.Equal(1, await service.GetUnreadCountForResidentAsync("B1", "A1"));
+        Assert.False(await service.MarkReadAsync("B1", resident1.MessageId.ToString("N"), "resident", "A2"));
+        Assert.True(await service.MarkReadAsync("B1", resident1.MessageId.ToString("N"), "resident", "A1"));
+        Assert.Equal(1, await service.GetUnreadCountForResidentAsync("B1", "A2"));
         Assert.Equal(1, await service.GetUnreadCountForAdminAsync("B1"));
-        Assert.Equal(1, await service.MarkAllReadAsync("B1", "resident", "A1"));
-        Assert.Equal(0, await service.GetUnreadCountForResidentAsync("B1", "A1"));
-
-        await using var verify = new AppDbContext(options);
-        Assert.True(await verify.Notifications.Where(item => item.Id == "a1-unread")
-            .Select(item => item.IsRead).SingleAsync());
-        Assert.False(await verify.Notifications.Where(item => item.Id == "a2-unread")
-            .Select(item => item.IsRead).SingleAsync());
-        Assert.False(await verify.Notifications.Where(item => item.Id == "admin-unread")
-            .Select(item => item.IsRead).SingleAsync());
-        Assert.False(await verify.Notifications.Where(item => item.Id == "other-building")
-            .Select(item => item.IsRead).SingleAsync());
+        Assert.Equal(1, await service.MarkAllReadAsync("B1", "resident", "A2"));
+        Assert.Equal(0, await service.GetUnreadCountForResidentAsync("B1", "A2"));
+        Assert.Equal(1, await service.GetUnreadCountForAdminAsync("B1"));
     }
 
-    private static NotificationEntity Create(string buildingId, string id, string recipientType, string? apartmentId) => new()
+    private static DbContextOptions<AppDbContext> CreateOptions() =>
+        new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N")).Options;
+
+    private static BuildingEntity Building(string id) => new()
     {
-        BuildingId = buildingId,
-        Id = id,
-        Ts = new DateTime(2026, 11, 19, 12, 0, 0, DateTimeKind.Utc),
-        RecipientType = recipientType,
-        RecipientApartmentId = apartmentId,
-        Type = "info",
-        Icon = "bell",
-        Title = id,
-        Body = "Test notification",
-        IsRead = false
+        Id = id, BuildingNumber = id, Name = id
     };
+
+    private static NotificationMessageEntity Message(
+        string buildingId, string title, byte recipientType, string? apartmentId)
+    {
+        var now = DateTime.UtcNow;
+        return new NotificationMessageEntity
+        {
+            MessageId = Guid.NewGuid(),
+            BuildingId = buildingId,
+            Title = title,
+            Body = title,
+            Channel = 0,
+            Origin = "info",
+            CreatedAtUtc = now,
+            Recipients =
+            {
+                new NotificationRecipientEntity
+                {
+                    RecipientId = Guid.NewGuid(),
+                    RecipientType = recipientType,
+                    RecipientReference = apartmentId ?? "building-admins",
+                    ApartmentId = apartmentId,
+                    CreatedAtUtc = now
+                }
+            }
+        };
+    }
 
     private sealed class TestContextFactory(DbContextOptions<AppDbContext> options)
         : IDbContextFactory<AppDbContext>
