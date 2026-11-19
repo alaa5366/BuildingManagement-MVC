@@ -40,6 +40,43 @@ public sealed class TargetNotificationsService
         return items.Select(ToModel).ToList();
     }
 
+
+    public async Task CreateResidentDepositNoticeAsync(
+        string buildingId,
+        string apartmentId,
+        string title,
+        string body,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateScope(buildingId, apartmentId);
+        if (string.IsNullOrWhiteSpace(title) || title.Length > 200)
+            throw new ArgumentException("A notification title of 1 to 200 characters is required.", nameof(title));
+        if (string.IsNullOrWhiteSpace(body) || body.Length > 1000)
+            throw new ArgumentException("A notification body of 1 to 1000 characters is required.", nameof(body));
+
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        var apartmentExists = await db.Apartments.AsNoTracking().AnyAsync(
+            apartment => apartment.BuildingId == buildingId && apartment.Id == apartmentId,
+            cancellationToken);
+        if (!apartmentExists)
+            throw new InvalidOperationException("The notification recipient apartment is outside the building scope.");
+
+        db.Notifications.Add(new NotificationEntity
+        {
+            BuildingId = buildingId,
+            Id = Guid.NewGuid().ToString("N"),
+            Ts = DateTime.UtcNow,
+            RecipientType = "resident",
+            RecipientApartmentId = apartmentId,
+            Type = "deposit",
+            Icon = "💳",
+            Title = title.Trim(),
+            Body = body.Trim(),
+            IsRead = false
+        });
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<bool> MarkReadAsync(
         string buildingId, string id, string recipientType, string? apartmentId = null,
         CancellationToken cancellationToken = default)
