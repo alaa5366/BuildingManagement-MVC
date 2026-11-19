@@ -190,11 +190,20 @@ public class WalletController : Controller
         var building = await _buildings.GetByIdAsync(BuildingId);
         if (building == null) return NotFound();
 
-        if (amount != 0)
+        try
         {
             _wallet.AddWalletAdjustment(building, aptId, amount, reason, month, User.Identity?.Name ?? "admin");
             _audit.Push(building, "wallet_adjustment", $"{amount:0.##} ج.م — {reason}", "admin", User.Identity?.Name ?? "admin");
             await _buildings.SaveFullAsync(building);
+            TempData["Message"] = "تم تسجيل التسوية بنجاح.";
+        }
+        catch (ArgumentException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        catch (Exception)
+        {
+            TempData["Error"] = "تعذر تسجيل التسوية.";
         }
 
         return RedirectToAction("Index", new { month });
