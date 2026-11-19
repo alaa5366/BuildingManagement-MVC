@@ -125,6 +125,13 @@ public sealed class TargetWalletReadService
             LogoUrl = source.LogoUrl,
             AdminWhatsapp = source.AdminWhatsapp,
             RowVersion = source.RowVersion,
+            PaymentInfo = new PaymentInfo
+            {
+                Label = source.PaymentLabel,
+                AccountNumber = source.PaymentAccountNumber,
+                Phone = source.PaymentPhone,
+                Notes = source.PaymentNotes
+            },
             FloorsCount = floors.Count,
             ApartmentsCount = apartments.Count,
             Floors = floors.Select(item => new Floor
