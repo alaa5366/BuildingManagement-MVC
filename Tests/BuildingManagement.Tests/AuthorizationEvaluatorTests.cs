@@ -181,6 +181,35 @@ public sealed class AuthorizationEvaluatorTests
         Assert.Equal(AuthorizationReason.Granted, result.Reason);
     }
 
+    [Theory]
+    [InlineData(-11)]
+    [InlineData(1)]
+    public async Task EvaluateAsync_RequiresStepUpWhenMfaProofIsExpiredOrFromTheFuture(int minutesFromNow)
+    {
+        await using var db = CreateContext();
+        var actor = await SeedAccountWithGrantsAsync(db,
+            ("audit-role", AuthorizationEffect.Allow));
+        db.UserTwoFactorSettings.Add(new UserTwoFactorSettingEntity
+        {
+            AccountId = actor.AccountId,
+            IsEnabled = true,
+            SecretCiphertext = System.Text.Encoding.UTF8.GetBytes("test-ciphertext"),
+            KeyVersion = "test",
+            EnrolledAtUtc = NowUtc.AddDays(-1)
+        });
+        await db.SaveChangesAsync();
+        var evaluator = new AuthorizationEvaluator(db, new DefaultAuthorizationPermissionCatalog());
+
+        var result = await evaluator.EvaluateAsync(
+            Principal(actor.AccountId, actor.SecurityStamp, NowUtc.AddMinutes(minutesFromNow)),
+            "audit.view.all",
+            new ResolvedAuthorizationResource(AuthorizationScopeType.System),
+            NowUtc);
+
+        Assert.Equal(AuthorizationDecision.RequiresStepUp, result.Decision);
+        Assert.Equal(AuthorizationReason.StepUpRequired, result.Reason);
+    }
+
     [Fact]
     public async Task EvaluateAsync_AllowsActiveSystemGrantWithCurrentSecurityStamp()
     {
