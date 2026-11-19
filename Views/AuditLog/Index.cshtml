@@ -12,6 +12,7 @@
     var knownActions = ViewBag.KnownActions as List<string> ?? new();
     var canFilterBuilding = ViewBag.CanFilterByBuilding as bool? ?? false;
     var canFilterApartment = ViewBag.CanFilterByApartment as bool? ?? false;
+    var canFilterUser = ViewBag.CanFilterByUser as bool? ?? true;
     var routeValues = ViewBag.RouteValues as Dictionary<string, string?> ?? new();
 
     // ✅ تجهيز RouteValues للـ Partial (بدون القيم الفاضية)
@@ -110,10 +111,13 @@
                     </div>
                 }
 
-                <div class="col-md-2">
-                    <label class="form-label small">@Loc.T("User")</label>
-                    <input name="userId" value="@ViewBag.SelectedUserId" class="form-control form-control-sm" maxlength="160" autocomplete="off" />
-                </div>
+                @if (canFilterUser)
+                {
+                    <div class="col-md-2">
+                        <label class="form-label small">@Loc.T("User")</label>
+                        <input name="userId" value="@ViewBag.SelectedUserId" class="form-control form-control-sm" maxlength="160" autocomplete="off" />
+                    </div>
+                }
 
                 <div class="col-md-2">
                     <label class="form-label small">@Loc.T("From_Date")</label>
