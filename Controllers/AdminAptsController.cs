@@ -25,7 +25,6 @@ public class AdminAptsController : Controller
     private readonly QrSecurityService _qrSecurity;
     private readonly QrGeneratorService _qrGen;
     private readonly WhatsAppTemplateService _waTemplates;
-    private readonly WalletService _wallet;
     private readonly NotificationsService _notify;
     private readonly TargetNotificationsService _targetNotifications;
     private readonly Microsoft.Extensions.Logging.ILogger<AdminAptsController> _logger;
@@ -40,7 +39,6 @@ public class AdminAptsController : Controller
         QrSecurityService qrSecurity,
         QrGeneratorService qrGen,
         WhatsAppTemplateService waTemplates,
-        WalletService wallet,
         NotificationsService notify,
         IAuditLogger auditLogger,
         TargetNotificationsService targetNotifications,
@@ -51,7 +49,6 @@ public class AdminAptsController : Controller
         _qrSecurity = qrSecurity;
         _qrGen = qrGen;
         _waTemplates = waTemplates;
-        _wallet = wallet;
         _notify = notify;
         _auditLogger = auditLogger;
         _targetNotifications = targetNotifications;
@@ -229,10 +226,6 @@ public class AdminAptsController : Controller
         apt.Closed = false;
         apt.OpenDate = DateTime.UtcNow.ToString("o");
         apt.CloseDate = null;
-
-        var currentMonth = WalletService.CurrentMonthKey();
-        _wallet.RecalculateDistribution(building, currentMonth);
-        _wallet.RecalculateRevenueDistribution(building, currentMonth);
 
         _notify.NotifyResidentApartmentReopened(building, apt, null);
         await _buildings.SaveFullAsync(building);
