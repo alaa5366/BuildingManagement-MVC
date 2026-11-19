@@ -168,8 +168,6 @@ public class AdminAptsController : Controller
             Purpose = "recovery"
         });
 
-        await _qrSecurity.RegisterRecoveryTokenAsync(token, apt.BuildingId, apt.ApartmentId, HttpContext.RequestAborted);
-
         var quickUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/Account/QuickLogin?token={Uri.EscapeDataString(token)}";
         var message =
             $"مرحباً، هذا رابط دخول مؤقت لحساب شقتك رقم {apt.ApartmentNumber} في {apt.BuildingName}.\n" +
@@ -178,6 +176,7 @@ public class AdminAptsController : Controller
             quickUrl;
         var waLink = WhatsAppTemplateService.BuildWaLink(phone, message);
         var qrBase64 = Convert.ToBase64String(_qrGen.GeneratePng(quickUrl, 12));
+        await _qrSecurity.RegisterRecoveryTokenAsync(token, apt.BuildingId, apt.ApartmentId, HttpContext.RequestAborted);
 
         await _auditLogger.LogAsync(
             action: "resident.recovery_qr_issued",
