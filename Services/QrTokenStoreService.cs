@@ -92,6 +92,19 @@ public class QrTokenStoreService
             var token = await db.QrTokens.AsNoTracking().FirstOrDefaultAsync(t => t.Uid == uid);
             if (token == null) return (false, "not-found", null, null);
             if (DateTime.UtcNow > token.ExpiresAt) return (false, "expired", null, null);
+            if (!db.Database.IsRelational())
+            {
+                var tracked = await db.QrTokens.SingleOrDefaultAsync(t => t.Uid == uid);
+                if (tracked is null || DateTime.UtcNow > tracked.ExpiresAt)
+                    return (false, tracked is null ? "not-found" : "expired", null, null);
+                if (tracked.UseType == "single" && tracked.IsUsed)
+                    return (false, "already-used", null, null);
+                tracked.UsedAt = DateTime.UtcNow;
+                if (tracked.UseType == "single") tracked.IsUsed = true;
+                await db.SaveChangesAsync();
+                return (true, null, tracked.BuildingId, tracked.ApartmentId);
+            }
+
             if (token.UseType == "single")
             {
                 // Atomic compare-and-set: only one concurrent request can consume a single-use token.
