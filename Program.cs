@@ -415,6 +415,30 @@ builder.Services.AddScoped<TargetQrService>();
     var superAdminEmails = ConfigSecrets.Require(app.Configuration, "Auth:SuperAdminEmails");
     SqlAuthService.ConfigureSuperAdmins(superAdminEmails);
 
+    // Explicit one-time command: bootstrap only the two pre-existing allow-listed
+    // target identity accounts. Passwords are supplied through process environment
+    // variables and are never written to configuration, logs, or source control.
+    if (args.Contains("--bootstrap-superadmins", StringComparer.OrdinalIgnoreCase))
+    {
+        var hotmailPassword = Environment.GetEnvironmentVariable("BM_SUPERADMIN_HOTMAIL_PASSWORD");
+        var gmailPassword = Environment.GetEnvironmentVariable("BM_SUPERADMIN_GMAIL_PASSWORD");
+        if (string.IsNullOrWhiteSpace(hotmailPassword) || hotmailPassword.Length < 14 ||
+            string.IsNullOrWhiteSpace(gmailPassword) || gmailPassword.Length < 14)
+            throw new InvalidOperationException(
+                "Both BM_SUPERADMIN_HOTMAIL_PASSWORD and BM_SUPERADMIN_GMAIL_PASSWORD must be supplied (minimum 14 characters).");
+
+        using var bootstrapScope = app.Services.CreateScope();
+        var identityAuth = bootstrapScope.ServiceProvider.GetRequiredService<IdentityAccountAuthenticationService>();
+        var hotmailCreated = await identityAuth.BootstrapSuperAdminAsync("alaa5366@hotmail.com", hotmailPassword);
+        var gmailCreated = await identityAuth.BootstrapSuperAdminAsync("alaa5366@gmail.com", gmailPassword);
+
+        Console.WriteLine($"Hotmail SuperAdmin bootstrap: {(hotmailCreated ? "created" : "not changed — verify account/role/credential state")}");
+        Console.WriteLine($"Gmail SuperAdmin bootstrap: {(gmailCreated ? "created" : "not changed — verify account/role/credential state")}");
+        if (!hotmailCreated || !gmailCreated)
+            throw new InvalidOperationException("One or more SuperAdmin accounts were not bootstrapped. Review the account state before retrying.");
+        return;
+    }
+
     SecretVerifier.AllowLegacyPlain = app.Configuration.GetValue<bool>("Auth:AllowLegacyPlainPins");
 
     BackupFileProtector.Initialize(encryptionSecret);
