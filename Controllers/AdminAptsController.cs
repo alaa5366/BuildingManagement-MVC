@@ -21,6 +21,7 @@ namespace BuildingManagementMvc.Controllers;
 public class AdminAptsController : Controller
 {
     private readonly BuildingsService _buildings;
+    private readonly WalletService _wallet;
     private readonly ResidentsService _residents;
     private readonly QrSecurityService _qrSecurity;
     private readonly TargetQrService _targetQr;
@@ -36,6 +37,7 @@ public class AdminAptsController : Controller
     /// </summary>
     public AdminAptsController(
         BuildingsService buildings,
+        WalletService wallet,
         ResidentsService residents,
         QrSecurityService qrSecurity,
         TargetQrService targetQr,
@@ -47,6 +49,7 @@ public class AdminAptsController : Controller
         Microsoft.Extensions.Logging.ILogger<AdminAptsController> logger)
     {
         _buildings = buildings;
+        _wallet = wallet;
         _residents = residents;
         _qrSecurity = qrSecurity;
         _targetQr = targetQr;
