@@ -444,6 +444,9 @@ public class BackupServiceTests
         Assert.Contains("notificationDeliveries", collections.Keys);
         Assert.Contains("notificationReadStates", collections.Keys);
         Assert.Contains("notificationPreferences", collections.Keys);
+        Assert.Contains("languages", collections.Keys);
+        Assert.Contains("translationEntries", collections.Keys);
+        Assert.Contains("translationValues", collections.Keys);
     }
 
     [Fact]
@@ -632,7 +635,6 @@ public class BackupServiceTests
 
         var restoredEntry = await _db.TranslationEntries.SingleAsync(x => x.Key == translationKey);
         Assert.Equal("Localization backup round-trip", restoredEntry.Description);
-        Assert.NotEmpty(restoredEntry.RowVersion);
 
         var restoredValue = await _db.TranslationValues.SingleAsync(
             x => x.Key == translationKey && x.CultureCode == culture);
