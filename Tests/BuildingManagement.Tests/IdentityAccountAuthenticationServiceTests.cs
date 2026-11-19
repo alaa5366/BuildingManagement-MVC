@@ -77,6 +77,15 @@ public sealed class IdentityAccountAuthenticationServiceTests
                 AccountId = accountId, PersonId = personId, AccountStatus = 1,
                 NormalizedEmail = "LOCKED-TEST@EXAMPLE.INVALID", SecurityStamp = "stamp", CreatedAtUtc = now
             });
+            db.RoleDefinitions.Add(new RoleDefinitionEntity
+            {
+                RoleKey = "resident", DisplayName = "Resident", IsActive = true
+            });
+            db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            {
+                RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "resident",
+                ValidFromUtc = now.AddMinutes(-1), GrantedAtUtc = now.AddMinutes(-1)
+            });
             await db.SaveChangesAsync();
         }
 
