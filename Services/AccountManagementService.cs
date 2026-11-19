@@ -10,7 +10,7 @@ public sealed class AccountManagementService
     private readonly IAuditLogger _audit;
     public AccountManagementService(IDbContextFactory<AppDbContext> factory, IAuditLogger audit) { _factory = factory; _audit = audit; }
 
-    /// <summary>Retrieves a paginated view of localization languages or translations.</summary>
+    /// <summary>Retrieves a paginated inventory of canonical identity accounts.</summary>
     public async Task<AccountManagementPage> GetPageAsync(string? search, string? role, string? status,
         int page, int pageSize, CancellationToken ct = default)
     {
@@ -26,30 +26,6 @@ public sealed class AccountManagementService
                               AccountStatus = account.AccountStatus, MustChangePin = account.MustChangePin,
                               IsArchived = person.IsArchived, LastLoginAtUtc = account.LastLoginAtUtc
                           }).ToListAsync(ct);
-
-        // SuperAdmin authentication is still backed by the legacy Users store and remains email/password-only.
-        // Keep those identities visible as a separate source; never attach them to phone/PIN login.
-        var legacySuperAdmins = await db.Users.AsNoTracking()
-            .Where(user => user.Role == "superadmin")
-            .Select(user => new
-            {
-                user.Uid, user.Name, user.Email, user.IsActive, user.IsDisabled, user.LastLoginAt
-            }).ToListAsync(ct);
-        rows.AddRange(legacySuperAdmins.Select(user => new AccountManagementRow
-        {
-            LegacyUserId = user.Uid,
-            IsLegacyAccount = true,
-            Name = user.Name,
-            Email = user.Email,
-            Phone = null,
-            AccountStatus = user.IsDisabled ? (byte)2 : user.IsActive ? (byte)1 : (byte)0,
-            StatusLabel = user.IsDisabled ? "موقوف / مقفل" : user.IsActive ? "نشط" : "غير نشط",
-            Roles = "superadmin",
-            RoleContexts = "مخزن الدخول القديم — البريد وكلمة المرور فقط",
-            ActiveRoleCount = 1,
-            LastLoginAtUtc = user.LastLoginAt,
-            IsSuperAdminEmailAllowed = SqlAuthService.IsSuperAdminEmail(user.Email)
-        }));
 
         var grants = await (from grant in db.UserRoleAssignments.AsNoTracking()
                             join definition in db.RoleDefinitions.AsNoTracking() on grant.RoleKey equals definition.RoleKey
@@ -71,7 +47,7 @@ public sealed class AccountManagementService
 
         foreach (var row in rows)
         {
-            if (row.IsLegacyAccount) continue;
+            
             if (byAccount.TryGetValue(row.AccountId, out var assignments))
             {
                 row.Roles = string.Join(", ", assignments.Select(x => x.RoleKey).Distinct().OrderBy(x => x));
@@ -108,8 +84,7 @@ public sealed class AccountManagementService
                 || (x.Phone?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false)
                 || (x.Email?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false)
                 || x.AccountId.ToString().Contains(term, StringComparison.OrdinalIgnoreCase)
-                || (!x.IsLegacyAccount && x.PersonId.ToString().Contains(term, StringComparison.OrdinalIgnoreCase))
-                || (x.LegacyUserId?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false));
+                || x.PersonId.ToString().Contains(term, StringComparison.OrdinalIgnoreCase));
         }
         if (!string.IsNullOrWhiteSpace(role))
             query = query.Where(x => x.Roles.Split(", ", StringSplitOptions.RemoveEmptyEntries).Contains(role, StringComparer.OrdinalIgnoreCase));
@@ -128,84 +103,11 @@ public sealed class AccountManagementService
             ActiveAccounts = rows.Count(x => x.AccountStatus == 1),
             InactiveAccounts = rows.Count(x => x.AccountStatus != 1),
             DuplicatePhoneAccounts = rows.Count(x => x.IsDuplicatePhone),
-            LegacySuperAdminAccounts = rows.Count(x => x.IsLegacyAccount),
+            LegacySuperAdminAccounts = 0,
             AccountsWithoutActiveRole = rows.Count(x => x.ActiveRoleCount == 0),
             Rows = result.Skip((page - 1) * pageSize).Take(pageSize).ToList()
         };
     }
-    /// <summary>Updates the status of a legacy super-admin account.</summary>
-    public async Task<AccountManagementMutationResult> SetLegacySuperAdminStatusAsync(
-        string legacyUserId, bool activate, string actorId, CancellationToken ct = default)
-    {
-        await using var db = await _factory.CreateDbContextAsync(ct);
-        await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
-        var account = await db.Users.SingleOrDefaultAsync(x => x.Uid == legacyUserId && x.Role == "superadmin", ct);
-        if (account is null) return AccountManagementMutationResult.Fail("حساب SuperAdmin غير موجود.");
-        if (string.Equals(account.Uid, actorId, StringComparison.Ordinal))
-            return AccountManagementMutationResult.Fail("لا يمكن تغيير حالة حسابك الحالي من هذه الشاشة.");
-        if (!SqlAuthService.IsSuperAdminEmail(account.Email))
-            return AccountManagementMutationResult.Fail("البريد غير موجود في قائمة SuperAdmin المسموح بها؛ راجع إعدادات Auth:SuperAdminEmails.");
-
-        if (activate)
-        {
-            account.IsActive = true;
-            account.IsDisabled = false;
-            account.DisabledReason = "";
-        }
-        else
-        {
-            var remainingEmails = await db.Users.AsNoTracking()
-                .Where(x => x.Role == "superadmin" && x.Uid != legacyUserId && x.IsActive && !x.IsDisabled)
-                .Select(x => x.Email).ToListAsync(ct);
-            if (!remainingEmails.Any(SqlAuthService.IsSuperAdminEmail))
-                return AccountManagementMutationResult.Fail("لا يمكن إيقاف آخر حساب SuperAdmin نشط.");
-            account.IsActive = false;
-            account.IsDisabled = true;
-            account.DisabledReason = "تم الإيقاف من مركز إدارة الحسابات.";
-        }
-
-        var updatedAt = DateTime.UtcNow;
-        if (account.UpdatedAt is DateTime previousUpdate && previousUpdate >= updatedAt.AddSeconds(-1))
-            updatedAt = previousUpdate.AddSeconds(1);
-        account.UpdatedAt = updatedAt;
-        account.UpdatedBy = actorId;
-        await db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
-        await _audit.LogAsync(activate ? "identity.superadmin.account.activated" : "identity.superadmin.account.deactivated",
-            userId: actorId, userRole: "superadmin", metadata: new { TargetUserId = legacyUserId, account.Email });
-        return AccountManagementMutationResult.Ok(activate ? "تم تفعيل حساب SuperAdmin." : "تم إيقاف حساب SuperAdmin.");
-    }
-
-    /// <summary>Resets the password for a legacy super-admin account.</summary>
-    public async Task<AccountManagementMutationResult> ResetLegacySuperAdminPasswordAsync(
-        string legacyUserId, string actorId, IPasswordHasher hasher, CancellationToken ct = default)
-    {
-        await using var db = await _factory.CreateDbContextAsync(ct);
-        await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
-        var account = await db.Users.SingleOrDefaultAsync(x => x.Uid == legacyUserId && x.Role == "superadmin", ct);
-        if (account is null) return AccountManagementMutationResult.Fail("حساب SuperAdmin غير موجود.");
-        if (string.Equals(account.Uid, actorId, StringComparison.Ordinal))
-            return AccountManagementMutationResult.Fail("لا يمكن إعادة تعيين كلمة مرور حسابك الحالي من هذه الشاشة.");
-        if (!SqlAuthService.IsSuperAdminEmail(account.Email))
-            return AccountManagementMutationResult.Fail("البريد غير موجود في قائمة SuperAdmin المسموح بها.");
-        if (!account.IsActive || account.IsDisabled)
-            return AccountManagementMutationResult.Fail("فعّل الحساب أولًا قبل إعادة تعيين كلمة المرور.");
-
-        var temporaryPassword = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(24))
-            .TrimEnd('=');
-        account.Pin = hasher.Hash(temporaryPassword);
-        var updatedAt = DateTime.UtcNow;
-        if (account.UpdatedAt is DateTime previousUpdate && previousUpdate >= updatedAt.AddSeconds(-1))
-            updatedAt = previousUpdate.AddSeconds(1);
-        account.UpdatedAt = updatedAt;
-        account.UpdatedBy = actorId;
-        await db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
-        await _audit.LogAsync("identity.superadmin.password.reset", userId: actorId, userRole: "superadmin",
-            metadata: new { TargetUserId = legacyUserId, account.Email, PasswordReset = true });
-        return AccountManagementMutationResult.Ok("تم تغيير كلمة المرور. اعرضها للمستخدم مرة واحدة واطلب منه تحديثها فور تسجيل الدخول.", password: temporaryPassword);
-    }
-
     /// <summary>Updates the status of a resident account.</summary>
     public async Task<AccountManagementMutationResult> SetResidentStatusAsync(Guid accountId, bool activate, string actorId, CancellationToken ct = default)
     {
