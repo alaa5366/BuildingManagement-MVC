@@ -63,7 +63,7 @@ public class WalletController : Controller
         var building = await _buildings.GetByIdAsync(BuildingId);
         if (building == null) return NotFound();
 
-        var mk = string.IsNullOrWhiteSpace(month) ? DateTime.UtcNow.ToString("yyyy-MM") : month;
+        var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
         TargetWalletAdminSnapshot snapshot;
         try
         {
@@ -125,7 +125,7 @@ public class WalletController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ConfirmDeposit(string month, string depositId)
     {
-        var mk = string.IsNullOrWhiteSpace(month) ? DateTime.UtcNow.ToString("yyyy-MM") : month;
+        var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
         if (!Guid.TryParse(depositId, out var paymentDepositId))
         {
             TempData["Error"] = "معرّف الدفعة غير صالح.";
@@ -216,7 +216,7 @@ public class WalletController : Controller
     public async Task<IActionResult> AddAdjustment(
         string month, string aptId, decimal amount, string? reason, Guid commandId)
     {
-        var mk = string.IsNullOrWhiteSpace(month) ? DateTime.UtcNow.ToString("yyyy-MM") : month;
+        var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
         var actorAccountId = await _identityResolver.ResolveAsync(User, HttpContext.RequestAborted);
         if (actorAccountId is null)
         {
