@@ -55,6 +55,20 @@ public sealed class IdentityAccountAuthenticationService
             return AuthResult.Fail("wrong-credentials");
 
         var match = matches[0];
+        if (requirePinChange)
+        {
+            var normalizedPhone = AuthHelpers.NormalizePhone(match.Person.PrimaryPhone);
+            if (string.IsNullOrWhiteSpace(normalizedPhone))
+                return AuthResult.Fail("wrong-credentials");
+            var peopleWithPhone = await db.Persons.AsNoTracking()
+                .Where(person => person.PrimaryPhone != null)
+                .Select(person => person.PrimaryPhone)
+                .ToListAsync(cancellationToken);
+            if (peopleWithPhone.Count(phone => string.Equals(
+                AuthHelpers.NormalizePhone(phone), normalizedPhone, StringComparison.Ordinal)) != 1)
+                return AuthResult.Fail("wrong-credentials");
+        }
+
         var hasResidentRole = await (
             from assignment in db.UserRoleAssignments.AsNoTracking()
             join role in db.RoleDefinitions.AsNoTracking() on assignment.RoleKey equals role.RoleKey
@@ -102,6 +116,14 @@ public sealed class IdentityAccountAuthenticationService
         if (string.IsNullOrWhiteSpace(normalized)) return false;
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         var now = DateTime.UtcNow;
+        var allPhones = await db.Persons.AsNoTracking()
+            .Where(person => person.PrimaryPhone != null)
+            .Select(person => person.PrimaryPhone)
+            .ToListAsync(cancellationToken);
+        if (allPhones.Count(value => string.Equals(
+            AuthHelpers.NormalizePhone(value), normalized, StringComparison.Ordinal)) != 1)
+            return false;
+
         var phones = await (
             from occupancy in db.ApartmentOccupancies.AsNoTracking()
             join person in db.Persons.AsNoTracking() on occupancy.PersonId equals person.PersonId
