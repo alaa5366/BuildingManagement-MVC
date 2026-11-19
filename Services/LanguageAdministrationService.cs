@@ -114,5 +114,63 @@ public sealed class LanguageAdministrationService
         return (true,"تم حفظ الترجمة.");
     }
 
+    public async Task<int> ScanSourceFilesAsync(string contentRoot, string actor, CancellationToken ct)
+    {
+        var root = Path.GetFullPath(contentRoot);
+        var folders = new[] { ("Controllers","Controllers"),("Services","Services"),("Views","Views"),(Path.Combine("wwwroot","js"),"JavaScript") };
+        var discovered = new Dictionary<string,(string Category,string Group)>(StringComparer.OrdinalIgnoreCase);
+        var keyPattern = new Regex(@"(?:Loc\\.T|Loc\\.Js|Loc\\.JsonDict|LocalizationService\\.Get)\\s*\\(\\s*[\""]([A-Za-z0-9_.-]+)[\""]", RegexOptions.Compiled);
+        foreach (var (folder, category) in folders)
+        {
+            var path = Path.Combine(root, folder);
+            if (!Directory.Exists(path)) continue;
+            foreach (var file in Directory.EnumerateFiles(path, category=="Views"?"*.cshtml":category=="JavaScript"?"*.js":"*.cs", SearchOption.AllDirectories))
+            {
+                ct.ThrowIfCancellationRequested();
+                var group = Path.GetRelativePath(path,file).Replace('\\','/');
+                if (group.Length > 160) group = group[^160..];
+                string source;
+                try { source = await File.ReadAllTextAsync(file,ct); } catch (IOException) { continue; }
+                foreach (Match match in keyPattern.Matches(source))
+                    discovered.TryAdd(match.Groups[1].Value,(category,group));
+            }
+        }
+
+        await using var db = await _factory.CreateDbContextAsync(ct);
+        var existing = await db.TranslationEntries.ToDictionaryAsync(x=>x.Key,StringComparer.OrdinalIgnoreCase,ct);
+        foreach (var item in discovered)
+        {
+            if (existing.TryGetValue(item.Key,out var row))
+            {
+                row.Category=item.Value.Category; row.SourceGroup=item.Value.Group;
+            }
+            else db.TranslationEntries.Add(new TranslationEntryEntity { Key=item.Key, Category=item.Value.Category, SourceGroup=item.Value.Group, UpdatedAtUtc=DateTime.UtcNow, UpdatedBy=actor });
+        }
+
+        var resources = Path.Combine(root,"Resources");
+        if (Directory.Exists(resources))
+        {
+            foreach (var file in Directory.EnumerateFiles(resources,"Shared*.resx",SearchOption.TopDirectoryOnly))
+            {
+                var name=Path.GetFileNameWithoutExtension(file);
+                var culture=name=="Shared"?"ar":name.StartsWith("Shared.",StringComparison.OrdinalIgnoreCase)?name["Shared.".Length..]:"ar";
+                if (!await db.Languages.AnyAsync(x=>x.CultureCode==culture&&x.IsEnabled,ct)) continue;
+                var document=System.Xml.Linq.XDocument.Load(file);
+                foreach (var data in document.Root?.Elements("data") ?? [])
+                {
+                    var key=(string?)data.Attribute("name"); var value=(string?)data.Element("value");
+                    if (string.IsNullOrWhiteSpace(key)||string.IsNullOrWhiteSpace(value)||key.Length>200||value.Length>4000) continue;
+                    if (!existing.ContainsKey(key)) { var entry=new TranslationEntryEntity{Key=key,Category="Shared",SourceGroup="Resources/Shared.resx",UpdatedAtUtc=DateTime.UtcNow,UpdatedBy=actor}; db.TranslationEntries.Add(entry); existing[key]=entry; }
+                    var translation=await db.TranslationValues.FindAsync([key,culture],ct);
+                    if (translation==null) db.TranslationValues.Add(new TranslationValueEntity{Key=key,CultureCode=culture,Value=value,UpdatedAtUtc=DateTime.UtcNow,UpdatedBy=actor});
+                }
+            }
+        }
+        await db.SaveChangesAsync(ct);
+        await _audit.LogAsync("Language.SourceScan.Completed",userId:actor,userRole:"superadmin",metadata:new { discovered=discovered.Count, root });
+        await RefreshRuntimeAsync(ct);
+        return discovered.Count;
+    }
+
     private static string NormalizeCategory(string? value) => value is "Controllers" or "Services" or "Views" or "Shared" or "JavaScript" or "Validation" or "System" ? value : "System";
 }
