@@ -27,6 +27,42 @@ public class DvrService
         _log = log;
     }
 
+    public async Task< DvrBuildingSummary?> GetBuildingSummaryAsync(
+        string buildingId, CancellationToken cancellationToken = default)
+    {
+        await using var db = await _sqlFactory.CreateDbContextAsync(cancellationToken);
+        var building = await db.Buildings.AsNoTracking()
+            .Where(x => x.Id == buildingId)
+            .Select(x => new { x.Id, x.Name, x.BuildingNumber })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (building is null) return null;
+        var count = await db.Apartments.AsNoTracking()
+            .CountAsync(x => x.BuildingId == buildingId && !x.IsClosed, cancellationToken);
+        return new DvrBuildingSummary
+        {
+            Id = building.Id,
+            Name = building.Name,
+            BuildingNumber = building.BuildingNumber,
+            ApartmentsCount = count
+        };
+    }
+
+    public async Task<List<DvrBuildingSummary>> GetBuildingSummariesAsync(CancellationToken cancellationToken = default)
+    {
+        await using var db = await _sqlFactory.CreateDbContextAsync(cancellationToken);
+        var buildings = await db.Buildings.AsNoTracking()
+            .OrderBy(x => x.BuildingNumber)
+            .Select(x => new DvrBuildingSummary
+            {
+                Id = x.Id,
+                Name = x.Name,
+                BuildingNumber = x.BuildingNumber,
+                ApartmentsCount = x.Apartments.Count(a => !a.IsClosed)
+            })
+            .ToListAsync(cancellationToken);
+        return buildings;
+    }
+
     /// <summary>
     /// Gets the by building.
     /// </summary>
