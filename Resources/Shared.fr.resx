@@ -5179,4 +5179,8 @@ Cette opération peut prendre quelques secondes.</value>
   <data name="Backup_Collection_languages" xml:space="preserve"><value>Langues</value></data>
   <data name="Backup_Collection_translationEntries" xml:space="preserve"><value>Clés de traduction</value></data>
   <data name="Backup_Collection_translationValues" xml:space="preserve"><value>Valeurs de traduction</value></data>
+  <data name="Backup_Collection_maintenanceRequests" xml:space="preserve"><value>Demandes de maintenance</value></data>
+  <data name="Backup_Collection_maintenanceAssignments" xml:space="preserve"><value>Affectations de maintenance</value></data>
+  <data name="Backup_Collection_maintenanceComments" xml:space="preserve"><value>Commentaires de maintenance</value></data>
+  <data name="Backup_Collection_maintenanceStatusEvents" xml:space="preserve"><value>Historique des statuts de maintenance</value></data>
 </root>
