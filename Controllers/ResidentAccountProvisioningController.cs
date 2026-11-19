@@ -16,6 +16,7 @@ public sealed class ResidentAccountProvisioningController : Controller
         _provisioning = provisioning;
     }
 
+    /// <summary>Displays the resident account provisioning report.</summary>
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
@@ -26,6 +27,7 @@ public sealed class ResidentAccountProvisioningController : Controller
         return View(report);
     }
 
+    /// <summary>Creates a controlled batch of eligible resident accounts.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Provision(int batchSize = 25, CancellationToken cancellationToken = default)
