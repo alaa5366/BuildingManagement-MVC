@@ -101,6 +101,12 @@ public sealed class PersonPhoneCorrectionService
                 return false;
             person.PrimaryPhone = request.RequestedPhone;
             person.UpdatedAtUtc = now;
+
+            // A phone change is an identity change: rotate the account stamp so any
+            // stamp-aware sessions/tokens can no longer rely on the old identity state.
+            var linkedAccount = await db.UserAccounts.SingleOrDefaultAsync(a => a.PersonId == person.PersonId);
+            if (linkedAccount != null)
+                linkedAccount.SecurityStamp = Guid.NewGuid().ToString("N");
         }
 
         request.Status = approve ? (byte)1 : (byte)2;
