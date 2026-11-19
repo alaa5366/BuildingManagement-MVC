@@ -1759,7 +1759,7 @@ namespace BuildingManagementMvc.Migrations
                         {
                             t.HasCheckConstraint("CK_LegacyIdentityMap_LinkTargets", "(([MappingStatus] IN (0,3,4) AND [PersonId] IS NULL AND [AccountId] IS NULL) OR ([MappingStatus] IN (1,2) AND [PersonId] IS NOT NULL))");
 
-                            t.HasCheckConstraint("CK_LegacyIdentityMap_ResolvedReview", "([MappingStatus] NOT IN (1,2) OR ([ReviewedAtUtc] IS NOT NULL AND [ReviewedByUserId] IS NOT NULL AND [ReviewReason] IS NOT NULL AND LEN(LTRIM(RTRIM([ReviewReason]))) > 0))");
+                            t.HasCheckConstraint("CK_LegacyIdentityMap_ResolvedReview", "([MappingStatus] NOT IN (1,2) OR ([ReviewedAtUtc] IS NOT NULL AND [ReviewedByAccountId] IS NOT NULL AND [ReviewReason] IS NOT NULL AND LEN(LTRIM(RTRIM([ReviewReason]))) > 0))");
 
                             t.HasCheckConstraint("CK_LegacyIdentityMap_ReviewStamp", "(([ReviewedAtUtc] IS NULL AND [ReviewedByAccountId] IS NULL) OR ([ReviewedAtUtc] IS NOT NULL AND [ReviewedByAccountId] IS NOT NULL))");
 
