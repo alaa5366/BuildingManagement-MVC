@@ -477,7 +477,7 @@ public class AccountController : Controller
             vm.NewPin == "1234" ||
             !string.Equals(vm.NewPin, vm.ConfirmNewPin, StringComparison.Ordinal))
         {
-            ViewBag.Error = "Choose a new 4–12 digit PIN, different from 1234, and confirm it.";
+            ViewBag.Error = Loc.T("Choose_New_PIN_And_Confirm");
             return View(vm);
         }
 
