@@ -41,7 +41,9 @@ public class RevenuesController : Controller
         var building = await _targetWallet.GetBuildingShellAsync(
             BuildingId, cancellationToken: HttpContext.RequestAborted);
         if (building == null) return NotFound();
-        var monthKey = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
+        var monthKey = string.IsNullOrWhiteSpace(month)
+            ? await _targetWallet.GetCurrentPeriodKeyAsync(BuildingId, cancellationToken: HttpContext.RequestAborted)
+            : month;
         var snapshot = await _financeRead.GetMonthAsync(BuildingId, monthKey, "revenue", HttpContext.RequestAborted);
         var revenues = PagedResult<Revenue>.Create(snapshot.Revenues.ToList(), page, pageSize);
         ViewBag.Building = building;
@@ -58,7 +60,9 @@ public class RevenuesController : Controller
         string date, Guid commandId)
     {
         var buildingId = BuildingId;
-        var monthKey = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
+        var monthKey = string.IsNullOrWhiteSpace(month)
+            ? await _targetWallet.GetCurrentPeriodKeyAsync(BuildingId, cancellationToken: HttpContext.RequestAborted)
+            : month;
         try
         {
             var actorId = await _identityResolver.ResolveAsync(User, HttpContext.RequestAborted);
@@ -81,7 +85,9 @@ public class RevenuesController : Controller
     public async Task<IActionResult> Delete(string month, string id)
     {
         var buildingId = BuildingId;
-        var monthKey = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
+        var monthKey = string.IsNullOrWhiteSpace(month)
+            ? await _targetWallet.GetCurrentPeriodKeyAsync(BuildingId, cancellationToken: HttpContext.RequestAborted)
+            : month;
         try
         {
             var actorId = await _identityResolver.ResolveAsync(User, HttpContext.RequestAborted);
