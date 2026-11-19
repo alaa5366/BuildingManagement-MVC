@@ -62,7 +62,12 @@ public class BackupService
         ["cameras"] = Loc.T("Backup_Collection_cameras"),
         ["qrTokens"] = Loc.T("Backup_Collection_qrTokens"),
         ["qrUsages"] = Loc.T("Backup_Collection_qrUsages"),
-        ["savedWhatsAppTemplates"] = Loc.T("Backup_Collection_savedWhatsAppTemplates")
+        ["savedWhatsAppTemplates"] = Loc.T("Backup_Collection_savedWhatsAppTemplates"),
+        ["notificationMessages"] = Loc.T("Backup_Collection_notificationMessages"),
+        ["notificationRecipients"] = Loc.T("Backup_Collection_notificationRecipients"),
+        ["notificationDeliveries"] = Loc.T("Backup_Collection_notificationDeliveries"),
+        ["notificationReadStates"] = Loc.T("Backup_Collection_notificationReadStates"),
+        ["notificationPreferences"] = Loc.T("Backup_Collection_notificationPreferences")
     };
 
     /// <summary>
@@ -144,6 +149,11 @@ public class BackupService
                     "qrTokens" => await db.QrTokens.CountAsync(),
                     "qrUsages" => await db.QrUsages.CountAsync(),
                     "savedWhatsAppTemplates" => await db.SavedWhatsAppTemplates.CountAsync(),
+                    "notificationMessages" => await db.NotificationMessages.CountAsync(),
+                    "notificationRecipients" => await db.NotificationRecipients.CountAsync(),
+                    "notificationDeliveries" => await db.NotificationDeliveries.CountAsync(),
+                    "notificationReadStates" => await db.NotificationReadStates.CountAsync(),
+                    "notificationPreferences" => await db.NotificationPreferences.CountAsync(),
                     _ => 0
                 };
             }
@@ -380,6 +390,26 @@ By: {userId}
                 foreach (var template in await db.SavedWhatsAppTemplates.AsNoTracking().ToListAsync())
                     result.Add(ToDict(template.Id.ToString("D"), template));
                 break;
+            case "notificationMessages":
+                foreach (var message in await db.NotificationMessages.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(message.MessageId.ToString("D"), message));
+                break;
+            case "notificationRecipients":
+                foreach (var recipient in await db.NotificationRecipients.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(recipient.RecipientId.ToString("D"), recipient));
+                break;
+            case "notificationDeliveries":
+                foreach (var delivery in await db.NotificationDeliveries.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(delivery.DeliveryId.ToString("D"), delivery));
+                break;
+            case "notificationReadStates":
+                foreach (var readState in await db.NotificationReadStates.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(readState.ReadStateId.ToString("D"), readState));
+                break;
+            case "notificationPreferences":
+                foreach (var preference in await db.NotificationPreferences.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(preference.PreferenceId.ToString("D"), preference));
+                break;
         }
 
         return result;
@@ -508,7 +538,12 @@ By: {userId}
             "cameras",
             "qrTokens",
             "qrUsages",
-            "savedWhatsAppTemplates"
+            "savedWhatsAppTemplates",
+            "notificationMessages",
+            "notificationRecipients",
+            "notificationDeliveries",
+            "notificationReadStates",
+            "notificationPreferences"
         };
 
         // نحتفظ فقط بالجداول اللي المستخدم اختارها
@@ -1027,6 +1062,80 @@ By: {userId}
 
                     entity.Id = templateId;
                     ApplyOrAdd(db, db.SavedWhatsAppTemplates, existing, entity);
+                    return true;
+                }
+
+            case "notificationMessages":
+                {
+                    if (!Guid.TryParse(id, out var messageId)) return false;
+                    var existing = await db.NotificationMessages
+                        .FirstOrDefaultAsync(x => x.MessageId == messageId);
+                    if (existing != null && !overwrite) return false;
+                    var entity = JsonSerializer.Deserialize<Data.Entities.NotificationMessageEntity>(
+                        data.GetRawText(), RestoreJsonOptions);
+                    if (entity == null) return false;
+                    entity.MessageId = messageId;
+                    entity.Recipients = new List<Data.Entities.NotificationRecipientEntity>();
+                    ApplyOrAdd(db, db.NotificationMessages, existing, entity);
+                    return true;
+                }
+
+            case "notificationRecipients":
+                {
+                    if (!Guid.TryParse(id, out var recipientId)) return false;
+                    var existing = await db.NotificationRecipients
+                        .FirstOrDefaultAsync(x => x.RecipientId == recipientId);
+                    if (existing != null && !overwrite) return false;
+                    var entity = JsonSerializer.Deserialize<Data.Entities.NotificationRecipientEntity>(
+                        data.GetRawText(), RestoreJsonOptions);
+                    if (entity == null) return false;
+                    entity.RecipientId = recipientId;
+                    entity.Message = null;
+                    entity.ReadState = null;
+                    ApplyOrAdd(db, db.NotificationRecipients, existing, entity);
+                    return true;
+                }
+
+            case "notificationDeliveries":
+                {
+                    if (!Guid.TryParse(id, out var deliveryId)) return false;
+                    var existing = await db.NotificationDeliveries
+                        .FirstOrDefaultAsync(x => x.DeliveryId == deliveryId);
+                    if (existing != null && !overwrite) return false;
+                    var entity = JsonSerializer.Deserialize<Data.Entities.NotificationDeliveryEntity>(
+                        data.GetRawText(), RestoreJsonOptions);
+                    if (entity == null) return false;
+                    entity.DeliveryId = deliveryId;
+                    ApplyOrAdd(db, db.NotificationDeliveries, existing, entity);
+                    return true;
+                }
+
+            case "notificationReadStates":
+                {
+                    if (!Guid.TryParse(id, out var readStateId)) return false;
+                    var existing = await db.NotificationReadStates
+                        .FirstOrDefaultAsync(x => x.ReadStateId == readStateId);
+                    if (existing != null && !overwrite) return false;
+                    var entity = JsonSerializer.Deserialize<Data.Entities.NotificationReadStateEntity>(
+                        data.GetRawText(), RestoreJsonOptions);
+                    if (entity == null) return false;
+                    entity.ReadStateId = readStateId;
+                    entity.Recipient = null;
+                    ApplyOrAdd(db, db.NotificationReadStates, existing, entity);
+                    return true;
+                }
+
+            case "notificationPreferences":
+                {
+                    if (!Guid.TryParse(id, out var preferenceId)) return false;
+                    var existing = await db.NotificationPreferences
+                        .FirstOrDefaultAsync(x => x.PreferenceId == preferenceId);
+                    if (existing != null && !overwrite) return false;
+                    var entity = JsonSerializer.Deserialize<Data.Entities.NotificationPreferenceEntity>(
+                        data.GetRawText(), RestoreJsonOptions);
+                    if (entity == null) return false;
+                    entity.PreferenceId = preferenceId;
+                    ApplyOrAdd(db, db.NotificationPreferences, existing, entity);
                     return true;
                 }
 
