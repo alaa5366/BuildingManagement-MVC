@@ -51,7 +51,7 @@ public sealed class TargetDepositWorkflowServiceTests
         }
 
         var service = new TargetDepositWorkflowService(factory, TimeProvider.System);
-        var depositId = await service.CreatePendingAsync("B1", "A1", periodId, 125m, sourceKey: "receipt-1");
+        var depositId = await service.CreatePendingAsync("B1", "A1", periodId, actorId, 125m, sourceKey: "receipt-1");
         var repeatedId = await service.CreatePendingAsync("B1", "A1", periodId, 125m, sourceKey: "receipt-1");
         Assert.Equal(depositId, repeatedId);
 
@@ -68,6 +68,8 @@ public sealed class TargetDepositWorkflowServiceTests
         Assert.Equal(LedgerTransactionStatus.Posted, ledger.Status);
         Assert.Single(await verify.LedgerEntries.ToListAsync());
         Assert.Equal(125m, (await verify.LedgerEntries.SingleAsync()).SignedAmount);
+        Assert.Contains(await verify.AuditEvents.ToListAsync(), item => item.EventType == "PaymentDepositSubmitted");
+        Assert.Contains(await verify.AuditEvents.ToListAsync(), item => item.EventType == "PaymentDepositConfirmed");
     }
 
     [Fact]
@@ -117,6 +119,7 @@ public sealed class TargetDepositWorkflowServiceTests
         Assert.Equal("duplicate receipt", deposit.ResolutionReason);
         Assert.Empty(await verify.LedgerTransactions.ToListAsync());
         Assert.Empty(await verify.LedgerEntries.ToListAsync());
+        Assert.Contains(await verify.AuditEvents.ToListAsync(), item => item.EventType == "PaymentDepositCancelled");
     }
 
     private sealed class TestContextFactory(DbContextOptions<AppDbContext> options)
