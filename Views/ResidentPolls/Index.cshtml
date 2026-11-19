@@ -44,8 +44,8 @@ else
 {
     foreach (var poll in Model.Items)
     {
-        var total = poll.Votes.Count;
-        var myVote = poll.Votes.TryGetValue(apartmentId, out var mv) ? mv : null;
+        var total = poll.TotalVotes;
+        var hasVoted = poll.HasVoted;
         var active = !poll.Closed && (string.IsNullOrEmpty(poll.Deadline) || !(DateTime.TryParse(poll.Deadline, out var dl) && dl < DateTime.UtcNow));
 
         <div class="ui-poll-card p-3 mb-3">
@@ -54,20 +54,20 @@ else
             {
                 <div class="text-muted small mb-2">@poll.Description</div>
             }
-            @if (myVote != null)
+            @if (hasVoted)
             {
                 <span class="badge bg-success mb-2">@Loc.T("Voted")</span>
             }
             <div class="mt-2">
                 @foreach (var opt in poll.Options)
                 {
-                    var cnt = poll.Votes.Values.Count(v => v == opt.Id);
+                    var cnt = opt.VoteCount;
                     var pct = total > 0 ? (100.0 * cnt / total) : 0;
-                    var chosen = myVote == opt.Id;
+                    
                     <div class="mb-2">
-                        <div class="d-flex justify-content-between small"><span>@(chosen ? "✓ " : "")@opt.Text</span><span>@cnt (@pct.ToString("0"))%</span></div>
-                        <div class="progress mb-1" style="height:8px;"><div class="progress-bar" style="width:@pct.ToString("0")%; background-color: @(chosen ? "var(--teal)" : "#ccc");"></div></div>
-                        @if (active && myVote == null)
+                        <div class="d-flex justify-content-between small"><span>@opt.Text</span><span>@cnt (@pct.ToString("0"))%</span></div>
+                        <div class="progress mb-1" style="height:8px;"><div class="progress-bar" style="width:@pct.ToString("0")%; background-color: var(--teal);"></div></div>
+                        @if (active && !hasVoted)
                         {
                             <form method="post" asp-action="Vote">
                                 <input type="hidden" name="pollId" value="@poll.Id" />
