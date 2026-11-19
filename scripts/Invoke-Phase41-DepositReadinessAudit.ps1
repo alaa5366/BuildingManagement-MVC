@@ -60,13 +60,16 @@ ActorCheck AS (
             AND m.SourceKey=d.ConfirmedBy AND m.MappingStatus=1
             AND m.PersonId IS NOT NULL AND m.AccountId IS NOT NULL
       ) THEN 1 ELSE 0 END ConfirmedActorResolved,
-      CASE WHEN d.Status=N'cancelled' AND EXISTS (
+      CASE WHEN LOWER(LTRIM(RTRIM(d.Status)))=N'cancelled' AND EXISTS (
           SELECT 1 FROM dbo.LegacyIdentityMap m
           JOIN dbo.UserAccounts ua ON ua.AccountId=m.AccountId
           WHERE m.SourceSystem=N'legacy-sql' AND m.SourceTable=N'Users'
             AND m.SourceKey=d.CancelledBy AND m.MappingStatus=1
             AND m.PersonId IS NOT NULL AND m.AccountId IS NOT NULL
-      ) THEN 1 ELSE 0 END CancelledActorResolved
+      ) THEN 1 ELSE 0 END CancelledActorResolved,
+      CASE WHEN EXISTS (SELECT 1 FROM dbo.Apartments otherA WHERE otherA.Id=d.ApartmentId AND otherA.BuildingId<>d.BuildingId) THEN 1 ELSE 0 END ApartmentBuildingMismatch,
+      CASE WHEN EXISTS (SELECT 1 FROM dbo.PaymentDeposits p WHERE p.SourceSystem=N'legacy-sql' AND p.SourceKey=d.SourceKey) THEN 1 ELSE 0 END AlreadyInTarget,
+      CASE WHEN NOT EXISTS (SELECT 1 FROM dbo.FinancialPeriods fp WHERE fp.BuildingId=d.BuildingId AND fp.PeriodKey=d.MonthKey) THEN 1 ELSE 0 END MissingTargetPeriod
     FROM D d
 )
 SELECT
@@ -79,14 +82,14 @@ SELECT
     SUM(CASE WHEN Amount<>ROUND(Amount,2) THEN 1 ELSE 0 END) SubCentAmountCount,
     SUM(CASE WHEN NULLIF(LTRIM(RTRIM(MonthKey)),N'') IS NULL OR MonthKey NOT LIKE '[0-9][0-9][0-9][0-9]-[01][0-9]' OR SUBSTRING(MonthKey,6,2) NOT BETWEEN '01' AND '12' THEN 1 ELSE 0 END) InvalidMonthKeyCount,
     SUM(CASE WHEN a.Id IS NULL THEN 1 ELSE 0 END) MissingApartmentCount,
-    SUM(CASE WHEN EXISTS (SELECT 1 FROM dbo.Apartments otherA WHERE otherA.Id=D.ApartmentId AND otherA.BuildingId<>D.BuildingId) THEN 1 ELSE 0 END) ApartmentBuildingMismatchCount,
+    SUM(ApartmentBuildingMismatch) ApartmentBuildingMismatchCount,
     SUM(CASE WHEN LOWER(LTRIM(RTRIM(Status)))=N'confirmed' AND (ConfirmedAt IS NULL OR NULLIF(LTRIM(RTRIM(ConfirmedBy)),N'') IS NULL) THEN 1 ELSE 0 END) ConfirmedMissingStampOrActorCount,
     SUM(CASE WHEN LOWER(LTRIM(RTRIM(Status)))=N'confirmed' AND ConfirmedActorResolved=0 THEN 1 ELSE 0 END) ConfirmedActorUnresolvedCount,
     SUM(CASE WHEN LOWER(LTRIM(RTRIM(Status)))=N'cancelled' AND (CancelledAt IS NULL OR NULLIF(LTRIM(RTRIM(CancelledBy)),N'') IS NULL OR NULLIF(LTRIM(RTRIM(CancelledReason)),N'') IS NULL) THEN 1 ELSE 0 END) CancelledMissingStampActorOrReasonCount,
     SUM(CASE WHEN LOWER(LTRIM(RTRIM(Status)))=N'cancelled' AND CancelledActorResolved=0 THEN 1 ELSE 0 END) CancelledActorUnresolvedCount,
     SUM(CASE WHEN LOWER(LTRIM(RTRIM(Status)))=N'pending' AND (ConfirmedAt IS NOT NULL OR ConfirmedBy IS NOT NULL OR CancelledAt IS NOT NULL OR CancelledBy IS NOT NULL) THEN 1 ELSE 0 END) PendingHasResolutionMetadataCount,
-    SUM(CASE WHEN EXISTS (SELECT 1 FROM dbo.PaymentDeposits p WHERE p.SourceSystem=N'legacy-sql' AND p.SourceKey=D.SourceKey) THEN 1 ELSE 0 END) AlreadyInTargetCount,
-    SUM(CASE WHEN NOT EXISTS (SELECT 1 FROM dbo.FinancialPeriods fp WHERE fp.BuildingId=D.BuildingId AND fp.PeriodKey=D.MonthKey) THEN 1 ELSE 0 END) MissingTargetPeriodCount
+    SUM(AlreadyInTarget) AlreadyInTargetCount,
+    SUM(MissingTargetPeriod) MissingTargetPeriodCount
 FROM ActorCheck D
 LEFT JOIN dbo.Apartments a ON a.BuildingId=D.BuildingId AND a.Id=D.ApartmentId;
 "@
@@ -95,25 +98,31 @@ LEFT JOIN dbo.Apartments a ON a.BuildingId=D.BuildingId AND a.Id=D.ApartmentId;
     foreach ($column in $profile.Columns) { Log "$($column.ColumnName): $($summary[$column.ColumnName])" }
 
     $byScope = ReadTable $connection @"
-SELECT d.BuildingId,d.MonthKey,d.Status,COUNT(*) DepositCount,
-       SUM(d.Amount) AmountTotal,
-       SUM(CASE WHEN d.Status=N'confirmed' AND NOT EXISTS (
-           SELECT 1 FROM dbo.LegacyIdentityMap m
-           JOIN dbo.UserAccounts ua ON ua.AccountId=m.AccountId
-           WHERE m.SourceSystem=N'legacy-sql' AND m.SourceTable=N'Users'
-             AND m.SourceKey=d.ConfirmedBy AND m.MappingStatus=1
-             AND m.PersonId IS NOT NULL AND m.AccountId IS NOT NULL
-       ) THEN 1 ELSE 0 END) ConfirmedActorUnresolved,
-       SUM(CASE WHEN d.Status=N'cancelled' AND NOT EXISTS (
-           SELECT 1 FROM dbo.LegacyIdentityMap m
-           JOIN dbo.UserAccounts ua ON ua.AccountId=m.AccountId
-           WHERE m.SourceSystem=N'legacy-sql' AND m.SourceTable=N'Users'
-             AND m.SourceKey=d.CancelledBy AND m.MappingStatus=1
-             AND m.PersonId IS NOT NULL AND m.AccountId IS NOT NULL
-       ) THEN 1 ELSE 0 END) CancelledActorUnresolved
-FROM dbo.Deposits d
-GROUP BY d.BuildingId,d.MonthKey,d.Status
-ORDER BY d.BuildingId,d.MonthKey,d.Status;
+;WITH ScopeCheck AS (
+    SELECT d.BuildingId,d.MonthKey,d.Status,d.Amount,
+      CASE WHEN EXISTS (
+          SELECT 1 FROM dbo.LegacyIdentityMap m
+          JOIN dbo.UserAccounts ua ON ua.AccountId=m.AccountId
+          WHERE m.SourceSystem=N'legacy-sql' AND m.SourceTable=N'Users'
+            AND m.SourceKey=d.ConfirmedBy AND m.MappingStatus=1
+            AND m.PersonId IS NOT NULL AND m.AccountId IS NOT NULL
+      ) THEN 1 ELSE 0 END ConfirmedActorResolved,
+      CASE WHEN EXISTS (
+          SELECT 1 FROM dbo.LegacyIdentityMap m
+          JOIN dbo.UserAccounts ua ON ua.AccountId=m.AccountId
+          WHERE m.SourceSystem=N'legacy-sql' AND m.SourceTable=N'Users'
+            AND m.SourceKey=d.CancelledBy AND m.MappingStatus=1
+            AND m.PersonId IS NOT NULL AND m.AccountId IS NOT NULL
+      ) THEN 1 ELSE 0 END CancelledActorResolved
+    FROM dbo.Deposits d
+)
+SELECT BuildingId,MonthKey,Status,COUNT(*) DepositCount,
+       SUM(Amount) AmountTotal,
+       SUM(CASE WHEN LOWER(LTRIM(RTRIM(Status)))=N'confirmed' AND ConfirmedActorResolved=0 THEN 1 ELSE 0 END) ConfirmedActorUnresolved,
+       SUM(CASE WHEN LOWER(LTRIM(RTRIM(Status)))=N'cancelled' AND CancelledActorResolved=0 THEN 1 ELSE 0 END) CancelledActorUnresolved
+FROM ScopeCheck
+GROUP BY BuildingId,MonthKey,Status
+ORDER BY BuildingId,MonthKey,Status;
 "@
     Log "Scope groups: $($byScope.Rows.Count)"
     foreach ($row in $byScope.Rows) {
