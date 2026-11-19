@@ -25,7 +25,6 @@ public class AdminAptsController : Controller
     private readonly QrSecurityService _qrSecurity;
     private readonly QrGeneratorService _qrGen;
     private readonly TargetWhatsAppService _targetWhatsApp;
-    private readonly NotificationsService _notify;
     private readonly TargetNotificationsService _targetNotifications;
     private readonly Microsoft.Extensions.Logging.ILogger<AdminAptsController> _logger;
     private readonly IAuditLogger _auditLogger;
@@ -39,7 +38,6 @@ public class AdminAptsController : Controller
         QrSecurityService qrSecurity,
         QrGeneratorService qrGen,
         TargetWhatsAppService targetWhatsApp,
-        NotificationsService notify,
         IAuditLogger auditLogger,
         TargetNotificationsService targetNotifications,
         Microsoft.Extensions.Logging.ILogger<AdminAptsController> logger)
@@ -49,7 +47,6 @@ public class AdminAptsController : Controller
         _qrSecurity = qrSecurity;
         _qrGen = qrGen;
         _targetWhatsApp = targetWhatsApp;
-        _notify = notify;
         _auditLogger = auditLogger;
         _targetNotifications = targetNotifications;
         _logger = logger;
@@ -230,7 +227,6 @@ public class AdminAptsController : Controller
         apt.OpenDate = DateTime.UtcNow.ToString("o");
         apt.CloseDate = null;
 
-        _notify.NotifyResidentApartmentReopened(building, apt, null);
         await _buildings.SaveFullAsync(building);
         await TryNotifyResidentAsync(apt.Id, "تم إعادة تفعيل شقتك",
             $"تم إعادة تفعيل شقتك رقم {apt.Number} في {building.Name}.",
@@ -288,7 +284,6 @@ public class AdminAptsController : Controller
         _wallet.RecalculateDistribution(building, currentMonth);
         _wallet.RecalculateRevenueDistribution(building, currentMonth);
 
-        _notify.NotifyResidentApartmentClosed(building, apt, reason);
         await _buildings.SaveFullAsync(building);
         await TryNotifyResidentAsync(apt.Id, "تم إغلاق شقتك",
             $"تم إغلاق شقتك رقم {apt.Number} في {building.Name}. {reason}".Trim(),
@@ -335,7 +330,6 @@ public class AdminAptsController : Controller
         apt.Disabled = true;
         apt.DisabledReason = reason ?? "";
 
-        _notify.NotifyResidentApartmentDisabled(building, apt, reason);
         await _buildings.SaveFullAsync(building);
         await TryNotifyResidentAsync(apt.Id, "تم تعطيل حساب الشقة",
             $"تم تعطيل الشقة رقم {apt.Number} في {building.Name}. {reason}".Trim(),
@@ -382,7 +376,6 @@ public class AdminAptsController : Controller
         apt.Disabled = false;
         apt.DisabledReason = "";
 
-        _notify.NotifyResidentApartmentEnabled(building, apt, reason);
         await _buildings.SaveFullAsync(building);
         await TryNotifyResidentAsync(apt.Id, "تم إعادة تفعيل حساب الشقة",
             $"تم إعادة تفعيل الشقة رقم {apt.Number} في {building.Name}. {reason}".Trim(),
