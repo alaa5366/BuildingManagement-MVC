@@ -48,6 +48,19 @@ public sealed class ApplicationLogsController : Controller
         ViewBag.CanViewAuditTrail = User.IsInRole("superadmin") ||
             User.HasClaim("perm", AdminPermissions.ViewAuditLogBuilding);
 
+        if (query.HttpStatusCode is < 100 or > 599 ||
+            query.MinDurationMs is < 0 or > 3600000 ||
+            query.MaxDurationMs is < 0 or > 3600000 ||
+            (query.MinDurationMs.HasValue && query.MaxDurationMs.HasValue && query.MinDurationMs > query.MaxDurationMs))
+        {
+            ModelState.AddModelError(nameof(httpStatusCode), "HTTP status and duration filters are outside the supported range.");
+            return View(new ApplicationLogsViewModel
+            {
+                Query = query,
+                Results = new PagedResult<ApplicationLogEntry> { CurrentPage = query.Page, PageSize = query.PageSize }
+            });
+        }
+
         if (query.FromUtc.HasValue && query.ToUtc.HasValue &&
             query.FromUtc.Value > query.ToUtc.Value)
         {
