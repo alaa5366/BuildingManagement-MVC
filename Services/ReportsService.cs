@@ -104,6 +104,8 @@ public sealed class ReportsService
         var wallet = building.Apartments.Where(apartment => !apartment.Closed && !apartment.Disabled)
             .Select(apartment => new WalletPoint
             {
+                ApartmentId = apartment.Id,
+                Owner = apartment.Owner,
                 Number = apartment.Number,
                 Label = Loc.T("Apartment_N", apartment.Number),
                 Balance = currentSnapshot.Balances.GetValueOrDefault(apartment.Id)
