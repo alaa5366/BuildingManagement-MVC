@@ -166,7 +166,8 @@ public class MaintenanceController : Controller
         if (string.IsNullOrWhiteSpace(BuildingId)) return Forbid();
         var record = await _maintenance.GetAsync(BuildingId, id, HttpContext.RequestAborted);
         if (record is null) return NotFound();
-        if (record.AddedToExpense || record.Cost <= 0)
+        if (record.AddedToExpense || record.Cost <= 0 ||
+            string.Equals(record.Status, "cancelled", StringComparison.OrdinalIgnoreCase))
         {
             TempData["Error"] = "سجل الصيانة غير موجود أو تمت إضافته للمصروفات بالفعل.";
             return RedirectToAction(nameof(Index));
