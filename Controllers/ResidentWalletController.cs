@@ -183,6 +183,13 @@ public class ResidentWalletController : Controller
         var mk = string.IsNullOrWhiteSpace(month)
             ? await _targetWallet.GetCurrentPeriodKeyAsync(BuildingId, cancellationToken: HttpContext.RequestAborted)
             : month;
+        if (!DateOnly.TryParseExact(mk + "-01", "yyyy-MM-dd",
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out _))
+        {
+            TempData["Error"] = "الفترة المالية غير صالحة.";
+            return RedirectToAction("Index");
+        }
         if (commandId == Guid.Empty)
         {
             TempData["Error"] = "انتهت صلاحية نموذج الإيداع. حدّث الصفحة وحاول مرة أخرى.";
