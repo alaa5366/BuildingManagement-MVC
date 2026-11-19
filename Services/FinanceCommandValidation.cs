@@ -9,6 +9,9 @@ namespace BuildingManagementMvc.Services;
 /// </summary>
 public static class FinanceCommandValidation
 {
+    /// <summary>Validates that a month key uses the exact yyyy-MM format.</summary>
+    /// <param name="monthKey">The month key to validate.</param>
+    /// <exception cref="ArgumentException">The key is missing or invalid.</exception>
     public static void ValidateMonthKey(string monthKey)
     {
         if (string.IsNullOrWhiteSpace(monthKey) ||
@@ -17,6 +20,10 @@ public static class FinanceCommandValidation
             throw new ArgumentException("Month must use the exact yyyy-MM format.", nameof(monthKey));
     }
 
+    /// <summary>Validates that a monetary amount is positive and precise to at most two decimal places.</summary>
+    /// <param name="amount">The amount to validate.</param>
+    /// <param name="parameterName">The name used when reporting an invalid argument.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The amount is non-positive or contains fractions smaller than one cent.</exception>
     public static void ValidatePositiveMoney(decimal amount, string parameterName)
     {
         if (amount <= 0)
@@ -25,6 +32,11 @@ public static class FinanceCommandValidation
             throw new ArgumentOutOfRangeException(parameterName, "Amount cannot contain fractions smaller than one cent.");
     }
 
+    /// <summary>Resolves and validates a transaction date within the selected month.</summary>
+    /// <param name="date">The optional transaction date in yyyy-MM-dd format.</param>
+    /// <param name="monthKey">The selected month in yyyy-MM format.</param>
+    /// <returns>The validated transaction date in yyyy-MM-dd format.</returns>
+    /// <exception cref="ArgumentException">The month or transaction date is invalid or the date belongs to another month.</exception>
     public static string ResolveTransactionDate(string? date, string monthKey)
     {
         ValidateMonthKey(monthKey);
@@ -42,6 +54,11 @@ public static class FinanceCommandValidation
         return parsed.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
     }
 
+    /// <summary>Ensures the requested financial category exists and is active.</summary>
+    /// <param name="categories">The available financial categories.</param>
+    /// <param name="categoryId">The category identifier to validate.</param>
+    /// <param name="parameterName">The name used when reporting an invalid argument.</param>
+    /// <exception cref="ArgumentException">No matching active category exists.</exception>
     public static void ValidateActiveCategory(IEnumerable<FinancialCategory> categories, string categoryId, string parameterName)
     {
         if (string.IsNullOrWhiteSpace(categoryId) ||
@@ -49,6 +66,10 @@ public static class FinanceCommandValidation
             throw new ArgumentException("A valid active financial category is required.", parameterName);
     }
 
+    /// <summary>Ensures a non-empty actor identity is recorded for the finance command.</summary>
+    /// <param name="actor">The actor identity to validate.</param>
+    /// <param name="parameterName">The name used when reporting an invalid argument.</param>
+    /// <exception cref="ArgumentException">The actor identity is missing.</exception>
     public static void ValidateActor(string actor, string parameterName)
     {
         if (string.IsNullOrWhiteSpace(actor))
