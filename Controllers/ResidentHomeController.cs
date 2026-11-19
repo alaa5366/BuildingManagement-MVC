@@ -47,19 +47,13 @@ public class ResidentHomeController : Controller
     {
         var buildingId = User.FindFirstValue("buildingId");
         var aptId = User.FindFirstValue("apartmentId");
-        var aptNumber = User.FindFirstValue("apartmentNumber");
 
-        var building = buildingId == null ? null : await _buildings.GetByIdAsync(buildingId);
-
-        Apartment? apt = null;
-        if (building != null)
-        {
-            if (!string.IsNullOrWhiteSpace(aptId))
-                apt = building.Apartments.FirstOrDefault(a => a.Id == aptId);
-
-            if (apt == null && !string.IsNullOrWhiteSpace(aptNumber))
-                apt = building.Apartments.FirstOrDefault(a => a.Number.ToString() == aptNumber);
-        }
+        var legacyBuilding = buildingId == null ? null : await _buildings.GetByIdAsync(buildingId);
+        var building = string.IsNullOrWhiteSpace(buildingId) || string.IsNullOrWhiteSpace(aptId)
+            ? null
+            : await _targetWallet.GetBuildingShellAsync(
+                buildingId, aptId, HttpContext.RequestAborted);
+        var apt = building?.Apartments.SingleOrDefault(apartment => apartment.Id == aptId);
 
         ViewBag.Building = building;
 
@@ -129,10 +123,12 @@ public class ResidentHomeController : Controller
         // ============================================================
         // 6. التصويتات النشطة (آخر 3)
         // ============================================================
-        var activePolls = _polls.GetPolls(building)
-            .Where(p => PollsService.IsPollActive(p))
-            .Take(3)
-            .ToList();
+        var activePolls = legacyBuilding is null
+            ? new List<Poll>()
+            : _polls.GetPolls(legacyBuilding)
+                .Where(p => PollsService.IsPollActive(p))
+                .Take(3)
+                .ToList();
 
         // ============================================================
         // 7. آخر 3 إشعارات + unread
@@ -145,10 +141,12 @@ public class ResidentHomeController : Controller
         // ============================================================
         // 8. آخر 3 صيانة
         // ============================================================
-        var maintenance = _maint.GetLog(building)
-            .Where(m => m.Status != "cancelled")
-            .Take(3)
-            .ToList();
+        var maintenance = legacyBuilding is null
+            ? new List<MaintenanceRecord>()
+            : _maint.GetLog(legacyBuilding)
+                .Where(m => m.Status != "cancelled")
+                .Take(3)
+                .ToList();
 
         // ============================================================
         // 9. آخر دفعة (للـ Hero) — الشهر الحالي فقط
