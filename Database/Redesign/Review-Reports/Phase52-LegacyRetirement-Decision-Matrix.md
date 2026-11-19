@@ -94,7 +94,24 @@ The requested two-step sequence is preserved, with a safety prerequisite made ex
 
 Because the current refactoring map and target inventory still show active legacy dependencies and multiple target entities are only logical candidates, Stage 1 currently has an empty authorized DROP allowlist. This is a deliberate safety result, not a skipped deletion.
 
-## 6. Execution status
+## 6. Phase 51 live audit results — 2026-11-19
+
+The user ran Phase 51 successfully. The generated read-only report is:
+`Phase51-LegacyDependencyRetirementAudit-20261119-050939.md`.
+
+Observed results:
+- Source user tables: **32**.
+- Target user tables: **97**.
+- Source table-name references in repository/application files: **6,489**.
+- Target foreign keys touching source table names: **45**.
+- Both connection identities were validated by the script: source `BuildingManagement`, target `BuildingManagement_RestoreTest`.
+- All 32 source table names have repository references; none has zero references.
+- The 45 FK list includes intentional shared-property references (for example, target ownership/occupancy/access and financial tables reference `Apartments` or `Buildings`) as well as genuine legacy dependencies (for example, `BuildingAdmins -> Users`, `UserPermissions -> Users`, `Cameras -> Dvrs`, and `DepositEditHistory -> Deposits`).
+- The report includes source-code locations. The large aggregate reference count is a conservative indicator; references must be classified by actual runtime use rather than treated as 6,489 independent blockers.
+
+**Phase 51 conclusion:** no legacy table is currently safe to drop as a batch. In particular, domain services/tests still use legacy finance entities, backup/restore still handles legacy collections, identity and authorization compatibility remains, and target FKs intentionally preserve the property foundation. The current explicit DROP allowlist remains empty.
+
+## 7. Execution status
 
 - [x] Reviewed the target ERD and entity inventory.
 - [x] Reviewed legacy-to-target mapping and module refactoring contract.
