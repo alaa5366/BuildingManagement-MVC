@@ -27,7 +27,7 @@ public sealed class ExplicitPermissionAuthorizationTests
     public async Task AdminPermission_RequiresExplicitGrantForEveryAdministratorRole(string role)
     {
         var context = CreateContext(role);
-        await await new AdminPermissionAttribute("backup.manage").OnAuthorizationAsync(context);
+        await new AdminPermissionAttribute("backup.manage").OnAuthorizationAsync(context);
         var denied = Assert.IsType<ContentResult>(context.Result);
         Assert.Equal(StatusCodes.Status403Forbidden, denied.StatusCode);
         Assert.False(string.IsNullOrWhiteSpace(denied.Content));
