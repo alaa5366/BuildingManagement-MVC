@@ -1,16 +1,15 @@
-@* =============================================================================
-   View:        WhatsApp/Index
-   Rendered by: WhatsAppController.Index
-   Model:       none
-   Purpose:     Main page.
-   ============================================================================= *@
+@model BuildingManagementMvc.Models.WhatsAppIndexViewModel
 @{
     ViewData["Title"] = Loc.T("WhatsApp_Messages");
-    var building = (Building)ViewBag.Building;
     var templates = (Dictionary<string, (string Name, string Text)>)ViewBag.Templates;
 }
 
-<h3 class="mb-3">@Loc.T("WhatsApp_Messages_N", building.Name)</h3>
+<h3 class="mb-3">@Loc.T("WhatsApp_Messages_N", Model.BuildingName)</h3>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-warning">@TempData["Error"]</div>
+}
 
 <div class="bg-white rounded shadow-sm p-3">
     <form method="post" asp-action="Generate">
@@ -18,7 +17,7 @@
             <div class="col-md-4">
                 <label class="form-label small">@Loc.T("Apartment")</label>
                 <select name="aptId" class="form-select" required>
-                    @foreach (var apt in building.Apartments.OrderBy(a => a.Number))
+                    @foreach (var apt in Model.Apartments)
                     {
                         <option value="@apt.Id">@Loc.T("Apartment_N_N_2", apt.Number, string.IsNullOrEmpty(apt.Owner) ? "" : "— " + apt.Owner)</option>
                     }
