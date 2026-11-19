@@ -22,8 +22,7 @@ public sealed class Phase21_DepositSubmissionEvidence : Migration
         migrationBuilder.AddColumn<string>(
             name: "ReceiptMetadataJson",
             table: "PaymentDeposits",
-            type: "nvarchar(8000)",
-            maxLength: 8000,
+            type: "nvarchar(max)",
             nullable: true);
     }
 
