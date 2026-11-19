@@ -31,7 +31,7 @@ public sealed class AccountManagementController : Controller
     {
         if (User.HasClaim("impersonated", "true")) return Forbid();
         search = string.IsNullOrWhiteSpace(search) ? null : search.Trim()[..Math.Min(search.Trim().Length, 128)];
-        role = role is "resident" or "admin" or "superadmin" ? role : null;
+        role = role is "resident" or "admin" or "building-admin" or "superadmin" ? role : null;
         status = status is "active" or "inactive" ? status : null;
         return View(await _service.GetPageAsync(search, role, status, page, pageSize, cancellationToken));
     }
