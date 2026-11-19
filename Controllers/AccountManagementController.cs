@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace BuildingManagementMvc.Controllers;
 
+/// <summary>AccountManagementController coordinates the corresponding application controller actions.</summary>
 [Authorize(Roles = "superadmin")]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public sealed class AccountManagementController : Controller
