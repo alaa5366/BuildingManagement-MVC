@@ -147,6 +147,12 @@ public class AppDbContext : DbContext
     /// Gets the maintenance records.
     /// </summary>
     public DbSet<MaintenanceRecordEntity> MaintenanceRecords => Set<MaintenanceRecordEntity>();
+    public DbSet<MaintenanceRequestEntity> MaintenanceRequests => Set<MaintenanceRequestEntity>();
+    public DbSet<MaintenanceAssignmentEntity> MaintenanceAssignments => Set<MaintenanceAssignmentEntity>();
+    public DbSet<MaintenanceCommentEntity> MaintenanceComments => Set<MaintenanceCommentEntity>();
+    public DbSet<MaintenanceAttachmentEntity> MaintenanceAttachments => Set<MaintenanceAttachmentEntity>();
+    public DbSet<MaintenanceStatusEventEntity> MaintenanceStatusEvents => Set<MaintenanceStatusEventEntity>();
+    public DbSet<MaintenanceLedgerLinkEntity> MaintenanceLedgerLinks => Set<MaintenanceLedgerLinkEntity>();
     /// <summary>
     /// Gets the QR tokens.
     /// </summary>
