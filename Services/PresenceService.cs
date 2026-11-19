@@ -1,4 +1,4 @@
-﻿using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
 using Microsoft.EntityFrameworkCore;
@@ -6,69 +6,76 @@ using Microsoft.EntityFrameworkCore;
 namespace BuildingManagementMvc.Services;
 
 /// <summary>
-/// Tracks and reports which users are online.
+/// Tracks online users using durable presence sessions and append-only heartbeat observations.
 /// </summary>
 public class PresenceService
 {
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly ILogger<PresenceService> _logger;
 
-    /// <summary>
-    /// The online threshold field.
-    /// </summary>
     public static readonly TimeSpan OnlineThreshold = TimeSpan.FromMinutes(2);
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PresenceService"/> class.
-    /// </summary>
     public PresenceService(IDbContextFactory<AppDbContext> sqlFactory, ILogger<PresenceService> logger)
     {
         _sqlFactory = sqlFactory;
         _logger = logger;
     }
 
-    /// <summary>
-    /// Builds the document ID.
-    /// </summary>
-    public static string BuildDocId(string uid, string aptId, string buildingId)
-    {
-        return !string.IsNullOrEmpty(buildingId) && !string.IsNullOrEmpty(aptId)
+    public static string BuildDocId(string uid, string aptId, string buildingId) =>
+        !string.IsNullOrEmpty(buildingId) && !string.IsNullOrEmpty(aptId)
             ? $"{buildingId}_{aptId}"
             : uid;
-    }
 
-    /// <summary>
-    /// Stores the last-seen time of a user.
-    /// </summary>
+    /// <summary>Records a heartbeat without deleting historical session evidence.</summary>
     public async Task HeartbeatAsync(string uid, string aptId, string buildingId)
     {
-        if (string.IsNullOrEmpty(uid)) return;
+        if (string.IsNullOrWhiteSpace(uid)) return;
 
+        var now = DateTime.UtcNow;
         var docId = BuildDocId(uid, aptId, buildingId);
-
         try
         {
             await using var db = await _sqlFactory.CreateDbContextAsync();
-            var existing = await db.Presence.FirstOrDefaultAsync(p => p.Uid == docId);
+            await using var tx = await db.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable);
 
-            if (existing == null)
+            var session = await db.PresenceSessions
+                .Where(x => x.LegacyUid == docId && x.Status == 0)
+                .OrderByDescending(x => x.LastSeenAtUtc)
+                .FirstOrDefaultAsync();
+
+            if (session == null)
             {
-                db.Presence.Add(new PresenceEntity
+                session = new PresenceSessionEntity
                 {
-                    Uid = docId,
-                    ApartmentId = string.IsNullOrWhiteSpace(aptId) ? null : aptId,
+                    PresenceSessionId = Guid.NewGuid(),
+                    LegacyUid = docId,
                     BuildingId = string.IsNullOrWhiteSpace(buildingId) ? null : buildingId,
-                    LastSeen = DateTime.UtcNow
-                });
+                    ApartmentId = string.IsNullOrWhiteSpace(aptId) ? null : aptId,
+                    StartedAtUtc = now,
+                    LastSeenAtUtc = now,
+                    ExpiresAtUtc = now.Add(OnlineThreshold),
+                    Status = 0
+                };
+                db.PresenceSessions.Add(session);
             }
             else
             {
-                existing.LastSeen = DateTime.UtcNow;
-                existing.BuildingId = buildingId ?? existing.BuildingId;
-                existing.ApartmentId = aptId ?? existing.ApartmentId;
+                session.LastSeenAtUtc = now;
+                session.ExpiresAtUtc = now.Add(OnlineThreshold);
+                session.BuildingId = string.IsNullOrWhiteSpace(buildingId) ? session.BuildingId : buildingId;
+                session.ApartmentId = string.IsNullOrWhiteSpace(aptId) ? session.ApartmentId : aptId;
             }
 
+            db.PresenceHeartbeats.Add(new PresenceHeartbeatEntity
+            {
+                PresenceSessionId = session.PresenceSessionId,
+                ObservedAtUtc = now,
+                Signal = 0
+            });
+
             await db.SaveChangesAsync();
+            await tx.CommitAsync();
         }
         catch (Exception ex)
         {
@@ -76,17 +83,18 @@ public class PresenceService
         }
     }
 
-    /// <summary>
-    /// Gets the online count.
-    /// </summary>
     public async Task<int> GetOnlineCountAsync(string buildingId)
     {
         try
         {
             var cutoff = DateTime.UtcNow.Subtract(OnlineThreshold);
             await using var db = await _sqlFactory.CreateDbContextAsync();
-            return await db.Presence
-                .CountAsync(p => p.BuildingId == buildingId && p.LastSeen >= cutoff);
+            return await db.PresenceSessions
+                .Where(x => x.BuildingId == buildingId && x.Status == 0 &&
+                    x.EndedAtUtc == null && x.LastSeenAtUtc >= cutoff)
+                .Select(x => x.ApartmentId)
+                .Distinct()
+                .CountAsync();
         }
         catch (Exception ex)
         {
@@ -95,32 +103,30 @@ public class PresenceService
         }
     }
 
-    /// <summary>
-    /// Gets the by building.
-    /// </summary>
     public async Task<Dictionary<string, Presence>> GetByBuildingAsync(string buildingId)
     {
         var result = new Dictionary<string, Presence>();
-
         try
         {
+            var cutoff = DateTime.UtcNow.Subtract(OnlineThreshold);
             await using var db = await _sqlFactory.CreateDbContextAsync();
-            var list = await db.Presence.AsNoTracking()
-                .Where(p => p.BuildingId == buildingId)
+            var list = await db.PresenceSessions.AsNoTracking()
+                .Where(x => x.BuildingId == buildingId && x.ApartmentId != null &&
+                    x.EndedAtUtc == null && x.Status == 0)
+                .GroupBy(x => x.ApartmentId!)
+                .Select(g => g.OrderByDescending(x => x.LastSeenAtUtc).First())
                 .ToListAsync();
 
-            foreach (var p in list)
+            foreach (var session in list)
             {
-                var aptId = p.ApartmentId ?? "";
-                if (string.IsNullOrEmpty(aptId)) continue;
-
+                var aptId = session.ApartmentId!;
                 result[aptId] = new Presence
                 {
-                    Uid = p.Uid,
+                    Uid = session.LegacyUid ?? session.PresenceSessionId.ToString("N"),
                     AptId = aptId,
-                    BuildingId = p.BuildingId ?? "",
-                    LastSeen = p.LastSeen.ToString("o"),
-                    Ts = new DateTimeOffset(p.LastSeen, TimeSpan.Zero).ToUnixTimeMilliseconds()
+                    BuildingId = session.BuildingId ?? "",
+                    LastSeen = session.LastSeenAtUtc.ToString("o"),
+                    Ts = new DateTimeOffset(session.LastSeenAtUtc, TimeSpan.Zero).ToUnixTimeMilliseconds()
                 };
             }
         }
@@ -128,13 +134,9 @@ public class PresenceService
         {
             _logger.LogWarning(ex, "[Presence] GetByBuilding failed");
         }
-
         return result;
     }
 
-    /// <summary>
-    /// Determines whether the value is online.
-    /// </summary>
     public static bool IsOnline(Presence? p)
     {
         if (p == null || p.Ts <= 0) return false;
@@ -142,9 +144,6 @@ public class PresenceService
         return DateTime.UtcNow - lastSeen <= OnlineThreshold;
     }
 
-    /// <summary>
-    /// Determines whether the value is recent.
-    /// </summary>
     public static bool IsRecent(Presence? p)
     {
         if (p == null || p.Ts <= 0) return false;
@@ -152,15 +151,11 @@ public class PresenceService
         return DateTime.UtcNow - lastSeen < TimeSpan.FromHours(24);
     }
 
-    /// <summary>
-    /// Returns the time ago.
-    /// </summary>
     public static string TimeAgo(Presence? p)
     {
         if (p == null || p.Ts <= 0) return Loc.T("Never_Logged_In");
         var lastSeen = DateTimeOffset.FromUnixTimeMilliseconds(p.Ts).UtcDateTime;
         var diff = DateTime.UtcNow - lastSeen;
-
         if (diff.TotalMinutes < 1) return Loc.T("Now");
         if (diff.TotalMinutes < 60) return Loc.T("N_Minutes_Ago", (int)diff.TotalMinutes);
         if (diff.TotalHours < 24) return Loc.T("N_Hours_Ago", (int)diff.TotalHours);
@@ -168,18 +163,19 @@ public class PresenceService
         return lastSeen.ToString("yyyy-MM-dd");
     }
 
-    /// <summary>
-    /// Clears the old.
-    /// </summary>
+    /// <summary>Closes stale sessions while retaining their heartbeat history.</summary>
     public async Task<int> ClearOldAsync(int olderThanDays = 30)
     {
+        if (olderThanDays < 1) throw new ArgumentOutOfRangeException(nameof(olderThanDays));
         try
         {
             var cutoff = DateTime.UtcNow.AddDays(-olderThanDays);
             await using var db = await _sqlFactory.CreateDbContextAsync();
-            return await db.Presence
-                .Where(p => p.LastSeen < cutoff)
-                .ExecuteDeleteAsync();
+            return await db.PresenceSessions
+                .Where(x => x.Status == 0 && x.LastSeenAtUtc < cutoff)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(x => x.Status, (byte)1)
+                    .SetProperty(x => x.EndedAtUtc, cutoff));
         }
         catch (Exception ex)
         {
