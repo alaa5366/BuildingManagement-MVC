@@ -411,6 +411,7 @@ public sealed class IdentityAccountAuthenticationService
 
     /// <summary>Changes the PIN for the specified resident account after validating the current credentials.</summary>
 
+    /// <summary>Changes the PIN for the authenticated resident account.</summary>
     public async Task<bool> ChangeResidentPinAsync(
         Guid accountId,
         string expectedSecurityStamp,
