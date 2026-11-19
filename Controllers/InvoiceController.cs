@@ -63,7 +63,9 @@ public class InvoiceController : Controller
     private async Task<IActionResult> GenerateInvoiceAsync(
         string buildingId, string apartmentId, string? month, string role)
     {
-        var monthKey = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
+        var monthKey = string.IsNullOrWhiteSpace(month)
+            ? await _invoice.GetCurrentPeriodKeyAsync(buildingId, HttpContext.RequestAborted)
+            : month;
         var data = await _invoice.BuildInvoiceDataAsync(
             buildingId, apartmentId, monthKey, HttpContext.RequestAborted);
         if (data is null) return NotFound();
