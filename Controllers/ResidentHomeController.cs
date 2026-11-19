@@ -17,7 +17,6 @@ namespace BuildingManagementMvc.Controllers;
 [Authorize(Roles = "resident")]
 public class ResidentHomeController : Controller
 {
-    private readonly BuildingsService _buildings;
     private readonly TargetWalletReadService _targetWallet;
     private readonly TargetPollsService _targetPolls;
     private readonly TargetMaintenanceService _targetMaintenance;
@@ -27,13 +26,11 @@ public class ResidentHomeController : Controller
     /// Initializes a new instance of the <see cref="ResidentHomeController"/> class.
     /// </summary>
     public ResidentHomeController(
-        BuildingsService buildings,
         TargetWalletReadService targetWallet,
         TargetPollsService targetPolls,
         TargetMaintenanceService targetMaintenance,
         TargetNotificationsService targetNotifications)
     {
-        _buildings = buildings;
         _targetWallet = targetWallet;
         _targetPolls = targetPolls;
         _targetMaintenance = targetMaintenance;
