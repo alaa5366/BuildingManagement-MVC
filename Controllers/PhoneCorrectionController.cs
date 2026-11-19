@@ -8,7 +8,6 @@ using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Controllers;
 
-[AdminPermission(AdminPermissions.ManageResidents)]
 public sealed class PhoneCorrectionController : Controller
 {
     private readonly PersonPhoneCorrectionService _service;
@@ -41,6 +40,7 @@ public sealed class PhoneCorrectionController : Controller
 
     [HttpGet]
     [Authorize(Roles = "admin,superadmin")]
+    [AdminPermission(AdminPermissions.ManageResidents)]
     public async Task<IActionResult> Index()
     {
         var superAdmin = User.IsInRole("superadmin");
@@ -56,6 +56,7 @@ public sealed class PhoneCorrectionController : Controller
 
     [HttpPost]
     [Authorize(Roles = "admin,superadmin")]
+    [AdminPermission(AdminPermissions.ManageResidents)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Review(Guid requestId, bool approve, string? reason)
     {
