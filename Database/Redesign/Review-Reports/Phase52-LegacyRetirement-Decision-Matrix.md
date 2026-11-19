@@ -126,3 +126,33 @@ Observed results:
 - [ ] Begin MVC controller/service/view refactoring only after Stage 1 is complete.
 
 **No SQL was executed by this document. No database was modified.**
+
+## Phase53 findings — 2026-11-19
+
+Phase53 completed successfully and its report is
+`Phase53-RefinedLegacyRuntimeReferenceAudit-20261119-051255.md`
+(commit `b0c03c8`).
+
+| Metric | Result |
+|---|---:|
+| Runtime text references | 2,401 |
+| Test references | 322 |
+| Documentation/schema references | 110 |
+| Generated migration references | 1,052 |
+
+These are classified text matches, not 2,401 proven live database operations. The runtime section still includes comments, XML documentation, service/type names, navigation properties and backup collection metadata. Therefore the counts must not be used as a DROP score or as proof of direct SQL access.
+
+### Confirmed blockers from source inspection
+
+1. `Data/AppDbContext.cs` still exposes DbSets for the legacy domain tables as well as the canonical identity/authorization and finance entities. Legacy EF mappings remain active in the application model.
+2. `Services/BackupService.cs` still treats legacy collections as first-class backup/restore payloads: it enumerates legacy collections, counts them, serializes them and restores them through legacy DbSets. Removing those tables before redesigning backup/restore would break recovery and could silently omit data.
+3. Building/floor/apartment data is still a shared foundation and remains explicitly excluded from retirement.
+4. Controllers and services still call legacy-oriented service abstractions in several modules; the Phase53 report is a location inventory, not proof that those modules have completed canonical cutover.
+
+### Updated retirement decision
+
+- DROP allowlist remains **empty**.
+- No legacy table is approved for deletion by Phase53.
+- Do not remove legacy DbSets or EF mappings in this audit phase.
+- Next implementation gate is an owning-module cutover inventory that maps each legacy DbSet and each backup/restore collection to its canonical replacement, compatibility adapter, or retained shared table. It must include read/write paths, foreign keys, restore semantics, data parity and rollback evidence.
+- Only after that gate passes for every table should one consolidated, guarded retirement script be generated for `BuildingManagement_RestoreTest`. The production/source database remains out of scope.
