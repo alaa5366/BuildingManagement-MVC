@@ -18,7 +18,7 @@ $m=(Query $c "SELECT COUNT(*) N FROM dbo.__EFMigrationsHistory WHERE MigrationId
 if([int]$m -ne 1){throw 'Phase09 is not applied'}
 $src=[int](Query $c "SELECT COUNT(*) N FROM dbo.Notifications").Rows[0].N
 $old=[int](Query $c "SELECT COUNT(*) N FROM dbo.NotificationMessages WHERE Origin='legacy.notifications.v1'").Rows[0].N
-$pending=[int](Query $c "SELECT COUNT(*) N FROM dbo.Notifications s WHERE NOT EXISTS(SELECT 1 FROM dbo.NotificationMessages t WHERE t.LegacyNotificationId=CONCAT(s.BuildingId,N'/',s.Id))").Rows[0].N
+$pending=[int](Query $c "SELECT COUNT(*) N FROM dbo.Notifications s WHERE NOT EXISTS(SELECT 1 FROM dbo.NotificationMessages t WHERE t.LegacyNotificationId=CONVERT(varchar(64),HASHBYTES('SHA2_256',CONCAT(s.BuildingId,N'|',s.Id)),2))").Rows[0].N
 Log "Database: $db";Log "Source: $src";Log "Existing migrated: $old";Log "Pending: $pending"
 if(-not $Apply){Log 'DRY RUN - no data changed'}
 else{
@@ -26,7 +26,7 @@ $tx=$c.BeginTransaction()
 try{
 $sql=@"
 SET NOCOUNT ON;
-;WITH S AS (SELECT n.*,CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONCAT(N'legacy.notifications.v1|',BuildingId,N'|',Id)),1,16)) Mid,CONCAT(BuildingId,N'/',Id) LKey FROM dbo.Notifications n)
+;WITH S AS (SELECT n.*,CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONCAT(N'legacy.notifications.v1|',BuildingId,N'|',Id)),1,16)) Mid,CONVERT(varchar(64),HASHBYTES('SHA2_256',CONCAT(BuildingId,N'|',Id)),2) LKey FROM dbo.Notifications n)
 INSERT dbo.NotificationMessages(MessageId,BuildingId,LegacyNotificationId,Title,Body,Channel,Origin,CreatedAtUtc,ExpiresAtUtc)
 SELECT Mid,BuildingId,LKey,Title,Body,0,N'legacy.notifications.v1',Ts,NULL FROM S
 WHERE NOT EXISTS(SELECT 1 FROM dbo.NotificationMessages t WHERE t.LegacyNotificationId=S.LKey);
@@ -38,9 +38,9 @@ WHERE NOT EXISTS(SELECT 1 FROM dbo.NotificationRecipients r WHERE r.RecipientId=
 INSERT dbo.NotificationReadStates(ReadStateId,RecipientId,ReadAtUtc,DismissedAtUtc)
 SELECT ReadId,Rid,ReadAt,NULL FROM S WHERE IsRead=1 AND ReadAt IS NOT NULL
 AND NOT EXISTS(SELECT 1 FROM dbo.NotificationReadStates x WHERE x.RecipientId=S.Rid);
-;WITH S AS (SELECT n.*,CONCAT(BuildingId,N'/',Id) LKey,HASHBYTES('SHA2_256',CONCAT(BuildingId,N'|',Id,N'|',CONVERT(nvarchar(33),Ts,126),N'|',RecipientType,N'|',COALESCE(RecipientApartmentId,N''),N'|',Type,N'|',Icon,N'|',Title,N'|',Body,N'|',CONVERT(nvarchar(1),IsRead),N'|',COALESCE(CONVERT(nvarchar(33),ReadAt,126),N''))) FP FROM dbo.Notifications n)
+;WITH S AS (SELECT n.*,CONCAT(BuildingId,N'/',Id) SourceKey,CONVERT(varchar(64),HASHBYTES('SHA2_256',CONCAT(BuildingId,N'|',Id)),2) LKey,HASHBYTES('SHA2_256',CONCAT(BuildingId,N'|',Id,N'|',CONVERT(nvarchar(33),Ts,126),N'|',RecipientType,N'|',COALESCE(RecipientApartmentId,N''),N'|',Type,N'|',Icon,N'|',Title,N'|',Body,N'|',CONVERT(nvarchar(1),IsRead),N'|',COALESCE(CONVERT(nvarchar(33),ReadAt,126),N''))) FP FROM dbo.Notifications n)
 INSERT dbo.LegacyDataMigrationMap(MigrationMapId,SourceSystem,SourceTable,SourceKey,TargetTable,TargetKey,SourceFingerprint,Outcome,Disposition,SafeNote)
-SELECT CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONCAT(N'legacy.notifications.map.v1|',BuildingId,N'|',Id)),1,16)),N'BuildingManagement.Legacy',N'Notifications',LKey,N'NotificationMessages',LKey,FP,1,N'Migrated',N'Legacy recipient retained; person not inferred.'
+SELECT CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONCAT(N'legacy.notifications.map.v1|',BuildingId,N'|',Id)),1,16)),N'BuildingManagement.Legacy',N'Notifications',SourceKey,N'NotificationMessages',LKey,FP,1,N'Migrated',N'Legacy recipient retained; person not inferred.'
 FROM S WHERE NOT EXISTS(SELECT 1 FROM dbo.LegacyDataMigrationMap x WHERE x.SourceSystem=N'BuildingManagement.Legacy' AND x.SourceTable=N'Notifications' AND x.SourceKey=S.LKey);
 "@
 $cmd=$c.CreateCommand();$cmd.Transaction=$tx;$cmd.CommandText=$sql;$cmd.CommandTimeout=300;[void]$cmd.ExecuteNonQuery();$tx.Commit()
@@ -57,7 +57,7 @@ if($c.State -ne 'Closed'){$c.Close()}
 $mode=if($Apply){'APPLY'}else{'DRY RUN'}
 $lines=@("# Phase 10 - Notification Backfill","","- Run: $(Get-Date -Format o)","- Mode: $mode","- Source rows retained: dbo.Notifications","","## Results")
 $lines+=($log|ForEach-Object{"- $_"})
-$lines+=@("","## Rules","- Source key: BuildingId/Id.","- No person identity inferred from apartment/building recipients.","- Read state copied only when IsRead=1 and ReadAt exists.","- Deterministic IDs and source map make reruns idempotent.","- No source rows are updated or deleted.")
+$lines+=@("","## Rules","- LegacyDataMigrationMap preserves the full composite key BuildingId/Id; NotificationMessages stores its SHA-256 reference to fit the target column limit.","- No person identity inferred from apartment/building recipients.","- Read state copied only when IsRead=1 and ReadAt exists.","- Deterministic IDs and source map make reruns idempotent.","- No source rows are updated or deleted.")
 Set-Content -LiteralPath $report -Value ($lines -join [Environment]::NewLine) -Encoding UTF8
 Write-Host "Report: $report"
 }
