@@ -161,7 +161,7 @@ public sealed class InvoiceService
         var issueDate = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
         var qrPayload = JsonSerializer.Serialize(new
         {
-            v = "4.0",
+            v = "3.2",
             no = invoiceNo,
             bld = building.BuildingNumber,
             apt = apartment.Number,
