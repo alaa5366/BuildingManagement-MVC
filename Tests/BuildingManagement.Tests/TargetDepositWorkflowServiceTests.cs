@@ -47,6 +47,20 @@ public sealed class TargetDepositWorkflowServiceTests
                 AccountId = actorId, PersonId = personId, AccountStatus = 1,
                 SecurityStamp = "test", CreatedAtUtc = now
             });
+            seed.RoleDefinitions.AddRange(
+                new RoleDefinitionEntity { RoleKey = "resident", DisplayName = "Resident", IsActive = true },
+                new RoleDefinitionEntity { RoleKey = "building-admin", DisplayName = "Building Admin", IsActive = true });
+            seed.UserRoleAssignments.AddRange(
+                new UserRoleAssignmentEntity
+                {
+                    RoleAssignmentId = Guid.NewGuid(), AccountId = actorId, RoleKey = "resident",
+                    ScopeType = 1, ScopeBuildingId = "B1", ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now
+                },
+                new UserRoleAssignmentEntity
+                {
+                    RoleAssignmentId = Guid.NewGuid(), AccountId = actorId, RoleKey = "building-admin",
+                    ScopeType = 1, ScopeBuildingId = "B1", ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now
+                });
             await seed.SaveChangesAsync();
         }
 
@@ -98,6 +112,15 @@ public sealed class TargetDepositWorkflowServiceTests
             {
                 AccountId = actorId, PersonId = personId, AccountStatus = 1,
                 SecurityStamp = "test", CreatedAtUtc = now
+            });
+            seed.RoleDefinitions.Add(new RoleDefinitionEntity
+            {
+                RoleKey = "building-admin", DisplayName = "Building Admin", IsActive = true
+            });
+            seed.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            {
+                RoleAssignmentId = Guid.NewGuid(), AccountId = actorId, RoleKey = "building-admin",
+                ScopeType = 1, ScopeBuildingId = "B1", ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now
             });
             seed.PaymentDeposits.Add(new PaymentDepositEntity
             {
