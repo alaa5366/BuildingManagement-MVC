@@ -403,7 +403,10 @@ public sealed class TargetWalletReadService
             .ToListAsync(cancellationToken);
 
         var totals = (
-            Collected: periodDepositRows.Where(d => d.Status == PaymentDepositStatus.Confirmed).Sum(d => d.Amount),
+            Collected: currentEntries.Where(entry =>
+                entry.EntryKind == LedgerEntryKind.Deposit ||
+                entry.EntryKind == LedgerEntryKind.Reversal && entry.SourceType == "PaymentDepositReversal")
+                .Sum(entry => entry.SignedAmount),
             Expenses: -currentEntries.Where(entry =>
                 entry.EntryKind == LedgerEntryKind.ExpenseAllocation ||
                 entry.EntryKind == LedgerEntryKind.Reversal && entry.SourceType == "ExpenseReversal")
