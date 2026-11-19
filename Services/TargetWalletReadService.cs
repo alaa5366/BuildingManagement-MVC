@@ -265,6 +265,45 @@ public sealed class TargetWalletReadService
         return result;
     }
 
+    public async Task<string> GetCurrentPeriodKeyAsync(
+        string buildingId,
+        DateTimeOffset? utcNow = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(buildingId))
+            throw new ArgumentException("Building is required.", nameof(buildingId));
+
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        var periods = await db.FinancialPeriods.AsNoTracking()
+            .Where(period => period.BuildingId == buildingId)
+            .OrderByDescending(period => period.PeriodKey)
+            .Select(period => new { period.PeriodKey, period.TimeZoneId, period.StartsAtUtc, period.EndsAtUtc })
+            .ToListAsync(cancellationToken);
+
+        if (periods.Count == 0)
+            return (utcNow ?? DateTimeOffset.UtcNow).UtcDateTime.ToString("yyyy-MM");
+
+        var now = (utcNow ?? DateTimeOffset.UtcNow).UtcDateTime;
+        var activePeriod = periods.FirstOrDefault(period =>
+            now >= period.StartsAtUtc && now < period.EndsAtUtc);
+        if (activePeriod is not null) return activePeriod.PeriodKey;
+
+        try
+        {
+            var timeZone = TimeZoneInfo.FindSystemTimeZoneById(periods[0].TimeZoneId);
+            return TimeZoneInfo.ConvertTime(new DateTimeOffset(now, TimeSpan.Zero), timeZone)
+                .ToString("yyyy-MM");
+        }
+        catch (TimeZoneNotFoundException ex)
+        {
+            throw new InvalidOperationException("The building financial period has an unknown time zone.", ex);
+        }
+        catch (InvalidTimeZoneException ex)
+        {
+            throw new InvalidOperationException("The building financial period time zone is invalid.", ex);
+        }
+    }
+
     public async Task<int> GetFinancialPeriodCountAsync(
         string buildingId,
         CancellationToken cancellationToken = default)
