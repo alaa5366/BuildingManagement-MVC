@@ -1,0 +1,37 @@
+@model BuildingManagementMvc.Services.LanguageAdminPage
+@{ ViewData["Title"]="إدارة اللغات والترجمات"; Layout="_Layout"; }
+<div class="container-fluid py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3"><div><h2>إدارة اللغات والترجمات</h2><p class="text-muted mb-0">إدارة اللغات والمفاتيح وتصنيفها حسب مصدر الاستخدام.</p></div><span class="badge bg-primary">@Model.Languages.Count لغة</span></div>
+    @if(TempData["Message"] is string msg){<div class="alert alert-success">@msg</div>}
+    @if(TempData["Error"] is string err){<div class="alert alert-danger">@err</div>}
+    <div class="card mb-3"><div class="card-header">اللغات</div><div class="card-body">
+        <div class="row g-3">
+        @foreach(var lang in Model.Languages){
+            <div class="col-xl-3 col-md-6"><div class="border rounded p-3 h-100"><div class="d-flex justify-content-between"><strong>@lang.Flag @lang.NativeName (@lang.CultureCode)</strong>@if(lang.IsDefault){<span class="badge bg-success">افتراضية</span>}</div><small class="text-muted">@lang.EnglishName · @lang.Direction · @(lang.IsEnabled?"مفعلة":"معطلة")</small>
+            <form asp-action="SaveLanguage" method="post" class="mt-2">@Html.AntiForgeryToken()
+                <input type="hidden" name="culture" value="@lang.CultureCode"/><input type="hidden" name="englishName" value="@lang.EnglishName"/><input type="hidden" name="nativeName" value="@lang.NativeName"/><input type="hidden" name="direction" value="@lang.Direction"/><input type="hidden" name="fallback" value="@lang.FallbackCulture"/><input type="hidden" name="flag" value="@lang.Flag"/><input type="hidden" name="sortOrder" value="@lang.SortOrder"/>
+                <div class="form-check"><input class="form-check-input" type="checkbox" name="enabled" value="true" checked="@lang.IsEnabled"/><label class="form-check-label">مفعلة</label></div>
+                <div class="form-check"><input class="form-check-input" type="checkbox" name="isDefault" value="true" checked="@lang.IsDefault"/><label class="form-check-label">اللغة الافتراضية</label></div>
+                <button class="btn btn-sm btn-outline-primary mt-2">حفظ الحالة</button>
+            </form></div></div>
+        }
+        <div class="col-xl-3 col-md-6"><div class="border rounded p-3 h-100"><strong>إضافة لغة</strong><form asp-action="SaveLanguage" method="post" class="mt-2">@Html.AntiForgeryToken()
+            <input class="form-control mb-2" name="culture" placeholder="es أو it" required/><input class="form-control mb-2" name="englishName" placeholder="English name" required/><input class="form-control mb-2" name="nativeName" placeholder="الاسم المحلي" required/>
+            <select class="form-select mb-2" name="direction"><option>LTR</option><option>RTL</option></select><input class="form-control mb-2" name="fallback" placeholder="Fallback culture (اختياري)"/><input class="form-control mb-2" name="flag" placeholder="🇪🇸"/><input type="hidden" name="enabled" value="true"/><input type="hidden" name="isDefault" value="false"/><input type="hidden" name="sortOrder" value="50"/><button class="btn btn-primary">إضافة اللغة</button>
+        </form></div></div>
+        </div>
+    </div></div>
+    <div class="card mb-3"><div class="card-body"><form method="get" class="row g-2 align-items-end">
+        <div class="col-md-3"><label class="form-label">اللغة</label><select class="form-select" name="culture">@foreach(var l in Model.Languages.Where(x=>x.IsEnabled)){<option value="@l.CultureCode" selected="@(l.CultureCode==Model.Culture)">@l.NativeName (@l.CultureCode)</option>}</select></div>
+        <div class="col-md-3"><label class="form-label">المصدر</label><select class="form-select" name="category"><option value="">كل المصادر</option>@foreach(var c in new[]{"Controllers","Services","Views","Shared","JavaScript","Validation","System"}){<option value="@c" selected="@(Model.Category==c)">@c</option>}</select></div>
+        <div class="col-md-4"><label class="form-label">بحث بالمفتاح أو الملف أو الوصف</label><input class="form-control" name="search" value="@Model.Search"/></div>
+        <div class="col-md-2"><div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="missingOnly" value="true" checked="@Model.MissingOnly"/><label class="form-check-label">الناقص فقط</label></div><button class="btn btn-primary">تصفية</button></div>
+    </form></div></div>
+    <div class="row g-3 mb-3"><div class="col-md-4"><div class="card card-body"><small>المفاتيح</small><strong class="fs-4">@Model.TotalKeys</strong></div></div><div class="col-md-4"><div class="card card-body"><small>النتائج الناقصة للغة المحددة</small><strong class="fs-4 text-warning">@Model.MissingCount</strong></div></div><div class="col-md-4"><div class="card card-body"><small>مجموعات الاستخدام</small><strong class="fs-4">@Model.Groups.Count</strong></div></div></div>
+    @foreach(var group in Model.Groups){
+        <div class="card mb-2"><div class="card-header d-flex justify-content-between"><strong>@group.Category / @group.SourceGroup</strong><span class="badge bg-secondary">@group.Total · ناقص @group.Missing</span></div><div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>المفتاح</th><th>الوصف</th><th>الترجمة الحالية</th><th>الحالة</th><th>تعديل</th></tr></thead><tbody>
+        @foreach(var item in Model.Entries.Where(x=>x.Category==group.Category&&x.SourceGroup==group.SourceGroup)){
+            <tr><td><code>@item.Key</code></td><td>@item.Description</td><td>@item.Value</td><td>@(item.IsMissing?"<span class='badge bg-warning'>ناقص</span>":"مكتمل")</td><td><details><summary class="btn btn-sm btn-outline-primary">تحرير</summary><form asp-action="SaveTranslation" method="post" class="p-2">@Html.AntiForgeryToken()<input type="hidden" name="key" value="@item.Key"/><input type="hidden" name="category" value="@item.Category"/><input type="hidden" name="sourceGroup" value="@item.SourceGroup"/><input type="hidden" name="description" value="@item.Description"/><input type="hidden" name="culture" value="@Model.Culture"/><textarea class="form-control my-2" name="value" rows="2" required>@item.Value</textarea><button class="btn btn-sm btn-success">حفظ الترجمة</button></form></details></td></tr>
+        }</tbody></table></div></div>
+    }
+</div>
