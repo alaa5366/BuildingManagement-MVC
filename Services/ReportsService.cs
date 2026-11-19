@@ -59,19 +59,12 @@ public sealed class ReportsService
         var months = SelectMonths(allKeys, normalizedRange, currentMonth);
         var periodTotals = await _wallet.GetPeriodTotalsAsync(building.Id, months, cancellationToken);
 
-        var expenseSnapshots = await Task.WhenAll(months.Select(month =>
-            _finance.GetMonthAsync(building.Id, month, "expense", cancellationToken)));
-        var categoryById = expenseSnapshots
-            .SelectMany(snapshot => snapshot.Categories)
-            .GroupBy(category => category.Id, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
-        var categoryTotals = new Dictionary<string, decimal>(StringComparer.Ordinal);
-        for (var index = 0; index < expenseSnapshots.Length; index++)
-        {
-            foreach (var expense in expenseSnapshots[index].Expenses)
-                categoryTotals[expense.CategoryId] =
-                    categoryTotals.GetValueOrDefault(expense.CategoryId) + expense.Amount;
-        }
+        var categorySnapshot = await _finance.GetMonthAsync(
+            building.Id, currentMonth, "expense", cancellationToken);
+        var categoryById = categorySnapshot.Categories
+            .ToDictionary(category => category.Id, StringComparer.Ordinal);
+        var categoryTotals = await _finance.GetExpenseCategoryTotalsAsync(
+            building.Id, months, cancellationToken);
 
         var monthly = months.Select(month =>
         {
