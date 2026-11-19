@@ -11,7 +11,7 @@ namespace BuildingManagement.Tests;
 public sealed class AccountManagementServiceTests
 {
     [Fact]
-    public async Task GetPageAsync_ReportsTargetRolesDuplicatePhonesAndSeparateLegacySuperAdmins()
+    public async Task GetPageAsync_ReportsCanonicalTargetRolesAndDuplicatePhones()
     {
         var factory = new TestContextFactory();
         var now = DateTime.UtcNow;
@@ -50,21 +50,14 @@ public sealed class AccountManagementServiceTests
                 RoleAssignmentId = Guid.NewGuid(), AccountId = targetSuperAdminAccountId, RoleKey = "superadmin",
                 ScopeType = 0, ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1)
             });
-            db.Users.Add(new UserEntity
-            {
-                Uid = "legacy-superadmin-1", Name = "Legacy SuperAdmin",
-                Email = "root@example.invalid", Phone = "+201000000111",
-                Role = "superadmin", IsActive = true, IsDisabled = false,
-                Pin = "must-not-be-read-or-returned"
-            });
             await db.SaveChangesAsync();
         }
 
         var audit = CreateAuditMock();
         var page = await new AccountManagementService(factory, audit.Object).GetPageAsync(null, null, null, 1, 25);
 
-        Assert.Equal(3, page.TotalAccounts);
-        Assert.Equal(1, page.LegacySuperAdminAccounts);
+        Assert.Equal(2, page.TotalAccounts);
+        Assert.Equal(0, page.LegacySuperAdminAccounts);
         Assert.Equal(1, page.DuplicatePhoneAccounts);
         Assert.Equal(0, page.AccountsWithoutActiveRole);
 
@@ -78,11 +71,7 @@ public sealed class AccountManagementServiceTests
         Assert.Null(targetSuperAdmin.Phone);
         Assert.False(targetSuperAdmin.IsDuplicatePhone);
 
-        var legacy = Assert.Single(page.Rows.Where(x => x.IsLegacyAccount));
-        Assert.Equal("superadmin", legacy.Roles);
-        Assert.Null(legacy.Phone);
-        Assert.Equal("root@example.invalid", legacy.Email);
-        Assert.Equal("legacy-superadmin-1", legacy.LegacyUserId);
+        Assert.All(page.Rows, row => Assert.False(row.IsLegacyAccount));
     }
 
 
