@@ -664,13 +664,12 @@ public void EnsureMonth_ExistingMonthWithEmptyCarryOver_DepositEqualsFee_YieldsZ
     }
 
     [Fact]
-    public void AddWalletAdjustment_NullReason_StoredAsEmptyString()
+    public void AddWalletAdjustment_NullReason_IsRejected()
     {
         var b = BuildingWithApartments(("a1", false, 0));
 
-        var adj = Svc.AddWalletAdjustment(b, "a1", 10, null, Month, "admin");
-
-        Assert.Equal("", adj.Reason);
+        Assert.Throws<ArgumentException>(() => Svc.AddWalletAdjustment(b, "a1", 10, null, Month, "admin"));
+        Assert.Empty(b.WalletAdjustments);
     }
 
     // ================================================================
