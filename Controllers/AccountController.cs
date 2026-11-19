@@ -135,6 +135,8 @@ public class AccountController : Controller
         }
 
         _throttle.Reset(throttleKey);
+        if (res.MustChangePin)
+            return StartPinChangeChallenge(res, vm.Whatsapp);
         await SignInCookieAsync(res);
         return RedirectToAction("Index", "ResidentHome");
     }
@@ -294,6 +296,8 @@ public class AccountController : Controller
             }
 
             _throttle.Reset(throttleKey);
+            if (identityResult.MustChangePin)
+                return StartPinChangeChallenge(identityResult, identifier);
             await SignInCookieAsync(identityResult);
             return RedirectBasedOnRole(identityResult.Role!);
         }
@@ -430,6 +434,80 @@ public class AccountController : Controller
             HttpContext.Session.Remove("2fa_pending");
             return null;
         }
+    }
+
+    private IActionResult StartPinChangeChallenge(AuthResult result, string identifier)
+    {
+        HttpContext.Session.Clear();
+        HttpContext.Session.SetString("resident_pin_change_account", result.Uid!);
+        HttpContext.Session.SetString("resident_pin_change_stamp", result.SecurityStamp ?? "");
+        HttpContext.Session.SetString("resident_pin_change_identifier", identifier);
+        HttpContext.Session.SetString("resident_pin_change_expires",
+            DateTimeOffset.UtcNow.AddMinutes(10).ToUnixTimeSeconds().ToString(
+                System.Globalization.CultureInfo.InvariantCulture));
+        return RedirectToAction(nameof(ChangePin));
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    public IActionResult ChangePin()
+    {
+        if (!HasValidPinChangeChallenge())
+            return RedirectToAction(nameof(UnifiedLogin));
+        return View(new ResidentPinChangeVm());
+    }
+
+    [HttpPost]
+    [AllowAnonymous]
+    [EnableRateLimiting("login")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangePin(ResidentPinChangeVm vm)
+    {
+        if (!HasValidPinChangeChallenge())
+            return RedirectToAction(nameof(UnifiedLogin));
+
+        if (!ModelState.IsValid ||
+            vm.NewPin.Length < 4 || vm.NewPin.Length > 12 ||
+            vm.NewPin.Any(character => character < '0' || character > '9') ||
+            vm.NewPin == "1234" ||
+            !string.Equals(vm.NewPin, vm.ConfirmNewPin, StringComparison.Ordinal))
+        {
+            ViewBag.Error = "Choose a new 4–12 digit PIN, different from 1234, and confirm it.";
+            return View(vm);
+        }
+
+        var accountText = HttpContext.Session.GetString("resident_pin_change_account")!;
+        var stamp = HttpContext.Session.GetString("resident_pin_change_stamp")!;
+        var identifier = HttpContext.Session.GetString("resident_pin_change_identifier")!;
+        if (!Guid.TryParse(accountText, out var accountId) ||
+            !await _identityAuth.ChangeResidentPinAsync(accountId, stamp, vm.NewPin))
+        {
+            HttpContext.Session.Clear();
+            ViewBag.Error = Loc.T("The_Session_Has_Expired_Please_Try");
+            return RedirectToAction(nameof(UnifiedLogin));
+        }
+
+        var result = await _identityAuth.AuthenticateResidentAsync(identifier, vm.NewPin);
+        if (result == null || !result.Success || result.MustChangePin)
+        {
+            HttpContext.Session.Clear();
+            ViewBag.Error = Loc.T("Invalid_Login_Details");
+            return RedirectToAction(nameof(UnifiedLogin));
+        }
+
+        await SignInCookieAsync(result);
+        return RedirectToAction("Index", "ResidentHome");
+    }
+
+    private bool HasValidPinChangeChallenge()
+    {
+        var account = HttpContext.Session.GetString("resident_pin_change_account");
+        var stamp = HttpContext.Session.GetString("resident_pin_change_stamp");
+        var expiresText = HttpContext.Session.GetString("resident_pin_change_expires");
+        return !string.IsNullOrWhiteSpace(account) &&
+            !string.IsNullOrWhiteSpace(stamp) &&
+            long.TryParse(expiresText, out var expires) &&
+            expires > DateTimeOffset.UtcNow.ToUnixTimeSeconds();
     }
 
     private async Task<IActionResult> CompleteSignInAsync(AuthResult result, string? throttleKey)
