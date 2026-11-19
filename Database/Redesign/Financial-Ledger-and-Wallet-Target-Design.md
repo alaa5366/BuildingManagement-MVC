@@ -197,3 +197,22 @@ These are owner decisions. No financial schema or behavior is changed until the 
 ## 13. Safety status
 
 This is a financial target design. No financial schema was created, no balance recalculated, no source row changed, and no EF migration was generated. No build or test was run. Gate A remains NOT AUTHORIZED.
+
+## 14. Accepted decision — historical expense/revenue share variances (Phase36)
+
+The accounting owner has accepted preserving the two previously profiled differences as explicit, separate reconciliation items:
+
+| Difference | Source total | Existing apartment-share total | Variance |
+|---|---:|---:|---:|
+| Expenses | 4,700.00 | 4,700.22 | +0.22 |
+| Revenues | 27,173.00 | 27,173.04 | +0.04 |
+
+Disposition:
+- Classify both as `LegacyRoundingVariance` in `FinancialReconciliationDifferences`, using the exact building and period discovered from the matching source aggregates.
+- Keep both at building/period scope; do not attribute either variance to any apartment.
+- Do not create balancing allocations, wallet adjustments, ledger entries, write-offs, or source corrections.
+- Preserve original expense, revenue, and MonthlyApartmentShares values unchanged.
+- Keep the differences visible in reconciliation reporting as unresolved historical variances until a separately authorized accounting disposition is recorded.
+- Registration is additive and idempotent; it does not authorize financial cutover or make either amount part of a resident wallet.
+
+Implementation: `scripts/Invoke-Phase36-LegacyFinanceVarianceRegister.ps1`. The script targets only `BuildingManagement_RestoreTest`, validates the exact reviewed totals and existing Phase29 evidence, and writes one deterministic reconciliation run with two deterministic difference rows in a transaction. Default execution is a dry run; `-Apply` performs only this reconciliation registration.
