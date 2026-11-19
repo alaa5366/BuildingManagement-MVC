@@ -6,6 +6,7 @@ using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
 
+/// <summary>WhatsAppController coordinates the corresponding application functionality.</summary>
 [Authorize(Roles = "admin")]
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.UseWhatsApp)]
 public class WhatsAppController : Controller
