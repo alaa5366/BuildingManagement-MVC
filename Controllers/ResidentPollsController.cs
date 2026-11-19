@@ -20,6 +20,7 @@ public class ResidentPollsController : Controller
     private string BuildingId => User.FindFirstValue("buildingId")!;
     private string ApartmentId => User.FindFirstValue("apartmentId")!;
 
+    /// <summary>Displays the current records and associated management actions.</summary>
     [HttpGet]
     public async Task<IActionResult> Index(int page = 1, int pageSize = 50)
     {
@@ -36,6 +37,7 @@ public class ResidentPollsController : Controller
         return View(paged);
     }
 
+    /// <summary>Submits the resident's vote for the selected poll.</summary>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Vote(string pollId, string optionId)
     {
