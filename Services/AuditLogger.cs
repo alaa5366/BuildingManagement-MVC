@@ -121,10 +121,11 @@ public class AuditLogger : IAuditLogger
         {
             var outcome = severity.Trim().ToLowerInvariant() switch
             {
+                "info" => (byte)0,
                 "warning" => (byte)1,
                 "error" => (byte)2,
                 "critical" => (byte)3,
-                _ => (byte)0
+                _ => byte.MaxValue
             };
             query = query.Where(x => x.Outcome == outcome);
         }
