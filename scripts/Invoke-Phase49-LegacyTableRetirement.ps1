@@ -120,25 +120,12 @@ WHERE EXISTS(SELECT 1 FROM @Legacy l WHERE l.TableName=pt.name AND l.SchemaName=
     foreach($r in $tableResults){Log ("{0}: source={1}; target={2}; map={3}; {4}" -f $r.Table,$r.SourceRows,$r.TargetRows,$r.MapRows,$r.Status)}
     foreach($b in $blockers){Log "BLOCKER: $b"}
     if($blockers.Count -gt 0){throw "Retirement stopped safely: $($blockers.Count) blocker(s). No table was dropped."}
-    if(-not $Apply){Log 'READ-ONLY PREFLIGHT: no schema changes or table drops are performed by this phase.'}
-    else { Log 'APPLY requested, but destructive retirement is disabled until table-by-table payload and dependency proof is implemented.'; throw 'Phase49 is a read-only safety audit. No target tables may be dropped by this script.' }
-/*DISABLED_APPLY_BLOCK*/
-        New-Item -ItemType Directory -Force -Path $BackupDirectory | Out-Null
-        $backupPath=Join-Path $BackupDirectory ("BuildingManagement_RestoreTest_PrePhase49_"+(Get-Date -Format 'yyyyMMdd_HHmmss')+".bak")
-        $backupCmd=$target.CreateCommand()
-        $backupCmd.CommandTimeout=0
-        $backupCmd.CommandText="BACKUP DATABASE [BuildingManagement_RestoreTest] TO DISK = N'$($backupPath.Replace("'","''"))' WITH COPY_ONLY, CHECKSUM, INIT, STATS=10;"
-        [void]$backupCmd.ExecuteNonQuery()
-        $verify=Query $target "RESTORE VERIFYONLY FROM DISK=N'$($backupPath.Replace("'","''"))' WITH CHECKSUM;"
-        if($null -eq $verify){throw 'Backup verification did not return successfully; no tables were dropped.'}
-        # Final guard: drop only source-named tables, never target-only operational tables or EF migration history.
-        $dropSql=($legacyToDrop | ForEach-Object { $parts=$_.Split('.',2); "DROP TABLE $(Quote $parts[0]).$(Quote $parts[1]);" }) -join [Environment]::NewLine
-        if(-not [string]::IsNullOrWhiteSpace($dropSql)){
-            $tx=$target.BeginTransaction()
-            try{$cmd=$target.CreateCommand();$cmd.Transaction=$tx;$cmd.CommandTimeout=900;$cmd.CommandText=$dropSql;[void]$cmd.ExecuteNonQuery();$tx.Commit();$dropped=@($legacyToDrop)}
-            catch{$tx.Rollback();throw}
-        }
-/*DISABLED_DROP_BLOCK*/
+    if($Apply) {
+        Log 'APPLY requested, but destructive retirement is disabled pending complete table-by-table migration proof and dependency review.'
+        throw 'Phase49 is a read-only migration readiness audit. No tables were dropped.'
+    } else {
+        Log 'READ-ONLY PREFLIGHT: no schema changes or table drops are performed.'
+    }
 }
 catch { $failure=$_.Exception.Message; Log "ERROR: $failure" }
 finally {
