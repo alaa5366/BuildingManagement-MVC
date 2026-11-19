@@ -1,6 +1,8 @@
 using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Xunit;
 
 namespace BuildingManagement.Tests;
@@ -15,7 +17,7 @@ public sealed class OperationalAuditIndexModelTests
             .Options;
         using var db = new AppDbContext(options);
 
-        var entity = db.Model.FindEntityType(typeof(AuditEventEntity));
+        var entity = db.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(AuditEventEntity));
         Assert.NotNull(entity);
 
         var index = Assert.Single(entity!.GetIndexes().Where(x =>
