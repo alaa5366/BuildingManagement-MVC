@@ -2007,8 +2007,7 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                         .HasColumnType("nvarchar(1000)");
 
                     b.Property<string>("ReceiptMetadataJson")
-                        .HasMaxLength(8000)
-                        .HasColumnType("nvarchar(8000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid?>("ReversalTransactionId")
                         .HasColumnType("uniqueidentifier");
