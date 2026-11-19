@@ -5176,4 +5176,7 @@ Cette opération peut prendre quelques secondes.</value>
   <data name="Backup_Collection_notificationDeliveries" xml:space="preserve"><value>Tentatives de livraison des notifications</value></data>
   <data name="Backup_Collection_notificationReadStates" xml:space="preserve"><value>États de lecture des notifications</value></data>
   <data name="Backup_Collection_notificationPreferences" xml:space="preserve"><value>Préférences de notification</value></data>
+  <data name="Backup_Collection_languages" xml:space="preserve"><value>Langues</value></data>
+  <data name="Backup_Collection_translationEntries" xml:space="preserve"><value>Clés de traduction</value></data>
+  <data name="Backup_Collection_translationValues" xml:space="preserve"><value>Valeurs de traduction</value></data>
 </root>
