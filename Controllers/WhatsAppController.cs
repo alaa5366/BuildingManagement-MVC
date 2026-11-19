@@ -36,6 +36,32 @@ public class WhatsAppController : Controller
     }
 
     [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveTemplate(string name, string message, Guid? id)
+    {
+        if (User.HasClaim("impersonated", "true")) return Forbid();
+        try
+        {
+            await _whatsApp.SaveTemplateAsync(
+                BuildingId, name, message,
+                User.FindFirstValue(ClaimTypes.NameIdentifier), id,
+                HttpContext.RequestAborted);
+            TempData["Success"] = "تم حفظ قالب الرسالة.";
+        }
+        catch (ArgumentException ex) { TempData["Error"] = ex.Message; }
+        catch (InvalidOperationException ex) { TempData["Error"] = ex.Message; }
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteTemplate(Guid id)
+    {
+        if (User.HasClaim("impersonated", "true")) return Forbid();
+        var deleted = await _whatsApp.DeleteTemplateAsync(BuildingId, id, HttpContext.RequestAborted);
+        TempData[deleted ? "Success" : "Error"] = deleted ? "تم حذف القالب." : "القالب غير موجود.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Generate(
         string aptId, string templateId, string? amount, string? note,
         string? share, string? message)
@@ -59,7 +85,7 @@ public class WhatsAppController : Controller
 
             // Publish the same content to the resident's in-app inbox. WhatsApp remains
             // a user-confirmed wa.me draft; the browser cannot truthfully confirm delivery.
-            var templateName = WhatsAppTemplateService.Templates[templateId].Name;
+            var templateName = result.TemplateName;
             // Welcome messages contain bearer links (SetPin / QuickLogin). Never persist
             // those secrets in the in-app notification table.
             var notificationBody = string.Equals(templateId, "welcome", StringComparison.Ordinal)
