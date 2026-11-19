@@ -5,6 +5,7 @@ using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
 
+/// <summary>ResidentPollsController coordinates the corresponding application functionality.</summary>
 [Authorize(Roles = "resident")]
 public class ResidentPollsController : Controller
 {
