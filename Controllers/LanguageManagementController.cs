@@ -17,6 +17,7 @@ public sealed class LanguageManagementController : Controller
     public async Task<IActionResult> Index(string? culture,string? category,string? search,bool missingOnly=false,CancellationToken ct=default)
     {
         if(User.HasClaim("impersonated","true")) return Forbid();
+        await _service.RefreshRuntimeAsync(ct);
         return View(await _service.GetPageAsync(culture,category,search,missingOnly,ct));
     }
 
