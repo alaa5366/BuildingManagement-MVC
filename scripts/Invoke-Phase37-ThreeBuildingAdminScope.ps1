@@ -217,7 +217,7 @@ INSERT @permissionCatalog([PermissionKey]) VALUES
 (N'wallet.adjust'),(N'expense.read'),(N'expense.post'),(N'expense.reverse'),(N'revenue.read'),
 (N'revenue.post'),(N'revenue.reverse'),(N'finance.export'),(N'finance.period.close'),
 (N'finance.period.reopen'),(N'notification.dispatch'),(N'integration.whatsapp.send'),
-(N'integration.whatsapp.configure'),(N'apartment.access.grant.manage);
+(N'integration.whatsapp.configure'),(N'apartment.access.grant.manage');
 
 INSERT dbo.[RolePermissions]([RoleKey],[PermissionKey],[Effect])
 SELECT @buildingAdminRoleKey,p.[PermissionKey],1 FROM @permissionCatalog p
@@ -238,7 +238,7 @@ IF EXISTS (SELECT 1 FROM dbo.[RolePermissions] rp
   N'wallet.adjust',N'expense.read',N'expense.post',N'expense.reverse',N'revenue.read',
   N'revenue.post',N'revenue.reverse',N'finance.export',N'finance.period.close',
   N'finance.period.reopen',N'notification.dispatch',N'integration.whatsapp.send',
-  N'integration.whatsapp.configure',N'apartment.access.grant.manage))
+  N'integration.whatsapp.configure',N'apartment.access.grant.manage'))
 BEGIN
     SELECT N'Building admin role contains permissions outside the approved building-only set.' AS Phase37Error; RETURN;
 END;
@@ -295,7 +295,7 @@ SELECT N'PHASE37_COMMITTED' AS Phase37Result;
                             Log ("SQL CONTEXT {0}: {1}" -f $i,$sqlLines[$i - 1])
                         }
                     }
-                    Log ("SQL BATCH SHA256: " + [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::Unicode.GetBytes($sql))))
+                    Log ("SQL BATCH SHA256: " + ([BitConverter]::ToString(([System.Security.Cryptography.SHA256]::Create()).ComputeHash([System.Text.Encoding]::Unicode.GetBytes($sql))).Replace("-", "")))
                     break
                 }
                 $caught = $caught.InnerException
