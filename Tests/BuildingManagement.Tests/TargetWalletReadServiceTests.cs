@@ -144,13 +144,21 @@ public sealed class TargetWalletReadServiceTests
                 EntryKind = LedgerEntryKind.Deposit, SignedAmount = 120m, CurrencyCode = "EGP",
                 EffectiveAtUtc = now.AddMonths(-1), CreatedAtUtc = now.AddMonths(-1)
             });
-            seed.PaymentDeposits.Add(new PaymentDepositEntity
-            {
-                PaymentDepositId = pendingId, PeriodId = currentPeriodId, BuildingId = "B1",
-                ApartmentId = "A2", Amount = 75m, CurrencyCode = "EGP",
-                Status = PaymentDepositStatus.Pending, SubmittedAtUtc = now,
-                Note = "Pending evidence", SourceSystem = "application"
-            });
+            seed.PaymentDeposits.AddRange(
+                new PaymentDepositEntity
+                {
+                    PaymentDepositId = pendingId, PeriodId = currentPeriodId, BuildingId = "B1",
+                    ApartmentId = "A2", Amount = 75m, CurrencyCode = "EGP",
+                    Status = PaymentDepositStatus.Pending, SubmittedAtUtc = now,
+                    Note = "Pending evidence", SourceSystem = "application"
+                },
+                new PaymentDepositEntity
+                {
+                    PaymentDepositId = Guid.NewGuid(), PeriodId = currentPeriodId, BuildingId = "B1",
+                    ApartmentId = "A2", Amount = 25m, CurrencyCode = "EGP",
+                    Status = PaymentDepositStatus.Pending, SubmittedAtUtc = now.AddDays(-2),
+                    Note = "Older pending", SourceSystem = "application"
+                });
             await seed.SaveChangesAsync();
         }
 
@@ -158,7 +166,8 @@ public sealed class TargetWalletReadServiceTests
         var snapshot = await service.GetAdminSnapshotAsync("B1", "2026-11");
 
         Assert.Equal(120m, snapshot.Balances["A1"]);
-        var pending = Assert.Single(snapshot.PendingDeposits);
+        Assert.Equal(2, snapshot.PendingDeposits.Count);
+        var pending = snapshot.PendingDeposits[0];
         Assert.Equal(pendingId.ToString("D"), pending.Deposit.Id);
         Assert.Equal("A2", pending.ApartmentId);
         Assert.Equal("2026-11", pending.MonthKey);
