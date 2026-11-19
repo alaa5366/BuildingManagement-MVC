@@ -12,11 +12,16 @@ public class WhatsAppController : Controller
 {
     private readonly TargetWhatsAppService _whatsApp;
     private readonly TargetNotificationsService _notifications;
+    private readonly IAuditLogger _auditLogger;
 
-    public WhatsAppController(TargetWhatsAppService whatsApp, TargetNotificationsService notifications)
+    public WhatsAppController(
+        TargetWhatsAppService whatsApp,
+        TargetNotificationsService notifications,
+        IAuditLogger auditLogger)
     {
         _whatsApp = whatsApp;
         _notifications = notifications;
+        _auditLogger = auditLogger;
     }
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
@@ -35,6 +40,8 @@ public class WhatsAppController : Controller
         string aptId, string templateId, string? amount, string? note,
         string? share, string? message)
     {
+        if (User.HasClaim("impersonated", "true")) return Forbid();
+
         var extra = new Dictionary<string, string>
         {
             ["amount"] = amount ?? "",
@@ -59,6 +66,22 @@ public class WhatsAppController : Controller
             await _notifications.CreateResidentNotificationAsync(
                 BuildingId, aptId, templateName, notificationBody,
                 "whatsapp-draft", "📲", HttpContext.RequestAborted);
+
+            await _auditLogger.LogAsync(
+                action: "notification.whatsapp_draft_created",
+                buildingId: BuildingId,
+                apartmentId: aptId,
+                userId: User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "",
+                userRole: "admin",
+                metadata: new
+                {
+                    channel = "whatsapp",
+                    deliveryStatus = "draft_ready",
+                    inAppStatus = "published",
+                    apartmentNumber = result.ApartmentNumber,
+                    template = templateId
+                },
+                severity: "info");
 
             return View("Result", result);
         }
