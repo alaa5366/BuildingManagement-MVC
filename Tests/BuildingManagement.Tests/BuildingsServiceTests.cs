@@ -18,10 +18,10 @@ public class BuildingsServiceTests
 
         public FakeBuildingStore() : base(null!, null!) { }
 
-        public override Task<List<Building>> GetSummariesAsync() => Task.FromResult(SummariesToReturn);
-        public override Task<List<Building>> GetSummariesWithCountsAsync() => Task.FromResult(SummariesWithCountsToReturn);
-        public override Task<string?> FindBuildingIdByApartmentAsync(string apartmentId) => Task.FromResult(BuildingIdToReturn);
-        public override Task<Building?> GetByIdAsync(string id) => Task.FromResult(BuildingToReturn);
+        public override Task<List<Building>> GetSummariesAsync(CancellationToken ct = default) => Task.FromResult(SummariesToReturn);
+        public override Task<List<Building>> GetSummariesWithCountsAsync(CancellationToken ct = default) => Task.FromResult(SummariesWithCountsToReturn);
+        public override Task<string?> FindBuildingIdByApartmentAsync(string apartmentId, CancellationToken ct = default) => Task.FromResult(BuildingIdToReturn);
+        public override Task<Building?> GetByIdAsync(string id, CancellationToken ct = default) => Task.FromResult(BuildingToReturn);
     }
 
     private readonly FakeBuildingStore _fakeStore;
