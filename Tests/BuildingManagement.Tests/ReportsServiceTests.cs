@@ -1,10 +1,94 @@
 using BuildingManagementMvc.Services;
+using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Data.Entities;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace BuildingManagement.Tests;
 
 public sealed class ReportsServiceTests
 {
+
+    [Fact]
+    public async Task BuildReportAsync_UsesTargetDepositsExpensesAndRevenues()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        var now = DateTime.UtcNow;
+        var month = now.ToString("yyyy-MM");
+        var periodId = Guid.NewGuid();
+        var categoryId = "C1";
+
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.Buildings.Add(new BuildingEntity
+            {
+                Id = "B1", Name = "Target Building", BuildingNumber = "01"
+            });
+            seed.BuildingSettings.Add(new BuildingSettingsEntity { BuildingId = "B1", Currency = "EGP" });
+            seed.Apartments.Add(new ApartmentEntity
+            {
+                BuildingId = "B1", Id = "A1", FloorId = "F1", Number = 101,
+                MonthlyFee = 100m, IsClosed = false, IsDisabled = false
+            });
+            seed.FinancialPeriods.Add(new FinancialPeriodEntity
+            {
+                PeriodId = periodId, BuildingId = "B1", PeriodKey = month,
+                TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Open,
+                StartsAtUtc = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndsAtUtc = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1),
+                CreatedAtUtc = now
+            });
+            seed.PaymentDeposits.Add(new PaymentDepositEntity
+            {
+                PaymentDepositId = Guid.NewGuid(), PeriodId = periodId, BuildingId = "B1",
+                ApartmentId = "A1", Amount = 500m, CurrencyCode = "EGP",
+                Status = PaymentDepositStatus.Confirmed, SubmittedAtUtc = now,
+                ConfirmedAtUtc = now, SourceSystem = "application"
+            });
+            seed.FinancialCategories.Add(new FinancialCategoryEntity
+            {
+                BuildingId = "B1", Id = categoryId, Kind = "expense",
+                Name = "Maintenance", Color = "#123456", IsActive = true, SortOrder = 1
+            });
+            seed.Expenses.Add(new ExpenseEntity
+            {
+                BuildingId = "B1", Id = Guid.NewGuid().ToString("N"), MonthKey = month,
+                CategoryId = categoryId, CategoryKind = "expense", Note = "Repair",
+                Amount = 200m, ExpenseDate = DateOnly.FromDateTime(now)
+            });
+            seed.Revenues.Add(new RevenueEntity
+            {
+                BuildingId = "B1", Id = Guid.NewGuid().ToString("N"), MonthKey = month,
+                CategoryId = null, CategoryKind = "revenue", Note = "Other income",
+                Amount = 100m, RevenueDate = DateOnly.FromDateTime(now)
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var factory = new TestContextFactory(options);
+        var wallet = new TargetWalletReadService(factory);
+        var finance = new TargetFinanceReadService(factory);
+        var service = new ReportsService(factory, wallet, finance);
+        var report = await service.BuildReportAsync("B1", "6m", month);
+
+        Assert.Equal(500m, report.TotalCollected);
+        Assert.Equal(200m, report.TotalExpenses);
+        Assert.Equal(100m, report.TotalRevenues);
+        Assert.Equal(400m, report.NetBalance);
+        Assert.Single(report.Categories);
+        Assert.Equal(200m, report.Categories[0].Total);
+    }
+
+    private sealed class TestContextFactory(DbContextOptions<AppDbContext> options)
+        : IDbContextFactory<AppDbContext>
+    {
+        public AppDbContext CreateDbContext() => new(options);
+        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new AppDbContext(options));
+    }
+
     [Fact]
     public void MonthLabel_ValidMonth_ReturnsLocalizedLabel()
     {
