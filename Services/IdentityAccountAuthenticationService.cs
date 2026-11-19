@@ -248,7 +248,10 @@ public sealed class IdentityAccountAuthenticationService
         if (matches.Count != 1) return AuthResult.Fail("wrong-credentials");
 
         var match = matches[0];
-        if (match.Account.AccountStatus != 1 || match.Person.IsArchived)
+        var hasSuperAdminAssignment = await db.UserRoleAssignments.AsNoTracking().AnyAsync(item =>
+            item.AccountId == match.Account.AccountId && item.RoleKey == "superadmin" && item.RevokedAtUtc == null,
+            cancellationToken);
+        if (hasSuperAdminAssignment || match.Account.AccountStatus != 1 || match.Person.IsArchived)
             return AuthResult.Fail("wrong-credentials");
 
         var now = DateTime.UtcNow;
