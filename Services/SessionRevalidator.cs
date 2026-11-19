@@ -169,13 +169,14 @@ public class SessionRevalidator
                     x.TwoFactorEnabled,
                     x.CreatedAt,
                     x.UpdatedAt,
+                    x.Pin,
                     Permissions = x.Permissions.Select(p => p.Permission).ToList()
                 })
                 .FirstOrDefaultAsync();
 
             var currentSecurityStamp = account == null ? null
-                : (account.UpdatedAt ?? account.CreatedAt ?? DateTime.MinValue).Ticks
-                    .ToString(System.Globalization.CultureInfo.InvariantCulture);
+                : SqlAuthService.CreateSuperAdminSecurityStamp(
+                    account.Pin, account.UpdatedAt ?? account.CreatedAt, account.IsActive, account.IsDisabled);
             var securityStampMatches = string.Equals(
                 currentSecurityStamp,
                 user.FindFirst("legacySuperAdminSecurityStamp")?.Value,
