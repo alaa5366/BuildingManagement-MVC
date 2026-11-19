@@ -155,6 +155,33 @@ public sealed class AuthorizationEvaluatorTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_AllowsSensitivePermissionWithFreshMfaProof()
+    {
+        await using var db = CreateContext();
+        var actor = await SeedAccountWithGrantsAsync(db,
+            ("audit-role", AuthorizationEffect.Allow));
+        db.UserTwoFactorSettings.Add(new UserTwoFactorSettingEntity
+        {
+            AccountId = actor.AccountId,
+            IsEnabled = true,
+            SecretCiphertext = System.Text.Encoding.UTF8.GetBytes("test-ciphertext"),
+            KeyVersion = "test",
+            EnrolledAtUtc = NowUtc.AddDays(-1)
+        });
+        await db.SaveChangesAsync();
+        var evaluator = new AuthorizationEvaluator(db, new DefaultAuthorizationPermissionCatalog());
+
+        var result = await evaluator.EvaluateAsync(
+            Principal(actor.AccountId, actor.SecurityStamp, NowUtc.AddMinutes(-5)),
+            "audit.view.all",
+            new ResolvedAuthorizationResource(AuthorizationScopeType.System),
+            NowUtc);
+
+        Assert.Equal(AuthorizationDecision.Allow, result.Decision);
+        Assert.Equal(AuthorizationReason.Granted, result.Reason);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_AllowsActiveSystemGrantWithCurrentSecurityStamp()
     {
         await using var db = CreateContext();
@@ -268,11 +295,16 @@ public sealed class AuthorizationEvaluatorTests
         return (accountId, stamp);
     }
 
-    private static ClaimsPrincipal Principal(Guid accountId, string stamp) => new(
-        new ClaimsIdentity(
-        [
-            new Claim(ClaimTypes.NameIdentifier, accountId.ToString("D")),
-            new Claim("securityStamp", stamp)
-        ],
-        authenticationType: "test"));
+    private static ClaimsPrincipal Principal(Guid accountId, string stamp, DateTime? mfaVerifiedAtUtc = null)
+    {
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, accountId.ToString("D")),
+            new("securityStamp", stamp)
+        };
+        if (mfaVerifiedAtUtc.HasValue)
+            claims.Add(new Claim("mfaVerifiedAtUtc", mfaVerifiedAtUtc.Value.ToString("O", System.Globalization.CultureInfo.InvariantCulture)));
+
+        return new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType: "test"));
+    }
 }
