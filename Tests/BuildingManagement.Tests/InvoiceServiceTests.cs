@@ -15,7 +15,10 @@ public sealed class InvoiceServiceTests
             .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
             .Options;
         var now = DateTime.UtcNow;
+        var priorPeriodId = Guid.NewGuid();
         var periodId = Guid.NewGuid();
+        var priorDepositTransactionId = Guid.NewGuid();
+        var priorDepositReversalId = Guid.NewGuid();
         var transactionId = Guid.NewGuid();
         var chargeTransactionId = Guid.NewGuid();
         var expenseTransactionId = Guid.NewGuid();
@@ -41,6 +44,15 @@ public sealed class InvoiceServiceTests
                 BuildingId = "B1", Id = "A1", FloorId = "F1", Number = 101,
                 MonthlyFee = 100m, IsClosed = false, IsDisabled = false
             });
+
+            seed.FinancialPeriods.Add(new FinancialPeriodEntity
+            {
+                PeriodId = priorPeriodId, BuildingId = "B1", PeriodKey = "2026-10",
+                TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Closed,
+                StartsAtUtc = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndsAtUtc = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+                CreatedAtUtc = now
+            });
             seed.FinancialPeriods.Add(new FinancialPeriodEntity
             {
                 PeriodId = periodId, BuildingId = "B1", PeriodKey = "2026-11",
@@ -48,6 +60,46 @@ public sealed class InvoiceServiceTests
                 StartsAtUtc = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
                 EndsAtUtc = new DateTime(2026, 12, 1, 0, 0, 0, DateTimeKind.Utc),
                 CreatedAtUtc = now
+            });
+            seed.LedgerTransactions.AddRange(
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = priorDepositTransactionId, PeriodId = priorPeriodId, BuildingId = "B1",
+                    Kind = LedgerTransactionKind.Deposit, Status = LedgerTransactionStatus.Posted,
+                    IdempotencyKey = "invoice-prior-deposit", CreatedAtUtc = now, PostedAtUtc = now
+                },
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = priorDepositReversalId, PeriodId = periodId, BuildingId = "B1",
+                    Kind = LedgerTransactionKind.Reversal, Status = LedgerTransactionStatus.Posted,
+                    IdempotencyKey = "invoice-prior-deposit-reversal",
+                    ReversesTransactionId = priorDepositTransactionId,
+                    CreatedAtUtc = now, PostedAtUtc = now
+                });
+            seed.LedgerEntries.AddRange(
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = priorDepositTransactionId,
+                    PeriodId = priorPeriodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.Deposit, SignedAmount = 50m, CurrencyCode = "EGP",
+                    EffectiveAtUtc = new DateTime(2026, 10, 15, 0, 0, 0, DateTimeKind.Utc),
+                    CreatedAtUtc = now
+                },
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = priorDepositReversalId,
+                    PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.Reversal, SignedAmount = -50m, CurrencyCode = "EGP",
+                    EffectiveAtUtc = now, CreatedAtUtc = now
+                });
+            seed.PaymentDeposits.Add(new PaymentDepositEntity
+            {
+                PaymentDepositId = Guid.NewGuid(), PeriodId = priorPeriodId, BuildingId = "B1",
+                ApartmentId = "A1", PostedTransactionId = priorDepositTransactionId,
+                ReversalTransactionId = priorDepositReversalId, Amount = 50m,
+                CurrencyCode = "EGP", Status = PaymentDepositStatus.Reversed,
+                SubmittedAtUtc = now, ConfirmedAtUtc = now, ReversedAtUtc = now,
+                SourceSystem = "application"
             });
             seed.LedgerTransactions.Add(new LedgerTransactionEntity
             {
@@ -139,8 +191,8 @@ public sealed class InvoiceServiceTests
         Assert.Equal("Target Building", invoice!.Building.Name);
         Assert.Equal(101, invoice.Apt.Number);
         Assert.Equal(75m, invoice.Balance);
-        Assert.Equal(0m, invoice.PreviousBalance);
-        Assert.Equal(200m, invoice.MonthDeposits);
+        Assert.Equal(50m, invoice.PreviousBalance);
+        Assert.Equal(150m, invoice.MonthDeposits);
         Assert.Equal(125m, invoice.MonthFee);
         Assert.Equal(0m, invoice.MonthExpensesShare);
         Assert.Empty(invoice.CategoryShares);
