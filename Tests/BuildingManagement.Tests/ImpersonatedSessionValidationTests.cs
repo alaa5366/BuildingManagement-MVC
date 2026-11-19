@@ -147,6 +147,7 @@ public class ImpersonatedSessionValidationTests
                 new Claim("impersonationActorUid", "super-1"),
                 new Claim("impersonationActorRole", "superadmin"),
                 new Claim("impersonationActorEmail", "root@example.test"),
+                new Claim("impersonationActorSecurityStamp", SqlAuthService.CreateSuperAdminSecurityStamp("", null, true, false)),
                 new Claim("impersonationTargetBuildingId", BuildingId)
             }, "test"));
 
@@ -217,6 +218,7 @@ public class ImpersonatedSessionValidationTests
             new Claim(ClaimTypes.NameIdentifier, "super-2fa"),
             new Claim(ClaimTypes.Email, "root@example.test"),
             new Claim(ClaimTypes.Role, "superadmin"),
+            new Claim("legacySuperAdminSecurityStamp", SqlAuthService.CreateSuperAdminSecurityStamp("", null, true, false)),
             new Claim("twoFactorVerified", verified)
         }, "test"));
 
