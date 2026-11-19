@@ -311,6 +311,7 @@
                                        asp-route-level="@query.Level" asp-route-from="@fromValue" asp-route-to="@toValue"
                                        asp-route-search="@query.Search" asp-route-correlationId="@query.CorrelationId"
                                        asp-route-componentType="@query.ComponentType" asp-route-hasException="@query.HasException"
+                                       asp-route-httpStatusCode="@query.HttpStatusCode" asp-route-minDurationMs="@query.MinDurationMs" asp-route-maxDurationMs="@query.MaxDurationMs"
                                        asp-route-pageSize="@result.PageSize" class="log-source-filter"
                                        title="Filter by this source">@item.SourceContext <i class="bi bi-funnel"></i></a>
                                 }
@@ -377,7 +378,8 @@
                         <a class="page-link" asp-action="Index" asp-route-from="@fromValue" asp-route-to="@toValue"
                            asp-route-level="@query.Level" asp-route-search="@query.Search"
                            asp-route-correlationId="@query.CorrelationId" asp-route-source="@query.Source"
-                           asp-route-componentType="@query.ComponentType" asp-route-hasException="@query.HasException" asp-route-page="@(result.CurrentPage - 1)"
+                           asp-route-componentType="@query.ComponentType" asp-route-hasException="@query.HasException"
+                           asp-route-httpStatusCode="@query.HttpStatusCode" asp-route-minDurationMs="@query.MinDurationMs" asp-route-maxDurationMs="@query.MaxDurationMs" asp-route-page="@(result.CurrentPage - 1)"
                            asp-route-pageSize="@result.PageSize"><i class="bi bi-chevron-right"></i> @Loc.T("Previous")</a>
                     </li>
                     <li class="page-item disabled"><span class="page-link">@result.CurrentPage / @Math.Max(1, result.TotalPages)</span></li>
@@ -385,7 +387,8 @@
                         <a class="page-link" asp-action="Index" asp-route-from="@fromValue" asp-route-to="@toValue"
                            asp-route-level="@query.Level" asp-route-search="@query.Search"
                            asp-route-correlationId="@query.CorrelationId" asp-route-source="@query.Source"
-                           asp-route-componentType="@query.ComponentType" asp-route-hasException="@query.HasException" asp-route-page="@(result.CurrentPage + 1)"
+                           asp-route-componentType="@query.ComponentType" asp-route-hasException="@query.HasException"
+                           asp-route-httpStatusCode="@query.HttpStatusCode" asp-route-minDurationMs="@query.MinDurationMs" asp-route-maxDurationMs="@query.MaxDurationMs" asp-route-page="@(result.CurrentPage + 1)"
                            asp-route-pageSize="@result.PageSize">@Loc.T("Next") <i class="bi bi-chevron-left"></i></a>
                     </li>
                 </ul>
