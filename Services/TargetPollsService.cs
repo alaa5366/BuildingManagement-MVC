@@ -192,33 +192,54 @@ public sealed class TargetPollsService
             return false;
 
         await using var transaction = db.Database.IsRelational()
-            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken)
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken)
             : null;
-        var entitlement = await db.PollEligibility.FirstOrDefaultAsync(x => x.BuildingId == buildingId &&
-                x.PollId == pollId && x.SubjectReference == apartmentId, cancellationToken);
-            if (entitlement is null || entitlement.ConsumedAtUtc is not null ||
-                entitlement.RevokedAtUtc is not null || entitlement.ExpiresAtUtc <= now)
+
+        var claimed = false;
+        if (db.Database.IsRelational())
+        {
+            var affected = await db.PollEligibility
+                .Where(x => x.BuildingId == buildingId && x.PollId == pollId &&
+                    x.SubjectReference == apartmentId && x.ConsumedAtUtc == null &&
+                    x.RevokedAtUtc == null && x.ExpiresAtUtc > now)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.ConsumedAtUtc, (DateTime?)now),
+                    cancellationToken);
+            claimed = affected == 1;
+        }
+        else
+        {
+            var entitlement = await db.PollEligibility.FirstOrDefaultAsync(x =>
+                x.BuildingId == buildingId && x.PollId == pollId && x.SubjectReference == apartmentId,
+                cancellationToken);
+            if (entitlement is not null && entitlement.ConsumedAtUtc is null &&
+                entitlement.RevokedAtUtc is null && entitlement.ExpiresAtUtc > now)
             {
-                if (transaction is not null) await transaction.RollbackAsync(cancellationToken);
-                return false;
+                entitlement.ConsumedAtUtc = now;
+                claimed = true;
             }
-            entitlement.ConsumedAtUtc = now;
-            var token = RandomNumberGenerator.GetBytes(32);
-            var tokenHash = SHA256.HashData(token);
-            CryptographicOperations.ZeroMemory(token);
-            // Coarsen the ballot timestamp so it cannot be directly joined to the precise
-            // eligibility-consumption timestamp. No apartment or actor reference is stored with the ballot.
-            var ballotTimeBucket = new DateTime(
-                now.Ticks - now.Ticks % TimeSpan.FromMinutes(15).Ticks, DateTimeKind.Utc);
-            db.PollBallots.Add(new PollBallotEntity
-            {
-                BallotId = Guid.NewGuid(), BuildingId = buildingId, PollId = pollId,
-                BallotTokenHash = tokenHash, ChoicePayload = Encoding.UTF8.GetBytes(_choiceProtector.Protect(optionId)),
-                CastAtUtc = ballotTimeBucket, BallotVersion = 1
-            });
-            await db.SaveChangesAsync(cancellationToken);
-            if (transaction is not null) await transaction.CommitAsync(cancellationToken);
-            return true;
+        }
+
+        if (!claimed)
+        {
+            if (transaction is not null) await transaction.RollbackAsync(cancellationToken);
+            return false;
+        }
+
+        var token = RandomNumberGenerator.GetBytes(32);
+        var tokenHash = SHA256.HashData(token);
+        CryptographicOperations.ZeroMemory(token);
+        // Coarsen the ballot timestamp so it cannot be directly joined to the precise
+        // eligibility-consumption timestamp. No apartment or actor reference is stored with the ballot.
+        var ballotTimeBucket = new DateTime(
+            now.Ticks - now.Ticks % TimeSpan.FromMinutes(15).Ticks, DateTimeKind.Utc);
+        db.PollBallots.Add(new PollBallotEntity
+        {
+            BallotId = Guid.NewGuid(), BuildingId = buildingId, PollId = pollId,
+            BallotTokenHash = tokenHash, ChoicePayload = Encoding.UTF8.GetBytes(_choiceProtector.Protect(optionId)),
+            CastAtUtc = ballotTimeBucket, BallotVersion = 1
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        if (transaction is not null) await transaction.CommitAsync(cancellationToken);
     }
 
     /// <summary>Gets the building name and count of active apartments.</summary>
