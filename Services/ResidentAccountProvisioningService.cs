@@ -33,6 +33,7 @@ public sealed class ResidentAccountProvisioningService
         _logger = logger;
     }
 
+    /// <summary>Builds the resident account provisioning report.</summary>
     public async Task<ResidentAccountProvisioningReport> GetReportAsync(CancellationToken cancellationToken = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
@@ -143,6 +144,7 @@ public sealed class ResidentAccountProvisioningService
         };
     }
 
+    /// <summary>Provisions a batch of eligible resident accounts.</summary>
     public async Task<ResidentAccountProvisioningBatchResult> ProvisionBatchAsync(
         int requestedBatchSize,
         string actorId,
