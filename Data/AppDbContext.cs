@@ -202,6 +202,8 @@ public class AppDbContext : DbContext
     public DbSet<ApartmentAccessGrantEntity> ApartmentAccessGrants => Set<ApartmentAccessGrantEntity>();
     public DbSet<AccountPermissionOverrideEntity> AccountPermissionOverrides => Set<AccountPermissionOverrideEntity>();
     public DbSet<LegacyIdentityMapEntity> LegacyIdentityMaps => Set<LegacyIdentityMapEntity>();
+    public DbSet<PersonPhoneChangeRequestEntity> PersonPhoneChangeRequests => Set<PersonPhoneChangeRequestEntity>();
+
     public DbSet<FinancialPeriodEntity> FinancialPeriods => Set<FinancialPeriodEntity>();
     public DbSet<PaymentDepositEntity> PaymentDeposits => Set<PaymentDepositEntity>();
     public DbSet<LedgerTransactionEntity> LedgerTransactions => Set<LedgerTransactionEntity>();
