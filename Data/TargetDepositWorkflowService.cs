@@ -122,8 +122,8 @@ public sealed class TargetDepositWorkflowService
             SourceKey = sourceKey
         });
         db.AuditEvents.Add(CreateAuditEvent(
-            buildingId, actorAccountId, "PaymentDepositSubmitted", id, now,
-            new { amount, currencyCode = currencyCode.ToUpperInvariant() }));
+            buildingId, actorAccountId, "PaymentDepositSubmitted", id, apartmentId, now,
+            new { paymentDepositId = id, amount, currencyCode = currencyCode.ToUpperInvariant() }));
         await db.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return id;
@@ -224,8 +224,8 @@ public sealed class TargetDepositWorkflowService
         deposit.ConfirmedAtUtc = now;
         deposit.ConfirmedByAccountId = actorAccountId;
         db.AuditEvents.Add(CreateAuditEvent(
-            deposit.BuildingId, actorAccountId, "PaymentDepositConfirmed", deposit.PaymentDepositId, now,
-            new { amount = deposit.Amount, currencyCode = deposit.CurrencyCode, transactionId }));
+            deposit.BuildingId, actorAccountId, "PaymentDepositConfirmed", deposit.PaymentDepositId, deposit.ApartmentId, now,
+            new { paymentDepositId = deposit.PaymentDepositId, amount = deposit.Amount, currencyCode = deposit.CurrencyCode, transactionId }));
         await db.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return transactionId;
@@ -279,8 +279,8 @@ public sealed class TargetDepositWorkflowService
         deposit.Amount = amount;
         deposit.Note = normalizedNote;
         db.AuditEvents.Add(CreateAuditEvent(
-            deposit.BuildingId, actorAccountId, "PaymentDepositUpdated", deposit.PaymentDepositId, now,
-            new { oldAmount, newAmount = amount, oldNote, newNote = normalizedNote, reason = reason.Trim() }));
+            deposit.BuildingId, actorAccountId, "PaymentDepositUpdated", deposit.PaymentDepositId, deposit.ApartmentId, now,
+            new { paymentDepositId = deposit.PaymentDepositId, oldAmount, newAmount = amount, oldNote, newNote = normalizedNote, reason = reason.Trim() }));
         await db.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return true;
@@ -395,8 +395,8 @@ public sealed class TargetDepositWorkflowService
         deposit.ReversalTransactionId = reversalId;
         deposit.ResolutionReason = reason.Trim();
         db.AuditEvents.Add(CreateAuditEvent(
-            deposit.BuildingId, actorAccountId, "PaymentDepositReversed", deposit.PaymentDepositId, now,
-            new { amount = deposit.Amount, currencyCode = deposit.CurrencyCode, reversalId, reason = reason.Trim() }));
+            deposit.BuildingId, actorAccountId, "PaymentDepositReversed", deposit.PaymentDepositId, deposit.ApartmentId, now,
+            new { paymentDepositId = deposit.PaymentDepositId, amount = deposit.Amount, currencyCode = deposit.CurrencyCode, reversalId, reason = reason.Trim() }));
         await db.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return reversalId;
@@ -493,8 +493,8 @@ public sealed class TargetDepositWorkflowService
         deposit.CancelledByAccountId = actorAccountId;
         deposit.ResolutionReason = reason.Trim();
         db.AuditEvents.Add(CreateAuditEvent(
-            deposit.BuildingId, actorAccountId, "PaymentDepositCancelled", deposit.PaymentDepositId, now,
-            new { reason = reason.Trim() }));
+            deposit.BuildingId, actorAccountId, "PaymentDepositCancelled", deposit.PaymentDepositId, deposit.ApartmentId, now,
+            new { paymentDepositId = deposit.PaymentDepositId, reason = reason.Trim() }));
         await db.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return true;
@@ -544,6 +544,7 @@ public sealed class TargetDepositWorkflowService
         Guid actorAccountId,
         string eventType,
         Guid depositId,
+        string apartmentId,
         DateTime occurredAtUtc,
         object details) => new()
     {
@@ -554,8 +555,8 @@ public sealed class TargetDepositWorkflowService
         BuildingId = buildingId,
         EventCategory = "Finance",
         EventType = eventType,
-        ResourceType = "PaymentDeposit",
-        ResourceReference = depositId.ToString("D"),
+        ResourceType = "Apartment",
+        ResourceReference = apartmentId,
         Outcome = 0,
         SafeDetailsJson = JsonSerializer.Serialize(details)
     };
