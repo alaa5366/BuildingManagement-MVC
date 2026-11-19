@@ -42,6 +42,12 @@ public sealed class IdentityAccountAuthenticationServiceTests
                 ScopeType = 2, ScopeBuildingId = "building-1", ScopeApartmentId = "apt-1",
                 ValidFromUtc = now.AddMinutes(-1), GrantedAtUtc = now.AddMinutes(-1)
             });
+            db.ApartmentOccupancies.Add(new ApartmentOccupancyEntity
+            {
+                OccupancyId = Guid.NewGuid(), BuildingId = "building-1", ApartmentId = "apt-1",
+                PersonId = personId, OccupancyType = 1, IsPrimary = true,
+                ValidFromUtc = now.AddDays(-1), RecordedAtUtc = now.AddDays(-1)
+            });
             db.UserCredentials.Add(new UserCredentialEntity
             {
                 CredentialId = Guid.NewGuid(), AccountId = accountId, CredentialType = 0,
@@ -196,6 +202,12 @@ public sealed class IdentityAccountAuthenticationServiceTests
                 ScopeApartmentId = "apt-1",
                 ValidFromUtc = now.AddDays(-1),
                 GrantedAtUtc = now.AddDays(-1)
+            });
+            db.ApartmentOccupancies.Add(new ApartmentOccupancyEntity
+            {
+                OccupancyId = Guid.NewGuid(), BuildingId = "building-1", ApartmentId = "apt-1",
+                PersonId = personId, OccupancyType = 1, IsPrimary = true,
+                ValidFromUtc = now.AddDays(-1), RecordedAtUtc = now.AddDays(-1)
             });
             db.UserCredentials.AddRange(
                 new UserCredentialEntity
