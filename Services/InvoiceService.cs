@@ -263,7 +263,8 @@ public sealed class InvoiceService
             await db.SaveChangesAsync(cancellationToken); // SQL identity allocates the stable serial.
         }
 
-        data.InvoiceNo = $"INV-{building.BuildingNumber}-{apartment.Number}-{issuedAtLocal:yyyyMMdd}-{existingIssue.InvoiceSerial:D6}";
+        var issueDateToken = issuedAtLocal.ToString("yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture);
+        data.InvoiceNo = $"INV-{building.BuildingNumber}-{apartment.Number}-{issueDateToken}-{existingIssue.InvoiceSerial:D6}";
         data.IssueDate = issuedAtLocal.ToString("dd/MM/yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture);
         data.QrPayload = JsonSerializer.Serialize(new
         {
