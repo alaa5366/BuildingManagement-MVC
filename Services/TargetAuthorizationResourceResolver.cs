@@ -24,6 +24,21 @@ public static class TargetAuthorizationResourceResolver
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
+        var apartmentIds = principal.FindAll("apartmentId")
+            .Select(claim => claim.Value)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (buildingIds.Length == 1 && apartmentIds.Length == 1 &&
+            definition.AllowedGrantScopes.Contains(AuthorizationScopeType.Apartment))
+        {
+            return new ResolvedAuthorizationResource(
+                AuthorizationScopeType.Apartment,
+                BuildingId: buildingIds[0],
+                ApartmentId: apartmentIds[0]);
+        }
+
         if (buildingIds.Length == 1 &&
             definition.AllowedGrantScopes.Contains(AuthorizationScopeType.Building))
         {
