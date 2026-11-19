@@ -192,14 +192,21 @@ WHERE LOWER(LTRIM(RTRIM(u.Role))) IN(N'admin',N'buildingadmin')
  AND NOT EXISTS(SELECT 1 FROM dbo.BuildingAdmins ba WHERE ba.AdminUid=u.Uid);
 
 IF (SELECT COUNT(*) FROM @admins)<>3 OR (SELECT COUNT(DISTINCT BuildingId) FROM @admins)<>3
- THROW 51038,'Admin/building mapping changed after preflight.',1;
+BEGIN
+    ;THROW 51038, 'Admin/building mapping changed after preflight.', 1;
+END;
 
-IF NOT EXISTS(SELECT 1 FROM dbo.RoleDefinitions WHERE RoleKey=N'building-admin')
- INSERT dbo.RoleDefinitions(RoleKey,DisplayName,IsSystemRole,IsActive)
- VALUES(N'building-admin',N'Building Administrator',0,1);
+IF NOT EXISTS (SELECT 1 FROM dbo.RoleDefinitions WHERE RoleKey=N'building-admin')
+BEGIN
+    INSERT dbo.RoleDefinitions(RoleKey,DisplayName,IsSystemRole,IsActive)
+    VALUES (N'building-admin',N'Building Administrator',0,1);
+END
 ELSE
- UPDATE dbo.RoleDefinitions SET DisplayName=N'Building Administrator',IsSystemRole=0,IsActive=1
- WHERE RoleKey=N'building-admin';
+BEGIN
+    UPDATE dbo.RoleDefinitions
+    SET DisplayName=N'Building Administrator',IsSystemRole=0,IsActive=1
+    WHERE RoleKey=N'building-admin';
+END;
 
 DECLARE @permissions TABLE(PermissionKey nvarchar(100) PRIMARY KEY);
 INSERT @permissions(PermissionKey) VALUES
@@ -215,11 +222,13 @@ INSERT dbo.RolePermissions(RoleKey,PermissionKey,Effect)
 SELECT N'building-admin',p.PermissionKey,1 FROM @permissions p
 WHERE NOT EXISTS(SELECT 1 FROM dbo.RolePermissions rp WHERE rp.RoleKey=N'building-admin' AND rp.PermissionKey=p.PermissionKey);
 
-IF EXISTS(SELECT 1 FROM dbo.RolePermissions rp
+IF EXISTS (SELECT 1 FROM dbo.RolePermissions rp
  WHERE rp.RoleKey=N'building-admin' AND rp.Effect<>1)
- THROW 51038,'Building admin role contains a non-Allow permission effect.',1;
+BEGIN
+    ;THROW 51038, 'Building admin role contains a non-Allow permission effect.', 1;
+END;
 
-IF EXISTS(SELECT 1 FROM dbo.RolePermissions rp
+IF EXISTS (SELECT 1 FROM dbo.RolePermissions rp
  WHERE rp.RoleKey=N'building-admin'
  AND rp.PermissionKey NOT IN
  (N'residents.manage',N'apartment.disable',N'dvrs.manage',N'cameras.view',N'cameras.manage',
@@ -229,7 +238,9 @@ IF EXISTS(SELECT 1 FROM dbo.RolePermissions rp
   N'revenue.post',N'revenue.reverse',N'finance.export',N'finance.period.close',
   N'finance.period.reopen',N'notification.dispatch',N'integration.whatsapp.send',
   N'integration.whatsapp.configure',N'apartment.access.grant.manage))
- THROW 51038,'Building admin role contains permissions outside the approved building-only set.',1;
+BEGIN
+    ;THROW 51038, 'Building admin role contains permissions outside the approved building-only set.', 1;
+END;
 
 INSERT dbo.UserRoleAssignments
 (RoleAssignmentId,AccountId,RoleKey,ScopeType,ScopeBuildingId,ScopeApartmentId,ValidFromUtc,ValidToUtc,GrantedAtUtc,GrantedByAccountId,GrantReason,RevokedAtUtc,RevokedByAccountId,RevocationReason)
@@ -247,12 +258,16 @@ IF (SELECT COUNT(*) FROM dbo.UserRoleAssignments a
  WHERE a.RoleKey=N'building-admin' AND a.ScopeType=1
    AND a.ScopeBuildingId=x.BuildingId AND a.ScopeApartmentId IS NULL
    AND a.RevokedAtUtc IS NULL AND (a.ValidToUtc IS NULL OR a.ValidToUtc>@now))<>3
- THROW 51038,'Post-write verification did not find exactly three active building-scoped assignments.',1;
+BEGIN
+    ;THROW 51038, 'Post-write verification did not find exactly three active building-scoped assignments.', 1;
+END;
 
-IF EXISTS(SELECT 1 FROM dbo.UserRoleAssignments a JOIN @admins x ON x.AccountId=a.AccountId
+IF EXISTS (SELECT 1 FROM dbo.UserRoleAssignments a JOIN @admins x ON x.AccountId=a.AccountId
  WHERE a.RevokedAtUtc IS NULL AND (a.ValidToUtc IS NULL OR a.ValidToUtc>@now)
  AND (a.ScopeType<>1 OR a.ScopeBuildingId<>x.BuildingId OR a.ScopeApartmentId IS NOT NULL))
- THROW 51038,'Cross-building or system-wide active assignment detected for a Building Admin.',1;
+BEGIN
+    ;THROW 51038, 'Cross-building or system-wide active assignment detected for a Building Admin.', 1;
+END;
 
 COMMIT;
 "@
