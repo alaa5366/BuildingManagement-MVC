@@ -79,4 +79,13 @@ public sealed class BuildingSqlMapperAuditTests
         Assert.Null(result.BuildingNumber);
         Assert.Null(result.AptNumber);
     }
+
+    [Theory]
+    [InlineData("pin=1234", "pin=[REDACTED]")]
+    [InlineData("password:secret-value", "password:[REDACTED]")]
+    [InlineData("token = \"abc-123\"", "token = [REDACTED]")]
+    public void RedactAuditDetails_MasksSensitiveKeyValuePairs(string source, string expected)
+    {
+        Assert.Equal(expected, BuildingSqlMapper.RedactAuditDetails(source));
+    }
 }
