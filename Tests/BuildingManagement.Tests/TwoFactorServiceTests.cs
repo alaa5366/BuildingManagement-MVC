@@ -69,6 +69,58 @@ public sealed class TwoFactorServiceTests
     }
 
     [Fact]
+    public async Task Target_identity_admin_reads_mfa_state_from_target_tables()
+    {
+        var factory = new TestFactory(Guid.NewGuid().ToString("N"));
+        var accountId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        await using (var db = factory.CreateDbContext())
+        {
+            var personId = Guid.NewGuid();
+            db.Persons.Add(new PersonEntity
+            {
+                PersonId = personId,
+                DisplayName = "Target Admin",
+                CreatedAtUtc = now
+            });
+            db.UserAccounts.Add(new UserAccountEntity
+            {
+                AccountId = accountId,
+                PersonId = personId,
+                AccountStatus = 1,
+                SecurityStamp = Guid.NewGuid().ToString("N"),
+                CreatedAtUtc = now
+            });
+            db.RoleDefinitions.Add(new RoleDefinitionEntity
+            {
+                RoleKey = "building-admin", DisplayName = "Building Administrator", IsActive = true
+            });
+            db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            {
+                RoleAssignmentId = Guid.NewGuid(),
+                AccountId = accountId,
+                RoleKey = "building-admin",
+                ScopeType = 1,
+                ScopeBuildingId = "building-1",
+                ValidFromUtc = now.AddDays(-1),
+                GrantedAtUtc = now.AddDays(-1)
+            });
+            db.UserTwoFactorSettings.Add(new UserTwoFactorSettingEntity
+            {
+                AccountId = accountId,
+                IsEnabled = true,
+                SecretCiphertext = System.Text.Encoding.UTF8.GetBytes("test:ciphertext"),
+                KeyVersion = "aes-gcm-v1",
+                EnrolledAtUtc = now.AddDays(-1)
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var service = new TwoFactorService(factory, new TestEncryption(), NullLogger<TwoFactorService>.Instance);
+        Assert.True(await service.IsEnabledAsync(accountId.ToString("D")));
+    }
+
+    [Fact]
     public async Task Enrollment_encrypts_secret_and_stores_only_recovery_hashes()
     {
         var (service, factory) = await CreateAsync();

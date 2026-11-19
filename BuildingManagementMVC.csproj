@@ -18,6 +18,7 @@
   <!-- مشروع الاختبارات جوه فولدر Tests — لازم مايتجمّعش مع الموقع -->
   <ItemGroup>
     <Compile Remove="Tests\**" />
+    <Compile Remove="Database\Diagnostics\**\*.cs" />
     <Content Remove="Tests\**" />
     <EmbeddedResource Remove="Tests\**" />
     <None Remove="Tests\**" />

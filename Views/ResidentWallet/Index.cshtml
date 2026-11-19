@@ -31,7 +31,7 @@
 </div>
 
 @* ===== الرصيد ===== *@
-<div class="bg-white rounded shadow-sm p-4 mb-3 text-center">
+<div class="ui-stat-tile p-4 mb-3 text-center">
     <div class="text-muted small">@Loc.T("Your_Current_Balance")</div>
     <div class="display-6 fw-bold @(balance < 0 ? "text-danger" : "text-success")">
         @Loc.T("N_EGP", balance.ToString("0.##"))
@@ -47,7 +47,7 @@
 </div>
 
 @* ===== تسجيل دفعة جديدة ===== *@
-<div class="bg-white rounded shadow-sm p-3 mb-3">
+<div class="ui-panel p-3 mb-3">
     <h5>@Loc.T("Submit_A_New_Payment_2")</h5>
     <p class="text-muted small">@Loc.T("It_Will_Be_Set_To_Pending")</p>
 
@@ -72,6 +72,7 @@
     <form method="post" asp-action="CreateDeposit" enctype="multipart/form-data"
           class="row g-2 align-items-end" id="depositForm">
         <input type="hidden" name="month" value="@month" />
+        <input type="hidden" name="commandId" value="@Guid.NewGuid()" />
 
         <div class="col-md-4">
             <label class="form-label small">@Loc.T("Amount")</label>
@@ -97,7 +98,7 @@
 }
 
 @* ===== فلاتر كشف الحساب ===== *@
-<div class="bg-white rounded shadow-sm p-3 mb-3">
+<div class="ui-panel p-3 mb-3">
     <h6 class="mb-3">🔍 @Loc.T("Search") / @Loc.T("Filter")</h6>
     <form method="get" id="filterForm" class="row g-2 align-items-end"
           asp-action="Index">
@@ -263,7 +264,7 @@
 </div>
 
 @* ===== كشف الحساب (AJAX Container) ===== *@
-<div class="bg-white rounded shadow-sm p-3" id="statementWrapper">
+<div class="ui-panel p-3" id="statementWrapper">
     @await Html.PartialAsync("_StatementPartial", new BuildingManagementMvc.ViewModels.StatementPartialViewModels
     {
         Transactions = transactions,

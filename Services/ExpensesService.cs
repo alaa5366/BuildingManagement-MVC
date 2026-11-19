@@ -1,4 +1,5 @@
 using BuildingManagementMvc.Models;
+using System.Globalization;
 
 namespace BuildingManagementMvc.Services;
 
@@ -19,14 +20,19 @@ public class ExpensesService
     /// </summary>
     public Expense AddExpense(Building building, string categoryId, string note, decimal amount, string? date, string monthKey)
     {
+        ArgumentNullException.ThrowIfNull(building);
+        FinanceCommandValidation.ValidateMonthKey(monthKey);
+        FinanceCommandValidation.ValidatePositiveMoney(amount, nameof(amount));
+        FinanceCommandValidation.ValidateActiveCategory(building.ExpenseCategories, categoryId, nameof(categoryId));
+        var transactionDate = FinanceCommandValidation.ResolveTransactionDate(date, monthKey);
         var m = _wallet.GetOrCreateMonth(building, monthKey);
         var expense = new Expense
         {
             Id = Guid.NewGuid().ToString("N"),
             CategoryId = categoryId,
-            Note = note ?? "",
+            Note = note?.Trim() ?? "",
             Amount = amount,
-            Date = string.IsNullOrWhiteSpace(date) ? DateTime.UtcNow.ToString("yyyy-MM-dd") : date
+            Date = transactionDate
         };
         m.Expenses.Add(expense);
         return expense;

@@ -51,6 +51,9 @@ public sealed class ApplicationLogQueryService
     private static readonly Regex IpAddress = new(
         @"(?<![\d.])(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?![\d.])",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex HttpRequestEvent = new(
+        @"^HTTP (?<method>[A-Z]+) (?<path>\S+) responded (?<status>\d{3}) in (?<elapsed>\d+(?:\.\d+)?) ms$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex ExceptionStart = new(
         @"^\s*(?:[A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*)?(?:Exception|Error|Fault)(?:\s*\([^)]*\))?:",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -188,7 +191,11 @@ public sealed class ApplicationLogQueryService
                         : current.SourceContext,
                     Exception = current.Exception,
                     Details = current.Details,
-                    FileName = current.FileName
+                    FileName = current.FileName,
+                    HttpMethod = current.HttpMethod,
+                    RequestPath = current.RequestPath,
+                    HttpStatusCode = current.HttpStatusCode,
+                    DurationMs = current.DurationMs
                 };
             }
 
@@ -238,6 +245,11 @@ public sealed class ApplicationLogQueryService
             "WRN" => "Warning", "ERR" => "Error", "FTL" => "Fatal", _ => match.Groups["level"].Value
         };
         var (message, correlation, source) = SplitProperties(match.Groups["body"].Value);
+        var request = HttpRequestEvent.Match(message);
+        int? statusCode = request.Success && int.TryParse(request.Groups["status"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var parsedStatus)
+            ? parsedStatus : null;
+        double? durationMs = request.Success && double.TryParse(request.Groups["elapsed"].Value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var parsedDuration)
+            ? parsedDuration : null;
         entry = new ApplicationLogEntry
         {
             Timestamp = timestamp,
@@ -245,7 +257,11 @@ public sealed class ApplicationLogQueryService
             Message = Limit(Redact(message), MaxMessageLength),
             CorrelationId = Limit(Redact(correlation), 100),
             SourceContext = Limit(Redact(source), 250),
-            FileName = fileName
+            FileName = fileName,
+            HttpMethod = request.Success ? request.Groups["method"].Value : "",
+            RequestPath = request.Success ? Limit(Redact(request.Groups["path"].Value), 300) : "",
+            HttpStatusCode = statusCode,
+            DurationMs = durationMs
         };
         return true;
     }
@@ -284,7 +300,12 @@ public sealed class ApplicationLogQueryService
             !entry.CorrelationId.Contains(query.CorrelationId, StringComparison.OrdinalIgnoreCase)) return false;
         if (!string.IsNullOrWhiteSpace(query.Source) &&
             !entry.SourceContext.Contains(query.Source, StringComparison.OrdinalIgnoreCase)) return false;
+        if (!string.IsNullOrWhiteSpace(query.ComponentType) &&
+            !entry.ComponentType.Equals(query.ComponentType, StringComparison.OrdinalIgnoreCase)) return false;
         if (query.HasException.HasValue && entry.HasException != query.HasException.Value) return false;
+        if (query.HttpStatusCode.HasValue && entry.HttpStatusCode != query.HttpStatusCode.Value) return false;
+        if (query.MinDurationMs.HasValue && (!entry.DurationMs.HasValue || entry.DurationMs.Value < query.MinDurationMs.Value)) return false;
+        if (query.MaxDurationMs.HasValue && (!entry.DurationMs.HasValue || entry.DurationMs.Value > query.MaxDurationMs.Value)) return false;
         if (!string.IsNullOrWhiteSpace(query.Search) &&
             !entry.Message.Contains(query.Search, StringComparison.OrdinalIgnoreCase) &&
             !entry.Details.Contains(query.Search, StringComparison.OrdinalIgnoreCase) &&
@@ -302,7 +323,12 @@ public sealed class ApplicationLogQueryService
         Search = Limit(query.Search?.Trim(), 200),
         CorrelationId = Limit(query.CorrelationId?.Trim(), 100),
         Source = Limit(query.Source?.Trim(), 200),
-        HasException = query.HasException
+        ComponentType = new[] { "Controller", "Service", "View", "Middleware", "Repository", "Database", "BackgroundJob", "ExternalDependency", "Other" }
+            .FirstOrDefault(x => x.Equals(query.ComponentType?.Trim(), StringComparison.OrdinalIgnoreCase)),
+        HasException = query.HasException,
+        HttpStatusCode = query.HttpStatusCode is >= 100 and <= 599 ? query.HttpStatusCode : null,
+        MinDurationMs = query.MinDurationMs is >= 0 and <= 3600000 ? query.MinDurationMs : null,
+        MaxDurationMs = query.MaxDurationMs is >= 0 and <= 3600000 ? query.MaxDurationMs : null
     };
 
     private static string Redact(string? value)

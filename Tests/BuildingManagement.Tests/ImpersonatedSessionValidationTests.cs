@@ -147,6 +147,7 @@ public class ImpersonatedSessionValidationTests
                 new Claim("impersonationActorUid", "super-1"),
                 new Claim("impersonationActorRole", "superadmin"),
                 new Claim("impersonationActorEmail", "root@example.test"),
+                new Claim("impersonationActorSecurityStamp", SqlAuthService.CreateSuperAdminSecurityStamp("", null, true, false)),
                 new Claim("impersonationTargetBuildingId", BuildingId)
             }, "test"));
 
@@ -217,11 +218,60 @@ public class ImpersonatedSessionValidationTests
             new Claim(ClaimTypes.NameIdentifier, "super-2fa"),
             new Claim(ClaimTypes.Email, "root@example.test"),
             new Claim(ClaimTypes.Role, "superadmin"),
+            new Claim("legacySuperAdminSecurityStamp", SqlAuthService.CreateSuperAdminSecurityStamp("", null, true, false)),
             new Claim("twoFactorVerified", verified)
         }, "test"));
 
         Assert.False((await validator.ValidateAsync(Principal("false"))).Valid);
         Assert.True((await validator.ValidateAsync(Principal("true"))).Valid);
+    }
+
+
+    [Fact]
+    public async Task Super_admin_password_rotation_revokes_existing_session()
+    {
+        SqlAuthService.ConfigureSuperAdmins("root@example.test");
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase("superadmin-password-rotation-" + Guid.NewGuid().ToString("N"))
+            .Options;
+        var factory = new TestDbContextFactory(options);
+        var createdAt = new DateTime(2026, 11, 19, 7, 0, 0, DateTimeKind.Utc);
+        const string oldCredentialHash = "bcrypt-hash-before";
+        await using (var seed = factory.CreateDbContext())
+        {
+            seed.Users.Add(new UserEntity
+            {
+                Uid = "super-rotation", Email = "root@example.test", Role = "superadmin",
+                IsActive = true, IsDisabled = false, Pin = oldCredentialHash, CreatedAt = createdAt
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var validator = new SessionRevalidator(
+            new UsersService(new TestUserSqlStore(null), NullLogger<UsersService>.Instance),
+            factory,
+            new MemoryCache(new MemoryCacheOptions()),
+            NullLogger<SessionRevalidator>.Instance);
+        var originalStamp = SqlAuthService.CreateSuperAdminSecurityStamp(oldCredentialHash, createdAt, true, false);
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "super-rotation"),
+            new Claim(ClaimTypes.Email, "root@example.test"),
+            new Claim(ClaimTypes.Role, "superadmin"),
+            new Claim("legacySuperAdminSecurityStamp", originalStamp)
+        }, "test"));
+
+        Assert.True((await validator.ValidateAsync(principal)).Valid);
+
+        await using (var update = factory.CreateDbContext())
+        {
+            var account = await update.Users.SingleAsync(x => x.Uid == "super-rotation");
+            account.Pin = "bcrypt-hash-after";
+            account.UpdatedAt = createdAt.AddSeconds(1);
+            await update.SaveChangesAsync();
+        }
+
+        Assert.False((await validator.ValidateAsync(principal)).Valid);
     }
 
     [Fact]

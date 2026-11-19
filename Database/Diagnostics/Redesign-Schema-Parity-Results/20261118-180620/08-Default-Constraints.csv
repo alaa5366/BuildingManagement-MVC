@@ -1,0 +1,3 @@
+﻿"SchemaName","TableName","ColumnName","ConstraintName","Definition"
+"dbo","AuditLog","Severity","DF__AuditLog__Severi__6E01572D","(N'info')"
+"dbo","Users","TwoFactorEnabled","DF__Users__TwoFactor__04AFB25B","(CONVERT([bit],(0)))"

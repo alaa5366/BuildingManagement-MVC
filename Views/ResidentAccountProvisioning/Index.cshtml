@@ -1,0 +1,97 @@
+@model ResidentAccountProvisioningReport
+@{
+    ViewData["Title"] = "إدارة حسابات السكان";
+    string StatusLabel(string status) => status switch
+    {
+        "Eligible" => "مؤهل لإنشاء الحساب",
+        "Existing" => "حساب موجود",
+        "MissingPhone" => "بدون رقم هاتف",
+        "InvalidPhone" => "رقم غير صالح",
+        "DuplicatePhone" => "رقم مكرر",
+        "NoActiveOccupancy" => "لا يوجد إشغال نشط",
+        "RoleUnavailable" => "دور الساكن غير متاح",
+        _ => status
+    };
+    string StatusClass(string status) => status == "Eligible" ? "success"
+        : status == "Existing" ? "secondary" : "warning";
+}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h2 class="mb-1">إدارة حسابات السكان</h2>
+        <div class="text-muted">مراجعة الجاهزية وإنشاء الحسابات على دفعات آمنة دون تعديل الحسابات الحالية.</div>
+    </div>
+    <a asp-controller="SuperAdminHome" asp-action="Index" class="btn btn-outline-secondary">العودة للوحة الرئيسية</a>
+</div>
+
+<div class="alert alert-info">
+    الحساب الجديد يرتبط بـ PersonId ورقم الهاتف الأساسي. يتم تخزين PIN المبدئي 1234 باستخدام BCrypt،
+    ويُطلب من الساكن تغييره عند أول دخول. لا يتم إنشاء حساب عند غياب الهاتف أو تكراره أو غياب الإشغال النشط.
+    الحسابات الموجودة لا يتم تعديلها.
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">الأشخاص النشطون</div><div class="fs-3 fw-bold">@Model.ActivePersons</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">إجمالي الحسابات</div><div class="fs-3 fw-bold">@Model.TotalAccounts</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">مؤهلون للإنشاء</div><div class="fs-3 fw-bold text-success">@Model.Eligible</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">حسابات تتطلب تغيير PIN</div><div class="fs-3 fw-bold">@Model.AccountsRequiringPinChange</div></div></div></div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted">بدون هاتف</div><strong class="fs-4">@Model.MissingPhone</strong></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted">أرقام مكررة</div><strong class="fs-4">@Model.DuplicatePhone</strong></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted">بدون إشغال نشط</div><strong class="fs-4">@Model.NoActiveOccupancy</strong></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted">حسابات موجودة</div><strong class="fs-4">@Model.ExistingAccounts</strong></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted">حسابات غير نشطة</div><strong class="fs-4">@Model.NonActiveAccounts</strong></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted">أرقام غير صالحة</div><strong class="fs-4">@Model.InvalidPhone</strong></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted">أشخاص مؤرشفون</div><strong class="fs-4">@Model.ArchivedPersons</strong></div></div></div>
+</div>
+
+@if (Model.Eligible > 0)
+{
+    <div class="card mb-4">
+        <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <h5 class="mb-1">إنشاء الحسابات المؤهلة</h5>
+                <div class="text-muted small">كل دفعة تُعيد التحقق من الهاتف والإشغال ووجود الحساب قبل الحفظ. الحد الأقصى 50 حسابًا.</div>
+            </div>
+            <form asp-action="Provision" method="post" class="d-flex align-items-center gap-2">
+                @Html.AntiForgeryToken()
+                <select name="batchSize" class="form-select" style="width:auto" aria-label="حجم الدفعة">
+                    <option value="10">10 حسابات</option>
+                    <option value="25" selected>25 حسابًا</option>
+                    <option value="50">50 حسابًا</option>
+                </select>
+                <button type="submit" class="btn btn-primary" onclick="return confirm('سيتم إنشاء حسابات للأشخاص المؤهلين فقط. هل تريد المتابعة؟')">
+                    إنشاء الدفعة التالية
+                </button>
+            </form>
+        </div>
+    </div>
+}
+
+<div class="card">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <strong>مراجعة الأشخاص</strong>
+        <span class="text-muted small">يعرض حتى 500 سجل</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>الشخص</th><th>رقم الهاتف الأساسي</th><th>الحالة</th><th>التفاصيل</th></tr></thead>
+            <tbody>
+            @foreach (var row in Model.Rows)
+            {
+                <tr>
+                    <td>@row.DisplayName</td>
+                    <td dir="ltr" class="text-start">@(!string.IsNullOrWhiteSpace(row.Phone) ? row.Phone : "—")</td>
+                    <td><span class="badge text-bg-@StatusClass(row.Status)">@StatusLabel(row.Status)</span></td>
+                    <td>@row.Reason</td>
+                </tr>
+            }
+            @if (Model.Rows.Count == 0)
+            {
+                <tr><td colspan="4" class="text-center text-muted py-4">لا توجد سجلات للعرض.</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,46 +1,80 @@
+using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingManagementMvc.Attributes;
 
 /// <summary>
-/// Authorization filter that requires the signed-in admin to hold a specific permission. Super admins always pass; residents never do.
+/// Authorization filter requiring an authenticated administrator and an explicit permission.
+/// Target-schema identities are evaluated against current role assignments and overrides;
+/// transitional legacy identities continue to use their persisted permission claims.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false)]
-public class AdminPermissionAttribute : Attribute, IAuthorizationFilter
+public class AdminPermissionAttribute : Attribute, IAsyncAuthorizationFilter
 {
     private readonly string _permission;
 
-    /// <summary>
-    /// Gets the permission key enforced by this attribute.
-    /// </summary>
+    /// <summary>Gets the permission enforced by this attribute.</summary>
     public string Permission => _permission;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AdminPermissionAttribute"/> class.
-    /// </summary>
+    /// <summary>Initializes a permission filter.</summary>
     public AdminPermissionAttribute(string permission) => _permission = permission;
 
-    /// <summary>
-    /// Handles the authorization.
-    /// </summary>
-    public void OnAuthorization(AuthorizationFilterContext context)
+    /// <inheritdoc />
+    public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
         var user = context.HttpContext.User;
 
-        // مش مسجّل دخول => [Authorize] هو اللي بيتصرف
-        if (user.Identity?.IsAuthenticated != true) return;
-        if (!user.IsInRole("admin")) return;
+        if (user.Identity?.IsAuthenticated != true)
+        {
+            context.Result = new ChallengeResult();
+            return;
+        }
 
-        var config = context.HttpContext.RequestServices.GetRequiredService<IConfiguration>();
-        // الفحص شغال دايمًا. مفتاح طوارئ فقط: Auth:EnforceAdminPermissions=false
-        if (config.GetValue<bool?>("Auth:EnforceAdminPermissions") == false) return;
+        // Roles identify the account class; they never grant permission by themselves.
+        if (!user.IsInRole("admin") && !user.IsInRole("superadmin"))
+        {
+            context.Result = new ForbidResult();
+            return;
+        }
 
-        if (user.HasClaim("perm", _permission)) return;
+        // Target identities must be checked against live target-schema grants on every
+        // request. Never trust the permission claims copied into an older cookie.
+        if (string.Equals(user.FindFirst("targetIdentityAccount")?.Value, "true", StringComparison.Ordinal))
+        {
+            var services = context.HttpContext.RequestServices;
+            var evaluator = services.GetRequiredService<AuthorizationEvaluator>();
+            var catalog = services.GetRequiredService<IAuthorizationPermissionCatalog>();
+            var resource = TargetAuthorizationResourceResolver.Resolve(user, catalog, _permission);
+            var decision = await evaluator.EvaluateAsync(
+                user,
+                _permission,
+                resource,
+                DateTime.UtcNow,
+                context.HttpContext.RequestAborted);
+
+            if (decision.Decision == AuthorizationDecision.Allow)
+                return;
+
+            context.Result = new ContentResult
+            {
+                StatusCode = StatusCodes.Status403Forbidden,
+                ContentType = "text/plain; charset=utf-8",
+                Content = decision.Decision == AuthorizationDecision.RequiresStepUp
+                    ? "Additional authentication is required."
+                    : Loc.T("You_Don_T_Have_Permission_To")
+            };
+            return;
+        }
+
+        // Transitional legacy accounts retain the existing claim-based policy.
+        if (user.HasClaim("perm", _permission))
+            return;
 
         context.Result = new ContentResult
         {
-            StatusCode = 403,
+            StatusCode = StatusCodes.Status403Forbidden,
             ContentType = "text/plain; charset=utf-8",
             Content = Loc.T("You_Don_T_Have_Permission_To")
         };

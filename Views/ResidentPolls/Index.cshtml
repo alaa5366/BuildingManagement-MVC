@@ -7,9 +7,8 @@
 @model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Poll>
 @{
     ViewData["Title"] = Loc.T("Polls_3");
-    var building = (Building)ViewBag.Building;
-    var apt = (Apartment)ViewBag.Apt;
-    var openApts = building.Apartments.Count(a => !a.Closed);
+    var apartmentId = (string)ViewBag.ApartmentId;
+    var openApts = (int)ViewBag.OpenApartmentCount;
     var routeValuesStr = ViewBag.RouteValues as Dictionary<string, string> ?? new();
 }
 
@@ -46,10 +45,10 @@ else
     foreach (var poll in Model.Items)
     {
         var total = poll.Votes.Count;
-        var myVote = poll.Votes.TryGetValue(apt.Id, out var mv) ? mv : null;
+        var myVote = poll.Votes.TryGetValue(apartmentId, out var mv) ? mv : null;
         var active = !poll.Closed && (string.IsNullOrEmpty(poll.Deadline) || !(DateTime.TryParse(poll.Deadline, out var dl) && dl < DateTime.UtcNow));
 
-        <div class="bg-white rounded shadow-sm p-3 mb-3">
+        <div class="ui-poll-card p-3 mb-3">
             <h5>@poll.Question</h5>
             @if (!string.IsNullOrEmpty(poll.Description))
             {

@@ -1682,3 +1682,16 @@ public class ResidentEntity
     /// </summary>
     public ApartmentEntity? Apartment { get; set; }
 }
+
+/// <summary>Building-scoped reusable WhatsApp message template.</summary>
+public class SavedWhatsAppTemplateEntity
+{
+    public Guid Id { get; set; }
+    public string BuildingId { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Message { get; set; } = "";
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+    public string? CreatedByUid { get; set; }
+}

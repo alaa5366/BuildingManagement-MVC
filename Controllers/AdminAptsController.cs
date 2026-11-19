@@ -23,10 +23,12 @@ public class AdminAptsController : Controller
     private readonly BuildingsService _buildings;
     private readonly ResidentsService _residents;
     private readonly QrSecurityService _qrSecurity;
+    private readonly TargetQrService _targetQr;
     private readonly QrGeneratorService _qrGen;
-    private readonly WhatsAppTemplateService _waTemplates;
-    private readonly WalletService _wallet;
-    private readonly NotificationsService _notify;
+    private readonly TargetWhatsAppService _targetWhatsApp;
+    private readonly TargetNotificationsService _targetNotifications;
+    private readonly IdentityAccountAuthenticationService _identityAuth;
+    private readonly Microsoft.Extensions.Logging.ILogger<AdminAptsController> _logger;
     private readonly IAuditLogger _auditLogger;
 
     /// <summary>
@@ -36,20 +38,24 @@ public class AdminAptsController : Controller
         BuildingsService buildings,
         ResidentsService residents,
         QrSecurityService qrSecurity,
+        TargetQrService targetQr,
         QrGeneratorService qrGen,
-        WhatsAppTemplateService waTemplates,
-        WalletService wallet,
-        NotificationsService notify,
-        IAuditLogger auditLogger)
+        TargetWhatsAppService targetWhatsApp,
+        IAuditLogger auditLogger,
+        TargetNotificationsService targetNotifications,
+        IdentityAccountAuthenticationService identityAuth,
+        Microsoft.Extensions.Logging.ILogger<AdminAptsController> logger)
     {
         _buildings = buildings;
         _residents = residents;
         _qrSecurity = qrSecurity;
+        _targetQr = targetQr;
         _qrGen = qrGen;
-        _waTemplates = waTemplates;
-        _wallet = wallet;
-        _notify = notify;
+        _targetWhatsApp = targetWhatsApp;
         _auditLogger = auditLogger;
+        _targetNotifications = targetNotifications;
+        _identityAuth = identityAuth;
+        _logger = logger;
     }
 
     private string BuildingId => User.FindFirst("buildingId")!.Value;
@@ -84,20 +90,19 @@ public class AdminAptsController : Controller
     public async Task<IActionResult> GenerateQuickQr(
         string aptId, int validityMinutes, bool oneTime, int maxUses)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
+        if (validityMinutes is < 1 or > 60 || (!oneTime && maxUses is < 1 or > 100))
+            return BadRequest(new { error = "invalid-qr-options" });
 
-        var apt = building.Apartments.FirstOrDefault(a => a.Id == aptId);
-        if (apt == null) return NotFound();
-
-        var floor = building.Floors.FirstOrDefault(f => f.Id == apt.FloorId);
+        var apt = await _targetQr.GetApartmentAsync(
+            BuildingId, aptId, requireActive: true, HttpContext.RequestAborted);
+        if (apt is null) return NotFound();
 
         var options = new QuickQrOptions
         {
-            BuildingId = building.Id,
-            AptId = aptId,
-            AptNumber = apt.Number,
-            FloorOrder = floor?.Order ?? 0,
+            BuildingId = apt.BuildingId,
+            AptId = apt.ApartmentId,
+            AptNumber = apt.ApartmentNumber,
+            FloorOrder = apt.FloorOrder,
             Validity = TimeSpan.FromMinutes(validityMinutes),
             OneTime = oneTime,
             MaxUses = oneTime ? 1 : maxUses
@@ -119,6 +124,124 @@ public class AdminAptsController : Controller
     }
 
     // ============================================================
+    // 3. GenerateRecoveryQr
+    // ============================================================
+    /// <summary>
+    /// Creates a five-minute, single-use resident login QR for an administrator-approved recovery.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> GenerateRecoveryQr(string aptId)
+    {
+        Response.Headers["Cache-Control"] = "no-store, no-cache, max-age=0";
+        Response.Headers["Pragma"] = "no-cache";
+        Response.Headers["Referrer-Policy"] = "no-referrer";
+
+        if (User.HasClaim("impersonated", "true"))
+            return Forbid();
+
+        Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+        Response.Headers.Pragma = "no-cache";
+        Response.Headers["Referrer-Policy"] = "no-referrer";
+
+        var apt = await _targetQr.GetApartmentAsync(
+            BuildingId, aptId, requireActive: true, HttpContext.RequestAborted);
+        if (apt is null) return NotFound();
+
+        var phone = AuthHelpers.NormalizePhone(apt.Phone);
+        if (string.IsNullOrWhiteSpace(phone))
+        {
+            TempData["Error"] = "لا يوجد رقم هاتف مسجل للشقة.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // Never send a recovery credential to a phone shared by another active apartment.
+        var buildingPage = await _targetQr.GetBuildingPageAsync(
+            BuildingId, HttpContext.RequestAborted);
+        var duplicatePhone = buildingPage?.Apartments.Any(x =>
+            x.ApartmentId != apt.ApartmentId &&
+            string.Equals(AuthHelpers.NormalizePhone(x.Phone), phone, StringComparison.Ordinal)) == true;
+        if (duplicatePhone)
+        {
+            TempData["Error"] = "رقم الهاتف مكرر في شقة أخرى؛ راجع بيانات الهاتف قبل إصدار رمز الدخول.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        if (!await _identityAuth.IsPrimaryResidentPhoneMatchAsync(
+            apt.BuildingId, apt.ApartmentId, phone, HttpContext.RequestAborted))
+        {
+            TempData["Error"] = "رقم هاتف الشقة لا يطابق الهاتف الأساسي لحساب الساكن الرئيسي في قاعدة الهوية؛ راجع البيانات قبل إصدار QR.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var token = _qrSecurity.GenerateQuickToken(new QuickQrOptions
+        {
+            BuildingId = apt.BuildingId,
+            AptId = apt.ApartmentId,
+            AptNumber = apt.ApartmentNumber,
+            FloorOrder = apt.FloorOrder,
+            Validity = TimeSpan.FromMinutes(5),
+            OneTime = true,
+            MaxUses = 1,
+            Purpose = "recovery"
+        });
+
+        var quickUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/Account/QuickLogin?token={Uri.EscapeDataString(token)}";
+        var message =
+            $"مرحباً، هذا رابط دخول مؤقت لحساب شقتك رقم {apt.ApartmentNumber} في {apt.BuildingName}.\n" +
+            "صالح لمدة 5 دقائق ويُستخدم مرة واحدة فقط. افتح الرابط ثم أكد الدخول.\n" +
+            "إذا لم تطلب هذا الرابط، تجاهل الرسالة ولا تشاركها مع أي شخص.\n" +
+            quickUrl;
+        var waLink = WhatsAppTemplateService.BuildWaLink(phone, message);
+        var qrBase64 = Convert.ToBase64String(_qrGen.GeneratePng(quickUrl, 12));
+        await _qrSecurity.RegisterRecoveryTokenAsync(token, apt.BuildingId, apt.ApartmentId, HttpContext.RequestAborted);
+
+        await _auditLogger.LogAsync(
+            action: "resident.recovery_qr_issued",
+            buildingId: apt.BuildingId,
+            apartmentId: apt.ApartmentId,
+            userId: CurrentUserId,
+            userRole: "admin",
+            metadata: new { aptNumber = apt.ApartmentNumber, phoneSuffix = phone.Length > 4 ? phone[^4..] : phone, expiresInMinutes = 5, oneTime = true },
+            severity: "warning");
+
+        ViewBag.BuildingName = apt.BuildingName;
+        ViewBag.ApartmentId = apt.ApartmentId;
+        ViewBag.ApartmentNumber = apt.ApartmentNumber;
+        ViewBag.ApartmentPhone = apt.Phone;
+        ViewBag.QuickUrl = quickUrl;
+        ViewBag.WhatsAppLink = waLink;
+        ViewBag.QrBase64 = qrBase64;
+        ViewBag.ExpiresInMinutes = 5;
+        return View("RecoveryQr");
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CancelRecoveryQr(string aptId)
+    {
+        if (User.HasClaim("impersonated", "true")) return Forbid();
+        var apt = await _targetQr.GetApartmentAsync(
+            BuildingId, aptId, requireActive: true, HttpContext.RequestAborted);
+        if (apt is null) return NotFound();
+
+        var revoked = await _qrSecurity.RevokeRecoveryTokenAsync(
+            apt.BuildingId, apt.ApartmentId, HttpContext.RequestAborted);
+        await _auditLogger.LogAsync(
+            action: "resident.recovery_qr_revoked",
+            buildingId: apt.BuildingId,
+            apartmentId: apt.ApartmentId,
+            userId: CurrentUserId,
+            userRole: "admin",
+            metadata: new { aptNumber = apt.ApartmentNumber, revoked },
+            severity: "warning");
+        TempData[revoked ? "Success" : "Info"] = revoked
+            ? "تم إلغاء رمز استعادة الدخول بنجاح."
+            : "لا يوجد رمز استعادة نشط لهذه الشقة.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    // ============================================================
     // 3. GenerateWelcome
     // ============================================================
     /// <summary>
@@ -131,23 +254,24 @@ public class AdminAptsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> GenerateWelcome(string aptId, int validityHours)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
-
-        var apt = building.Apartments.FirstOrDefault(a => a.Id == aptId);
-        if (apt == null) return NotFound();
-
-        var floor = building.Floors.FirstOrDefault(f => f.Id == apt.FloorId);
+        var apt = await _targetQr.GetApartmentAsync(
+            BuildingId, aptId, requireActive: true, HttpContext.RequestAborted);
+        if (apt is null) return NotFound();
         var baseUrl = $"{Request.Scheme}://{Request.Host}";
 
         var hours = validityHours <= 0 ? 24 : validityHours;
+        if (hours > 72)
+        {
+            TempData["Error"] = "مدة رابط الترحيب يجب ألا تتجاوز 72 ساعة.";
+            return RedirectToAction(nameof(Index));
+        }
 
         var options = new QuickQrOptions
         {
-            BuildingId = building.Id,
-            AptId = apt.Id,
-            AptNumber = apt.Number,
-            FloorOrder = floor?.Order ?? 0,
+            BuildingId = apt.BuildingId,
+            AptId = apt.ApartmentId,
+            AptNumber = apt.ApartmentNumber,
+            FloorOrder = apt.FloorOrder,
             Validity = TimeSpan.FromHours(hours),
             OneTime = false,
             MaxUses = 5
@@ -159,10 +283,10 @@ public class AdminAptsController : Controller
         // رابط تعيين الـ PIN (مرة واحدة) — بدل ما نبعت الـ PIN نفسه
         var setPinToken = _qrSecurity.GenerateQuickToken(new QuickQrOptions
         {
-            BuildingId = building.Id,
-            AptId = apt.Id,
-            AptNumber = apt.Number,
-            FloorOrder = floor?.Order ?? 0,
+            BuildingId = apt.BuildingId,
+            AptId = apt.ApartmentId,
+            AptNumber = apt.ApartmentNumber,
+            FloorOrder = apt.FloorOrder,
             Validity = TimeSpan.FromHours(hours),
             OneTime = true,
             MaxUses = 1,
@@ -177,15 +301,29 @@ public class AdminAptsController : Controller
             ["login_url"] = WhatsAppTemplateService.BuildLoginUrl(baseUrl)
         };
 
-        var messageText = _waTemplates.Render("welcome", building, apt, extra);
-        var waLink = WhatsAppTemplateService.BuildWaLink(apt.Phone, messageText);
+        WhatsAppResultViewModel welcomeDraft;
+        try
+        {
+            welcomeDraft = await _targetWhatsApp.GenerateAsync(
+                BuildingId, apt.ApartmentId, "welcome", extra, baseUrl, HttpContext.RequestAborted)
+                ?? throw new InvalidOperationException("تعذر العثور على بيانات الشقة في النظام المستهدف.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+            return RedirectToAction(nameof(Index));
+        }
+        var messageText = welcomeDraft.Message;
+        var waLink = welcomeDraft.Link;
 
         var qrPng = _qrGen.GeneratePng(quickUrl, 10);
         var qrBase64 = Convert.ToBase64String(qrPng);
 
-        ViewBag.Building = building;
-        ViewBag.Apt = apt;
-        ViewBag.Floor = floor;
+        ViewBag.BuildingName = apt.BuildingName;
+        ViewBag.BuildingNumber = apt.BuildingNumber;
+        ViewBag.ApartmentNumber = apt.ApartmentNumber;
+        ViewBag.ApartmentPhone = apt.Phone;
+        ViewBag.FloorLabel = apt.FloorLabel;
         ViewBag.QuickUrl = quickUrl;
         ViewBag.MessageText = messageText;
         ViewBag.WhatsAppLink = waLink;
@@ -224,13 +362,10 @@ public class AdminAptsController : Controller
         apt.OpenDate = DateTime.UtcNow.ToString("o");
         apt.CloseDate = null;
 
-        var currentMonth = WalletService.CurrentMonthKey();
-        _wallet.RecalculateDistribution(building, currentMonth);
-        _wallet.RecalculateRevenueDistribution(building, currentMonth);
-
-        _notify.NotifyResidentApartmentReopened(building, apt, null);
-
         await _buildings.SaveFullAsync(building);
+        await TryNotifyResidentAsync(apt.Id, "تم إعادة تفعيل شقتك",
+            $"تم إعادة تفعيل شقتك رقم {apt.Number} في {building.Name}.",
+            "apartment_reopened", "🔓");
 
         await _auditLogger.LogAsync(
             action: "apartment.opened",
@@ -284,9 +419,10 @@ public class AdminAptsController : Controller
         _wallet.RecalculateDistribution(building, currentMonth);
         _wallet.RecalculateRevenueDistribution(building, currentMonth);
 
-        _notify.NotifyResidentApartmentClosed(building, apt, reason);
-
         await _buildings.SaveFullAsync(building);
+        await TryNotifyResidentAsync(apt.Id, "تم إغلاق شقتك",
+            $"تم إغلاق شقتك رقم {apt.Number} في {building.Name}. {reason}".Trim(),
+            "apartment_closed", "🔒");
 
         await _auditLogger.LogAsync(
             action: "apartment.closed",
@@ -329,9 +465,10 @@ public class AdminAptsController : Controller
         apt.Disabled = true;
         apt.DisabledReason = reason ?? "";
 
-        _notify.NotifyResidentApartmentDisabled(building, apt, reason);
-
         await _buildings.SaveFullAsync(building);
+        await TryNotifyResidentAsync(apt.Id, "تم تعطيل حساب الشقة",
+            $"تم تعطيل الشقة رقم {apt.Number} في {building.Name}. {reason}".Trim(),
+            "apartment_disabled", "🚫");
 
         await _auditLogger.LogAsync(
             action: "apartment.disabled",
@@ -374,9 +511,10 @@ public class AdminAptsController : Controller
         apt.Disabled = false;
         apt.DisabledReason = "";
 
-        _notify.NotifyResidentApartmentEnabled(building, apt, reason);
-
         await _buildings.SaveFullAsync(building);
+        await TryNotifyResidentAsync(apt.Id, "تم إعادة تفعيل حساب الشقة",
+            $"تم إعادة تفعيل الشقة رقم {apt.Number} في {building.Name}. {reason}".Trim(),
+            "apartment_enabled", "✅");
 
         await _auditLogger.LogAsync(
             action: "apartment.enabled",
@@ -486,5 +624,19 @@ public class AdminAptsController : Controller
         }
 
         return RedirectToAction(nameof(Edit), new { aptId });
+    }
+
+    private async Task TryNotifyResidentAsync(string apartmentId, string title, string body, string type, string icon)
+    {
+        try
+        {
+            await _targetNotifications.CreateResidentDepositNoticeAsync(
+                BuildingId, apartmentId, title, body, HttpContext.RequestAborted, type, icon);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Apartment notification failed for building {BuildingId}, apartment {ApartmentId}.",
+                BuildingId, apartmentId);
+        }
     }
 }

@@ -21,12 +21,14 @@ namespace BuildingManagementMvc.Controllers;
 public class AccountController : Controller
 {
     private readonly SqlAuthService _sqlAuth;
+    private readonly IdentityAccountAuthenticationService _identityAuth;
     private readonly BuildingsService _buildings;
     private readonly ResidentsService _residents;
     private readonly UsersService _users;
     private readonly LoginThrottle _throttle;
     private readonly TwoFactorService _twoFactor;
     private readonly QrGeneratorService _qrGenerator;
+    private readonly TargetQrService _targetQr;
     private readonly ILogger<AccountController> _log;
     private string? ClientIp => HttpContext.Connection.RemoteIpAddress?.ToString();
     // مفتاح قفل موحّد لكل طرق الدخول: الرقم بعد التطبيع (0100.. = +20100.. = 20100..) أو الإيميل
@@ -45,21 +47,25 @@ public class AccountController : Controller
     /// </summary>
     public AccountController(
         SqlAuthService sqlAuth,
+        IdentityAccountAuthenticationService identityAuth,
         BuildingsService buildings,
         UsersService users,
         ResidentsService residents,
         LoginThrottle throttle,
         TwoFactorService twoFactor,
         QrGeneratorService qrGenerator,
+        TargetQrService targetQr,
         ILogger<AccountController> logger)
     {
         _sqlAuth = sqlAuth;
+        _identityAuth = identityAuth;
         _buildings = buildings;
         _users = users;
         _residents = residents;
         _throttle = throttle;
         _twoFactor = twoFactor;
         _qrGenerator = qrGenerator;
+        _targetQr = targetQr;
         _log = logger;
     }
 
@@ -101,7 +107,7 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        var throttleKey = AcctKey(vm.Whatsapp);
+        var throttleKey = AcctKey(vm.Phone);
         if (_throttle.IsLocked(throttleKey, ClientIp))
         {
             ViewBag.Error = LockedMsg;
@@ -109,18 +115,31 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        var res = await _sqlAuth.SignInResidentAsync(
-            vm.BuildingId, vm.FloorId, vm.AptId, vm.Whatsapp, vm.Pin);
+        // Authenticate against Persons/UserAccounts/UserCredentials and constrain the
+        // resulting occupancy to the exact building/apartment selected by the resident.
+        var building = await _buildings.GetByIdAsync(vm.BuildingId);
+        var floor = building?.Floors.FirstOrDefault(item => item.Id == vm.FloorId);
+        var apartment = building?.Apartments.FirstOrDefault(item =>
+            item.Id == vm.AptId && item.FloorId == vm.FloorId);
+        var res = building == null || floor == null || apartment == null
+            ? AuthResult.Fail("wrong-credentials")
+            : await _identityAuth.AuthenticateResidentAsync(
+                vm.Phone, vm.Pin, vm.BuildingId, vm.AptId);
 
-        if (!res.Success)
+        if (res == null || !res.Success ||
+            !string.Equals(res.Role, "resident", StringComparison.Ordinal) ||
+            !res.BuildingIds.Contains(vm.BuildingId, StringComparer.Ordinal) ||
+            !string.Equals(res.ApartmentId, vm.AptId, StringComparison.Ordinal))
         {
             _throttle.RegisterFailure(throttleKey, ClientIp);
-            ViewBag.Error = MapError(res.Error, res.Reason);
+            ViewBag.Error = Loc.T("Invalid_Login_Details");
             ViewBag.Buildings = await _buildings.GetSummariesAsync();
             return View(vm);
         }
 
         _throttle.Reset(throttleKey);
+        if (res.MustChangePin)
+            return StartPinChangeChallenge(res, vm.Phone, vm.BuildingId, vm.AptId);
         await SignInCookieAsync(res);
         return RedirectToAction("Index", "ResidentHome");
     }
@@ -166,7 +185,8 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        var res = await _sqlAuth.SignInAdminAsync(vm.BuildingId, vm.Phone, vm.Pin);
+        var res = await _identityAuth.AuthenticateAdminAsync(vm.Phone, vm.Pin, vm.BuildingId);
+        res ??= await _sqlAuth.SignInAdminAsync(vm.BuildingId, vm.Phone, vm.Pin);
 
         if (!res.Success)
         {
@@ -175,6 +195,9 @@ public class AccountController : Controller
             ViewBag.Buildings = await _buildings.GetSummariesAsync();
             return View(vm);
         }
+
+        if (res.UsesTargetIdentity && res.MustChangePin)
+            return StartPinChangeChallenge(res, vm.Phone, vm.BuildingId);
 
         return await CompleteSignInAsync(res, throttleKey);
     }
@@ -236,6 +259,7 @@ public class AccountController : Controller
     public IActionResult UnifiedLogin(string? returnUrl = null)
     {
         ViewBag.ReturnUrl = returnUrl;
+        ViewBag.Error = TempData["Error"];
         ViewBag.TwoFactorStep = GetPendingTwoFactorSignIn() != null;
         return View(new UnifiedLoginVm());
     }
@@ -259,13 +283,31 @@ public class AccountController : Controller
         if (!ModelState.IsValid) return View(vm);
 
         var identifier = vm.Identifier.Trim();
-        var credential = vm.Credential.Trim();
+        // Credentials are opaque secrets: never trim or normalize passwords/PINs.
+        var credential = vm.Credential;
 
         var throttleKey = AcctKey(identifier);
         if (_throttle.IsLocked(throttleKey, ClientIp))
         {
             ViewBag.Error = LockedMsg;
             return View(vm);
+        }
+
+        var identityResult = await _identityAuth.AuthenticateResidentAsync(identifier, credential);
+        if (identityResult != null)
+        {
+            if (!identityResult.Success)
+            {
+                _throttle.RegisterFailure(throttleKey, ClientIp);
+                ViewBag.Error = Loc.T("Invalid_Login_Details");
+                return View(vm);
+            }
+
+            _throttle.Reset(throttleKey);
+            if (identityResult.MustChangePin)
+                return StartPinChangeChallenge(identityResult, identifier);
+            await SignInCookieAsync(identityResult);
+            return RedirectBasedOnRole(identityResult.Role!);
         }
 
         var contexts = await _sqlAuth.FindAllContextsAsync(identifier, credential);
@@ -402,6 +444,89 @@ public class AccountController : Controller
         }
     }
 
+    private IActionResult StartPinChangeChallenge(AuthResult result, string identifier, string? buildingId = null, string? apartmentId = null)
+    {
+        HttpContext.Session.Clear();
+        HttpContext.Session.SetString("resident_pin_change_account", result.Uid!);
+        HttpContext.Session.SetString("resident_pin_change_stamp", result.SecurityStamp ?? "");
+        HttpContext.Session.SetString("resident_pin_change_identifier", identifier);
+        HttpContext.Session.SetString("resident_pin_change_role", result.Role ?? "resident");
+        if (!string.IsNullOrWhiteSpace(buildingId))
+            HttpContext.Session.SetString("resident_pin_change_building", buildingId);
+        if (!string.IsNullOrWhiteSpace(apartmentId))
+            HttpContext.Session.SetString("resident_pin_change_apartment", apartmentId);
+        HttpContext.Session.SetString("resident_pin_change_expires",
+            DateTimeOffset.UtcNow.AddMinutes(10).ToUnixTimeSeconds().ToString(
+                System.Globalization.CultureInfo.InvariantCulture));
+        return RedirectToAction(nameof(ChangePin));
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    public IActionResult ChangePin()
+    {
+        if (!HasValidPinChangeChallenge())
+            return RedirectToAction(nameof(UnifiedLogin));
+        return View(new ResidentPinChangeVm());
+    }
+
+    [HttpPost]
+    [AllowAnonymous]
+    [EnableRateLimiting("login")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangePin(ResidentPinChangeVm vm)
+    {
+        if (!HasValidPinChangeChallenge())
+            return RedirectToAction(nameof(UnifiedLogin));
+
+        if (!ModelState.IsValid ||
+            vm.NewPin.Length < 4 || vm.NewPin.Length > 12 ||
+            vm.NewPin.Any(character => character < '0' || character > '9') ||
+            vm.NewPin == "1234" ||
+            !string.Equals(vm.NewPin, vm.ConfirmNewPin, StringComparison.Ordinal))
+        {
+            ViewBag.Error = Loc.T("Choose_New_PIN_And_Confirm");
+            return View(vm);
+        }
+
+        var accountText = HttpContext.Session.GetString("resident_pin_change_account")!;
+        var stamp = HttpContext.Session.GetString("resident_pin_change_stamp")!;
+        var identifier = HttpContext.Session.GetString("resident_pin_change_identifier")!;
+        var buildingId = HttpContext.Session.GetString("resident_pin_change_building");
+        var apartmentId = HttpContext.Session.GetString("resident_pin_change_apartment");
+        if (!Guid.TryParse(accountText, out var accountId) ||
+            !await _identityAuth.ChangeResidentPinAsync(accountId, stamp, vm.NewPin))
+        {
+            HttpContext.Session.Clear();
+            TempData["Error"] = Loc.T("The_Session_Has_Expired_Please_Try");
+            return RedirectToAction(nameof(UnifiedLogin));
+        }
+
+        var pinChangeRole = HttpContext.Session.GetString("resident_pin_change_role") ?? "resident";
+        var result = pinChangeRole == "admin"
+            ? await _identityAuth.AuthenticateAdminAsync(identifier, vm.NewPin, buildingId ?? "", HttpContext.RequestAborted)
+            : await _identityAuth.AuthenticateResidentAsync(identifier, vm.NewPin, buildingId, apartmentId);
+        if (result == null || !result.Success || result.MustChangePin)
+        {
+            HttpContext.Session.Clear();
+            TempData["Error"] = Loc.T("Invalid_Login_Details");
+            return RedirectToAction(nameof(UnifiedLogin));
+        }
+
+        return await CompleteSignInAsync(result, AcctKey(identifier));
+    }
+
+    private bool HasValidPinChangeChallenge()
+    {
+        var account = HttpContext.Session.GetString("resident_pin_change_account");
+        var stamp = HttpContext.Session.GetString("resident_pin_change_stamp");
+        var expiresText = HttpContext.Session.GetString("resident_pin_change_expires");
+        return !string.IsNullOrWhiteSpace(account) &&
+            !string.IsNullOrWhiteSpace(stamp) &&
+            long.TryParse(expiresText, out var expires) &&
+            expires > DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    }
+
     private async Task<IActionResult> CompleteSignInAsync(AuthResult result, string? throttleKey)
     {
         if ((result.Role is "admin" or "superadmin")
@@ -418,8 +543,7 @@ public class AccountController : Controller
         }
 
         if (!string.IsNullOrWhiteSpace(throttleKey)) _throttle.Reset(throttleKey);
-        await SignInCookieAsync(result);
-        return RedirectBasedOnRole(result.Role!);
+        return await CompleteSignInAsync(result, AcctKey(identifier));
     }
 
     /// <summary>Legacy route retained for compatibility; the challenge is rendered by UnifiedLogin.</summary>
@@ -671,9 +795,12 @@ public class AccountController : Controller
     private async Task RefreshTwoFactorVerifiedCookieAsync()
     {
         var claims = User.Claims
-            .Where(c => c.Type != "twoFactorVerified")
+            .Where(c => c.Type is not ("twoFactorVerified" or "mfaVerifiedAtUtc"))
             .ToList();
         claims.Add(new Claim("twoFactorVerified", "true"));
+        claims.Add(new Claim(
+            "mfaVerifiedAtUtc",
+            DateTime.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture)));
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var properties = new AuthenticationProperties
@@ -700,6 +827,16 @@ public class AccountController : Controller
             new(ClaimTypes.Role, res.Role!),
         };
 
+        if (res.UsesTargetIdentity)
+        {
+            claims.Add(new Claim("targetIdentityAccount", "true"));
+            claims.Add(new Claim("securityStamp", res.SecurityStamp ?? ""));
+        }
+        else if (res.Role == "superadmin")
+        {
+            claims.Add(new Claim("legacySuperAdminSecurityStamp", res.SecurityStamp ?? ""));
+        }
+
         foreach (var bId in res.BuildingIds)
             claims.Add(new Claim("buildingId", bId));
 
@@ -707,21 +844,18 @@ public class AccountController : Controller
         if (res.ApartmentNumber != null) claims.Add(new Claim("apartmentNumber", res.ApartmentNumber.Value.ToString()));
 
         if (res.Role is "admin" or "superadmin")
+        {
             claims.Add(new Claim("twoFactorVerified", twoFactorVerified ? "true" : "false"));
-
-        if (res.Role == "superadmin")
-        {
-            foreach (var p in BuildingManagementMvc.Models.AdminPermissions.SuperAdminAll)
-                claims.Add(new Claim("perm", p));
+            if (twoFactorVerified)
+                claims.Add(new Claim("mfaVerifiedAtUtc", DateTime.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture)));
         }
-        else if (res.Role == "admin")
+
+        if (res.Role is "admin" or "superadmin")
         {
-            var user = await _users.GetByUidAsync(res.Uid!);
-            if (user?.Permissions != null)
-            {
-                foreach (var p in user.Permissions)
-                    claims.Add(new Claim("perm", p));
-            }
+            // Permission claims are sourced from persisted grants for both administrator roles.
+            // A role name or configured SuperAdmin allow-list never manufactures permissions.
+            foreach (var permission in res.Permissions.Distinct(StringComparer.Ordinal))
+                claims.Add(new Claim("perm", permission));
         }
         else if (res.Role == "resident")
         {
@@ -848,6 +982,9 @@ public class AccountController : Controller
         string token,
         [FromServices] QrSecurityService qrSecurity)
     {
+        Response.Headers["Cache-Control"] = "no-store, no-cache, max-age=0";
+        Response.Headers["Pragma"] = "no-cache";
+        Response.Headers["Referrer-Policy"] = "no-referrer";
         if (string.IsNullOrEmpty(token))
             return RedirectToAction("LoginChoice");
 
@@ -860,8 +997,8 @@ public class AccountController : Controller
         }
 
         ViewBag.Token = token;
-        ViewBag.AptNumber = ctx.Apt!.Number;
-        ViewBag.BuildingName = ctx.Building!.Name;
+        ViewBag.AptNumber = ctx.Apartment!.ApartmentNumber;
+        ViewBag.BuildingName = ctx.Apartment!.BuildingName;
         return View("QuickLoginConfirm");
     }
 
@@ -873,11 +1010,15 @@ public class AccountController : Controller
     /// </remarks>
     [HttpPost]
     [EnableRateLimiting("login")]
+    [ValidateAntiForgeryToken]
     [AllowAnonymous]
     public async Task<IActionResult> QuickLoginConfirm(
         string token,
         [FromServices] QrSecurityService qrSecurity)
     {
+        Response.Headers["Cache-Control"] = "no-store, no-cache, max-age=0";
+        Response.Headers["Pragma"] = "no-cache";
+        Response.Headers["Referrer-Policy"] = "no-referrer";
         if (string.IsNullOrEmpty(token))
             return RedirectToAction("LoginChoice");
 
@@ -889,11 +1030,10 @@ public class AccountController : Controller
         }
 
         var payload = ctx.Payload!;
-        var building = ctx.Building!;
-        var apt = ctx.Apt!;
-        var resident = ctx.Resident!;
+        var apartment = ctx.Apartment!;
 
-        // ✅ استهلاك atomic قبل تسجيل الدخول — لو طلب تاني سبقنا يفشل هنا
+        // Consume before resolving the account. A stale token cannot be revived if it
+        // was revoked/reissued between the preview GET and this confirmation POST.
         var consumed = await qrSecurity.TryConsumeQuickTokenAsync(payload);
         if (!consumed)
         {
@@ -901,21 +1041,32 @@ public class AccountController : Controller
             return View("QuickLoginError");
         }
 
-        var result = AuthResult.Ok(
-            uid: resident.Uid,
-            role: "resident",
-            email: resident.Email ?? "",
-            name: string.IsNullOrWhiteSpace(resident.Name)
-                ? Loc.T("Resident_Of_Apartment_N", apt.Number) : resident.Name,
-            buildingIds: new List<string> { building.Id },
-            aptId: resident.ApartmentId,
-            aptNumber: apt.Number);
+        // QR sign-in must use Persons/UserAccounts/ApartmentOccupancies and scoped
+        // resident grants only. Never authenticate through the transitional Residents table.
+        var isRecovery = string.Equals(payload.Purpose, "recovery", StringComparison.OrdinalIgnoreCase);
+        var result = await _identityAuth.AuthenticateResidentWithQuickQrAsync(
+            payload.BuildingId, payload.AptId, requirePinChange: isRecovery,
+            cancellationToken: HttpContext.RequestAborted);
+        if (!result.Success)
+        {
+            ViewBag.Error = Loc.T("Invalid_Token");
+            return View("QuickLoginError");
+        }
+
+        result.ApartmentNumber = apartment.ApartmentNumber;
+        if (result.MustChangePin)
+        {
+            if (string.IsNullOrWhiteSpace(result.Phone))
+            {
+                ViewBag.Error = "تعذر بدء تغيير الرقم السري؛ راجع رقم الهاتف الأساسي المسجل للحساب مع الإدارة.";
+                return View("QuickLoginError");
+            }
+            return StartPinChangeChallenge(result, result.Phone, payload.BuildingId, payload.AptId);
+        }
 
         await SignInCookieAsync(result);
-
-        _log.LogInformation("[QuickLogin] Resident logged in: {Name} (apt {Apt})",
-            resident.Name, apt.Number);
-
+        _log.LogInformation("[QuickLogin] Target resident account logged in for apartment {Apt}",
+            apartment.ApartmentNumber);
         return RedirectToAction("Index", "ResidentHome");
     }
 
@@ -940,8 +1091,8 @@ public class AccountController : Controller
         }
 
         ViewBag.Token = token;
-        ViewBag.AptNumber = ctx.Apt!.Number;
-        ViewBag.BuildingName = ctx.Building!.Name;
+        ViewBag.AptNumber = ctx.Apartment!.ApartmentNumber;
+        ViewBag.BuildingName = ctx.Apartment!.BuildingName;
         return View("SetPin");
     }
 
@@ -966,8 +1117,8 @@ public class AccountController : Controller
         }
 
         ViewBag.Token = token;
-        ViewBag.AptNumber = ctx.Apt!.Number;
-        ViewBag.BuildingName = ctx.Building!.Name;
+        ViewBag.AptNumber = ctx.Apartment!.ApartmentNumber;
+        ViewBag.BuildingName = ctx.Apartment!.BuildingName;
 
         if (string.IsNullOrEmpty(newPin) || newPin.Length != 4 || !newPin.All(char.IsDigit))
         {
@@ -992,7 +1143,7 @@ public class AccountController : Controller
         {
             await _residents.SetApartmentPinAsync(ctx.Payload!.BuildingId, ctx.Payload.AptId, newPin, "setpin-link");
             _log.LogInformation("[SetPin] PIN set via link for apartment {Apt} in building {B}",
-                ctx.Apt.Number, ctx.Payload.BuildingId);
+                ctx.Apartment.ApartmentNumber, ctx.Payload.BuildingId);
         }
         catch (Exception ex)
         {
@@ -1018,24 +1169,19 @@ public class AccountController : Controller
         if (!string.Equals(payload.Purpose, "setpin", StringComparison.OrdinalIgnoreCase))
             return new QuickLoginContext { Error = Loc.T("Invalid_Token") };
 
-        var building = await _buildings.GetByIdAsync(payload.BuildingId);
-        if (building == null)
-            return new QuickLoginContext { Error = Loc.T("The_Building_Does_Not_Exist") };
-
-        var apt = building.Apartments.FirstOrDefault(a => a.Id == payload.AptId);
-        if (apt == null)
+        var apartment = await _targetQr.GetApartmentAsync(
+            payload.BuildingId, payload.AptId, requireActive: true, HttpContext.RequestAborted);
+        if (apartment is null)
             return new QuickLoginContext { Error = Loc.T("The_Apartment_Does_Not_Exist") };
 
-        return new QuickLoginContext { Payload = payload, Building = building, Apt = apt };
+        return new QuickLoginContext { Payload = payload, Apartment = apartment };
     }
 
     private sealed class QuickLoginContext
     {
         public string? Error { get; init; }
         public QuickTokenPayload? Payload { get; init; }
-        public Building? Building { get; init; }
-        public Apartment? Apt { get; init; }
-        public BuildingManagementMvc.Data.Entities.ResidentEntity? Resident { get; init; }
+        public QrApartmentInfo? Apartment { get; init; }
     }
 
     private async Task<QuickLoginContext> ResolveQuickLoginAsync(string token, QrSecurityService qrSecurity)
@@ -1047,28 +1193,29 @@ public class AccountController : Controller
         var payload = validation.Data!;
 
         // توكن تعيين الـ PIN مايعملش دخول
-        if (!string.Equals(payload.Purpose, "login", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(payload.Purpose, "login", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(payload.Purpose, "recovery", StringComparison.OrdinalIgnoreCase))
             return new QuickLoginContext { Error = Loc.T("Invalid_Token") };
 
-        var building = await _buildings.GetByIdAsync(payload.BuildingId);
-        if (building == null)
-            return new QuickLoginContext { Error = Loc.T("The_Building_Does_Not_Exist") };
-
-        var apt = building.Apartments.FirstOrDefault(a => a.Id == payload.AptId);
-        if (apt == null)
+        var apartment = await _targetQr.GetApartmentAsync(
+            payload.BuildingId, payload.AptId, requireActive: true, HttpContext.RequestAborted);
+        if (apartment is null)
             return new QuickLoginContext { Error = Loc.T("The_Apartment_Does_Not_Exist") };
 
         var residents = await _residents.GetByApartmentAsync(payload.BuildingId, payload.AptId);
-        var resident = residents.FirstOrDefault(r => r.IsPrimary && !r.IsDisabled && r.IsActive)
-                    ?? residents.FirstOrDefault(r => !r.IsDisabled && r.IsActive);
+        // Recovery must resolve to the explicitly designated primary resident;
+        // it must never fall back to another occupant's identity.
+        var resident = string.Equals(payload.Purpose, "recovery", StringComparison.OrdinalIgnoreCase)
+            ? residents.FirstOrDefault(r => r.IsPrimary && !r.IsDisabled && r.IsActive)
+            : residents.FirstOrDefault(r => r.IsPrimary && !r.IsDisabled && r.IsActive)
+                ?? residents.FirstOrDefault(r => !r.IsDisabled && r.IsActive);
         if (resident == null)
             return new QuickLoginContext { Error = Loc.T("The_Apartment_Does_Not_Exist") };
 
         return new QuickLoginContext
         {
             Payload = payload,
-            Building = building,
-            Apt = apt,
+            Apartment = apartment,
             Resident = resident
         };
     }

@@ -19,17 +19,16 @@ namespace BuildingManagementMvc.Controllers;
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ViewReports)]
 public class ReportsController : Controller
 {
-    private readonly BuildingsService _buildings;
     private readonly ReportsService _reports;
-    private readonly WalletService _wallet;
     private readonly IAuditLogger _audit;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReportsController"/> class.
     /// </summary>
-    public ReportsController(BuildingsService buildings, ReportsService reports, WalletService wallet, IAuditLogger audit)
+    public ReportsController(ReportsService reports, IAuditLogger audit)
     {
-        _buildings = buildings; _reports = reports; _wallet = wallet; _audit = audit;
+        _reports = reports;
+        _audit = audit;
     }
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
@@ -43,29 +42,21 @@ public class ReportsController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(string? range)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
-
-        var r = string.IsNullOrWhiteSpace(range) ? "6m" : range;
-        var vm = _reports.BuildReport(building, r, WalletService.CurrentMonthKey());
+        var selectedRange = string.IsNullOrWhiteSpace(range) ? "6m" : range;
+        var currentMonth = await _reports.GetCurrentPeriodKeyAsync(BuildingId, HttpContext.RequestAborted);
+        var vm = await _reports.BuildReportAsync(
+            BuildingId, selectedRange, currentMonth, HttpContext.RequestAborted);
         return View(vm);
     }
 
-    /// <summary>
-    /// Exports the CSV.
-    /// </summary>
-    /// <remarks>
-    /// HTTP GET.
-    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> ExportCsv(string? range)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
-
-        var r = string.IsNullOrWhiteSpace(range) ? "6m" : range;
-        var currentMonth = WalletService.CurrentMonthKey();
-        var vm = _reports.BuildReport(building, r, currentMonth);
+        var selectedRange = string.IsNullOrWhiteSpace(range) ? "6m" : range;
+        var currentMonth = await _reports.GetCurrentPeriodKeyAsync(BuildingId, HttpContext.RequestAborted);
+        var vm = await _reports.BuildReportAsync(
+            BuildingId, selectedRange, currentMonth, HttpContext.RequestAborted);
+        var building = vm.Building;
 
         var sb = new StringBuilder();
         sb.Append('\uFEFF');
@@ -83,21 +74,20 @@ public class ReportsController : Controller
         Row("");
         Row(Loc.T("Monthly_2"));
         Row(Loc.T("Month"), Loc.T("Collected_2"), Loc.T("Revenues_2"), Loc.T("Expenses"), Loc.T("Net"));
-        foreach (var mp in vm.Monthly)
-            Row(mp.Month, mp.Collected.ToString("0.##"), mp.Revenues.ToString("0.##"), mp.Expenses.ToString("0.##"),
-                (mp.Collected + mp.Revenues - mp.Expenses).ToString("0.##"));
+        foreach (var point in vm.Monthly)
+            Row(point.Month, point.Collected.ToString("0.##"), point.Revenues.ToString("0.##"),
+                point.Expenses.ToString("0.##"), (point.Collected + point.Revenues - point.Expenses).ToString("0.##"));
 
         Row("");
         Row(Loc.T("Wallet_Distribution_Current_Month_2"));
         Row(Loc.T("Apartment"), Loc.T("Owner"), Loc.T("Balance"));
-        foreach (var a in building.Apartments)
+        foreach (var point in vm.Wallet)
         {
-            var bal = _wallet.ComputeWalletBalance(building, a.Id, currentMonth);
-            Row(a.Number.ToString(), a.Owner ?? "", bal.ToString("0.##"));
+            Row(point.Number.ToString(), point.Owner ?? "", point.Balance.ToString("0.##"));
         }
 
         await _audit.LogAsync("report_export", building.Id, userId: User.Identity?.Name ?? "admin",
-            userRole: "admin", metadata: new { format = "CSV", range = r });
+            userRole: "admin", metadata: new { format = "CSV", range = selectedRange });
 
         var bytes = Encoding.UTF8.GetBytes(sb.ToString());
         var fileName = $"report-{building.BuildingNumber}-{DateTime.UtcNow:yyyy-MM-dd}.csv";

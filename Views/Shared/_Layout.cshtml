@@ -8,11 +8,8 @@
 @{
     var currentCulture = Context.Features.Get<IRequestCultureFeature>()?.RequestCulture?.UICulture?.Name ?? "ar";
     
-    // ✅ نأخد أول حرفين بس (عشان لو جاي en-US أو en-GB)
-    if (currentCulture.Length > 2) currentCulture = currentCulture.Substring(0, 2);
-
-    var isRtl = currentCulture == "ar";
-    var dir = isRtl ? "rtl" : "ltr";
+    var dir = BuildingManagementMvc.Services.LanguageAdministrationService.GetDirection(currentCulture).ToLowerInvariant();
+    var isRtl = dir == "rtl";
 
     var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
     var isAuth = User.Identity?.IsAuthenticated == true;
@@ -45,6 +42,7 @@
     }
 
     @await RenderSectionAsync("Styles", required: false)
+    <link rel="stylesheet" href="~/css/ui-refresh.css" asp-append-version="true" />
 </head>
 <body class="@(isRtl ? "rtl" : "ltr") @(showSidebar ? "has-sidebar" : "no-sidebar")">
 

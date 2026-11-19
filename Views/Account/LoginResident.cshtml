@@ -59,11 +59,11 @@
             </div>
 
             @* ═══════════════════════════════════════════════════════ *@
-            @* WhatsApp                                                    *@
+            @* Phone                                                    *@
             @* ═══════════════════════════════════════════════════════ *@
             <div class="field">
-                <label>@Loc.T("WhatsApp_Number")</label>
-                <input name="Whatsapp" type="tel" class="form-control"
+                <label>@Loc.T("Phone_Number")</label>
+                <input name="Phone" type="tel" class="form-control"
                        placeholder="+201001234567" required dir="ltr" />
             </div>
 
@@ -73,10 +73,11 @@
             <div class="field">
                 <label>PIN</label>
                 <input name="Pin" type="password" class="form-control"
-                       required maxlength="4" inputmode="numeric" />
+                       required maxlength="12" inputmode="numeric" />
             </div>
 
             <button type="submit" class="btn btn-brand w-100">@Loc.T("Log_In")</button>
+            <div class="text-center mt-3"><a asp-controller="PhoneCorrection" asp-action="Request">رقمي غير صحيح أو أحتاج إلى تصحيحه</a></div>
         </form>
     </div>
 </div>

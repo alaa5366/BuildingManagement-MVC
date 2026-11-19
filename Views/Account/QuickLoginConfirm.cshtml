@@ -16,6 +16,7 @@
 
         @* الدخول بيحصل بالضغط على الزرار (POST) — مش بمجرد فتح الرابط، عشان معاينة الرابط ماتحرقش الـ QR *@
         <form method="post" asp-action="QuickLoginConfirm">
+            @Html.AntiForgeryToken()
             <input type="hidden" name="token" value="@ViewBag.Token" />
             <button type="submit" class="btn btn-brand mt-3">@Loc.T("Log_In")</button>
         </form>

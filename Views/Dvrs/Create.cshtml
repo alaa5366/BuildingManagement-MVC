@@ -6,7 +6,8 @@
    ============================================================================= *@
 @{
     ViewData["Title"] = Loc.T("Add_DVR");
-    var building = ViewBag.Building as BuildingManagementMvc.Models.Building;
+    var buildingName = ViewBag.BuildingName as string;
+    var buildingNumber = ViewBag.BuildingNumber as string;
     var buildingId = ViewBag.BuildingId as string;
 }
 
@@ -19,7 +20,7 @@
                 @Loc.T("Add_DVR")
             </h3>
             <p class="text-muted mb-0">
-                @building?.Name — @building?.BuildingNumber
+                @buildingName — @buildingNumber
             </p>
         </div>
         <a asp-action="Index" asp-route-buildingId="@buildingId"

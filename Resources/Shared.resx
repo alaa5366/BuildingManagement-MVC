@@ -4172,4 +4172,27 @@ This operation can take a few seconds.</value>
   <data name="Backup_Collection_cameras" xml:space="preserve"><value>Cameras</value></data>
   <data name="Backup_Collection_qrTokens" xml:space="preserve"><value>QR tokens</value></data>
   <data name="Backup_Collection_qrUsages" xml:space="preserve"><value>QR token usage</value></data>
+  <data name="Resident_Change_PIN" xml:space="preserve">
+    <value>Change your PIN</value>
+  </data>
+  <data name="Temporary_PIN_Replace_Notice" xml:space="preserve">
+    <value>Your temporary PIN must be replaced before you continue.</value>
+  </data>
+
+
+  <data name="PIN_4_12_Digits" xml:space="preserve">
+    <value>Use 4–12 digits.</value>
+  </data>
+  <data name="Temporary_PIN_1234_Not_Allowed" xml:space="preserve">
+    <value>The temporary PIN 1234 cannot be reused.</value>
+  </data>
+  <data name="Save_New_PIN" xml:space="preserve">
+    <value>Save new PIN</value>
+  </data>
+  <data name="Choose_New_PIN_And_Confirm" xml:space="preserve">
+    <value>Choose a new 4–12 digit PIN, different from 1234, and confirm it.</value>
+  </data>
+  <data name="Phone_Correction_Requests" xml:space="preserve">
+    <value>Phone correction requests</value>
+  </data>
 </root>

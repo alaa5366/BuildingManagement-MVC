@@ -1,0 +1,25 @@
+DatabaseName
+------------
+BuildingManagement_RestoreTest
+MigrationId
+-----------
+20261118182110_Phase06_IdentityAuthorizationFoundation
+20261118184850_Phase07_OwnershipRecordProvenance
+SourceTable|MappingStatus|Rows
+-----------|-------------|----
+Residents|0|79
+Users|0|5
+InvalidPendingRows
+------------------
+0
+Action|AuditRows|SafeAggregateDetails
+------|---------|--------------------
+identity.mapping.candidates.imported|1|{"usersInserted":5,"residentsInserted":79}
+Persons
+-------
+0
+UserAccounts
+------------
+0
+
+Verified pre-write COPY_ONLY backup: C:\Users\alaa5\AppData\Local\Temp\BuildingManagement_RestoreTest_IdentityCandidates-pre-20261118-211500.bak (13,230,080 bytes). RESTORE VERIFYONLY WITH CHECKSUM passed.

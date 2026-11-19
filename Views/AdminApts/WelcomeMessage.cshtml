@@ -6,9 +6,11 @@
    ============================================================================= *@
 @{
     ViewData["Title"] = Loc.T("Welcome_Message");
-    var building = (Building)ViewBag.Building;
-    var apt = (Apartment)ViewBag.Apt;
-    var floor = (Floor?)ViewBag.Floor;
+    var buildingName = (string)ViewBag.BuildingName;
+    var buildingNumber = (string)ViewBag.BuildingNumber;
+    var apartmentNumber = (int)ViewBag.ApartmentNumber;
+    var apartmentPhone = (string)ViewBag.ApartmentPhone;
+    var floorLabel = (string)ViewBag.FloorLabel;
     var quickUrl = (string)ViewBag.QuickUrl;
     var messageText = (string)ViewBag.MessageText;
     var waLink = (string)ViewBag.WhatsAppLink;
@@ -16,14 +18,14 @@
     var validityHours = (int)ViewBag.ValidityHours;
 
     // ✅ نبني اسم الملف هنا كـ C# string — أنضف من الـ JS
-    var fileName = $"QR-Apt-{apt.Number}-{building.BuildingNumber}.png";
+    var fileName = $"QR-Apt-{apartmentNumber}-{buildingNumber}.png";
 }
 
 <div class="container" style="max-width: 800px;">
 
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>@Loc.T("Welcome_Message_Apartment_N", apt.Number)</h2>
-        <span class="badge bg-secondary">@building.Name</span>
+        <h2>@Loc.T("Welcome_Message_Apartment_N", apartmentNumber)</h2>
+        <span class="badge bg-secondary">@buildingName</span>
     </div>
 
     @* ===== الخطوات ===== *@
@@ -76,7 +78,7 @@
                 @Loc.T("Tap_The_Button_To_Open_WhatsApp")
             </p>
             <a href="@waLink" target="_blank" class="btn btn-success btn-lg">
-                @Loc.T("Send_Via_WhatsApp_N", apt.Phone)
+                @Loc.T("Send_Via_WhatsApp_N", apartmentPhone)
             </a>
             <div class="mt-2 text-muted small">
                 @Loc.T("WhatsApp_Will_Open_On_Your_Device")

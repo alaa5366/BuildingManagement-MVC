@@ -16,15 +16,32 @@ public class AppDbContext : DbContext
     /// </summary>
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-    private void EnsureAuditLogIsAppendOnly()
+    private void EnsureAppendOnlyAndPostedFinanceIsImmutable()
     {
         ChangeTracker.DetectChanges();
         if (ChangeTracker.Entries<AuditLogEntity>()
+            .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted) ||
+            ChangeTracker.Entries<AuditEventEntity>()
             .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
         {
             throw new InvalidOperationException(
-                "Audit log entries are append-only and cannot be updated or deleted by the application.");
+                "Business audit events are append-only and cannot be updated or deleted by the application.");
         }
+
+        if (ChangeTracker.Entries<InvoiceIssueEntity>()
+            .Any(entry => entry.State == EntityState.Deleted ||
+                entry.State == EntityState.Modified &&
+                !string.IsNullOrWhiteSpace(entry.Property(x => x.SnapshotJson).OriginalValue)))
+            throw new InvalidOperationException("Issued invoices are immutable; reprints must use the stored invoice snapshot.");
+
+        if (ChangeTracker.Entries<LedgerEntryEntity>()
+            .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Ledger entries are immutable; corrections require reversal transactions.");
+
+        if (ChangeTracker.Entries<LedgerTransactionEntity>()
+            .Any(entry => (entry.State is EntityState.Modified or EntityState.Deleted) &&
+                          entry.Property(x => x.Status).OriginalValue == LedgerTransactionStatus.Posted))
+            throw new InvalidOperationException("Posted ledger transactions are immutable; corrections require reversal transactions.");
     }
 
     /// <summary>
@@ -32,7 +49,7 @@ public class AppDbContext : DbContext
     /// </summary>
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
-        EnsureAuditLogIsAppendOnly();
+        EnsureAppendOnlyAndPostedFinanceIsImmutable();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
@@ -43,7 +60,7 @@ public class AppDbContext : DbContext
         bool acceptAllChangesOnSuccess,
         CancellationToken cancellationToken = default)
     {
-        EnsureAuditLogIsAppendOnly();
+        EnsureAppendOnlyAndPostedFinanceIsImmutable();
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
@@ -112,6 +129,8 @@ public class AppDbContext : DbContext
     /// Gets the notifications.
     /// </summary>
     public DbSet<NotificationEntity> Notifications => Set<NotificationEntity>();
+    /// <summary>Saved building-scoped WhatsApp message templates.</summary>
+    public DbSet<SavedWhatsAppTemplateEntity> SavedWhatsAppTemplates => Set<SavedWhatsAppTemplateEntity>();
     /// <summary>
     /// Gets the polls.
     /// </summary>
@@ -172,6 +191,40 @@ public class AppDbContext : DbContext
     /// Gets the residents.
     /// </summary>
     public DbSet<ResidentEntity> Residents => Set<ResidentEntity>();
+
+    public DbSet<PresenceSessionEntity> PresenceSessions => Set<PresenceSessionEntity>();
+    public DbSet<PresenceHeartbeatEntity> PresenceHeartbeats => Set<PresenceHeartbeatEntity>();
+    public DbSet<AuditEventEntity> AuditEvents => Set<AuditEventEntity>();
+
+    // Canonical identity and authorization foundation (Gate A).
+    public DbSet<PersonEntity> Persons => Set<PersonEntity>();
+    public DbSet<UserAccountEntity> UserAccounts => Set<UserAccountEntity>();
+    public DbSet<UserCredentialEntity> UserCredentials => Set<UserCredentialEntity>();
+    public DbSet<UserTwoFactorSettingEntity> UserTwoFactorSettings => Set<UserTwoFactorSettingEntity>();
+    public DbSet<UserRecoveryCodeEntity> UserRecoveryCodes => Set<UserRecoveryCodeEntity>();
+    public DbSet<RoleDefinitionEntity> RoleDefinitions => Set<RoleDefinitionEntity>();
+    public DbSet<RolePermissionEntity> RolePermissions => Set<RolePermissionEntity>();
+    public DbSet<UserRoleAssignmentEntity> UserRoleAssignments => Set<UserRoleAssignmentEntity>();
+    public DbSet<ApartmentOwnershipEntity> ApartmentOwnerships => Set<ApartmentOwnershipEntity>();
+    public DbSet<ApartmentOccupancyEntity> ApartmentOccupancies => Set<ApartmentOccupancyEntity>();
+    public DbSet<ApartmentAccessGrantEntity> ApartmentAccessGrants => Set<ApartmentAccessGrantEntity>();
+    public DbSet<AccountPermissionOverrideEntity> AccountPermissionOverrides => Set<AccountPermissionOverrideEntity>();
+    public DbSet<LegacyIdentityMapEntity> LegacyIdentityMaps => Set<LegacyIdentityMapEntity>();
+    public DbSet<PersonPhoneChangeRequestEntity> PersonPhoneChangeRequests => Set<PersonPhoneChangeRequestEntity>();
+
+    public DbSet<FinancialPeriodEntity> FinancialPeriods => Set<FinancialPeriodEntity>();
+    public DbSet<PaymentDepositEntity> PaymentDeposits => Set<PaymentDepositEntity>();
+    public DbSet<LedgerTransactionEntity> LedgerTransactions => Set<LedgerTransactionEntity>();
+    public DbSet<LedgerEntryEntity> LedgerEntries => Set<LedgerEntryEntity>();
+    public DbSet<FinancialSourceLinkEntity> FinancialSourceLinks => Set<FinancialSourceLinkEntity>();
+    public DbSet<FinancialAllocationBatchEntity> FinancialAllocationBatches => Set<FinancialAllocationBatchEntity>();
+    public DbSet<FinancialAllocationLineEntity> FinancialAllocationLines => Set<FinancialAllocationLineEntity>();
+    public DbSet<FinancialReconciliationRunEntity> FinancialReconciliationRuns => Set<FinancialReconciliationRunEntity>();
+    public DbSet<FinancialReconciliationDifferenceEntity> FinancialReconciliationDifferences => Set<FinancialReconciliationDifferenceEntity>();
+    public DbSet<InvoiceIssueEntity> InvoiceIssues => Set<InvoiceIssueEntity>();
+    public DbSet<LanguageEntity> Languages => Set<LanguageEntity>();
+    public DbSet<TranslationEntryEntity> TranslationEntries => Set<TranslationEntryEntity>();
+    public DbSet<TranslationValueEntity> TranslationValues => Set<TranslationValueEntity>();
     protected override void ConfigureConventions(ModelConfigurationBuilder cb)
     {
         cb.Properties<decimal>().HavePrecision(18, 2);
@@ -182,6 +235,13 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
+        IdentityModelConfiguration.Configure(mb);
+        mb.Entity<LanguageEntity>(e => { e.ToTable("Languages"); e.HasKey(x => x.CultureCode); e.Property(x => x.CultureCode).HasMaxLength(20); e.Property(x => x.EnglishName).HasMaxLength(100).IsRequired(); e.Property(x => x.NativeName).HasMaxLength(100).IsRequired(); e.Property(x => x.Direction).HasMaxLength(12).IsRequired(); e.Property(x => x.FallbackCulture).HasMaxLength(20); e.Property(x => x.Flag).HasMaxLength(8); e.Property(x => x.UpdatedBy).HasMaxLength(128); });
+        mb.Entity<TranslationEntryEntity>(e => { e.ToTable("TranslationEntries"); e.HasKey(x => x.Key); e.Property(x => x.Key).HasMaxLength(200); e.Property(x => x.Category).HasMaxLength(40).IsRequired(); e.Property(x => x.SourceGroup).HasMaxLength(160).IsRequired(); e.Property(x => x.Description).HasMaxLength(500); e.Property(x => x.UpdatedBy).HasMaxLength(128); e.Property(x => x.RowVersion).IsRowVersion(); e.HasIndex(x => new { x.Category, x.SourceGroup }); });
+        mb.Entity<TranslationValueEntity>(e => { e.ToTable("TranslationValues"); e.HasKey(x => new { x.Key, x.CultureCode }); e.Property(x => x.Key).HasMaxLength(200); e.Property(x => x.CultureCode).HasMaxLength(20); e.Property(x => x.Value).HasMaxLength(4000).IsRequired(); e.Property(x => x.UpdatedBy).HasMaxLength(128); e.HasOne<TranslationEntryEntity>().WithMany().HasForeignKey(x => x.Key).OnDelete(DeleteBehavior.Cascade); e.HasOne<LanguageEntity>().WithMany().HasForeignKey(x => x.CultureCode).OnDelete(DeleteBehavior.Restrict); });
+        FinanceModelConfiguration.Configure(mb);
+        OperationalModelConfiguration.Configure(mb);
+
         // -----------------------------------------------------------------
         // Phase 04: Explicit SQL Server lengths for PK/FK and key columns.
         // Keep every FK component aligned with its principal key column.
@@ -243,6 +303,7 @@ public class AppDbContext : DbContext
         mb.Entity<AuditLogEntity>().Property(x => x.ApartmentId).HasMaxLength(64);
         mb.Entity<AuditLogEntity>().Property(x => x.MonthKey).HasMaxLength(7);
 
+        mb.Entity<SavedWhatsAppTemplateEntity>().Property(x => x.BuildingId).HasMaxLength(64);
         mb.Entity<NotificationEntity>().Property(x => x.BuildingId).HasMaxLength(64);
         mb.Entity<NotificationEntity>().Property(x => x.Id).HasMaxLength(64);
         mb.Entity<NotificationEntity>().Property(x => x.RecipientApartmentId).HasMaxLength(64);

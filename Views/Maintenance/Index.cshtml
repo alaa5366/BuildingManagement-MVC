@@ -7,7 +7,7 @@
 @model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.MaintenanceRecord>
 @{
     ViewData["Title"] = Loc.T("Maintenance");
-    var building = (Building)ViewBag.Building;
+    var buildingName = (string)ViewBag.BuildingName;
     string[] statuses = { "open", "inprogress", "done", "cancelled" };
     string StatusLabel(string s) => s switch { "open" => Loc.T("Open_3"), "inprogress" => Loc.T("In_Progress"), "done" => Loc.T("Done"), "cancelled" => Loc.T("Cancelled"), _ => s };
     var routeValuesStr = ViewBag.RouteValues as Dictionary<string, string> ?? new();
@@ -16,14 +16,14 @@
     var pageTotalCost = Model.Items.Sum(m => m.Cost);
 }
 
-<h3 class="mb-3">@Loc.T("Maintenance_N_N", building.Name, Model.TotalItems)</h3>
+<h3 class="mb-3">@Loc.T("Maintenance_N_N", buildingName, Model.TotalItems)</h3>
 
 @if (TempData["Message"] != null)
 {
     <div class="alert alert-success">@TempData["Message"]</div>
 }
 
-<div class="bg-white rounded shadow-sm p-3 mb-3">
+<div class="ui-panel ui-form-panel p-3 mb-3">
     <h5>@Loc.T("New_Maintenance_Record")</h5>
     <form method="post" asp-action="Add" class="row g-2 align-items-end">
         <div class="col-md-3">
@@ -86,7 +86,7 @@ else
 {
     foreach (var m in Model.Items)
     {
-        <div class="bg-white rounded shadow-sm p-3 mb-2">
+        <div class="ui-record-card p-3 mb-2">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
                 <div>
                     <div class="fw-bold">@m.Title</div>

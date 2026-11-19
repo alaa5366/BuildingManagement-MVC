@@ -1,0 +1,58 @@
+@{
+    ViewData["Title"] = "طلب تصحيح رقم الهاتف";
+    var buildings = ViewBag.Buildings as List<Building> ?? new();
+}
+<div class="container py-4" style="max-width:560px">
+    <h2>طلب تصحيح رقم الهاتف</h2>
+    <p>لن يتغير رقمك تلقائيًا. ستتحقق إدارة العمارة من هويتك قبل اعتماد الرقم الجديد.</p>
+    @if (ViewBag.Message != null) { <div class="alert alert-info">@ViewBag.Message</div> }
+    <form method="post" asp-action="Request">
+        @Html.AntiForgeryToken()
+        <label class="form-label">رقم الهاتف المسجل حاليًا</label>
+        <input class="form-control mb-3" name="previousPhone" type="tel" required maxlength="32" dir="ltr" />
+        <label class="form-label">رقم الهاتف الجديد</label>
+        <input class="form-control mb-3" name="requestedPhone" type="tel" required maxlength="32" dir="ltr" />
+        <label class="form-label">العمارة</label>
+        <select class="form-select mb-3" name="buildingId" id="buildingId" required>
+            <option value="">اختر العمارة</option>
+            @foreach (var b in buildings) { <option value="@b.Id">@b.BuildingNumber — @b.Name</option> }
+        </select>
+        <label class="form-label">الدور</label>
+        <select class="form-select mb-3" id="floorId" required disabled><option value="">اختر العمارة أولاً</option></select>
+        <label class="form-label">الشقة</label>
+        <select class="form-select mb-3" name="apartmentId" id="apartmentId" required disabled><option value="">اختر الدور أولاً</option></select>
+        <button class="btn btn-primary" type="submit">إرسال طلب المراجعة</button>
+        <a class="btn btn-link" asp-controller="Account" asp-action="UnifiedLogin">العودة للدخول</a>
+    </form>
+</div>
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const building = document.getElementById('buildingId');
+    const floor = document.getElementById('floorId');
+    const apartment = document.getElementById('apartmentId');
+    building.addEventListener('change', async () => {
+        floor.innerHTML = '<option value="">اختر الدور</option>';
+        apartment.innerHTML = '<option value="">اختر الدور أولاً</option>';
+        floor.disabled = apartment.disabled = true;
+        if (!building.value) return;
+        const response = await fetch('/Account/GetFloors?buildingId=' + encodeURIComponent(building.value));
+        if (!response.ok) return;
+        const items = await response.json();
+        items.forEach(item => floor.add(new Option(item.label, item.id)));
+        floor.disabled = items.length === 0;
+    });
+    floor.addEventListener('change', async () => {
+        apartment.innerHTML = '<option value="">اختر الشقة</option>';
+        apartment.disabled = true;
+        if (!building.value || !floor.value) return;
+        const url = '/Account/GetApartments?buildingId=' + encodeURIComponent(building.value) + '&floorId=' + encodeURIComponent(floor.value);
+        const response = await fetch(url);
+        if (!response.ok) return;
+        const items = await response.json();
+        items.forEach(item => apartment.add(new Option(item.label, item.id)));
+        apartment.disabled = items.length === 0;
+    });
+});
+</script>
+}

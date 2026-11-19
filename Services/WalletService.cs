@@ -220,7 +220,7 @@ public class WalletService
 
     // -------- Distribution --------
     /// <summary>
-    /// Splits the month's expenses equally between the open apartments (each share rounded to two decimals) and stores the result in the month.
+    /// Splits the month's expenses equally between open apartments using deterministic largest-remainder cent allocation.
     /// </summary>
     public Dictionary<string, decimal> RecalculateDistribution(Building building, string monthKey)
     {
@@ -250,7 +250,7 @@ public class WalletService
     }
 
     /// <summary>
-    /// Splits the month's revenues equally between the open apartments and stores the result in the month.
+    /// Splits the month's revenues equally between open apartments using deterministic largest-remainder cent allocation.
     /// </summary>
     public Dictionary<string, decimal> RecalculateRevenueDistribution(Building building, string monthKey)
     {
@@ -324,16 +324,26 @@ public class WalletService
     /// </summary>
     public WalletAdjustment AddWalletAdjustment(Building building, string aptId, decimal amount, string? reason, string monthKey, string createdBy)
     {
+        ArgumentNullException.ThrowIfNull(building);
+        FinanceCommandValidation.ValidateMonthKey(monthKey);
+        FinanceCommandValidation.ValidateActor(createdBy, nameof(createdBy));
+        if (string.IsNullOrWhiteSpace(aptId) || !building.Apartments.Any(a => a.Id == aptId))
+            throw new ArgumentException("Apartment must belong to the target building.", nameof(aptId));
+        if (amount == 0 || decimal.Round(amount, 2, MidpointRounding.AwayFromZero) != amount)
+            throw new ArgumentOutOfRangeException(nameof(amount), "Adjustment must be non-zero and use whole currency cents.");
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new ArgumentException("A reason is required for every wallet adjustment.", nameof(reason));
+
         building.WalletAdjustments ??= new List<WalletAdjustment>();
         var adj = new WalletAdjustment
         {
             Id = "adj-" + Guid.NewGuid().ToString("N"),
             AptId = aptId,
             Amount = amount,
-            Reason = reason ?? "",
+            Reason = reason.Trim(),
             MonthKey = monthKey,
             CreatedAt = DateTime.UtcNow.ToString("o"),
-            CreatedBy = createdBy
+            CreatedBy = createdBy.Trim()
         };
         building.WalletAdjustments.Add(adj);
         return adj;
@@ -766,19 +776,30 @@ public class WalletService
         }
     }
 
-    // Allocate rounded shares while assigning any rounding remainder to the final apartment.
+    // Deterministic equal allocation using the largest-remainder method.
+    // Amounts are rounded to cents once; residual cents are assigned by immutable ApartmentId order.
+    // This guarantees conservation and makes results independent of SQL/in-memory row ordering.
     private static void DistributeExactCents(decimal total, IReadOnlyList<Apartment> apartments,
         IDictionary<string, decimal> distribution)
     {
         if (apartments.Count == 0) return;
-        var share = Math.Round(total / apartments.Count, 2, MidpointRounding.AwayFromZero);
-        decimal allocated = 0m;
-        for (var i = 0; i < apartments.Count; i++)
+
+        var ordered = apartments
+            .OrderBy(a => a.Id, StringComparer.Ordinal)
+            .ToArray();
+        var totalCents = decimal.ToInt64(Math.Round(total * 100m, 0, MidpointRounding.AwayFromZero));
+        var baseCents = Math.DivRem(totalCents, ordered.Length, out var remainderCents);
+        var residualCount = Math.Abs(remainderCents);
+        var residualSign = Math.Sign(remainderCents);
+
+        for (var i = 0; i < ordered.Length; i++)
         {
-            var amount = i == apartments.Count - 1 ? total - allocated : share;
-            distribution[apartments[i].Id] = amount;
-            allocated += amount;
+            var cents = baseCents + (i < residualCount ? residualSign : 0L);
+            distribution[ordered[i].Id] = cents / 100m;
         }
+
+        if (distribution.Values.Sum() != Math.Round(total, 2, MidpointRounding.AwayFromZero))
+            throw new InvalidOperationException("Financial allocation failed to conserve the source total.");
     }
 
 }

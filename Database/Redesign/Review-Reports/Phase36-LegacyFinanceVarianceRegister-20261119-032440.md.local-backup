@@ -1,0 +1,26 @@
+﻿Registration state: ALREADY REGISTERED (idempotent; no duplicate rows will be created)
+Database: BuildingManagement_RestoreTest
+Expense: source total=4700.00; existing apartment shares=4700.22; variance=+0.22
+Revenue: source total=27173.00; existing apartment shares=27173.04; variance=+0.04
+Scope: exact legacy building/month discovered from source aggregates; no apartment-level attribution.
+Disposition: Preserve as a documented legacy rounding/allocation variance; no auto-allocation, ledger posting, wallet adjustment, or source correction.
+No-op: this deterministic Phase36 registration is already present.
+Verified reconciliation difference rows: 2
+# Phase 36 - Legacy finance variance register
+
+- Run: 2026-11-19T03:24:41.0196098+02:00
+- Mode: APPLY
+
+## Registered historical differences
+- Expenses: source total 4,700.00; existing apartment shares 4,700.22; variance +0.22.
+- Revenues: source total 27,173.00; existing apartment shares 27,173.04; variance +0.04.
+
+Both differences are separate reconciliation items classified as LegacyRoundingVariance. They are not assigned to apartments and are not posted to the ledger or wallet.
+
+## Safeguards
+- Source rows and the 158 Phase29 finance evidence records are read only.
+- No FinancialPeriod, LedgerTransaction, LedgerEntry, AllocationBatch, AllocationLine, deposit posting, wallet adjustment, or balance is created.
+- The register uses one deterministic run ID and deterministic difference IDs; rerunning is idempotent.
+- Building and period scope are resolved from matching source aggregates; no apartment scope is inferred.
+- No accounting correction or write-off is implied; the variance remains visible and unresolved for future accounting-owner disposition.
+

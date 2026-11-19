@@ -1,0 +1,6 @@
+﻿"SchemaName","TableName","ColumnName","SqlType","MaxLengthBytes","NumericPrecision","NumericScale","IsNullable","CollationName","KeyIndexName","KeyOrdinal"
+"dbo","Apartments","BuildingId","nvarchar","128","0","0","False","SQL_Latin1_General_CP1_CI_AS","PK_Apartments","1"
+"dbo","Apartments","BuildingId","nvarchar","128","0","0","False","SQL_Latin1_General_CP1_CI_AS","IX_Apartments_BuildingId_FloorId","1"
+"dbo","Apartments","BuildingId","nvarchar","128","0","0","False","SQL_Latin1_General_CP1_CI_AS","IX_Apartments_BuildingId_Number","1"
+"dbo","Apartments","Id","nvarchar","128","0","0","False","SQL_Latin1_General_CP1_CI_AS","PK_Apartments","2"
+"dbo","Buildings","Id","nvarchar","128","0","0","False","SQL_Latin1_General_CP1_CI_AS","PK_Buildings","1"

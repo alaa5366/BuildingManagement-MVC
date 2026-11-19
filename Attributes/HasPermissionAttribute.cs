@@ -1,25 +1,25 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using BuildingManagementMvc.Services;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingManagementMvc.Attributes;
 
 /// <summary>
-/// Authorization filter that checks a single named permission for admins (super admins always pass). Redirects anonymous users to the login page.
+/// Checks an explicit administrator permission. Target-schema identities are evaluated
+/// against live role assignments and account overrides; legacy identities retain the
+/// transitional permission-claim behavior.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false)]
-public class HasPermissionAttribute : Attribute, IAuthorizationFilter
+public class HasPermissionAttribute : Attribute, IAsyncAuthorizationFilter
 {
     private readonly string _permission;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="HasPermissionAttribute"/> class.
-    /// </summary>
+    /// <summary>Initializes the filter with a permission key.</summary>
     public HasPermissionAttribute(string permission) => _permission = permission;
 
-    /// <summary>
-    /// Handles the authorization.
-    /// </summary>
-    public void OnAuthorization(AuthorizationFilterContext context)
+    /// <inheritdoc />
+    public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
         var user = context.HttpContext.User;
 
@@ -30,15 +30,33 @@ public class HasPermissionAttribute : Attribute, IAuthorizationFilter
         }
 
         var role = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
-        if (role == "superadmin") return;
-
-        var hasPerm = false;
-        foreach (var claim in user.FindAll("perm"))
+        if (role != "admin" && role != "superadmin")
         {
-            if (claim.Value == _permission) { hasPerm = true; break; }
+            context.Result = new ForbidResult();
+            return;
         }
 
-        if (!hasPerm)
+        if (string.Equals(user.FindFirst("targetIdentityAccount")?.Value, "true", StringComparison.Ordinal))
+        {
+            var services = context.HttpContext.RequestServices;
+            var evaluator = services.GetRequiredService<AuthorizationEvaluator>();
+            var catalog = services.GetRequiredService<IAuthorizationPermissionCatalog>();
+            var resource = TargetAuthorizationResourceResolver.Resolve(user, catalog, _permission);
+            var result = await evaluator.EvaluateAsync(
+                user,
+                _permission,
+                resource,
+                DateTime.UtcNow,
+                context.HttpContext.RequestAborted);
+
+            if (result.Decision == AuthorizationDecision.Allow)
+                return;
+
+            context.Result = new ForbidResult();
+            return;
+        }
+
+        if (!user.HasClaim("perm", _permission))
             context.Result = new ForbidResult();
     }
 }

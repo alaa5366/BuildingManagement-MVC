@@ -7,7 +7,7 @@
 @model BuildingManagementMvc.Data.Entities.DvrEntity
 @{
     ViewData["Title"] = Loc.T("Edit_DVR");
-    var building = ViewBag.Building as BuildingManagementMvc.Models.Building;
+    var buildingName = ViewBag.BuildingName as string;
 }
 
 <div class="container-fluid">
@@ -19,7 +19,7 @@
                 @Loc.T("Edit_DVR")
             </h3>
             <p class="text-muted mb-0">
-                @Model.Name — @building?.Name
+                @Model.Name — @buildingName
             </p>
         </div>
         <a asp-action="Details" asp-route-id="@Model.Id"

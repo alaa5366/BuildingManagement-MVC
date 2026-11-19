@@ -300,4 +300,62 @@
   <data name="Next" xml:space="preserve"><value>Next</value></data>
   <data name="Reset" xml:space="preserve"><value>Reset</value></data>
   <data name="Message" xml:space="preserve"><value>Message</value></data>
+
+  <data name="Log_Center_Eyebrow" xml:space="preserve"><value>APPLICATION OBSERVABILITY</value></data>
+  <data name="Log_Center_Subtitle" xml:space="preserve"><value>Monitor runtime activity, investigate errors, and trace application events.</value></data>
+  <data name="Log_Overview" xml:space="preserve"><value>Log overview</value></data>
+  <data name="Log_Total_Matching" xml:space="preserve"><value>Total matching events</value></data>
+  <data name="Log_Visible_On_Page" xml:space="preserve"><value>Visible events</value></data>
+  <data name="Log_Current_Page" xml:space="preserve"><value>On this page</value></data>
+  <data name="Log_Errors_On_Page" xml:space="preserve"><value>Errors on page</value></data>
+  <data name="Log_Error_Fatal" xml:space="preserve"><value>Error / Fatal</value></data>
+  <data name="Log_Exceptions_On_Page" xml:space="preserve"><value>Exceptions on page</value></data>
+  <data name="Log_With_Exception" xml:space="preserve"><value>Events with exception</value></data>
+  <data name="Log_Sources_On_Page" xml:space="preserve"><value>Sources on page</value></data>
+  <data name="Log_Distinct_Sources" xml:space="preserve"><value>Distinct source contexts</value></data>
+  <data name="Log_Explore" xml:space="preserve"><value>EXPLORE</value></data>
+  <data name="Log_Search_Anything" xml:space="preserve"><value>Search logs</value></data>
+  <data name="Log_Search_Placeholder" xml:space="preserve"><value>Search messages, exceptions, or details...</value></data>
+  <data name="Log_Source_Placeholder" xml:space="preserve"><value>Namespace or component name</value></data>
+  <data name="Log_Advanced_Filters" xml:space="preserve"><value>Advanced filters</value></data>
+  <data name="Log_Activity" xml:space="preserve"><value>ACTIVITY</value></data>
+  <data name="Log_Results" xml:space="preserve"><value>Log events</value></data>
+  <data name="Log_Results_Description" xml:space="preserve"><value>Sanitized application events matching your search criteria.</value></data>
+  <data name="Log_Warnings" xml:space="preserve"><value>Warnings</value></data>
+  <data name="Log_Information" xml:space="preserve"><value>Information</value></data>
+  <data name="Log_Current_Page_Only" xml:space="preserve"><value>Counts reflect the current page only</value></data>
+  <data name="Log_UTC_Time" xml:space="preserve"><value>Timestamp (UTC)</value></data>
+  <data name="Log_Empty_Title" xml:space="preserve"><value>No events to display</value></data>
+  <data name="Log_Clear_Filters" xml:space="preserve"><value>Clear filters</value></data>
+  <data name="Log_Inspect" xml:space="preserve"><value>Inspect</value></data>
+  <data name="Log_Filter_By_Correlation" xml:space="preserve"><value>Search all events with this correlation ID</value></data>
+  <data name="Log_Of" xml:space="preserve"><value>of</value></data>
+
+  <data name="Resident_Change_PIN" xml:space="preserve">
+    <value>Change your PIN</value>
+  </data>
+  <data name="Temporary_PIN_Replace_Notice" xml:space="preserve">
+    <value>Your temporary PIN must be replaced before you continue.</value>
+  </data>
+  <data name="New_PIN" xml:space="preserve">
+    <value>New PIN</value>
+  </data>
+  <data name="Confirm_New_PIN" xml:space="preserve">
+    <value>Confirm new PIN</value>
+  </data>
+  <data name="PIN_4_12_Digits" xml:space="preserve">
+    <value>Use 4–12 digits.</value>
+  </data>
+  <data name="Temporary_PIN_1234_Not_Allowed" xml:space="preserve">
+    <value>The temporary PIN 1234 cannot be reused.</value>
+  </data>
+  <data name="Save_New_PIN" xml:space="preserve">
+    <value>Save new PIN</value>
+  </data>
+  <data name="Choose_New_PIN_And_Confirm" xml:space="preserve">
+    <value>Choose a new 4–12 digit PIN, different from 1234, and confirm it.</value>
+  </data>
+  <data name="Phone_Correction_Requests" xml:space="preserve">
+    <value>Phone correction requests</value>
+  </data>
 </root>

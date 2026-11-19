@@ -1,4 +1,6 @@
+using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -63,6 +65,67 @@ public class QrSecurityServiceTests
     {
         var result = await Create().ValidateQuickToken(token);
         Assert.False(result.IsSuccess);
+    }
+
+
+    [Fact]
+    public async Task Recovery_token_is_revoked_and_cannot_be_resurrected_by_late_consume()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N")).Options;
+        var qr = Create(new TestContextFactory(options));
+        var token = qr.GenerateQuickToken(RecoveryOptions());
+
+        await qr.RegisterRecoveryTokenAsync(token, "b1", "a1");
+        var validated = await qr.ValidateQuickToken(token);
+        Assert.True(validated.IsSuccess);
+
+        Assert.True(await qr.RevokeRecoveryTokenAsync("b1", "a1"));
+        Assert.False((await qr.ValidateQuickToken(token)).IsSuccess);
+        Assert.False(await qr.TryConsumeQuickTokenAsync(validated.Data!));
+    }
+
+    [Fact]
+    public async Task Reissuing_recovery_token_invalidates_old_token_even_if_it_was_previously_validated()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N")).Options;
+        var qr = Create(new TestContextFactory(options));
+        var oldToken = qr.GenerateQuickToken(RecoveryOptions());
+        await qr.RegisterRecoveryTokenAsync(oldToken, "b1", "a1");
+        var oldValidation = await qr.ValidateQuickToken(oldToken);
+        Assert.True(oldValidation.IsSuccess);
+
+        var newToken = qr.GenerateQuickToken(RecoveryOptions());
+        await qr.RegisterRecoveryTokenAsync(newToken, "b1", "a1");
+
+        Assert.False((await qr.ValidateQuickToken(oldToken)).IsSuccess);
+        Assert.False(await qr.TryConsumeQuickTokenAsync(oldValidation.Data!));
+
+        var newValidation = await qr.ValidateQuickToken(newToken);
+        Assert.True(newValidation.IsSuccess);
+        Assert.True(await qr.TryConsumeQuickTokenAsync(newValidation.Data!));
+    }
+
+    private static QrSecurityService Create(IDbContextFactory<AppDbContext> factory) =>
+        new(factory,
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["Qr:SecretKey"] = "unit-test-qr-secret-key-0123456789" })
+                .Build(),
+            NullLogger<QrSecurityService>.Instance);
+
+    private static QuickQrOptions RecoveryOptions() => new()
+    {
+        BuildingId = "b1", AptId = "a1", AptNumber = 1, FloorOrder = 0,
+        Validity = TimeSpan.FromMinutes(5), MaxUses = 1, OneTime = true, Purpose = "recovery"
+    };
+
+    private sealed class TestContextFactory(DbContextOptions<AppDbContext> options)
+        : IDbContextFactory<AppDbContext>
+    {
+        public AppDbContext CreateDbContext() => new(options);
+        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new AppDbContext(options));
     }
 
     [Fact]

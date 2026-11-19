@@ -1,0 +1,58 @@
+/* Shared Kibana-inspired shell for every retained log surface. */
+.observability-nav {
+    display:flex; align-items:stretch; gap:.55rem; margin:1rem 0 1.15rem; padding:.45rem;
+    overflow-x:auto; border:1px solid #dce5ee; border-radius:11px; background:#fff;
+}
+.observability-nav a {
+    display:grid; grid-template-columns:auto 1fr; grid-template-rows:auto auto; align-items:center;
+    column-gap:.65rem; min-width:190px; padding:.7rem .9rem; border:1px solid transparent;
+    border-radius:8px; color:#536b83; text-decoration:none;
+    transition:background .15s ease,border-color .15s ease,color .15s ease;
+}
+.observability-nav a>i { grid-row:1 / span 2; color:#2583c5; font-size:1.1rem; }
+.observability-nav a>span { color:#29445f; font-size:.82rem; font-weight:800; }
+.observability-nav a>small { color:#8292a3; font-size:.68rem; }
+.observability-nav a:hover { border-color:#dce8f3; background:#f7fafd; }
+.observability-nav a.active { border-color:#b9d9f1; background:#edf6fd; box-shadow:inset 3px 0 #1682c8; }
+.observability-nav a.active>span { color:#086eae; }
+.log-center .log-results-panel,.log-center .log-filter-panel { overflow:hidden; }
+.log-center .log-table thead th { position:sticky; top:0; z-index:1; }
+.log-center .log-table tbody tr { transition:background .12s ease; }
+.log-center .log-event-details summary { cursor:pointer; }
+.log-center .log-detail-block pre { max-width:min(72vw,1000px); }
+@media(max-width:575.98px) {
+ .observability-nav { gap:.35rem; }
+ .observability-nav a { min-width:155px; padding:.6rem .7rem; }
+}
+.log-center .log-source-filter,.log-center .audit-event-filter { color:#426b8d; text-decoration:none; }
+.log-center .log-source-filter { display:inline-flex; align-items:center; gap:.35rem; overflow-wrap:anywhere; }
+.log-center .log-source-filter:hover,.log-center .audit-event-filter:hover { color:#0878c9; text-decoration:underline; }
+.log-center .log-source-filter i { opacity:0; font-size:.68rem; }
+.log-center tr:hover .log-source-filter i { opacity:1; }
+.log-center .audit-event-filter { display:inline-block; }
+.log-center .audit-event-filter strong { color:#29445f; }
+
+.observability-time-presets { display:flex; align-items:center; flex-wrap:wrap; gap:.45rem; margin:0 0 .8rem; }
+.observability-time-presets>span { display:inline-flex; align-items:center; gap:.4rem; margin-inline-end:.25rem; color:#647b91; font-size:.75rem; font-weight:700; }
+.observability-time-presets>a { display:inline-flex; align-items:center; padding:.38rem .7rem; border:1px solid #d9e4ee; border-radius:6px; background:#fff; color:#3b6689; font-size:.73rem; font-weight:700; text-decoration:none; }
+.observability-time-presets>a:hover { border-color:#9fc9e8; background:#edf6fd; color:#086eae; }
+
+.system-health-page .health-status-text { font-size:1.35rem; }
+.health-healthy { color:#16845b!important; }
+.health-degraded { color:#a86b08!important; }
+.health-unhealthy { color:#c43d46!important; }
+.health-state { display:inline-flex; align-items:center; gap:.45rem; font-size:.78rem; font-weight:800; }
+.health-state i { font-size:.48rem; }
+.health-process-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem; }
+.health-process-grid>div { display:flex; flex-direction:column; gap:.35rem; padding:1rem; border:1px solid #e3ebf2; border-radius:8px; background:#fbfdff; }
+.health-process-grid small { color:#74879a; font-size:.72rem; }
+.health-process-grid strong { color:#29445f; font-size:.85rem; overflow-wrap:anywhere; }
+@media(max-width:767px) { .health-process-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:480px) { .health-process-grid { grid-template-columns:1fr; } }
+
+.log-http-cell { min-width:145px; }
+.http-status { display:inline-flex; padding:.2rem .45rem; border-radius:5px; font:800 .72rem/1.3 ui-monospace,monospace; }
+.http-status-ok { color:#14734e; background:#e6f5ee; }
+.http-status-warning { color:#986008; background:#fff3d9; }
+.http-status-error { color:#b52e3b; background:#fdebed; }
+.http-duration { display:block; margin-top:.2rem; color:#526c83; font:700 .7rem ui-monospace,monospace; }

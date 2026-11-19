@@ -52,6 +52,14 @@ public class SqlAuthService
     }
 
     private static bool VerifySecret(string? input, string? stored) => SecretVerifier.Verify(input, stored);
+    /// <summary>Builds a non-reversible session version for legacy SuperAdmin credentials and status.</summary>
+    public static string CreateSuperAdminSecurityStamp(string? credentialHash, DateTime? updatedAt, bool isActive, bool isDisabled)
+    {
+        var material = string.Join("|", credentialHash ?? "", updatedAt?.Ticks ?? 0, isActive, isDisabled);
+        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(material)));
+    }
+
 
     /// <summary>
     /// Determines whether an e-mail address is in the configured super-admin list.
@@ -221,7 +229,9 @@ public class SqlAuthService
             email: admin.Email,
             name: admin.Name,
             // الجلسة مربوطة بالعمارة اللي سجّل دخول عليها بس (كان بياخد أول عمارة من القايمة)
-            buildingIds: new List<string> { buildingId });
+            buildingIds: new List<string> { buildingId },
+            permissions: admin.Permissions.Select(p => p.Permission)
+                .Distinct(StringComparer.Ordinal).ToList());
     }
     // ═══════════════════════════════════════════════════════════
     // 3. Super Admin Login
@@ -236,6 +246,7 @@ public class SqlAuthService
 
         await using var db = await _sqlFactory.CreateDbContextAsync();
         var superAdmin = await db.Users
+            .Include(u => u.Permissions)
             .FirstOrDefaultAsync(u => u.Email == email && u.Role == "superadmin");
 
         if (superAdmin == null)
@@ -263,13 +274,17 @@ public class SqlAuthService
 
         _log.LogDebug("[SqlAuth] SuperAdmin sign-in succeeded");
 
-        return AuthResult.Ok(
+        var result = AuthResult.Ok(
             uid: superAdmin.Uid,
             role: "superadmin",
             email: email,
             name: string.IsNullOrWhiteSpace(superAdmin.Name)
                 ? "Super Admin" : superAdmin.Name,
-            buildingIds: new List<string>());
+            buildingIds: new List<string>(),
+            permissions: superAdmin.Permissions.Select(p => p.Permission).Distinct(StringComparer.Ordinal).ToList());
+        result.SecurityStamp = CreateSuperAdminSecurityStamp(
+            superAdmin.Pin, superAdmin.UpdatedAt ?? superAdmin.CreatedAt, superAdmin.IsActive, superAdmin.IsDisabled);
+        return result;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -413,30 +428,62 @@ public class SqlAuthService
     /// <summary>
     /// Signs the in from context.
     /// </summary>
-    public Task<AuthResult> SignInFromContextAsync(UserContext context)
+    public async Task<AuthResult> SignInFromContextAsync(UserContext context)
     {
+        // The context is a short-lived selection hint, not an authorization snapshot.
+        // Re-read the selected account and its current grants before issuing a cookie.
         if (context.Type == "superadmin")
         {
-            return Task.FromResult(AuthResult.Ok(
-                context.Uid!, "superadmin", context.Email!,
-                context.Name ?? "Super Admin", new List<string>()));
+            if (string.IsNullOrWhiteSpace(context.Uid) || string.IsNullOrWhiteSpace(context.Email)
+                || !IsSuperAdminEmail(context.Email))
+                return AuthResult.Fail("unknown-context");
+
+            await using var db = await _sqlFactory.CreateDbContextAsync();
+            var account = await db.Users
+                .Include(u => u.Permissions)
+                .FirstOrDefaultAsync(u => u.Uid == context.Uid
+                    && u.Email == context.Email && u.Role == "superadmin");
+
+            if (account == null || !account.IsActive || account.IsDisabled)
+                return AuthResult.Fail("account-inactive");
+
+            return AuthResult.Ok(
+                account.Uid, "superadmin", account.Email,
+                account.Name ?? "Super Admin", new List<string>(),
+                permissions: account.Permissions.Select(p => p.Permission)
+                    .Distinct(StringComparer.Ordinal).ToList());
         }
 
         if (context.Type == "admin")
         {
-            return Task.FromResult(AuthResult.Ok(
+            var admin = await _users.GetByUidAsync(context.Uid!);
+            if (admin == null || admin.Role != "admin" || admin.IsDisabled || !admin.IsActive
+                || !admin.BuildingAdmins.Any(ba => ba.BuildingId == context.BuildingId))
+                return AuthResult.Fail("account-inactive");
+
+            return AuthResult.Ok(
                 context.Uid!, "admin", context.Email!,
-                context.Name ?? "Admin", new List<string> { context.BuildingId! }));
+                context.Name ?? "Admin", new List<string> { context.BuildingId! },
+                permissions: admin.Permissions.Select(p => p.Permission)
+                    .Distinct(StringComparer.Ordinal).ToList());
         }
 
         if (context.Type == "resident")
         {
-            return Task.FromResult(AuthResult.Ok(
-                context.Uid!, "resident", context.Email!,
-                context.Name ?? "Resident", new List<string> { context.BuildingId! },
-                context.AptId, context.AptNumber));
+            await using var db = await _sqlFactory.CreateDbContextAsync();
+            var resident = await db.Residents.AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Uid == context.Uid
+                    && r.BuildingId == context.BuildingId
+                    && r.ApartmentId == context.AptId
+                    && r.IsActive && !r.IsDisabled);
+            if (resident == null) return AuthResult.Fail("account-inactive");
+
+            return AuthResult.Ok(
+                resident.Uid, "resident", resident.Email ?? "",
+                resident.Name ?? "Resident", new List<string> { context.BuildingId! },
+                context.AptId, context.AptNumber);
         }
 
-        return Task.FromResult(AuthResult.Fail("unknown-context"));
+        return AuthResult.Fail("unknown-context");
     }
 }
