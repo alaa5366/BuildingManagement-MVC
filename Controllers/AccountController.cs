@@ -235,7 +235,7 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        var res = await _sqlAuth.SignInSuperAdminAsync(vm.Email, vm.Password);
+        var res = await _identityAuth.AuthenticateSuperAdminAsync(vm.Email, vm.Password);
 
         if (!res.Success)
         {
