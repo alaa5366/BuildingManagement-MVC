@@ -15,10 +15,11 @@ public sealed class TargetExpenseRevenueWorkflowServiceTests
         var service = new TargetExpenseRevenueWorkflowService(factory, TimeProvider.System);
 
         var localNow = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo"));
+        var commandId = Guid.NewGuid();
         var transactionId = await service.AddExpenseAsync(
             "B1", localNow.ToString("yyyy-MM"), "C-EXP", "Repair",
             10.01m, localNow.ToString("yyyy-MM-dd"),
-            Guid.NewGuid(), actorId);
+            commandId, actorId);
 
         await using var verify = factory.CreateDbContext();
         var transaction = await verify.LedgerTransactions.SingleAsync();
@@ -32,6 +33,15 @@ public sealed class TargetExpenseRevenueWorkflowServiceTests
         Assert.Single(await verify.Expenses.ToListAsync());
         Assert.Single(await verify.FinancialSourceLinks.ToListAsync());
         Assert.Contains(await verify.AuditEvents.ToListAsync(), x => x.EventType == "ExpensePosted");
+        await verify.DisposeAsync();
+
+        var reversalId = await service.ReverseAsync(false, "B1", commandId.ToString("N"),
+            "Test reversal", Guid.NewGuid(), actorId);
+        await using var reversed = factory.CreateDbContext();
+        Assert.NotEqual(transactionId, reversalId);
+        Assert.Equal(2, await reversed.LedgerTransactions.CountAsync());
+        Assert.Equal(0m, await reversed.LedgerEntries.SumAsync(x => x.SignedAmount));
+        Assert.Contains(await reversed.AuditEvents.ToListAsync(), x => x.EventType == "ExpenseReversed");
     }
 
     [Fact]
