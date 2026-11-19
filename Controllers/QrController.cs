@@ -35,6 +35,14 @@ public class QrController : Controller
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
 
+    private void _logQrPersistenceFailure(string apartmentId)
+    {
+        // Do not log the generated token or any signed payload material.
+        HttpContext.RequestServices.GetRequiredService<ILogger<QrController>>()
+            .LogError("QR access token persistence failed for building {BuildingId}, apartment {ApartmentId}.",
+                BuildingId, apartmentId);
+    }
+
     /// <summary>
     /// Shows the main page of the QR screen.
     /// </summary>
@@ -87,11 +95,32 @@ public class QrController : Controller
         var apt = building?.Apartments.FirstOrDefault(a => a.Id == aptId);
         if (building == null || apt == null) return NotFound();
 
-        var (token, payload, expiresAt) = _qrAuth.GenerateAccessToken(building.Id, apt.Id, minutes <= 0 ? 15 : minutes, oneTime, User.Identity?.Name ?? "admin");
-        await _qrStore.SaveTokenAsync(payload);
+        // Keep temporary access capabilities short-lived and fail closed.
+        // The token must be durably stored before a usable link is ever shown.
+        if (minutes is < 1 or > 60)
+        {
+            ModelState.AddModelError(nameof(minutes), "مدة رابط الدخول يجب أن تكون من دقيقة إلى 60 دقيقة.");
+            return BadRequest(ModelState);
+        }
 
-        _audit.Push(building, "qr_access_generate", $"رابط دخول مؤقت — شقة {apt.Number} ({minutes} دقيقة)", "admin", User.Identity?.Name ?? "admin", apt.Number.ToString());
+        var (token, payload, expiresAt) = _qrAuth.GenerateAccessToken(
+            building.Id, apt.Id, minutes, oneTime, User.Identity?.Name ?? "admin");
+
+        if (!await _qrStore.SaveTokenAsync(payload))
+        {
+            _logQrPersistenceFailure(apt.Id);
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { error = "qr-token-persistence-failed", message = "تعذر حفظ رابط الدخول. لم يتم إنشاء رابط صالح." });
+        }
+
+        _audit.Push(building, "qr_access_generate",
+            $"رابط دخول مؤقت — شقة {apt.Number} ({minutes} دقيقة)",
+            "admin", User.Identity?.Name ?? "admin", apt.Number.ToString());
         await _buildings.SaveFullAsync(building);
+
+        Response.Headers.CacheControl = "no-store, no-cache, max-age=0";
+        Response.Headers.Pragma = "no-cache";
+        Response.Headers.ReferrerPolicy = "no-referrer";
 
         var baseUrl = $"{Request.Scheme}://{Request.Host}";
         ViewBag.Link = $"{baseUrl}/QrAccess/Enter?token={token}";
