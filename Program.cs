@@ -143,6 +143,8 @@ try
 builder.Services.AddScoped<TargetWalletReadService>();
 builder.Services.AddScoped<TargetDepositWorkflowService>();
 builder.Services.AddScoped<TargetExpenseRevenueWorkflowService>();
+builder.Services.AddScoped<TargetFinanceReadService>();
+builder.Services.AddScoped<TargetAccountIdentityResolver>();
 
     // ✅ Health Checks (فحص صحة الداتابيز)
     builder.Services.AddHealthChecks()
