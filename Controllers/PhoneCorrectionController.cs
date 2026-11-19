@@ -18,6 +18,7 @@ public sealed class PhoneCorrectionController : Controller
         _buildings = buildings;
     }
 
+    /// <summary>Displays the phone-correction request page.</summary>
     [HttpGet]
     [AllowAnonymous]
     [ActionName("Request")]
@@ -27,6 +28,7 @@ public sealed class PhoneCorrectionController : Controller
         return View();
     }
 
+    /// <summary>Submits a phone-correction request.</summary>
     [HttpPost]
     [AllowAnonymous]
     [ValidateAntiForgeryToken]
@@ -40,6 +42,7 @@ public sealed class PhoneCorrectionController : Controller
         return View();
     }
 
+    /// <summary>Displays the administration page and its current records.</summary>
     [HttpGet]
     [Authorize(Roles = "admin,superadmin")]
     [AdminPermission(AdminPermissions.ManageResidents)]
@@ -56,6 +59,7 @@ public sealed class PhoneCorrectionController : Controller
         return View(items.OrderBy(x => x.RequestedAtUtc).ToList());
     }
 
+    /// <summary>Reviews a submitted phone-correction request.</summary>
     [HttpPost]
     [Authorize(Roles = "admin,superadmin")]
     [AdminPermission(AdminPermissions.ManageResidents)]
