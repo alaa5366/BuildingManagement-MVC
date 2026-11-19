@@ -361,6 +361,7 @@ public sealed class AccountManagementService
 
 }
 
+/// <summary>AccountManagementPage coordinates the corresponding application functionality.</summary>
 public sealed class AccountManagementPage
 {
     public string? Search { get; init; }
@@ -379,6 +380,7 @@ public sealed class AccountManagementPage
     public List<AccountManagementRow> Rows { get; init; } = new();
 }
 
+/// <summary>AccountManagementRow coordinates the corresponding application functionality.</summary>
 public sealed class AccountManagementRow
 {
     public Guid AccountId { get; set; }
@@ -401,6 +403,7 @@ public sealed class AccountManagementRow
 
 }
 
+/// <summary>AccountManagementMutationResult coordinates the corresponding application functionality.</summary>
 public sealed record AccountManagementMutationResult(bool Success, string Message, string? TemporaryPin = null, string? TemporaryPassword = null)
 {
     public static AccountManagementMutationResult Fail(string message) => new(false, message);
