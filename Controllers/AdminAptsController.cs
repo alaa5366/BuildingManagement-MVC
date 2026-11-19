@@ -165,10 +165,12 @@ public class AdminAptsController : Controller
             Validity = TimeSpan.FromMinutes(5),
             OneTime = true,
             MaxUses = 1,
-            Purpose = "login"
+            Purpose = "recovery"
         });
 
-        var quickUrl = $"{Request.Scheme}://{Request.Host}/Account/QuickLogin?token={Uri.EscapeDataString(token)}";
+        await _qrSecurity.RegisterRecoveryTokenAsync(token, apt.BuildingId, apt.ApartmentId, HttpContext.RequestAborted);
+
+        var quickUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/Account/QuickLogin?token={Uri.EscapeDataString(token)}";
         var message =
             $"مرحباً، هذا رابط دخول مؤقت لحساب شقتك رقم {apt.ApartmentNumber} في {apt.BuildingName}.\n" +
             "صالح لمدة 5 دقائق ويُستخدم مرة واحدة فقط. افتح الرابط ثم أكد الدخول.\n" +
@@ -194,6 +196,31 @@ public class AdminAptsController : Controller
         ViewBag.QrBase64 = qrBase64;
         ViewBag.ExpiresInMinutes = 5;
         return View("RecoveryQr");
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CancelRecoveryQr(string aptId)
+    {
+        if (User.HasClaim("impersonated", "true")) return Forbid();
+        var apt = await _targetQr.GetApartmentAsync(
+            BuildingId, aptId, requireActive: true, HttpContext.RequestAborted);
+        if (apt is null) return NotFound();
+
+        var revoked = await _qrSecurity.RevokeRecoveryTokenAsync(
+            apt.BuildingId, apt.ApartmentId, HttpContext.RequestAborted);
+        await _auditLogger.LogAsync(
+            action: "resident.recovery_qr_revoked",
+            buildingId: apt.BuildingId,
+            apartmentId: apt.ApartmentId,
+            userId: CurrentUserId,
+            userRole: "admin",
+            metadata: new { aptNumber = apt.ApartmentNumber, revoked },
+            severity: "warning");
+        TempData[revoked ? "Success" : "Info"] = revoked
+            ? "تم إلغاء رمز استعادة الدخول بنجاح."
+            : "لا يوجد رمز استعادة نشط لهذه الشقة.";
+        return RedirectToAction(nameof(Index));
     }
 
     // ============================================================
