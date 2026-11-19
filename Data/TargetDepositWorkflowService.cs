@@ -44,6 +44,8 @@ public sealed class TargetDepositWorkflowService
             throw new ArgumentException("Currency must contain exactly three ASCII letters.", nameof(currencyCode));
         if (sourceKey is { Length: > 256 })
             throw new ArgumentException("Source key is too long.", nameof(sourceKey));
+        if (sourceKey is not null && string.IsNullOrWhiteSpace(sourceKey))
+            throw new ArgumentException("Source key cannot be blank.", nameof(sourceKey));
 
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
@@ -356,11 +358,11 @@ public sealed class TargetDepositWorkflowService
         if (!await HasFinanceManagementRoleAsync(db, actorAccountId, deposit.BuildingId, authorizationTime, cancellationToken))
             throw new InvalidOperationException("The actor has no active finance-management assignment for this building.");
 
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         deposit.Status = PaymentDepositStatus.Cancelled;
-        deposit.CancelledAtUtc = _timeProvider.GetUtcNow().UtcDateTime;
+        deposit.CancelledAtUtc = now;
         deposit.CancelledByAccountId = actorAccountId;
         deposit.ResolutionReason = reason.Trim();
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
         db.AuditEvents.Add(CreateAuditEvent(
             deposit.BuildingId, actorAccountId, "PaymentDepositCancelled", deposit.PaymentDepositId, now,
             new { reason = reason.Trim() }));
