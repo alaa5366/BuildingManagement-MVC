@@ -790,7 +790,7 @@ public sealed class TargetWalletReadServiceTests
                     EndsAtUtc = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1),
                     CreatedAtUtc = now
                 });
-            var periods = await seed.FinancialPeriods.ToListAsync();
+            var periods = seed.FinancialPeriods.Local.ToList();
             seed.Apartments.AddRange(
                 new ApartmentEntity { BuildingId = "B1", Id = "A1", FloorId = "F1", Number = 1, Label = "Unit 1" },
                 new ApartmentEntity { BuildingId = "B2", Id = "A1", FloorId = "F1", Number = 1, Label = "Other unit" });
