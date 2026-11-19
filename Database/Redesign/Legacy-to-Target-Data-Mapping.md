@@ -158,3 +158,18 @@ The Gate A additive script now includes `dbo.LegacyIdentityMap` (not the earlier
 The database constraints do not prove that AccountId belongs to the same PersonId in this mapping row; the migration service must verify that pair transactionally against UserAccounts before accepting a linked Users row. This avoids relying on an unenforced polymorphic/source-specific relationship.
 
 This schema is additive design only. The revised Gate A script has not been executed, and no backfill has started.
+
+## 11. Operational backfill execution status — 2026-11-19
+
+The following additive backfills have reported exact source/target/provenance reconciliation on the restored test database. Source rows remain intact:
+
+| Phase | Legacy source | Reported rows | Result |
+|---|---|---:|---|
+| 10 | Notifications | 68 | RECONCILIATION PASS |
+| 11 | MaintenanceRecords | 1 | RECONCILIATION PASS |
+| 12 | AuditLog | 1,053 | RECONCILIATION PASS |
+| 13 | BackupHistory | 2 | RECONCILIATION PASS |
+
+Phase 14 adds `BackupScheduleConfigurations` as a distinct configuration target for `ScheduledBackupSettings`; schedule configuration is not a backup execution/job. Its backfill script is dry-run by default, requires the Phase14 migration to be recorded, rejects unsupported or out-of-range settings rather than normalizing them, preserves the exact CollectionsJson value, and writes LegacyDataMigrationMap provenance. Phase14 backfill is pending execution and reconciliation.
+
+These phases are additive migration steps, not application cutover. Legacy tables remain authoritative until the later application-read/write transition is separately implemented and verified.
