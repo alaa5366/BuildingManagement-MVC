@@ -129,6 +129,8 @@ public class AppDbContext : DbContext
     /// Gets the notifications.
     /// </summary>
     public DbSet<NotificationEntity> Notifications => Set<NotificationEntity>();
+    /// <summary>Saved building-scoped WhatsApp message templates.</summary>
+    public DbSet<SavedWhatsAppTemplateEntity> SavedWhatsAppTemplates => Set<SavedWhatsAppTemplateEntity>();
     /// <summary>
     /// Gets the polls.
     /// </summary>
