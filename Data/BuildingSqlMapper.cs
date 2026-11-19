@@ -523,7 +523,7 @@ public static class BuildingSqlMapper
         if (string.IsNullOrEmpty(details)) return "";
         return Regex.Replace(
             details,
-            @"(?i)(password|secret|token|credential|pin|recovery(?:code|codes)?)(\\s*[:=]\\s*)(?:""[^""]*""|'[^']*'|[^,\\s;]+)",
+            @"(?i)(password|secret|token|credential|pin|recovery(?:code|codes)?)(\s*[:=]\s*)(?:""[^""]*""|'[^']*'|[^,\s;]+)",
             "$1$2[REDACTED]");
     }
 
