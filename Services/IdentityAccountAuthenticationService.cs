@@ -94,6 +94,32 @@ public sealed class IdentityAccountAuthenticationService
         return result;
     }
 
+    /// <summary>Verifies that the apartment contact phone is the primary target Person phone used for QR recovery.</summary>
+    public async Task<bool> IsPrimaryResidentPhoneMatchAsync(
+        string buildingId, string apartmentId, string phone, CancellationToken cancellationToken = default)
+    {
+        var normalized = AuthHelpers.NormalizePhone(phone);
+        if (string.IsNullOrWhiteSpace(normalized)) return false;
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var now = DateTime.UtcNow;
+        var phones = await (
+            from occupancy in db.ApartmentOccupancies.AsNoTracking()
+            join person in db.Persons.AsNoTracking() on occupancy.PersonId equals person.PersonId
+            join account in db.UserAccounts.AsNoTracking() on person.PersonId equals account.PersonId
+            where occupancy.BuildingId == buildingId
+                && occupancy.ApartmentId == apartmentId
+                && occupancy.IsPrimary
+                && occupancy.ValidFromUtc <= now
+                && (occupancy.ValidToUtc == null || occupancy.ValidToUtc > now)
+                && account.AccountStatus == 1
+                && !person.IsArchived
+            select person.PrimaryPhone)
+            .Take(2)
+            .ToListAsync(cancellationToken);
+        return phones.Count == 1 &&
+            string.Equals(AuthHelpers.NormalizePhone(phones[0]), normalized, StringComparison.Ordinal);
+    }
+
     /// <summary>
     /// Returns null only when no target account matches the identifier. A matching but
     /// inactive, unauthorized, or incorrectly credentialed account fails closed.
