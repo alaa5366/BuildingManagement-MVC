@@ -4195,4 +4195,5 @@ This operation can take a few seconds.</value>
   <data name="Phone_Correction_Requests" xml:space="preserve">
     <value>Phone correction requests</value>
   </data>
+  <data name="Backup_Collection_savedWhatsAppTemplates" xml:space="preserve"><value>Saved WhatsApp templates</value></data>
 </root>
