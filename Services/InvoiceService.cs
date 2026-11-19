@@ -18,6 +18,9 @@ public sealed class InvoiceService
         _wallet = wallet;
     }
 
+    public Task<string> GetCurrentPeriodKeyAsync(string buildingId, CancellationToken cancellationToken = default) =>
+        _wallet.GetCurrentPeriodKeyAsync(buildingId, cancellationToken: cancellationToken);
+
     public async Task<string?> FindBuildingIdByApartmentAsync(string apartmentId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(apartmentId)) return null;
