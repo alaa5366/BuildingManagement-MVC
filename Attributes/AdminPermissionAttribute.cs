@@ -43,11 +43,14 @@ public class AdminPermissionAttribute : Attribute, IAsyncAuthorizationFilter
         // request. Never trust the permission claims copied into an older cookie.
         if (string.Equals(user.FindFirst("targetIdentityAccount")?.Value, "true", StringComparison.Ordinal))
         {
-            var evaluator = context.HttpContext.RequestServices.GetRequiredService<AuthorizationEvaluator>();
+            var services = context.HttpContext.RequestServices;
+            var evaluator = services.GetRequiredService<AuthorizationEvaluator>();
+            var catalog = services.GetRequiredService<IAuthorizationPermissionCatalog>();
+            var resource = TargetAuthorizationResourceResolver.Resolve(user, catalog, _permission);
             var decision = await evaluator.EvaluateAsync(
                 user,
                 _permission,
-                new ResolvedAuthorizationResource(AuthorizationScopeType.System),
+                resource,
                 DateTime.UtcNow,
                 context.HttpContext.RequestAborted);
 
