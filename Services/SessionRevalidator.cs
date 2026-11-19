@@ -193,6 +193,56 @@ public class SessionRevalidator
         }
     }
 
+    private async Task<Result> ValidateTargetIdentitySuperAdminAsync(ClaimsPrincipal user, Guid accountId)
+    {
+        var email = user.FindFirst(ClaimTypes.Email)?.Value;
+        if (string.IsNullOrWhiteSpace(email) || !SqlAuthService.IsSuperAdminEmail(email))
+            return new Result(false, null);
+
+        try
+        {
+            await using var db = await _sqlFactory.CreateDbContextAsync();
+            var now = DateTime.UtcNow;
+            var account = await (
+                from item in db.UserAccounts.AsNoTracking()
+                join person in db.Persons.AsNoTracking() on item.PersonId equals person.PersonId
+                where item.AccountId == accountId
+                select new { item.AccountStatus, item.SecurityStamp, item.NormalizedEmail, person.IsArchived })
+                .SingleOrDefaultAsync();
+            if (account is null || account.AccountStatus != 1 || account.IsArchived ||
+                !string.Equals(account.NormalizedEmail, email.Trim().ToUpperInvariant(), StringComparison.Ordinal) ||
+                !string.Equals(account.SecurityStamp, user.FindFirst("securityStamp")?.Value, StringComparison.Ordinal))
+                return new Result(false, null);
+
+            var activeAssignment = await (
+                from assignment in db.UserRoleAssignments.AsNoTracking()
+                join role in db.RoleDefinitions.AsNoTracking() on assignment.RoleKey equals role.RoleKey
+                where assignment.AccountId == accountId && assignment.RoleKey == "superadmin"
+                    && role.IsActive && assignment.ScopeType == 0
+                    && assignment.ScopeBuildingId == null && assignment.ScopeApartmentId == null
+                    && assignment.ValidFromUtc <= now
+                    && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
+                    && assignment.RevokedAtUtc == null
+                select assignment.RoleAssignmentId).AnyAsync();
+            if (!activeAssignment) return new Result(false, null);
+
+            var twoFactorEnabled = await db.UserTwoFactorSettings.AsNoTracking()
+                .AnyAsync(item => item.AccountId == accountId && item.IsEnabled);
+            if (twoFactorEnabled && !user.HasClaim("twoFactorVerified", "true"))
+                return new Result(false, null);
+
+            var permissions = await db.RolePermissions.AsNoTracking()
+                .Where(item => item.RoleKey == "superadmin" && item.Effect == 1)
+                .Select(item => item.PermissionKey).Distinct().ToListAsync();
+            return new Result(true, permissions);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[SessionRevalidator] target SuperAdmin validation failed for {AccountId}; rejecting session", accountId);
+            return new Result(false, null);
+        }
+    }
+
     private async Task<Result> ValidateImpersonatedAsync(ClaimsPrincipal user)
     {
         var actorUid = user.FindFirst("impersonationActorUid")?.Value;
@@ -347,8 +397,12 @@ public class SessionRevalidator
 
     private async Task<Result> ValidateTargetIdentityAccountAsync(ClaimsPrincipal user)
     {
-        if (user.FindFirst(ClaimTypes.Role)?.Value != "resident" ||
-            !Guid.TryParse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var accountId))
+        var claimedRole = user.FindFirst(ClaimTypes.Role)?.Value;
+        if (!Guid.TryParse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var accountId))
+            return new Result(false, null);
+        if (claimedRole == "superadmin")
+            return await ValidateTargetIdentitySuperAdminAsync(user, accountId);
+        if (claimedRole != "resident")
             return new Result(false, null);
 
         try
