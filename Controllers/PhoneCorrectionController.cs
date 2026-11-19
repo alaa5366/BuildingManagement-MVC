@@ -1,4 +1,5 @@
 using BuildingManagementMvc.Services;
+using BuildingManagementMvc.Attributes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -7,6 +8,7 @@ using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Controllers;
 
+[AdminPermission(AdminPermissions.ManageResidents)]
 public sealed class PhoneCorrectionController : Controller
 {
     private readonly PersonPhoneCorrectionService _service;
