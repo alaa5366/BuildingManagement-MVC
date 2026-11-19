@@ -218,6 +218,7 @@ public sealed class InvoiceServiceTests
 
         Assert.NotNull(invoice);
         Assert.Equal("Target Building", invoice!.Building.Name);
+        Assert.Equal("EGP", invoice.CurrencyCode);
         Assert.Equal(101, invoice.Apt.Number);
         Assert.Equal(50m, invoice.Balance);
         Assert.Equal(50m, invoice.PreviousBalance);
