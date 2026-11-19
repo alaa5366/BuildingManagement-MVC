@@ -10,6 +10,7 @@ using Xunit;
 
 namespace BuildingManagement.Tests;
 
+[Collection("SuperAdmin configuration")]
 public class ImpersonatedSessionValidationTests
 {
     private const string BuildingId = "building-1";
