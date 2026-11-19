@@ -150,52 +150,6 @@ public sealed class TargetWalletReadService
         };
     }
 
-    public async Task<TargetWalletDepositContext?> GetDepositAsync(
-        Guid paymentDepositId,
-        CancellationToken cancellationToken = default)
-    {
-        if (paymentDepositId == Guid.Empty)
-            throw new ArgumentException("Deposit id is required.", nameof(paymentDepositId));
-
-        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
-        var row = await (
-            from deposit in db.PaymentDeposits.AsNoTracking()
-            join period in db.FinancialPeriods.AsNoTracking() on deposit.PeriodId equals period.PeriodId
-            where deposit.PaymentDepositId == paymentDepositId
-            select new
-            {
-                deposit.PaymentDepositId, deposit.BuildingId, deposit.ApartmentId, deposit.Amount,
-                deposit.Note, deposit.ReceiptMetadataJson, deposit.Status, deposit.SubmittedAtUtc,
-                deposit.ConfirmedAtUtc, deposit.CancelledAtUtc, deposit.ResolutionReason,
-                period.PeriodKey
-            }).SingleOrDefaultAsync(cancellationToken);
-        if (row is null) return null;
-
-        var status = row.Status switch
-        {
-            PaymentDepositStatus.Pending => "pending",
-            PaymentDepositStatus.Confirmed => "confirmed",
-            PaymentDepositStatus.Cancelled => "cancelled",
-            PaymentDepositStatus.Reversed => "reversed",
-            _ => "unknown"
-        };
-        var depositVm = new Deposit
-        {
-            Id = row.PaymentDepositId.ToString("D"),
-            Number = row.PaymentDepositId.ToString("N")[..8].ToUpperInvariant(),
-            AptId = row.ApartmentId,
-            Amount = row.Amount,
-            Note = row.Note ?? "",
-            Receipt = DeserializeReceipt(row.ReceiptMetadataJson),
-            Status = status,
-            CreatedAt = row.SubmittedAtUtc.ToString("O"),
-            ConfirmedAt = row.ConfirmedAtUtc?.ToString("O"),
-            CancelledAt = row.CancelledAtUtc?.ToString("O"),
-            CancelledReason = row.ResolutionReason
-        };
-        return new TargetWalletDepositContext(row.BuildingId, row.ApartmentId, row.PeriodKey, depositVm);
-    }
-
     public async Task<TargetWalletAdminSnapshot> GetAdminSnapshotAsync(
         string buildingId,
         string month,
@@ -520,4 +474,3 @@ public sealed record TargetWalletAdminSnapshot(
     IReadOnlyList<TargetPendingWalletDeposit> PendingDeposits,
     (decimal Collected, decimal Expenses, decimal Revenues, int OpenCount, int ClosedCount, decimal Balance, decimal TotalWallet) Totals);
 
-public sealed record TargetWalletDepositContext(string BuildingId, string ApartmentId, string MonthKey, Deposit Deposit);
