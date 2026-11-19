@@ -12,6 +12,7 @@ public sealed class TargetNotificationsService
 
     public TargetNotificationsService(IDbContextFactory<AppDbContext> factory) => _factory = factory;
 
+    /// <summary>Gets notifications visible to an administrator.</summary>
     public async Task<List<Notification>> GetForAdminAsync(
         string buildingId, int max = 500, CancellationToken cancellationToken = default)
     {
@@ -25,6 +26,7 @@ public sealed class TargetNotificationsService
         return items.Select(ToModel).ToList();
     }
 
+    /// <summary>Gets notifications visible to a resident.</summary>
     public async Task<List<Notification>> GetForResidentAsync(
         string buildingId, string apartmentId, int max = 500,
         CancellationToken cancellationToken = default)
@@ -41,11 +43,13 @@ public sealed class TargetNotificationsService
     }
 
 
+    /// <summary>Gets a paged notification list for an administrator.</summary>
     public async Task<PagedResult<Notification>> GetPageForAdminAsync(
         string buildingId, int page = 1, int pageSize = 50,
         CancellationToken cancellationToken = default) =>
         await GetPageAsync(buildingId, "admin", null, page, pageSize, cancellationToken);
 
+    /// <summary>Gets a paged notification list for a resident.</summary>
     public async Task<PagedResult<Notification>> GetPageForResidentAsync(
         string buildingId, string apartmentId, int page = 1, int pageSize = 50,
         CancellationToken cancellationToken = default) =>
@@ -81,6 +85,7 @@ public sealed class TargetNotificationsService
         };
     }
 
+    /// <summary>Creates a notification for a resident deposit event.</summary>
     public Task CreateResidentDepositNoticeAsync(
         string buildingId, string apartmentId, string title, string body,
         CancellationToken cancellationToken = default, string type = "deposit", string icon = "💳") =>
@@ -129,6 +134,7 @@ public sealed class TargetNotificationsService
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    /// <summary>Marks a notification as read by the current recipient.</summary>
     public async Task<bool> MarkReadAsync(
         string buildingId, string id, string recipientType, string? apartmentId = null,
         CancellationToken cancellationToken = default)
@@ -152,6 +158,7 @@ public sealed class TargetNotificationsService
         return true;
     }
 
+    /// <summary>Gets the unread notification count for an administrator.</summary>
     public async Task<int> GetUnreadCountForAdminAsync(
         string buildingId,
         CancellationToken cancellationToken = default)
@@ -163,6 +170,7 @@ public sealed class TargetNotificationsService
             item.RecipientApartmentId == null && !item.IsRead, cancellationToken);
     }
 
+    /// <summary>Gets the unread notification count for a resident.</summary>
     public async Task<int> GetUnreadCountForResidentAsync(
         string buildingId,
         string apartmentId,
@@ -175,6 +183,7 @@ public sealed class TargetNotificationsService
             item.RecipientApartmentId == apartmentId && !item.IsRead, cancellationToken);
     }
 
+    /// <summary>Marks all applicable notifications as read for the current recipient.</summary>
     public async Task<int> MarkAllReadAsync(
         string buildingId, string recipientType, string? apartmentId = null,
         CancellationToken cancellationToken = default)
