@@ -119,6 +119,7 @@ public sealed class TargetWalletReadService
                 entry.CurrencyCode,
                 entry.Description,
                 entry.EffectiveAtUtc,
+                DepositPaymentId = deposit == null ? (Guid?)null : deposit.PaymentDepositId,
                 DepositNote = deposit == null ? null : deposit.Note,
                 ReceiptMetadataJson = deposit == null ? null : deposit.ReceiptMetadataJson
             }).ToListAsync(cancellationToken);
@@ -160,6 +161,9 @@ public sealed class TargetWalletReadService
                 Type = ToLegacyType(entry.EntryKind),
                 Status = "confirmed",
                 Id = entry.LedgerEntryId.ToString("D"),
+                Number = entry.DepositPaymentId is Guid paymentDepositId
+                    ? paymentDepositId.ToString("N")[..8].ToUpperInvariant()
+                    : "",
                 Amount = entry.SignedAmount,
                 Note = entry.DepositNote ?? entry.Description ?? "",
                 HasReceipt = receipt?.Success == true,
