@@ -88,7 +88,8 @@ public sealed class TargetFinanceReadService
             .Where(transaction => transaction.BuildingId == buildingId &&
                 periodIds.Contains(transaction.PeriodId) &&
                 transaction.Status == LedgerTransactionStatus.Posted &&
-                (transaction.SourceType == "Expense" || transaction.SourceType == "ExpenseReversal"))
+                (transaction.SourceType == "Expense" && transaction.Kind == LedgerTransactionKind.Expense ||
+                 transaction.SourceType == "ExpenseReversal" && transaction.Kind == LedgerTransactionKind.Reversal))
             .Select(transaction => new { transaction.SourceType, transaction.SourceKey })
             .ToListAsync(cancellationToken);
         var expenses = await db.Expenses.AsNoTracking()
