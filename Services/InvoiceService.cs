@@ -44,7 +44,7 @@ public sealed class InvoiceService
             throw new ArgumentException("Month must use yyyy-MM format.", nameof(monthKey));
 
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = db.Database.IsRelational()
+        await using var dbTransaction = db.Database.IsRelational()
             ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken)
             : null;
 
@@ -66,8 +66,8 @@ public sealed class InvoiceService
             var storedInvoice = JsonSerializer.Deserialize<InvoiceData>(existingIssue.SnapshotJson);
             if (storedInvoice is null)
                 throw new InvalidOperationException("Stored invoice snapshot is invalid.");
-            if (transaction is not null)
-                await transaction.CommitAsync(cancellationToken);
+            if (dbTransaction is not null)
+                await dbTransaction.CommitAsync(cancellationToken);
             return storedInvoice;
         }
 
@@ -328,8 +328,8 @@ public sealed class InvoiceService
         existingIssue.InvoiceNo = data.InvoiceNo;
         existingIssue.SnapshotJson = JsonSerializer.Serialize(immutableSnapshot);
         await db.SaveChangesAsync(cancellationToken);
-        if (transaction is not null)
-            await transaction.CommitAsync(cancellationToken);
+        if (dbTransaction is not null)
+            await dbTransaction.CommitAsync(cancellationToken);
 
         return data;
     }
