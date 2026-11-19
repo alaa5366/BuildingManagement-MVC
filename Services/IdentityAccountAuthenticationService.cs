@@ -40,11 +40,26 @@ public sealed class IdentityAccountAuthenticationService
         var matches = await (
             from account in db.UserAccounts
             join person in db.Persons on account.PersonId equals person.PersonId
-            where account.NormalizedEmail == email ||
-                  (!string.IsNullOrEmpty(phone) && (person.PrimaryPhone == phone || person.Whatsapp == phone))
+            where account.NormalizedEmail == email
             select new { Account = account, Person = person })
             .Take(2)
             .ToListAsync(cancellationToken);
+
+        if (!string.IsNullOrEmpty(phone))
+        {
+            var phoneCandidates = await (
+                from account in db.UserAccounts
+                join person in db.Persons on account.PersonId equals person.PersonId
+                where person.PrimaryPhone != null
+                select new { Account = account, Person = person })
+                .ToListAsync(cancellationToken);
+            foreach (var candidate in phoneCandidates.Where(item =>
+                string.Equals(AuthHelpers.NormalizePhone(item.Person.PrimaryPhone), phone, StringComparison.Ordinal)))
+            {
+                if (!matches.Any(item => item.Account.AccountId == candidate.Account.AccountId))
+                    matches.Add(candidate);
+            }
+        }
 
         if (matches.Count == 0 && string.Equals(credential, "1234", StringComparison.Ordinal))
         {
@@ -57,11 +72,26 @@ public sealed class IdentityAccountAuthenticationService
                 matches = await (
                     from account in db.UserAccounts
                     join person in db.Persons on account.PersonId equals person.PersonId
-                    where account.NormalizedEmail == email ||
-                          (!string.IsNullOrEmpty(phone) && person.PrimaryPhone == phone)
+                    where account.NormalizedEmail == email
                     select new { Account = account, Person = person })
                     .Take(2)
                     .ToListAsync(cancellationToken);
+
+                if (!string.IsNullOrEmpty(phone))
+                {
+                    var phoneCandidates = await (
+                        from account in db.UserAccounts
+                        join person in db.Persons on account.PersonId equals person.PersonId
+                        where person.PrimaryPhone != null
+                        select new { Account = account, Person = person })
+                        .ToListAsync(cancellationToken);
+                    foreach (var candidate in phoneCandidates.Where(item =>
+                        string.Equals(AuthHelpers.NormalizePhone(item.Person.PrimaryPhone), phone, StringComparison.Ordinal)))
+                    {
+                        if (!matches.Any(item => item.Account.AccountId == candidate.Account.AccountId))
+                            matches.Add(candidate);
+                    }
+                }
             }
         }
 
@@ -141,6 +171,57 @@ public sealed class IdentityAccountAuthenticationService
         result.SecurityStamp = match.Account.SecurityStamp;
         result.MustChangePin = match.Account.MustChangePin;
         return result;
+    }
+
+    public async Task<bool> ChangeResidentPinAsync(
+        Guid accountId,
+        string expectedSecurityStamp,
+        string newPin,
+        CancellationToken cancellationToken = default)
+    {
+        if (newPin.Length < 4 || newPin.Length > 12 || newPin.Any(character => character < '0' || character > '9')
+            || string.Equals(newPin, "1234", StringComparison.Ordinal))
+            return false;
+
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await db.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable, cancellationToken);
+        var account = await db.UserAccounts.SingleOrDefaultAsync(
+            item => item.AccountId == accountId, cancellationToken);
+        if (account is null || !account.MustChangePin ||
+            !string.Equals(account.SecurityStamp, expectedSecurityStamp, StringComparison.Ordinal) ||
+            account.AccountStatus != 1)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return false;
+        }
+
+        var now = DateTime.UtcNow;
+        var currentCredentials = await db.UserCredentials
+            .Where(item => item.AccountId == accountId && item.CredentialType == 0
+                && item.RevokedAtUtc == null)
+            .ToListAsync(cancellationToken);
+        var replacementId = Guid.NewGuid();
+        db.UserCredentials.Add(new UserCredentialEntity
+        {
+            CredentialId = replacementId,
+            AccountId = accountId,
+            CredentialType = 0,
+            CredentialHash = _hasher.HashPin(newPin),
+            HashAlgorithm = "BCrypt.Net-Next",
+            CreatedAtUtc = now
+        });
+        foreach (var credential in currentCredentials)
+        {
+            credential.RevokedAtUtc = now;
+            credential.ReplacedByCredentialId = replacementId;
+        }
+
+        account.MustChangePin = false;
+        account.SecurityStamp = Guid.NewGuid().ToString("N");
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return true;
     }
 
     private async Task<bool> ProvisionResidentAccountAsync(
