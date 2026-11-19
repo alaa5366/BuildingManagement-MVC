@@ -287,7 +287,15 @@ SELECT N'PHASE37_COMMITTED' AS Phase37Result;
                 if ($caught -is [System.Data.SqlClient.SqlException]) {
                     foreach ($sqlError in $caught.Errors) {
                         Log ("SQL ERROR Number={0}; State={1}; Class={2}; Line={3}; Procedure={4}; Server={5}; Message={6}" -f $sqlError.Number,$sqlError.State,$sqlError.Class,$sqlError.LineNumber,$sqlError.Procedure,$sqlError.Server,$sqlError.Message)
+                        $sqlLines = $sql -split "`r?`n"
+                        $lineNumber = [int]$sqlError.LineNumber
+                        $from = [Math]::Max(1,$lineNumber - 5)
+                        $to = [Math]::Min($sqlLines.Count,$lineNumber + 5)
+                        for ($i = $from; $i -le $to; $i++) {
+                            Log ("SQL CONTEXT {0}: {1}" -f $i,$sqlLines[$i - 1])
+                        }
                     }
+                    Log ("SQL BATCH SHA256: " + [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::Unicode.GetBytes($sql))))
                     break
                 }
                 $caught = $caught.InnerException
