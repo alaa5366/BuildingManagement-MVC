@@ -64,7 +64,11 @@ public sealed class InvoiceService
         if (!string.IsNullOrWhiteSpace(existingIssue?.SnapshotJson))
         {
             var storedInvoice = JsonSerializer.Deserialize<InvoiceData>(existingIssue.SnapshotJson);
-            return storedInvoice ?? throw new InvalidOperationException("Stored invoice snapshot is invalid.");
+            if (storedInvoice is null)
+                throw new InvalidOperationException("Stored invoice snapshot is invalid.");
+            if (transaction is not null)
+                await transaction.CommitAsync(cancellationToken);
+            return storedInvoice;
         }
 
         var building = await _wallet.GetBuildingShellAsync(buildingId, apartmentId, cancellationToken);
