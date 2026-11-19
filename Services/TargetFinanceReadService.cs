@@ -216,6 +216,8 @@ public sealed class TargetFinanceReadService
             : new Dictionary<string, decimal>(StringComparer.Ordinal) { [""] = netExpense };
     }
 
+    private static string NormalizeSourceKey(string sourceKey) => sourceKey.Trim();
+
     private static TargetFinanceMonthSnapshot Empty(IReadOnlyList<FinancialCategory> categories) =>
         new(categories, Array.Empty<Expense>(), Array.Empty<Revenue>(), 0m);
 
