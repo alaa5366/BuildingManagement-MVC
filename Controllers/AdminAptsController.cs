@@ -23,6 +23,7 @@ public class AdminAptsController : Controller
     private readonly BuildingsService _buildings;
     private readonly ResidentsService _residents;
     private readonly QrSecurityService _qrSecurity;
+    private readonly TargetQrService _targetQr;
     private readonly QrGeneratorService _qrGen;
     private readonly TargetWhatsAppService _targetWhatsApp;
     private readonly TargetNotificationsService _targetNotifications;
@@ -36,6 +37,7 @@ public class AdminAptsController : Controller
         BuildingsService buildings,
         ResidentsService residents,
         QrSecurityService qrSecurity,
+        TargetQrService targetQr,
         QrGeneratorService qrGen,
         TargetWhatsAppService targetWhatsApp,
         IAuditLogger auditLogger,
@@ -45,6 +47,7 @@ public class AdminAptsController : Controller
         _buildings = buildings;
         _residents = residents;
         _qrSecurity = qrSecurity;
+        _targetQr = targetQr;
         _qrGen = qrGen;
         _targetWhatsApp = targetWhatsApp;
         _auditLogger = auditLogger;
@@ -84,20 +87,19 @@ public class AdminAptsController : Controller
     public async Task<IActionResult> GenerateQuickQr(
         string aptId, int validityMinutes, bool oneTime, int maxUses)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
+        if (validityMinutes is < 1 or > 60 || (!oneTime && maxUses is < 1 or > 100))
+            return BadRequest(new { error = "invalid-qr-options" });
 
-        var apt = building.Apartments.FirstOrDefault(a => a.Id == aptId);
-        if (apt == null) return NotFound();
-
-        var floor = building.Floors.FirstOrDefault(f => f.Id == apt.FloorId);
+        var apt = await _targetQr.GetApartmentAsync(
+            BuildingId, aptId, requireActive: true, HttpContext.RequestAborted);
+        if (apt is null) return NotFound();
 
         var options = new QuickQrOptions
         {
-            BuildingId = building.Id,
-            AptId = aptId,
-            AptNumber = apt.Number,
-            FloorOrder = floor?.Order ?? 0,
+            BuildingId = apt.BuildingId,
+            AptId = apt.ApartmentId,
+            AptNumber = apt.ApartmentNumber,
+            FloorOrder = apt.FloorOrder,
             Validity = TimeSpan.FromMinutes(validityMinutes),
             OneTime = oneTime,
             MaxUses = oneTime ? 1 : maxUses
@@ -131,23 +133,24 @@ public class AdminAptsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> GenerateWelcome(string aptId, int validityHours)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
-
-        var apt = building.Apartments.FirstOrDefault(a => a.Id == aptId);
-        if (apt == null) return NotFound();
-
-        var floor = building.Floors.FirstOrDefault(f => f.Id == apt.FloorId);
+        var apt = await _targetQr.GetApartmentAsync(
+            BuildingId, aptId, requireActive: true, HttpContext.RequestAborted);
+        if (apt is null) return NotFound();
         var baseUrl = $"{Request.Scheme}://{Request.Host}";
 
         var hours = validityHours <= 0 ? 24 : validityHours;
+        if (hours > 72)
+        {
+            TempData["Error"] = "مدة رابط الترحيب يجب ألا تتجاوز 72 ساعة.";
+            return RedirectToAction(nameof(Index));
+        }
 
         var options = new QuickQrOptions
         {
-            BuildingId = building.Id,
-            AptId = apt.Id,
-            AptNumber = apt.Number,
-            FloorOrder = floor?.Order ?? 0,
+            BuildingId = apt.BuildingId,
+            AptId = apt.ApartmentId,
+            AptNumber = apt.ApartmentNumber,
+            FloorOrder = apt.FloorOrder,
             Validity = TimeSpan.FromHours(hours),
             OneTime = false,
             MaxUses = 5
@@ -159,10 +162,10 @@ public class AdminAptsController : Controller
         // رابط تعيين الـ PIN (مرة واحدة) — بدل ما نبعت الـ PIN نفسه
         var setPinToken = _qrSecurity.GenerateQuickToken(new QuickQrOptions
         {
-            BuildingId = building.Id,
-            AptId = apt.Id,
-            AptNumber = apt.Number,
-            FloorOrder = floor?.Order ?? 0,
+            BuildingId = apt.BuildingId,
+            AptId = apt.ApartmentId,
+            AptNumber = apt.ApartmentNumber,
+            FloorOrder = apt.FloorOrder,
             Validity = TimeSpan.FromHours(hours),
             OneTime = true,
             MaxUses = 1,
@@ -178,7 +181,7 @@ public class AdminAptsController : Controller
         };
 
         var welcomeDraft = await _targetWhatsApp.GenerateAsync(
-            BuildingId, apt.Id, "welcome", extra, baseUrl, HttpContext.RequestAborted);
+            BuildingId, apt.ApartmentId, "welcome", extra, baseUrl, HttpContext.RequestAborted);
         if (welcomeDraft is null) return NotFound();
         var messageText = welcomeDraft.Message;
         var waLink = welcomeDraft.Link;
@@ -186,9 +189,11 @@ public class AdminAptsController : Controller
         var qrPng = _qrGen.GeneratePng(quickUrl, 10);
         var qrBase64 = Convert.ToBase64String(qrPng);
 
-        ViewBag.Building = building;
-        ViewBag.Apt = apt;
-        ViewBag.Floor = floor;
+        ViewBag.BuildingName = apt.BuildingName;
+        ViewBag.BuildingNumber = apt.BuildingNumber;
+        ViewBag.ApartmentNumber = apt.ApartmentNumber;
+        ViewBag.ApartmentPhone = apt.Phone;
+        ViewBag.FloorLabel = apt.FloorLabel;
         ViewBag.QuickUrl = quickUrl;
         ViewBag.MessageText = messageText;
         ViewBag.WhatsAppLink = waLink;
