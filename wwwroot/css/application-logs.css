@@ -207,3 +207,24 @@
 .log-center .log-source-cell > span {
     display: block;
 }
+
+
+/* Shared observability navigation: one Kibana-style workspace, two protected streams. */
+.log-center .observability-nav {
+    display:flex; align-items:center; gap:.35rem; flex-wrap:wrap; margin:1rem 0;
+    padding:.45rem; border:1px solid #dfe7ef; border-radius:11px; background:#fff;
+}
+.log-center .observability-nav a,
+.log-center .observability-nav > span {
+    display:inline-flex; align-items:center; gap:.5rem; padding:.65rem .9rem;
+    border-radius:8px; color:#5c7086; font-size:.8rem; font-weight:750; text-decoration:none;
+}
+.log-center .observability-nav a:hover { background:#f1f6fb; color:#176da8; }
+.log-center .observability-nav a.active {
+    color:#075f9d; background:#eaf4fc; box-shadow:inset 0 0 0 1px #d4e8f8;
+}
+.log-center .observability-nav > span { margin-inline-start:auto; color:#91a0af; }
+.log-center .observability-nav small { font-size:.65rem; font-weight:500; }
+@media(max-width:650px) {
+    .log-center .observability-nav > span { margin-inline-start:0; }
+}
