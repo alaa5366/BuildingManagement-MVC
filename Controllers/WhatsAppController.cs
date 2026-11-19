@@ -26,6 +26,7 @@ public class WhatsAppController : Controller
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
 
+    /// <summary>Displays the current records and associated management actions.</summary>
     [HttpGet]
     public async Task<IActionResult> Index()
     {
@@ -35,6 +36,7 @@ public class WhatsAppController : Controller
         return View(model);
     }
 
+    /// <summary>Handles the SaveTemplate operation.</summary>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveTemplate(string name, string message, Guid? id)
     {
@@ -52,6 +54,7 @@ public class WhatsAppController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>Handles the DeleteTemplate operation.</summary>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteTemplate(Guid id)
     {
@@ -61,6 +64,7 @@ public class WhatsAppController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>Handles the Generate operation.</summary>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Generate(
         string aptId, string templateId, string? amount, string? note,
