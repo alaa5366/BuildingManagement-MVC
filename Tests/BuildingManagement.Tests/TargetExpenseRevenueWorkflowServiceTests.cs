@@ -14,9 +14,10 @@ public sealed class TargetExpenseRevenueWorkflowServiceTests
         var (factory, periodId, actorId) = await SeedAsync();
         var service = new TargetExpenseRevenueWorkflowService(factory, TimeProvider.System);
 
+        var localNow = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo"));
         var transactionId = await service.AddExpenseAsync(
-            "B1", DateTime.UtcNow.ToString("yyyy-MM"), "C-EXP", "Repair",
-            10.01m, DateTime.UtcNow.ToString("yyyy-MM-") + DateTime.UtcNow.ToString("dd"),
+            "B1", localNow.ToString("yyyy-MM"), "C-EXP", "Repair",
+            10.01m, localNow.ToString("yyyy-MM-dd"),
             Guid.NewGuid(), actorId);
 
         await using var verify = factory.CreateDbContext();
@@ -39,8 +40,9 @@ public sealed class TargetExpenseRevenueWorkflowServiceTests
         var (factory, _, actorId) = await SeedAsync();
         var service = new TargetExpenseRevenueWorkflowService(factory, TimeProvider.System);
         var commandId = Guid.NewGuid();
-        var month = DateTime.UtcNow.ToString("yyyy-MM");
-        var date = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        var localNow = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo"));
+        var month = localNow.ToString("yyyy-MM");
+        var date = localNow.ToString("yyyy-MM-dd");
 
         var first = await service.AddRevenueAsync("B1", month, "C-REV", "Refund",
             7.50m, date, commandId, actorId);
@@ -61,8 +63,12 @@ public sealed class TargetExpenseRevenueWorkflowServiceTests
             .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
         var factory = new TestContextFactory(options);
+        var zone = TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo");
+        var localNow = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, zone);
         var now = DateTime.UtcNow;
-        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var localMonthStart = new DateTime(localNow.Year, localNow.Month, 1, 0, 0, 0, DateTimeKind.Unspecified);
+        var monthStart = TimeZoneInfo.ConvertTimeToUtc(localMonthStart, zone);
+        var nextMonthStart = TimeZoneInfo.ConvertTimeToUtc(localMonthStart.AddMonths(1), zone);
         var periodId = Guid.NewGuid();
         var actorId = Guid.NewGuid();
         var personId = Guid.NewGuid();
@@ -72,7 +78,7 @@ public sealed class TargetExpenseRevenueWorkflowServiceTests
         {
             PeriodId = periodId, BuildingId = "B1", PeriodKey = now.ToString("yyyy-MM"),
             TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Open,
-            StartsAtUtc = monthStart, EndsAtUtc = monthStart.AddMonths(1), CreatedAtUtc = now
+            StartsAtUtc = monthStart, EndsAtUtc = nextMonthStart, CreatedAtUtc = now
         });
         db.Apartments.AddRange(
             new ApartmentEntity { BuildingId = "B1", Id = "A1", FloorId = "F1", Number = 1 },
