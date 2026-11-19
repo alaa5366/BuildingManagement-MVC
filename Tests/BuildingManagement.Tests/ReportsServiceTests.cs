@@ -10,7 +10,7 @@ public sealed class ReportsServiceTests
 {
 
     [Fact]
-    public async Task BuildReportAsync_UsesTargetDepositsExpensesAndRevenues()
+    public async Task BuildReportAsync_UsesTargetLedgerAndAllocationSourceRecords()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
@@ -18,7 +18,11 @@ public sealed class ReportsServiceTests
         var now = DateTime.UtcNow;
         var month = now.ToString("yyyy-MM");
         var periodId = Guid.NewGuid();
-        var categoryId = "C1";
+        var depositTx = Guid.NewGuid();
+        var expenseTx = Guid.NewGuid();
+        var revenueTx = Guid.NewGuid();
+        var expenseId = Guid.NewGuid();
+        var revenueId = Guid.NewGuid();
 
         await using (var seed = new AppDbContext(options))
         {
@@ -40,38 +44,77 @@ public sealed class ReportsServiceTests
                 EndsAtUtc = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1),
                 CreatedAtUtc = now
             });
-            seed.PaymentDeposits.Add(new PaymentDepositEntity
-            {
-                PaymentDepositId = Guid.NewGuid(), PeriodId = periodId, BuildingId = "B1",
-                ApartmentId = "A1", Amount = 500m, CurrencyCode = "EGP",
-                Status = PaymentDepositStatus.Confirmed, SubmittedAtUtc = now,
-                ConfirmedAtUtc = now, SourceSystem = "application"
-            });
             seed.FinancialCategories.Add(new FinancialCategoryEntity
             {
-                BuildingId = "B1", Id = categoryId, Kind = "expense",
+                BuildingId = "B1", Id = "C1", Kind = "expense",
                 Name = "Maintenance", Color = "#123456", IsActive = true, SortOrder = 1
             });
             seed.Expenses.Add(new ExpenseEntity
             {
-                BuildingId = "B1", Id = Guid.NewGuid().ToString("N"), MonthKey = month,
-                CategoryId = categoryId, CategoryKind = "expense", Note = "Repair",
+                BuildingId = "B1", Id = expenseId.ToString("N"), MonthKey = month,
+                CategoryId = "C1", CategoryKind = "expense", Note = "Repair",
                 Amount = 200m, ExpenseDate = DateOnly.FromDateTime(now)
             });
             seed.Revenues.Add(new RevenueEntity
             {
-                BuildingId = "B1", Id = Guid.NewGuid().ToString("N"), MonthKey = month,
+                BuildingId = "B1", Id = revenueId.ToString("N"), MonthKey = month,
                 CategoryId = null, CategoryKind = "revenue", Note = "Other income",
                 Amount = 100m, RevenueDate = DateOnly.FromDateTime(now)
             });
+            seed.LedgerTransactions.AddRange(
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = depositTx, PeriodId = periodId, BuildingId = "B1",
+                    Kind = LedgerTransactionKind.Deposit, Status = LedgerTransactionStatus.Posted,
+                    IdempotencyKey = "report-deposit", CreatedAtUtc = now, PostedAtUtc = now
+                },
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = expenseTx, PeriodId = periodId, BuildingId = "B1",
+                    Kind = LedgerTransactionKind.Expense, Status = LedgerTransactionStatus.Posted,
+                    IdempotencyKey = "report-expense", SourceSystem = "application",
+                    SourceType = "Expense", SourceKey = expenseId.ToString("D"),
+                    CreatedAtUtc = now, PostedAtUtc = now
+                },
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = revenueTx, PeriodId = periodId, BuildingId = "B1",
+                    Kind = LedgerTransactionKind.Revenue, Status = LedgerTransactionStatus.Posted,
+                    IdempotencyKey = "report-revenue", SourceSystem = "application",
+                    SourceType = "Revenue", SourceKey = revenueId.ToString("D"),
+                    CreatedAtUtc = now, PostedAtUtc = now
+                });
+            seed.LedgerEntries.AddRange(
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = depositTx,
+                    PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.Deposit, SignedAmount = 500m, CurrencyCode = "EGP",
+                    EffectiveAtUtc = now, CreatedAtUtc = now
+                },
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = expenseTx,
+                    PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.ExpenseAllocation, SignedAmount = -200m, CurrencyCode = "EGP",
+                    EffectiveAtUtc = now, CreatedAtUtc = now
+                },
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = revenueTx,
+                    PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.RevenueAllocation, SignedAmount = 100m, CurrencyCode = "EGP",
+                    EffectiveAtUtc = now, CreatedAtUtc = now
+                });
             await seed.SaveChangesAsync();
         }
 
         var factory = new TestContextFactory(options);
         var wallet = new TargetWalletReadService(factory);
         var finance = new TargetFinanceReadService(factory);
-        var service = new ReportsService(factory, wallet, finance);
-        var report = await service.BuildReportAsync("B1", "6m", month);
+        var building = await wallet.GetBuildingShellAsync("B1");
+        var service = new ReportsService(wallet, finance);
+        var report = await service.BuildReportAsync(building!, "6m", month);
 
         Assert.Equal(500m, report.TotalCollected);
         Assert.Equal(200m, report.TotalExpenses);
