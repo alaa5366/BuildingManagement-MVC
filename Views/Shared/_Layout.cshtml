@@ -43,9 +43,9 @@
     {
         <link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
     }
-    <link rel="stylesheet" href="~/css/ui-refresh.css" asp-append-version="true" />
-
     @await RenderSectionAsync("Styles", required: false)
+    @* Keep the shared design system last so legacy page styles cannot fragment the UI. *@
+    <link rel="stylesheet" href="~/css/ui-refresh.css" asp-append-version="true" />
 </head>
 <body class="@(isRtl ? "rtl" : "ltr") @(showSidebar ? "has-sidebar" : "no-sidebar")">
 
