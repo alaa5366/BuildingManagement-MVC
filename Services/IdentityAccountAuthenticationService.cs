@@ -25,6 +25,8 @@ public sealed class IdentityAccountAuthenticationService
     public async Task<AuthResult?> AuthenticateResidentAsync(
         string identifier,
         string credential,
+        string? buildingId = null,
+        string? apartmentId = null,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(identifier) || credential is null)
@@ -84,7 +86,9 @@ public sealed class IdentityAccountAuthenticationService
         var occupancy = await db.ApartmentOccupancies.AsNoTracking()
             .Where(item => item.PersonId == match.Person.PersonId
                 && item.ValidFromUtc <= now
-                && (item.ValidToUtc == null || item.ValidToUtc > now))
+                && (item.ValidToUtc == null || item.ValidToUtc > now)
+                && (buildingId == null || item.BuildingId == buildingId)
+                && (apartmentId == null || item.ApartmentId == apartmentId))
             .OrderByDescending(item => item.IsPrimary)
             .ThenByDescending(item => item.ValidFromUtc)
             .Select(item => new { item.BuildingId, item.ApartmentId })
