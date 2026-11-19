@@ -119,6 +119,13 @@ public class BackupController : Controller
         try
         {
             var (bytes, result) = await _backup.CreateBackupAsync(collections, CurrentUserId);
+            if (!result.Success)
+            {
+                _logger.LogError("Backup creation was incomplete: {Errors}", string.Join("; ", result.Errors));
+                TempData["Error"] = Loc.T("Creation_Failed");
+                return RedirectToAction(nameof(Index), new { tab = "backup" });
+            }
+
             TempData["Message"] = Loc.T("Backup_Created_N_Collections_N_Documents", result.Collections.Count, result.TotalDocuments);
             return File(bytes, "application/zip", result.FileName);
         }
