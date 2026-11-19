@@ -1033,8 +1033,10 @@ public class AccountController : Controller
 
         // QR sign-in must use Persons/UserAccounts/ApartmentOccupancies and scoped
         // resident grants only. Never authenticate through the transitional Residents table.
+        var isRecovery = string.Equals(payload.Purpose, "recovery", StringComparison.OrdinalIgnoreCase);
         var result = await _identityAuth.AuthenticateResidentWithQuickQrAsync(
-            payload.BuildingId, payload.AptId, HttpContext.RequestAborted);
+            payload.BuildingId, payload.AptId, requirePinChange: isRecovery,
+            cancellationToken: HttpContext.RequestAborted);
         if (!result.Success)
         {
             ViewBag.Error = Loc.T("Invalid_Token");
@@ -1042,9 +1044,6 @@ public class AccountController : Controller
         }
 
         result.ApartmentNumber = apartment.ApartmentNumber;
-        if (string.Equals(payload.Purpose, "recovery", StringComparison.OrdinalIgnoreCase))
-            result.MustChangePin = true;
-
         if (result.MustChangePin)
         {
             if (string.IsNullOrWhiteSpace(result.Phone))
