@@ -4178,12 +4178,8 @@ This operation can take a few seconds.</value>
   <data name="Temporary_PIN_Replace_Notice" xml:space="preserve">
     <value>Your temporary PIN must be replaced before you continue.</value>
   </data>
-  <data name="New_PIN" xml:space="preserve">
-    <value>New PIN</value>
-  </data>
-  <data name="Confirm_New_PIN" xml:space="preserve">
-    <value>Confirm new PIN</value>
-  </data>
+
+
   <data name="PIN_4_12_Digits" xml:space="preserve">
     <value>Use 4–12 digits.</value>
   </data>
