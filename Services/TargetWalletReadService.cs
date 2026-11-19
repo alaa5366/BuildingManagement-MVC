@@ -16,6 +16,7 @@ public sealed class TargetWalletReadService
 
     public TargetWalletReadService(IDbContextFactory<AppDbContext> factory) => _factory = factory;
 
+    /// <summary>Gets the context required to submit a wallet transaction.</summary>
     public async Task<TargetWalletSubmissionContext?> GetSubmissionContextAsync(
         string buildingId,
         string periodKey,
@@ -46,6 +47,7 @@ public sealed class TargetWalletReadService
     }
 
 
+    /// <summary>Gets pending wallet submissions for a building.</summary>
     public async Task<IReadOnlyList<TargetPendingDeposit>> GetPendingForBuildingAsync(
         string buildingId,
         CancellationToken cancellationToken = default)
@@ -92,6 +94,7 @@ public sealed class TargetWalletReadService
             row.PeriodKey)).ToList();
     }
 
+    /// <summary>Gets the building data required by wallet views.</summary>
     public async Task<Building?> GetBuildingShellAsync(
         string buildingId,
         string? apartmentId = null,
@@ -161,6 +164,7 @@ public sealed class TargetWalletReadService
         };
     }
 
+    /// <summary>Resolves the building identifier associated with an apartment.</summary>
     public async Task<string?> FindBuildingIdByApartmentAsync(
         string apartmentId,
         CancellationToken cancellationToken = default)
@@ -181,6 +185,7 @@ public sealed class TargetWalletReadService
         return buildingIds.Count == 1 ? buildingIds[0] : null;
     }
 
+    /// <summary>Gets the available financial period keys.</summary>
     public async Task<IReadOnlyList<string>> GetFinancialPeriodKeysAsync(
         string buildingId,
         CancellationToken cancellationToken = default)
@@ -197,6 +202,7 @@ public sealed class TargetWalletReadService
             .ToListAsync(cancellationToken);
     }
 
+    /// <summary>Gets wallet totals for the requested financial period.</summary>
     public async Task<IReadOnlyDictionary<string, TargetWalletPeriodTotals>> GetPeriodTotalsAsync(
         string buildingId,
         IReadOnlyCollection<string> monthKeys,
@@ -265,6 +271,7 @@ public sealed class TargetWalletReadService
         return result;
     }
 
+    /// <summary>Gets the current financial period key.</summary>
     public async Task<string> GetCurrentPeriodKeyAsync(
         string buildingId,
         DateTimeOffset? utcNow = null,
@@ -304,6 +311,7 @@ public sealed class TargetWalletReadService
         }
     }
 
+    /// <summary>Gets the number of financial periods for the requested scope.</summary>
     public async Task<int> GetFinancialPeriodCountAsync(
         string buildingId,
         CancellationToken cancellationToken = default)
@@ -318,6 +326,7 @@ public sealed class TargetWalletReadService
             .CountAsync(cancellationToken);
     }
 
+    /// <summary>Builds the administrator wallet snapshot for the requested scope.</summary>
     public async Task<TargetWalletAdminSnapshot> GetAdminSnapshotAsync(
         string buildingId,
         string month,
@@ -423,6 +432,7 @@ public sealed class TargetWalletReadService
         return new TargetWalletAdminSnapshot(balances, pending, totals);
     }
 
+    /// <summary>Gets apartment details used by wallet operations.</summary>
     public async Task<TargetWalletSnapshot> GetApartmentAsync(
         string buildingId,
         string apartmentId,
