@@ -7,7 +7,7 @@
 @model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.MaintenanceRecord>
 @{
     ViewData["Title"] = Loc.T("Maintenance");
-    var building = (Building)ViewBag.Building;
+    var buildingName = (string)ViewBag.BuildingName;
     string[] statuses = { "open", "inprogress", "done", "cancelled" };
     string StatusLabel(string s) => s switch { "open" => Loc.T("Open_3"), "inprogress" => Loc.T("In_Progress"), "done" => Loc.T("Done"), "cancelled" => Loc.T("Cancelled"), _ => s };
     var routeValuesStr = ViewBag.RouteValues as Dictionary<string, string> ?? new();
@@ -16,7 +16,7 @@
     var pageTotalCost = Model.Items.Sum(m => m.Cost);
 }
 
-<h3 class="mb-3">@Loc.T("Maintenance_N_N", building.Name, Model.TotalItems)</h3>
+<h3 class="mb-3">@Loc.T("Maintenance_N_N", buildingName, Model.TotalItems)</h3>
 
 @if (TempData["Message"] != null)
 {
