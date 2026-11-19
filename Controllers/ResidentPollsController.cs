@@ -33,7 +33,6 @@ public class ResidentPollsController : Controller
         var paged = await _polls.GetPageAsync(BuildingId, page, pageSize, activeOnly: true, HttpContext.RequestAborted, subjectReference: ApartmentId);
         ViewBag.BuildingName = summary.Value.Name;
         ViewBag.OpenApartmentCount = summary.Value.ActiveApartmentCount;
-        ViewBag.ApartmentId = ApartmentId;
         ViewBag.RouteValues = new Dictionary<string, string?> { ["pageSize"] = paged.PageSize.ToString() };
         return View(paged);
     }
