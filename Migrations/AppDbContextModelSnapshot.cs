@@ -1751,8 +1751,7 @@ namespace BuildingManagementMvc.Migrations
                         .HasDatabaseName("IX_LegacyIdentityMap_Person")
                         .HasFilter("[PersonId] IS NOT NULL");
 
-                    b.HasIndex("ReviewedByAccountId");
-
+                    
                     b.HasIndex("MappingStatus", "SourceTable", "SourceSystem")
                         .HasDatabaseName("IX_LegacyIdentityMap_Status_Source");
 
@@ -1760,7 +1759,7 @@ namespace BuildingManagementMvc.Migrations
                         {
                             t.HasCheckConstraint("CK_LegacyIdentityMap_LinkTargets", "(([MappingStatus] IN (0,3,4) AND [PersonId] IS NULL AND [AccountId] IS NULL) OR ([MappingStatus] IN (1,2) AND [PersonId] IS NOT NULL))");
 
-                            t.HasCheckConstraint("CK_LegacyIdentityMap_ResolvedReview", "([MappingStatus] NOT IN (1,2) OR ([ReviewedAtUtc] IS NOT NULL AND [ReviewedByAccountId] IS NOT NULL AND [ReviewReason] IS NOT NULL AND LEN(LTRIM(RTRIM([ReviewReason]))) > 0))");
+                            t.HasCheckConstraint("CK_LegacyIdentityMap_ResolvedReview", "([MappingStatus] NOT IN (1,2) OR ([ReviewedAtUtc] IS NOT NULL AND [ReviewedByUserId] IS NOT NULL AND [ReviewReason] IS NOT NULL AND LEN(LTRIM(RTRIM([ReviewReason]))) > 0))");
 
                             t.HasCheckConstraint("CK_LegacyIdentityMap_ReviewStamp", "(([ReviewedAtUtc] IS NULL AND [ReviewedByAccountId] IS NULL) OR ([ReviewedAtUtc] IS NOT NULL AND [ReviewedByAccountId] IS NOT NULL))");
 
@@ -2035,7 +2034,7 @@ namespace BuildingManagementMvc.Migrations
                     b.Property<string>("PreviousPhone").IsRequired().HasMaxLength(32).HasColumnType("nvarchar(32)");
                     b.Property<string>("RequestedPhone").IsRequired().HasMaxLength(32).HasColumnType("nvarchar(32)");
                     b.Property<DateTime>("RequestedAtUtc").ValueGeneratedOnAdd().HasColumnType("datetime2(3)").HasDefaultValueSql("SYSUTCDATETIME()");
-                    b.Property<Guid?>("ReviewedByAccountId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("ReviewedByUserId").HasMaxLength(128).HasColumnType("nvarchar(128)");
                     b.Property<DateTime?>("ReviewedAtUtc").HasColumnType("datetime2(3)");
                     b.Property<string>("ReviewReason").HasMaxLength(500).HasColumnType("nvarchar(500)");
                     b.Property<byte[]>("RowVersion").IsConcurrencyToken().IsRequired().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
