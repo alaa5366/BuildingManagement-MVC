@@ -30,7 +30,7 @@ public class ResidentPollsController : Controller
         if (!await _polls.IsActiveApartmentAsync(BuildingId, ApartmentId, HttpContext.RequestAborted))
             return Forbid();
 
-        var paged = await _polls.GetPageAsync(BuildingId, page, pageSize, activeOnly: true, HttpContext.RequestAborted);
+        var paged = await _polls.GetPageAsync(BuildingId, page, pageSize, activeOnly: true, HttpContext.RequestAborted, subjectReference: ApartmentId);
         ViewBag.BuildingName = summary.Value.Name;
         ViewBag.OpenApartmentCount = summary.Value.ActiveApartmentCount;
         ViewBag.ApartmentId = ApartmentId;
