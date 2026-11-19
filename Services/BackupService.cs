@@ -134,19 +134,10 @@ public class BackupService
                     "apartments" => await db.Apartments.CountAsync(),
                     "residents" => await db.Residents.CountAsync(),
                     "financialCategories" => await db.FinancialCategories.CountAsync(),
-                    "expenses" => await db.Expenses.CountAsync(),
-                    "revenues" => await db.Revenues.CountAsync(),
-                    "monthlyApartmentShares" => await db.MonthlyApartmentShares.CountAsync(),
-                    "deposits" => await db.Deposits.CountAsync(),
-                    "depositEditHistory" => await db.DepositEditHistory.CountAsync(),
-                    "walletAdjustments" => await db.WalletAdjustments.CountAsync(),
                     "userPermissions" => await db.UserPermissions.CountAsync(),
                     "auditLog" => await db.AuditLog.CountAsync(),
-                    "notifications" => await db.Notifications.CountAsync(),
                     "polls" => await db.Polls.CountAsync(),
                     "pollOptions" => await db.PollOptions.CountAsync(),
-                    "pollVotes" => await db.PollVotes.CountAsync(),
-                    "maintenanceRecords" => await db.MaintenanceRecords.CountAsync(),
                     "dvrs" => await db.Dvrs.CountAsync(),
                     "cameras" => await db.Cameras.CountAsync(),
                     "qrTokens" => await db.QrTokens.CountAsync(),
@@ -323,35 +314,6 @@ By: {userId}
                 foreach (var c in await db.FinancialCategories.AsNoTracking().ToListAsync())
                     result.Add(ToDict($"{c.BuildingId}_{c.Kind}_{c.Id}", c));
                 break;
-            case "expenses":
-                // مفتاح مركّب: buildingId_expenseId
-                foreach (var e in await db.Expenses.AsNoTracking().ToListAsync())
-                    result.Add(ToDict($"{e.BuildingId}_{e.Id}", e));
-                break;
-            case "revenues":
-                // مفتاح مركّب: buildingId_revenueId
-                foreach (var r in await db.Revenues.AsNoTracking().ToListAsync())
-                    result.Add(ToDict($"{r.BuildingId}_{r.Id}", r));
-                break;
-            case "monthlyApartmentShares":
-                // مفتاح مركّب: buildingId_monthKey_apartmentId
-                foreach (var s in await db.MonthlyApartmentShares.AsNoTracking().ToListAsync())
-                    result.Add(ToDict($"{s.BuildingId}_{s.MonthKey}_{s.ApartmentId}", s));
-                break;
-            case "deposits":
-                // مفتاح مركّب: buildingId_depositId
-                foreach (var d in await db.Deposits.AsNoTracking().ToListAsync())
-                    result.Add(ToDict($"{d.BuildingId}_{d.Id}", d));
-                break;
-            case "depositEditHistory":
-                foreach (var de in await db.DepositEditHistory.AsNoTracking().ToListAsync())
-                    result.Add(ToDict(de.EditId.ToString(), de));
-                break;
-            case "walletAdjustments":
-                // مفتاح مركّب: buildingId_adjustmentId
-                foreach (var w in await db.WalletAdjustments.AsNoTracking().ToListAsync())
-                    result.Add(ToDict($"{w.BuildingId}_{w.Id}", w));
-                break;
             case "userPermissions":
                 // مفتاح مركّب: uid_permission
                 foreach (var p in await db.UserPermissions.AsNoTracking().ToListAsync())
@@ -360,11 +322,6 @@ By: {userId}
             case "auditLog":
                 foreach (var a in await db.AuditLog.AsNoTracking().ToListAsync())
                     result.Add(ToDict(a.AuditId.ToString(), a));
-                break;
-            case "notifications":
-                // مفتاح مركّب: buildingId_notificationId
-                foreach (var n in await db.Notifications.AsNoTracking().ToListAsync())
-                    result.Add(ToDict($"{n.BuildingId}_{n.Id}", n));
                 break;
             case "polls":
                 // مفتاح مركّب: buildingId_pollId
@@ -375,16 +332,6 @@ By: {userId}
                 // مفتاح مركّب: buildingId_pollId_optionId
                 foreach (var o in await db.PollOptions.AsNoTracking().ToListAsync())
                     result.Add(ToDict($"{o.BuildingId}_{o.PollId}_{o.Id}", o));
-                break;
-            case "pollVotes":
-                // مفتاح مركّب: buildingId_pollId_apartmentId
-                foreach (var v in await db.PollVotes.AsNoTracking().ToListAsync())
-                    result.Add(ToDict($"{v.BuildingId}_{v.PollId}_{v.ApartmentId}", v));
-                break;
-            case "maintenanceRecords":
-                // مفتاح مركّب: buildingId_recordId
-                foreach (var m in await db.MaintenanceRecords.AsNoTracking().ToListAsync())
-                    result.Add(ToDict($"{m.BuildingId}_{m.Id}", m));
                 break;
             case "dvrs":
                 foreach (var d in await db.Dvrs.AsNoTracking().ToListAsync())
@@ -898,147 +845,6 @@ By: {userId}
                     return true;
                 }
 
-            case "expenses":
-                {
-                    // فك المفتاح المركّب buildingId_expenseId
-                    var parts = id.Split('_');
-                    if (parts.Length != 2) return false;
-                    var buildingId = parts[0];
-                    var expId = parts[1];
-
-                    var existing = await db.Expenses
-                        .FirstOrDefaultAsync(x => x.BuildingId == buildingId && x.Id == expId);
-                    if (existing != null)
-                    {
-                        if (!overwrite) return false;
-                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
-                    }
-                    var entity = JsonSerializer.Deserialize<Data.Entities.ExpenseEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null)
-                    {
-                        entity.BuildingId = buildingId;
-                        entity.Id = expId;
-                        ApplyOrAdd(db, db.Expenses, existing, entity);
-                    }
-                    return true;
-                }
-
-            case "revenues":
-                {
-                    // فك المفتاح المركّب buildingId_revenueId
-                    var parts = id.Split('_');
-                    if (parts.Length != 2) return false;
-                    var buildingId = parts[0];
-                    var revId = parts[1];
-
-                    var existing = await db.Revenues
-                        .FirstOrDefaultAsync(x => x.BuildingId == buildingId && x.Id == revId);
-                    if (existing != null)
-                    {
-                        if (!overwrite) return false;
-                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
-                    }
-                    var entity = JsonSerializer.Deserialize<Data.Entities.RevenueEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null)
-                    {
-                        entity.BuildingId = buildingId;
-                        entity.Id = revId;
-                        ApplyOrAdd(db, db.Revenues, existing, entity);
-                    }
-                    return true;
-                }
-
-            case "monthlyApartmentShares":
-                {
-                    // فك المفتاح المركّب buildingId_monthKey_apartmentId
-                    var parts = id.Split('_');
-                    if (parts.Length != 3) return false;
-                    var buildingId = parts[0];
-                    var monthKey = parts[1];
-                    var aptId = parts[2];
-
-                    var existing = await db.MonthlyApartmentShares
-                        .FirstOrDefaultAsync(x => x.BuildingId == buildingId && x.MonthKey == monthKey && x.ApartmentId == aptId);
-                    if (existing != null)
-                    {
-                        if (!overwrite) return false;
-                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
-                    }
-                    var entity = JsonSerializer.Deserialize<Data.Entities.MonthlyApartmentShareEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null)
-                    {
-                        entity.BuildingId = buildingId;
-                        entity.MonthKey = monthKey;
-                        entity.ApartmentId = aptId;
-                        ApplyOrAdd(db, db.MonthlyApartmentShares, existing, entity);
-                    }
-                    return true;
-                }
-
-            case "deposits":
-                {
-                    // فك المفتاح المركّب buildingId_depositId
-                    var parts = id.Split('_');
-                    if (parts.Length != 2) return false;
-                    var buildingId = parts[0];
-                    var depId = parts[1];
-
-                    var existing = await db.Deposits
-                        .FirstOrDefaultAsync(x => x.BuildingId == buildingId && x.Id == depId);
-                    if (existing != null)
-                    {
-                        if (!overwrite) return false;
-                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
-                    }
-                    var entity = JsonSerializer.Deserialize<Data.Entities.DepositEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null)
-                    {
-                        entity.BuildingId = buildingId;
-                        entity.Id = depId;
-                        ApplyOrAdd(db, db.Deposits, existing, entity);
-                    }
-                    return true;
-                }
-
-            case "depositEditHistory":
-                {
-                    // مفتاح رقمي بسيط
-                    var existing = await db.DepositEditHistory.FirstOrDefaultAsync(x => x.EditId == long.Parse(id));
-                    if (existing != null)
-                    {
-                        if (!overwrite) return false;
-                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
-                    }
-                    var entity = JsonSerializer.Deserialize<Data.Entities.DepositEditEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null) { if (existing == null) entity.EditId = 0; ApplyOrAdd(db, db.DepositEditHistory, existing, entity); }
-                    return true;
-                }
-
-            case "walletAdjustments":
-                {
-                    // فك المفتاح المركّب buildingId_adjustmentId
-                    var parts = id.Split('_');
-                    if (parts.Length != 2) return false;
-                    var buildingId = parts[0];
-                    var adjId = parts[1];
-
-                    var existing = await db.WalletAdjustments
-                        .FirstOrDefaultAsync(x => x.BuildingId == buildingId && x.Id == adjId);
-                    if (existing != null)
-                    {
-                        if (!overwrite) return false;
-                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
-                    }
-                    var entity = JsonSerializer.Deserialize<Data.Entities.WalletAdjustmentEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null)
-                    {
-                        entity.BuildingId = buildingId;
-                        entity.Id = adjId;
-                        ApplyOrAdd(db, db.WalletAdjustments, existing, entity);
-                    }
-                    return true;
-                }
-
             case "userPermissions":
                 {
                     // فك المفتاح المركّب uid_permission
@@ -1069,31 +875,6 @@ By: {userId}
                     // جدول append-only → نضيف دايماً بدون حذف
                     var entity = JsonSerializer.Deserialize<Data.Entities.AuditLogEntity>(data.GetRawText(), RestoreJsonOptions);
                     if (entity != null) { entity.AuditId = 0; db.AuditLog.Add(entity); }   // الـ id بيتولّد من الداتابيز (identity)
-                    return true;
-                }
-
-            case "notifications":
-                {
-                    // فك المفتاح المركّب buildingId_notificationId
-                    var parts = id.Split('_');
-                    if (parts.Length != 2) return false;
-                    var buildingId = parts[0];
-                    var notifId = parts[1];
-
-                    var existing = await db.Notifications
-                        .FirstOrDefaultAsync(x => x.BuildingId == buildingId && x.Id == notifId);
-                    if (existing != null)
-                    {
-                        if (!overwrite) return false;
-                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
-                    }
-                    var entity = JsonSerializer.Deserialize<Data.Entities.NotificationEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null)
-                    {
-                        entity.BuildingId = buildingId;
-                        entity.Id = notifId;
-                        ApplyOrAdd(db, db.Notifications, existing, entity);
-                    }
                     return true;
                 }
 
@@ -1145,58 +926,6 @@ By: {userId}
                         entity.PollId = pollId;
                         entity.Id = optionId;
                         ApplyOrAdd(db, db.PollOptions, existing, entity);
-                    }
-                    return true;
-                }
-
-            case "pollVotes":
-                {
-                    // فك المفتاح المركّب buildingId_pollId_apartmentId
-                    var parts = id.Split('_');
-                    if (parts.Length != 3) return false;
-                    var buildingId = parts[0];
-                    var pollId = parts[1];
-                    var aptId = parts[2];
-
-                    var existing = await db.PollVotes
-                        .FirstOrDefaultAsync(x => x.BuildingId == buildingId && x.PollId == pollId && x.ApartmentId == aptId);
-                    if (existing != null)
-                    {
-                        if (!overwrite) return false;
-                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
-                    }
-                    var entity = JsonSerializer.Deserialize<Data.Entities.PollVoteEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null)
-                    {
-                        entity.BuildingId = buildingId;
-                        entity.PollId = pollId;
-                        entity.ApartmentId = aptId;
-                        ApplyOrAdd(db, db.PollVotes, existing, entity);
-                    }
-                    return true;
-                }
-
-            case "maintenanceRecords":
-                {
-                    // فك المفتاح المركّب buildingId_recordId
-                    var parts = id.Split('_');
-                    if (parts.Length != 2) return false;
-                    var buildingId = parts[0];
-                    var recordId = parts[1];
-
-                    var existing = await db.MaintenanceRecords
-                        .FirstOrDefaultAsync(x => x.BuildingId == buildingId && x.Id == recordId);
-                    if (existing != null)
-                    {
-                        if (!overwrite) return false;
-                        // التحديث بيتم في المكان (SetValues) — مفيش حذف، عشان الـ cascade ماتمسحش بيانات مرتبطة
-                    }
-                    var entity = JsonSerializer.Deserialize<Data.Entities.MaintenanceRecordEntity>(data.GetRawText(), RestoreJsonOptions);
-                    if (entity != null)
-                    {
-                        entity.BuildingId = buildingId;
-                        entity.Id = recordId;
-                        ApplyOrAdd(db, db.MaintenanceRecords, existing, entity);
                     }
                     return true;
                 }
