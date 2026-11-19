@@ -8,6 +8,7 @@ public sealed class QrApartmentInfo
     public string ApartmentId { get; set; } = "";
     public int ApartmentNumber { get; set; }
     public string Owner { get; set; } = "";
+    public string Phone { get; set; } = "";
     public string FloorLabel { get; set; } = "";
     public int FloorOrder { get; set; }
 }
