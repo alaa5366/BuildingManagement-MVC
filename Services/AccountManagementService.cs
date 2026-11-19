@@ -46,7 +46,8 @@ public sealed class AccountManagementService
             Roles = "superadmin",
             RoleContexts = "مخزن الدخول القديم — البريد وكلمة المرور فقط",
             ActiveRoleCount = 1,
-            LastLoginAtUtc = user.LastLoginAt
+            LastLoginAtUtc = user.LastLoginAt,
+            IsSuperAdminEmailAllowed = SqlAuthService.IsSuperAdminEmail(user.Email)
         }));
 
         var grants = await (from grant in db.UserRoleAssignments.AsNoTracking()
@@ -125,6 +126,70 @@ public sealed class AccountManagementService
             Rows = result.Skip((page - 1) * pageSize).Take(pageSize).ToList()
         };
     }
+    public async Task<AccountManagementMutationResult> SetLegacySuperAdminStatusAsync(
+        string legacyUserId, bool activate, string actorId, CancellationToken ct = default)
+    {
+        await using var db = await _factory.CreateDbContextAsync(ct);
+        await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+        var account = await db.Users.SingleOrDefaultAsync(x => x.Uid == legacyUserId && x.Role == "superadmin", ct);
+        if (account is null) return AccountManagementMutationResult.Fail("حساب SuperAdmin غير موجود.");
+        if (string.Equals(account.Uid, actorId, StringComparison.Ordinal))
+            return AccountManagementMutationResult.Fail("لا يمكن تغيير حالة حسابك الحالي من هذه الشاشة.");
+        if (!SqlAuthService.IsSuperAdminEmail(account.Email))
+            return AccountManagementMutationResult.Fail("البريد غير موجود في قائمة SuperAdmin المسموح بها؛ راجع إعدادات Auth:SuperAdminEmails.");
+
+        if (activate)
+        {
+            account.IsActive = true;
+            account.IsDisabled = false;
+            account.DisabledReason = "";
+        }
+        else
+        {
+            var remaining = await db.Users.CountAsync(x => x.Role == "superadmin" && x.Uid != legacyUserId
+                && x.IsActive && !x.IsDisabled, ct);
+            if (remaining == 0)
+                return AccountManagementMutationResult.Fail("لا يمكن إيقاف آخر حساب SuperAdmin نشط.");
+            account.IsActive = false;
+            account.IsDisabled = true;
+            account.DisabledReason = "تم الإيقاف من مركز إدارة الحسابات.";
+        }
+
+        account.UpdatedAt = DateTime.UtcNow;
+        account.UpdatedBy = actorId;
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        await _audit.LogAsync(activate ? "identity.superadmin.account.activated" : "identity.superadmin.account.deactivated",
+            userId: actorId, userRole: "superadmin", metadata: new { TargetUserId = legacyUserId, account.Email });
+        return AccountManagementMutationResult.Ok(activate ? "تم تفعيل حساب SuperAdmin." : "تم إيقاف حساب SuperAdmin.");
+    }
+
+    public async Task<AccountManagementMutationResult> ResetLegacySuperAdminPasswordAsync(
+        string legacyUserId, string actorId, IPasswordHasher hasher, CancellationToken ct = default)
+    {
+        await using var db = await _factory.CreateDbContextAsync(ct);
+        await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+        var account = await db.Users.SingleOrDefaultAsync(x => x.Uid == legacyUserId && x.Role == "superadmin", ct);
+        if (account is null) return AccountManagementMutationResult.Fail("حساب SuperAdmin غير موجود.");
+        if (string.Equals(account.Uid, actorId, StringComparison.Ordinal))
+            return AccountManagementMutationResult.Fail("لا يمكن إعادة تعيين كلمة مرور حسابك الحالي من هذه الشاشة.");
+        if (!SqlAuthService.IsSuperAdminEmail(account.Email))
+            return AccountManagementMutationResult.Fail("البريد غير موجود في قائمة SuperAdmin المسموح بها.");
+        if (!account.IsActive || account.IsDisabled)
+            return AccountManagementMutationResult.Fail("فعّل الحساب أولًا قبل إعادة تعيين كلمة المرور.");
+
+        var temporaryPassword = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(24))
+            .TrimEnd('=');
+        account.Pin = hasher.Hash(temporaryPassword);
+        account.UpdatedAt = DateTime.UtcNow;
+        account.UpdatedBy = actorId;
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        await _audit.LogAsync("identity.superadmin.password.reset", userId: actorId, userRole: "superadmin",
+            metadata: new { TargetUserId = legacyUserId, account.Email, PasswordReset = true });
+        return AccountManagementMutationResult.Ok("تم إصدار كلمة مرور مؤقتة. اعرضها للمستخدم مرة واحدة واطلب منه تغييرها من قناة آمنة.", password: temporaryPassword);
+    }
+
     public async Task<AccountManagementMutationResult> SetResidentStatusAsync(Guid accountId, bool activate, string actorId, CancellationToken ct = default)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
@@ -231,6 +296,7 @@ public sealed class AccountManagementRow
     public Guid PersonId { get; set; }
     public string? LegacyUserId { get; set; }
     public bool IsLegacyAccount { get; set; }
+    public bool IsSuperAdminEmailAllowed { get; set; }
     public string Name { get; set; } = "";
     public string? Phone { get; set; }
     public string? Email { get; set; }
@@ -246,8 +312,9 @@ public sealed class AccountManagementRow
 
 }
 
-public sealed record AccountManagementMutationResult(bool Success, string Message, string? TemporaryPin = null)
+public sealed record AccountManagementMutationResult(bool Success, string Message, string? TemporaryPin = null, string? TemporaryPassword = null)
 {
     public static AccountManagementMutationResult Fail(string message) => new(false, message);
-    public static AccountManagementMutationResult Ok(string message, string? pin = null) => new(true, message, pin);
+    public static AccountManagementMutationResult Ok(string message, string? pin = null, string? password = null) =>
+        new(true, message, pin, password);
 }
