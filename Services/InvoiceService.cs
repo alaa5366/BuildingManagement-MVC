@@ -145,6 +145,15 @@ public sealed class InvoiceService
                 .Sum(line => line.AllocatedAmount);
         }
 
+        // Ledger entries include same-period reversal credits; use them for invoice totals
+        // rather than summing only original allocation batches.
+        expenseShare = -currentSnapshot.Transactions
+            .Where(item => item.Type == "expense")
+            .Sum(item => item.Amount);
+        revenueShare = currentSnapshot.Transactions
+            .Where(item => item.Type == "revenue")
+            .Sum(item => item.Amount);
+
         var openCount = building.Apartments.Count(item => !item.Closed && !item.Disabled);
         foreach (var categoryTotal in categoryTotals)
         {
