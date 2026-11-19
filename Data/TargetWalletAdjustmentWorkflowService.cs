@@ -159,8 +159,8 @@ public sealed class TargetWalletAdjustmentWorkflowService
             BuildingId = buildingId,
             EventCategory = "Finance",
             EventType = "WalletAdjustmentPosted",
-            ResourceType = "LedgerTransaction",
-            ResourceReference = transactionId.ToString("D"),
+            ResourceType = "Apartment",
+            ResourceReference = apartmentId,
             Outcome = 0,
             SafeDetailsJson = JsonSerializer.Serialize(new { apartmentId, amount, currencyCode, reason = reason.Trim() })
         });
