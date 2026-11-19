@@ -2772,7 +2772,7 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.SavedWhatsAppTemplateEntity", b =>
                 {
-                    b.Property<Guid>("Id").HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("Id").ValueGeneratedNever().HasColumnType("uniqueidentifier");
                     b.Property<string>("BuildingId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
                     b.Property<string>("Name").IsRequired().HasMaxLength(100).HasColumnType("nvarchar(100)");
                     b.Property<string>("Message").IsRequired().HasMaxLength(4000).HasColumnType("nvarchar(4000)");
