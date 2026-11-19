@@ -2044,7 +2044,7 @@ namespace BuildingManagementMvc.Migrations
                     b.HasOne("BuildingManagementMvc.Data.Entities.PersonEntity", null).WithMany().HasForeignKey("PersonId").OnDelete(DeleteBehavior.NoAction).IsRequired();
                     b.ToTable("PersonPhoneChangeRequests", null, t =>
                     {
-                        t.HasCheckConstraint("CK_PersonPhoneChangeRequests_Review", "(([Status] = 0 AND [ReviewedAtUtc] IS NULL AND [ReviewedByUserId] IS NULL) OR ([Status] IN (1,2) AND [ReviewedAtUtc] IS NOT NULL AND [ReviewedByUserId] IS NOT NULL))");
+                        t.HasCheckConstraint("CK_PersonPhoneChangeRequests_Review", "(([Status] = 0 AND [ReviewedAtUtc] IS NULL AND [ReviewedByUserId] IS NULL AND [ReviewReason] IS NULL) OR ([Status] IN (1,2) AND [ReviewedAtUtc] IS NOT NULL AND [ReviewedByUserId] IS NOT NULL AND [ReviewReason] IS NOT NULL AND LEN(LTRIM(RTRIM([ReviewReason]))) > 0))");
                         t.HasCheckConstraint("CK_PersonPhoneChangeRequests_Status", "[Status] IN (0,1,2)");
                     });
                 });
