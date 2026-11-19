@@ -4719,4 +4719,7 @@
   <data name="Backup_Collection_notificationDeliveries" xml:space="preserve"><value>محاولات إرسال الإشعارات</value></data>
   <data name="Backup_Collection_notificationReadStates" xml:space="preserve"><value>حالات قراءة الإشعارات</value></data>
   <data name="Backup_Collection_notificationPreferences" xml:space="preserve"><value>تفضيلات الإشعارات</value></data>
+  <data name="Backup_Collection_languages" xml:space="preserve"><value>اللغات</value></data>
+  <data name="Backup_Collection_translationEntries" xml:space="preserve"><value>مفاتيح الترجمة</value></data>
+  <data name="Backup_Collection_translationValues" xml:space="preserve"><value>قيم الترجمة</value></data>
 </root>
