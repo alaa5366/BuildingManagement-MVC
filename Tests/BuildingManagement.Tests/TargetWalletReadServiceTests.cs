@@ -152,6 +152,75 @@ public sealed class TargetWalletReadServiceTests
         Assert.Equal(2, adminBuilding!.Apartments.Count);
     }
 
+
+    [Fact]
+    public async Task GetPeriodTotalsAsync_NetsDepositExpenseAndRevenueReversals()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        var now = DateTime.UtcNow;
+        var periodId = Guid.NewGuid();
+        var transactions = new[]
+        {
+            (Id: Guid.NewGuid(), Kind: LedgerTransactionKind.Deposit, SourceType: "PaymentDeposit", Key: "deposit"),
+            (Id: Guid.NewGuid(), Kind: LedgerTransactionKind.Reversal, SourceType: "PaymentDepositReversal", Key: "deposit-reversal"),
+            (Id: Guid.NewGuid(), Kind: LedgerTransactionKind.Expense, SourceType: "Expense", Key: "expense"),
+            (Id: Guid.NewGuid(), Kind: LedgerTransactionKind.Reversal, SourceType: "ExpenseReversal", Key: "expense-reversal"),
+            (Id: Guid.NewGuid(), Kind: LedgerTransactionKind.Expense, SourceType: "Expense", Key: "expense-net"),
+            (Id: Guid.NewGuid(), Kind: LedgerTransactionKind.Revenue, SourceType: "Revenue", Key: "revenue"),
+            (Id: Guid.NewGuid(), Kind: LedgerTransactionKind.Reversal, SourceType: "RevenueReversal", Key: "revenue-reversal"),
+            (Id: Guid.NewGuid(), Kind: LedgerTransactionKind.Revenue, SourceType: "Revenue", Key: "revenue-net")
+        };
+
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.Buildings.Add(new BuildingEntity { Id = "B1", BuildingNumber = "1", Name = "One" });
+            seed.BuildingSettings.Add(new BuildingSettingsEntity { BuildingId = "B1", Currency = "EGP" });
+            seed.FinancialPeriods.Add(new FinancialPeriodEntity
+            {
+                PeriodId = periodId, BuildingId = "B1", PeriodKey = now.ToString("yyyy-MM"),
+                TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Open,
+                StartsAtUtc = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndsAtUtc = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1),
+                CreatedAtUtc = now
+            });
+            seed.LedgerTransactions.AddRange(transactions.Select(item => new LedgerTransactionEntity
+            {
+                LedgerTransactionId = item.Id, PeriodId = periodId, BuildingId = "B1",
+                Kind = item.Kind, Status = LedgerTransactionStatus.Posted,
+                SourceSystem = "application", SourceType = item.SourceType,
+                IdempotencyKey = item.Key, CreatedAtUtc = now, PostedAtUtc = now
+            }));
+            var amounts = new[]
+            {
+                (transactions[0].Id, LedgerEntryKind.Deposit, 100m),
+                (transactions[1].Id, LedgerEntryKind.Reversal, -40m),
+                (transactions[2].Id, LedgerEntryKind.ExpenseAllocation, -100m),
+                (transactions[3].Id, LedgerEntryKind.Reversal, 100m),
+                (transactions[4].Id, LedgerEntryKind.ExpenseAllocation, -20m),
+                (transactions[5].Id, LedgerEntryKind.RevenueAllocation, 50m),
+                (transactions[6].Id, LedgerEntryKind.Reversal, -50m),
+                (transactions[7].Id, LedgerEntryKind.RevenueAllocation, 30m)
+            };
+            seed.LedgerEntries.AddRange(amounts.Select(item => new LedgerEntryEntity
+            {
+                LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = item.Item1,
+                PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
+                EntryKind = item.Item2, SignedAmount = item.Item3, CurrencyCode = "EGP",
+                EffectiveAtUtc = now, CreatedAtUtc = now
+            }));
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetWalletReadService(new TestContextFactory(options));
+        var totals = await service.GetPeriodTotalsAsync("B1", new[] { now.ToString("yyyy-MM") });
+
+        Assert.Equal(60m, totals[now.ToString("yyyy-MM")].Collected);
+        Assert.Equal(20m, totals[now.ToString("yyyy-MM")].Expenses);
+        Assert.Equal(30m, totals[now.ToString("yyyy-MM")].Revenues);
+    }
+
     [Fact]
     public async Task GetAdminSnapshotAsync_UsesTargetLedgerAndIncludesPendingDepositsAcrossPeriods()
     {
