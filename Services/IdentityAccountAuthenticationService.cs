@@ -484,6 +484,8 @@ public sealed class IdentityAccountAuthenticationService
             CredentialType = 0, CredentialHash = _hasher.Hash(password),
             HashAlgorithm = "BCrypt.Net-Next", CreatedAtUtc = now
         });
+        // Invalidate any previously issued sessions for this account.
+        match.Account.SecurityStamp = Guid.NewGuid().ToString("N");
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return true;
