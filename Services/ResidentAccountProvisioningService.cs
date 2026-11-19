@@ -51,11 +51,16 @@ public sealed class ResidentAccountProvisioningService
 
         var accountByPerson = accounts.GroupBy(x => x.PersonId).ToDictionary(x => x.Key, x => x.First());
         var occupancySet = occupiedPersonIds.ToHashSet();
-        var phoneCounts = people
+        var phoneGroups = people
             .Select(x => new { x.PersonId, Normalized = AuthHelpers.NormalizePhone(x.PrimaryPhone) })
             .Where(x => IsPlausibleE164(x.Normalized))
             .GroupBy(x => x.Normalized!, StringComparer.Ordinal)
-            .ToDictionary(x => x.Key, x => x.Count(), StringComparer.Ordinal);
+            .ToList();
+        var phoneCounts = phoneGroups.ToDictionary(x => x.Key, x => x.Count(), StringComparer.Ordinal);
+        var duplicatePhonePersonIds = phoneGroups
+            .Where(x => x.Count() > 1)
+            .SelectMany(x => x.Select(person => person.PersonId))
+            .ToHashSet();
 
         var rows = new List<ResidentAccountProvisioningRow>();
         var activePeople = people.Where(x => !x.IsArchived).ToList();
@@ -71,7 +76,9 @@ public sealed class ResidentAccountProvisioningService
                 status = "Existing";
                 var account = accountByPerson[person.PersonId];
                 reason = account.AccountStatus == ActiveAccountStatus
-                    ? (account.MustChangePin ? "Existing account; PIN change required" : "Existing account")
+                    ? (duplicatePhonePersonIds.Contains(person.PersonId)
+                        ? "Existing account; primary phone is duplicated and requires review"
+                        : account.MustChangePin ? "Existing account; PIN change required" : "Existing account")
                     : "Existing account is inactive; review manually";
             }
             else if (string.IsNullOrWhiteSpace(person.PrimaryPhone))
@@ -125,7 +132,7 @@ public sealed class ResidentAccountProvisioningService
             Eligible = rows.Count(x => x.Status == "Eligible"),
             MissingPhone = rows.Count(x => x.Status == "MissingPhone"),
             InvalidPhone = rows.Count(x => x.Status == "InvalidPhone"),
-            DuplicatePhone = rows.Count(x => x.Status == "DuplicatePhone"),
+            DuplicatePhone = activePeople.Count(x => duplicatePhonePersonIds.Contains(x.PersonId)),
             NoActiveOccupancy = rows.Count(x => x.Status == "NoActiveOccupancy"),
             ExistingAccounts = rows.Count(x => x.Status == "Existing"),
             RoleUnavailable = rows.Count(x => x.Status == "RoleUnavailable"),
