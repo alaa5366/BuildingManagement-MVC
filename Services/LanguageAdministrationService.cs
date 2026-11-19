@@ -135,7 +135,7 @@ public sealed class LanguageAdministrationService
         var root = Path.GetFullPath(contentRoot);
         var folders = new[] { ("Controllers","Controllers"),("Services","Services"),("Views","Views"),(Path.Combine("wwwroot","js"),"JavaScript") };
         var discovered = new Dictionary<string,(string Category,string Group)>(StringComparer.OrdinalIgnoreCase);
-        var keyPattern = new Regex(@"(?:Loc\\.T|Loc\\.Js|Loc\\.JsonDict|LocalizationService\\.Get)\\s*\\(\\s*[\""]([A-Za-z0-9_.-]+)[\""]", RegexOptions.Compiled);
+        var keyPattern = new Regex(@"(?:Loc\.T|Loc\.Js|Loc\.JsonDict|LocalizationService\.Get)\s*\(\s*[""]([A-Za-z0-9_.-]+)[""]", RegexOptions.Compiled);
         foreach (var (folder, category) in folders)
         {
             var path = Path.Combine(root, folder);
