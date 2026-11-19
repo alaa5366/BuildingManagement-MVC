@@ -70,11 +70,11 @@ public class AuditLogger : IAuditLogger
     public async Task<List<AuditEntryDoc>> QueryAsync(
         string? buildingId = null, string? apartmentId = null, string? userId = null,
         DateTime? from = null, DateTime? to = null, string? action = null,
-        string? severity = null, int limit = 100)
+        string? severity = null, int limit = 100, string? correlationId = null)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
         var query = ApplyFilters(db.AuditEvents.AsNoTracking(), buildingId, apartmentId,
-            userId, from, to, action, severity);
+            userId, from, to, action, severity, correlationId);
         var rows = await query.OrderByDescending(x => x.OccurredAtUtc)
             .ThenByDescending(x => x.AuditEventId)
             .Take(Math.Clamp(limit, 1, 50000)).ToListAsync();
@@ -87,7 +87,7 @@ public class AuditLogger : IAuditLogger
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
         var query = ApplyFilters(db.AuditEvents.AsNoTracking(), buildingId, apartmentId,
-            userId, from, to, action, severity);
+            userId, from, to, action, severity, correlationId);
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 200);
         var total = await query.CountAsync();
@@ -107,7 +107,7 @@ public class AuditLogger : IAuditLogger
 
     private static IQueryable<AuditEventEntity> ApplyFilters(
         IQueryable<AuditEventEntity> query, string? buildingId, string? apartmentId,
-        string? userId, DateTime? from, DateTime? to, string? action, string? severity)
+        string? userId, DateTime? from, DateTime? to, string? action, string? severity, string? correlationId = null)
     {
         if (!string.IsNullOrWhiteSpace(buildingId))
             query = query.Where(x => x.BuildingId == buildingId);
@@ -117,6 +117,8 @@ public class AuditLogger : IAuditLogger
             query = query.Where(x => x.ActorReference == userId);
         if (!string.IsNullOrWhiteSpace(action))
             query = query.Where(x => x.EventType == action);
+        if (!string.IsNullOrWhiteSpace(correlationId))
+            query = query.Where(x => x.CorrelationId != null && x.CorrelationId.Contains(correlationId));
         if (!string.IsNullOrWhiteSpace(severity))
         {
             var outcome = severity.Trim().ToLowerInvariant() switch
