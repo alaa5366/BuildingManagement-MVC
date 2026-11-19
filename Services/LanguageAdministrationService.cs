@@ -18,6 +18,8 @@ public sealed class LanguageAdministrationService
     private readonly ILogger<LanguageAdministrationService> _logger;
     private static readonly object CacheLock = new();
     private static Dictionary<string, Dictionary<string, string>> _runtime = new(StringComparer.OrdinalIgnoreCase);
+    private static Dictionary<string, string?> _fallbacks = new(StringComparer.OrdinalIgnoreCase);
+    private static string _defaultCulture = "ar";
     private static readonly Regex CulturePattern = new(@"^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})*$", RegexOptions.Compiled);
 
     public LanguageAdministrationService(IDbContextFactory<AppDbContext> factory, IAuditLogger audit, ILogger<LanguageAdministrationService> logger)
@@ -26,7 +28,16 @@ public sealed class LanguageAdministrationService
     public static string? GetRuntime(string key, string culture)
     {
         lock (CacheLock)
-            return _runtime.TryGetValue(culture, out var values) && values.TryGetValue(key, out var value) ? value : null;
+        {
+            var current = culture;
+            var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            while (!string.IsNullOrWhiteSpace(current) && visited.Add(current))
+            {
+                if (_runtime.TryGetValue(current, out var values) && values.TryGetValue(key, out var value)) return value;
+                current = _fallbacks.GetValueOrDefault(current);
+            }
+            return _runtime.TryGetValue(_defaultCulture, out var defaults) && defaults.TryGetValue(key, out var fallbackValue) ? fallbackValue : null;
+        }
     }
 
     public async Task RefreshRuntimeAsync(CancellationToken ct = default)
@@ -34,11 +45,16 @@ public sealed class LanguageAdministrationService
         try
         {
             await using var db = await _factory.CreateDbContextAsync(ct);
-            var languages = await db.Languages.AsNoTracking().Where(x => x.IsEnabled).Select(x => x.CultureCode).ToListAsync(ct);
+            var languages = await db.Languages.AsNoTracking().Where(x => x.IsEnabled).ToListAsync(ct);
             var values = await db.TranslationValues.AsNoTracking().Join(db.Languages.AsNoTracking().Where(l => l.IsEnabled), v => v.CultureCode, l => l.CultureCode, (v,l) => v).ToListAsync(ct);
-            var cache = languages.ToDictionary(x => x, _ => new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
+            var cache = languages.ToDictionary(x => x.CultureCode, _ => new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
             foreach (var row in values) if (cache.TryGetValue(row.CultureCode, out var map)) map[row.Key] = row.Value;
-            lock (CacheLock) _runtime = cache;
+            lock (CacheLock)
+            {
+                _runtime = cache;
+                _fallbacks = languages.ToDictionary(x => x.CultureCode, x => x.FallbackCulture, StringComparer.OrdinalIgnoreCase);
+                _defaultCulture = languages.FirstOrDefault(x => x.IsDefault)?.CultureCode ?? "ar";
+            }
         }
         catch (Exception ex) { _logger.LogWarning(ex, "Dynamic localization cache refresh failed; resource files remain the fallback."); }
     }
