@@ -9,15 +9,13 @@ namespace BuildingManagement.Tests;
 public sealed class TargetFinanceReadServiceTests
 {
     [Fact]
-    public async Task GetExpenseCategoryTotalsAsync_NetsReversalInItsPostingPeriod()
+    public async Task GetExpenseCategoryTotalsAsync_NetsReversalInItsPostingPeriod_WithoutLegacyExpenseRows()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
             .Options;
         var originalPeriodId = Guid.NewGuid();
         var reversalPeriodId = Guid.NewGuid();
-        var originalExpenseId = Guid.NewGuid();
-        var currentExpenseId = Guid.NewGuid();
         var originalTransactionId = Guid.NewGuid();
         var reversalTransactionId = Guid.NewGuid();
         var currentTransactionId = Guid.NewGuid();
@@ -43,26 +41,13 @@ public sealed class TargetFinanceReadServiceTests
                     EndsAtUtc = new DateTime(2026, 12, 1, 0, 0, 0, DateTimeKind.Utc),
                     CreatedAtUtc = now
                 });
-            seed.Expenses.AddRange(
-                new ExpenseEntity
-                {
-                    BuildingId = "B1", Id = originalExpenseId.ToString("N"), MonthKey = "2026-10",
-                    CategoryId = "maintenance", Amount = 100m,
-                    ExpenseDate = new DateOnly(2026, 10, 15), Note = "Original maintenance"
-                },
-                new ExpenseEntity
-                {
-                    BuildingId = "B1", Id = currentExpenseId.ToString("N"), MonthKey = "2026-11",
-                    CategoryId = "maintenance", Amount = 30m,
-                    ExpenseDate = new DateOnly(2026, 11, 15), Note = "Current maintenance"
-                });
             seed.LedgerTransactions.AddRange(
                 new LedgerTransactionEntity
                 {
                     LedgerTransactionId = originalTransactionId, PeriodId = originalPeriodId,
                     BuildingId = "B1", Kind = LedgerTransactionKind.Expense,
                     Status = LedgerTransactionStatus.Posted, SourceSystem = "application",
-                    SourceType = "Expense", SourceKey = originalExpenseId.ToString("D"),
+                    SourceType = "Expense", SourceKey = Guid.NewGuid().ToString("D"),
                     IdempotencyKey = "expense-original", CreatedAtUtc = now, PostedAtUtc = now
                 },
                 new LedgerTransactionEntity
@@ -70,7 +55,7 @@ public sealed class TargetFinanceReadServiceTests
                     LedgerTransactionId = reversalTransactionId, PeriodId = reversalPeriodId,
                     BuildingId = "B1", Kind = LedgerTransactionKind.Reversal,
                     Status = LedgerTransactionStatus.Posted, SourceSystem = "application",
-                    SourceType = "ExpenseReversal", SourceKey = originalExpenseId.ToString("D"),
+                    SourceType = "ExpenseReversal", SourceKey = Guid.NewGuid().ToString("D"),
                     ReversesTransactionId = originalTransactionId,
                     IdempotencyKey = "expense-reversal", CreatedAtUtc = now, PostedAtUtc = now
                 },
@@ -79,23 +64,76 @@ public sealed class TargetFinanceReadServiceTests
                     LedgerTransactionId = currentTransactionId, PeriodId = reversalPeriodId,
                     BuildingId = "B1", Kind = LedgerTransactionKind.Expense,
                     Status = LedgerTransactionStatus.Posted, SourceSystem = "application",
-                    SourceType = "Expense", SourceKey = currentExpenseId.ToString("D"),
+                    SourceType = "Expense", SourceKey = Guid.NewGuid().ToString("D"),
                     IdempotencyKey = "expense-current", CreatedAtUtc = now, PostedAtUtc = now
                 });
+            seed.LedgerEntries.AddRange(
+                Entry(originalTransactionId, originalPeriodId, "A1", -100m, now.AddDays(-20)),
+                Entry(reversalTransactionId, reversalPeriodId, "A1", 100m, now.AddDays(-2)),
+                Entry(currentTransactionId, reversalPeriodId, "A1", -30m, now.AddDays(-1)));
             await seed.SaveChangesAsync();
         }
 
         var service = new TargetFinanceReadService(new TestContextFactory(options));
         var totals = await service.GetExpenseCategoryTotalsAsync("B1", new[] { "2026-10", "2026-11" });
 
-        Assert.Equal(30m, totals["maintenance"]);
+        Assert.Equal(30m, totals[""]);
     }
+
+    [Fact]
+    public async Task GetMonthAsync_UsesPostedLedgerRowsAndDoesNotRequireRetiredExpenseTable()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        var periodId = Guid.NewGuid();
+        var transactionId = Guid.NewGuid();
+        var now = new DateTime(2026, 11, 10, 12, 0, 0, DateTimeKind.Utc);
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.FinancialPeriods.Add(new FinancialPeriodEntity
+            {
+                PeriodId = periodId, BuildingId = "B1", PeriodKey = "2026-11",
+                TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Open,
+                StartsAtUtc = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndsAtUtc = new DateTime(2026, 12, 1, 0, 0, 0, DateTimeKind.Utc),
+                CreatedAtUtc = now
+            });
+            seed.LedgerTransactions.Add(new LedgerTransactionEntity
+            {
+                LedgerTransactionId = transactionId, PeriodId = periodId, BuildingId = "B1",
+                Kind = LedgerTransactionKind.Expense, Status = LedgerTransactionStatus.Posted,
+                SourceSystem = "application", SourceType = "Expense", SourceKey = Guid.NewGuid().ToString("D"),
+                IdempotencyKey = "expense-one", Reason = "Lift maintenance",
+                CreatedAtUtc = now, PostedAtUtc = now
+            });
+            seed.LedgerEntries.Add(Entry(transactionId, periodId, "A1", -125m, now));
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetFinanceReadService(new TestContextFactory(options));
+        var snapshot = await service.GetMonthAsync("B1", "2026-11", "expense");
+
+        var item = Assert.Single(snapshot.Expenses);
+        Assert.Equal(125m, item.Amount);
+        Assert.Equal("Lift maintenance", item.Note);
+        Assert.Equal("", item.CategoryId);
+        Assert.Equal(125m, snapshot.Total);
+    }
+
+    private static LedgerEntryEntity Entry(Guid transactionId, Guid periodId, string apartmentId,
+        decimal amount, DateTime effectiveAtUtc) => new()
+    {
+        LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = transactionId, PeriodId = periodId,
+        BuildingId = "B1", ApartmentId = apartmentId, EntryKind = LedgerEntryKind.ExpenseAllocation,
+        SignedAmount = amount, CurrencyCode = "EGP", EffectiveAtUtc = effectiveAtUtc,
+        CreatedAtUtc = effectiveAtUtc
+    };
 
     private sealed class TestContextFactory(DbContextOptions<AppDbContext> options)
         : IDbContextFactory<AppDbContext>
     {
         public AppDbContext CreateDbContext() => new(options);
-
         public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new AppDbContext(options));
     }
