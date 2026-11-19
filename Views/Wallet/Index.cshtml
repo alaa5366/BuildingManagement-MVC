@@ -171,6 +171,13 @@
                                     <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
                                     @Loc.T("Download_PDF_Invoice")
                                 </a>
+                                <a asp-controller="Invoice" asp-action="Qr"
+                                   asp-route-aptId="@apt.Id" asp-route-month="@month"
+                                   class="btn btn-sm btn-outline-success" target="_blank" rel="noopener"
+                                   title="@Loc.T("Scan_To_Verify")">
+                                    <i class="bi bi-qr-code" aria-hidden="true"></i>
+                                    QR
+                                </a>
                             </div>
                         </td>
                         <td class="@(balance < 0 ? "text-danger" : "text-success") fw-bold">@balance.ToString("0.##")</td>
