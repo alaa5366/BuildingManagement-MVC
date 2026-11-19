@@ -118,6 +118,7 @@
                     @if (Has("residents.manage"))
                     {
                         <li><a asp-controller="AdminApts" asp-action="Index" class="nav-link @Active("AdminApts")"><i class="bi bi-door-closed"></i><span>@Loc.T("Nav_Apts")</span></a></li>
+                        <li><a asp-controller="PhoneCorrection" asp-action="Index" class="nav-link @Active("PhoneCorrection")"><i class="bi bi-telephone"></i><span>@Loc.T("Phone_Correction_Requests")</span></a></li>
                     }
                 </ul>
             </div>
