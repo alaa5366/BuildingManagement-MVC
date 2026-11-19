@@ -19,9 +19,11 @@ public sealed class InvoiceService
         _wallet = wallet;
     }
 
+    /// <summary>Gets the current financial period key for a building.</summary>
     public Task<string> GetCurrentPeriodKeyAsync(string buildingId, CancellationToken cancellationToken = default) =>
         _wallet.GetCurrentPeriodKeyAsync(buildingId, cancellationToken: cancellationToken);
 
+    /// <summary>Finds the building identifier associated with an apartment.</summary>
     public async Task<string?> FindBuildingIdByApartmentAsync(string apartmentId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(apartmentId)) return null;
@@ -34,6 +36,7 @@ public sealed class InvoiceService
         return matches.Count == 1 ? matches[0] : null;
     }
 
+    /// <summary>Builds invoice data for the requested building and period.</summary>
     public async Task<InvoiceData?> BuildInvoiceDataAsync(
         string buildingId, string apartmentId, string monthKey,
         CancellationToken cancellationToken = default)
