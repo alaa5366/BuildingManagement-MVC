@@ -7,7 +7,7 @@
 @foreach (var apt in Model.Apartments)
 {
     <div class="col-md-4 col-lg-3 mb-3">
-        <div class="bg-white rounded shadow-sm p-3 text-center">
+        <div class="ui-qr-card p-3 text-center">
             <div class="fw-bold mb-1">@Loc.T("Apartment_N", apt.ApartmentNumber)</div>
             <div class="text-muted small mb-2">@apt.FloorLabel</div>
             <a class="btn btn-sm btn-outline-secondary w-100 mb-2" asp-action="ApartmentBadge" asp-route-aptId="@apt.ApartmentId">
