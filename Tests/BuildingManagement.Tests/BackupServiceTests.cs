@@ -430,6 +430,84 @@ public class BackupServiceTests
     }
 
     [Fact]
+    public async Task PollSecurity_BackupAndRestore_PreservesImmutablePoliciesEligibilityBallotsAndEvents()
+    {
+        var policyId = Guid.NewGuid();
+        var eligibilityId = Guid.NewGuid();
+        var ballotId = Guid.NewGuid();
+        var eventId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        var tokenHash = new byte[] { 1, 3, 5, 7, 9, 11 };
+        var protectedChoice = new byte[] { 2, 4, 6, 8, 10, 12, 14 };
+
+        _db.PollVotingPolicies.Add(new PollVotingPolicyEntity
+        {
+            PolicyId = policyId, BuildingId = "poll-backup-building", PollId = "POLL-1",
+            PolicyVersion = 3, VotingMode = 2, EligibilityMode = 1, IsActive = true, CreatedAtUtc = now
+        });
+        _db.PollEligibility.Add(new PollEligibilityEntity
+        {
+            EligibilityId = eligibilityId, BuildingId = "poll-backup-building", PollId = "POLL-1",
+            SubjectReference = "resident-reference-1", CredentialHash = new byte[] { 20, 21, 22 },
+            IssuedAtUtc = now.AddHours(-1), ExpiresAtUtc = now.AddDays(1), ConsumedAtUtc = now
+        });
+        _db.PollBallots.Add(new PollBallotEntity
+        {
+            BallotId = ballotId, BuildingId = "poll-backup-building", PollId = "POLL-1",
+            BallotTokenHash = tokenHash, ChoicePayload = protectedChoice, CastAtUtc = now, BallotVersion = 2
+        });
+        _db.PollLifecycleEvents.Add(new PollLifecycleEventEntity
+        {
+            EventId = eventId, BuildingId = "poll-backup-building", PollId = "POLL-1",
+            EventType = 4, OccurredAtUtc = now, ActorReference = "admin-reference",
+            Reason = "Poll closed", MetadataJson = "{\"source\":\"test\"}"
+        });
+        await _db.SaveChangesAsync();
+
+        var selected = new List<string>
+        {
+            "pollVotingPolicies", "pollEligibility", "pollBallots", "pollLifecycleEvents"
+        };
+        var (bytes, backup) = await _service.CreateBackupAsync(selected, "poll-security-backup-test");
+        Assert.True(backup.Success, string.Join("; ", backup.Errors));
+        Assert.Equal(4, backup.TotalCollections);
+        Assert.Equal(4, backup.TotalDocuments);
+
+        _db.PollVotingPolicies.Remove(await _db.PollVotingPolicies.SingleAsync(x => x.PolicyId == policyId));
+        _db.PollEligibility.Remove(await _db.PollEligibility.SingleAsync(x => x.EligibilityId == eligibilityId));
+        _db.PollBallots.Remove(await _db.PollBallots.SingleAsync(x => x.BallotId == ballotId));
+        _db.PollLifecycleEvents.Remove(await _db.PollLifecycleEvents.SingleAsync(x => x.EventId == eventId));
+        await _db.SaveChangesAsync();
+
+        using var upload = new MemoryStream(bytes);
+        var preview = await _service.PreviewRestoreAsync(upload, "poll-security.zip", "poll-security-backup-test");
+        Assert.True(preview.Success, string.Join("; ", preview.Errors));
+        var restored = await _service.RestoreSessionAsync(
+            preview.RestoreSessionId!, selected, overwrite: true, "poll-security-backup-test");
+        Assert.True(restored.Success, string.Join("; ", restored.Errors));
+
+        _db.ChangeTracker.Clear();
+        var restoredPolicy = await _db.PollVotingPolicies.SingleAsync(x => x.PolicyId == policyId);
+        Assert.Equal(3, restoredPolicy.PolicyVersion);
+        Assert.Equal((byte)2, restoredPolicy.VotingMode);
+
+        var restoredEligibility = await _db.PollEligibility.SingleAsync(x => x.EligibilityId == eligibilityId);
+        Assert.Equal("resident-reference-1", restoredEligibility.SubjectReference);
+        Assert.Equal(now, restoredEligibility.ConsumedAtUtc);
+        Assert.Equal(new byte[] { 20, 21, 22 }, restoredEligibility.CredentialHash);
+
+        var restoredBallot = await _db.PollBallots.SingleAsync(x => x.BallotId == ballotId);
+        Assert.Equal(tokenHash, restoredBallot.BallotTokenHash);
+        Assert.Equal(protectedChoice, restoredBallot.ChoicePayload);
+        Assert.Equal(2, restoredBallot.BallotVersion);
+
+        var restoredEvent = await _db.PollLifecycleEvents.SingleAsync(x => x.EventId == eventId);
+        Assert.Equal("Poll closed", restoredEvent.Reason);
+        Assert.Equal("{\"source\":\"test\"}", restoredEvent.MetadataJson);
+        Assert.False(File.Exists(preview.TempFilePath));
+    }
+
+    [Fact]
     public void GetKnownCollections_ReturnsAllKnownTables()
     {
         var collections = BackupService.GetKnownCollections();
@@ -451,6 +529,10 @@ public class BackupServiceTests
         Assert.Contains("maintenanceAssignments", collections.Keys);
         Assert.Contains("maintenanceComments", collections.Keys);
         Assert.Contains("maintenanceStatusEvents", collections.Keys);
+        Assert.Contains("pollVotingPolicies", collections.Keys);
+        Assert.Contains("pollEligibility", collections.Keys);
+        Assert.Contains("pollBallots", collections.Keys);
+        Assert.Contains("pollLifecycleEvents", collections.Keys);
     }
 
     [Fact]
