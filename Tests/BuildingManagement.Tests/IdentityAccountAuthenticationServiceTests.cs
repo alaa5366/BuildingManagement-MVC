@@ -2,6 +2,7 @@ using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Xunit;
 
 namespace BuildingManagement.Tests;
@@ -293,10 +294,108 @@ public sealed class IdentityAccountAuthenticationServiceTests
         Assert.Equal("wrong-credentials", result.Error);
     }
 
+    [Fact]
+    public async Task AuthenticateResidentAsync_ProvisioningWithInitialPinRequiresPinRotation()
+    {
+        var factory = new TestContextFactory();
+        var hasher = new BcryptPasswordHasher();
+        var personId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        await using (var db = await factory.CreateDbContextAsync())
+        {
+            db.Persons.Add(new PersonEntity
+            {
+                PersonId = personId,
+                DisplayName = "First Login Resident",
+                PrimaryPhone = "01000000077",
+                IsArchived = false,
+                CreatedAtUtc = now
+            });
+            db.RoleDefinitions.Add(new RoleDefinitionEntity
+            {
+                RoleKey = "resident",
+                DisplayName = "Resident",
+                IsActive = true
+            });
+            db.ApartmentOccupancies.Add(new ApartmentOccupancyEntity
+            {
+                OccupancyId = Guid.NewGuid(),
+                BuildingId = "building-1",
+                ApartmentId = "apt-77",
+                PersonId = personId,
+                OccupancyType = 1,
+                IsPrimary = true,
+                ValidFromUtc = now.AddDays(-1),
+                RecordedAtUtc = now.AddDays(-1)
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var service = new IdentityAccountAuthenticationService(factory, hasher);
+        var initial = await service.AuthenticateResidentAsync("+201000000077", "1234");
+
+        Assert.NotNull(initial);
+        Assert.True(initial.Success);
+        Assert.True(initial.MustChangePin);
+        Assert.True(Guid.TryParse(initial.Uid, out var accountId));
+
+        await using (var db = await factory.CreateDbContextAsync())
+        {
+            var account = await db.UserAccounts.SingleAsync(item => item.AccountId == accountId);
+            Assert.True(account.MustChangePin);
+            Assert.Equal(1, account.AccountStatus);
+            Assert.Equal(1, await db.UserCredentials.CountAsync(item =>
+                item.AccountId == accountId && item.CredentialType == 0 && item.RevokedAtUtc == null));
+            Assert.Equal(1, await db.UserRoleAssignments.CountAsync(item =>
+                item.AccountId == accountId && item.RoleKey == "resident" &&
+                item.ScopeType == 2 && item.ScopeBuildingId == "building-1" &&
+                item.ScopeApartmentId == "apt-77"));
+        }
+
+        Assert.True(await service.ChangeResidentPinAsync(accountId, initial.SecurityStamp!, "9876"));
+        var afterChange = await service.AuthenticateResidentAsync("01000000077", "9876");
+
+        Assert.NotNull(afterChange);
+        Assert.True(afterChange.Success);
+        Assert.False(afterChange.MustChangePin);
+    }
+
+    [Fact]
+    public async Task AuthenticateResidentAsync_DoesNotProvisionWhenPhoneIsAmbiguousAcrossPeople()
+    {
+        var factory = new TestContextFactory();
+        var now = DateTime.UtcNow;
+        await using (var db = await factory.CreateDbContextAsync())
+        {
+            db.Persons.AddRange(
+                new PersonEntity
+                {
+                    PersonId = Guid.NewGuid(), DisplayName = "Duplicate Phone A",
+                    PrimaryPhone = "+201000000088", CreatedAtUtc = now
+                },
+                new PersonEntity
+                {
+                    PersonId = Guid.NewGuid(), DisplayName = "Duplicate Phone B",
+                    PrimaryPhone = "01000000088", CreatedAtUtc = now
+                });
+            await db.SaveChangesAsync();
+        }
+
+        var result = await new IdentityAccountAuthenticationService(factory, new BcryptPasswordHasher())
+            .AuthenticateResidentAsync("+201000000088", "1234");
+
+        Assert.Null(result);
+        await using var verify = await factory.CreateDbContextAsync();
+        Assert.Empty(await verify.UserAccounts.ToListAsync());
+        Assert.Empty(await verify.UserCredentials.ToListAsync());
+    }
+
     private sealed class TestContextFactory : IDbContextFactory<AppDbContext>
     {
         private readonly DbContextOptions<AppDbContext> _options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .ConfigureWarnings(warnings => warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         public AppDbContext CreateDbContext() => new(_options);
