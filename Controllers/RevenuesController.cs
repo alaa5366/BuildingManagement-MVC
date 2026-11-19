@@ -34,6 +34,7 @@ public class RevenuesController : Controller
 
     private string BuildingId => User.FindFirstValue("buildingId") ?? "";
 
+    /// <summary>Displays the current records and associated management actions.</summary>
     [HttpGet]
     public async Task<IActionResult> Index(string? month, int page = 1, int pageSize = 50)
     {
@@ -54,6 +55,7 @@ public class RevenuesController : Controller
         return View(revenues);
     }
 
+    /// <summary>Creates a new record from the submitted values.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Add(string month, string categoryId, string note, decimal amount,
@@ -80,6 +82,7 @@ public class RevenuesController : Controller
         return RedirectToAction(nameof(Index), new { month = monthKey });
     }
 
+    /// <summary>Deletes the specified record.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string month, string id)
