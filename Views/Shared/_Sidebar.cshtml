@@ -203,7 +203,6 @@
                     @if (Has("system.logs.view"))
                     {
                         <li><a asp-controller="ApplicationLogs" asp-action="Index" class="nav-link @Active("ApplicationLogs")"><i class="bi bi-terminal"></i><span>@Loc.T("Application_Logs")</span></a></li>
-                    <li><a asp-controller="SystemHealth" asp-action="Index" class="nav-link @Active("SystemHealth")"><i class="bi bi-heart-pulse"></i><span>System Health</span></a></li>
                         <li><a asp-controller="SystemHealth" asp-action="Index" class="nav-link @Active("SystemHealth")"><i class="bi bi-heart-pulse"></i><span>System Health</span></a></li>
                     }
                     <li><a asp-controller="Settings" asp-action="Index" class="nav-link @Active("Settings")"><i class="bi bi-sliders"></i><span>@Loc.T("Nav_Settings")</span></a></li>
@@ -253,6 +252,7 @@
                 <ul class="nav-list">
                     <li><a asp-controller="AuditLog" asp-action="Index" class="nav-link @Active("AuditLog")"><i class="bi bi-shield-check"></i><span>@Loc.T("Nav_AuditLog")</span></a></li>
                     <li><a asp-controller="ApplicationLogs" asp-action="Index" class="nav-link @Active("ApplicationLogs")"><i class="bi bi-terminal"></i><span>@Loc.T("Application_Logs")</span></a></li>
+                    <li><a asp-controller="SystemHealth" asp-action="Index" class="nav-link @Active("SystemHealth")"><i class="bi bi-heart-pulse"></i><span>System Health</span></a></li>
                     <li><a asp-controller="Settings" asp-action="Index" class="nav-link @Active("Settings")"><i class="bi bi-sliders"></i><span>@Loc.T("Nav_Settings")</span></a></li>
                 </ul>
             </div>
