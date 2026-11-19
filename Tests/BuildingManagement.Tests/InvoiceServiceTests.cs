@@ -195,14 +195,14 @@ public sealed class InvoiceServiceTests
                     AuditEventId = Guid.NewGuid(), OccurredAtUtc = now, BuildingId = "B1",
                     EventCategory = "Finance", EventType = "ExpensePosted", ResourceType = "Expense",
                     ResourceReference = expenseSourceId.ToString("D"), Outcome = 0,
-                    SafeDetailsJson = "{\\"categoryId\\":\\"CAT1\\"}"
+                    SafeDetailsJson = """{"categoryId":"CAT1"}"""
                 },
                 new AuditEventEntity
                 {
                     AuditEventId = Guid.NewGuid(), OccurredAtUtc = now, BuildingId = "B1",
                     EventCategory = "Finance", EventType = "ExpensePosted", ResourceType = "Expense",
                     ResourceReference = activeExpenseSourceId.ToString("D"), Outcome = 0,
-                    SafeDetailsJson = "{\\"categoryId\\":\\"CAT2\\"}"
+                    SafeDetailsJson = """{"categoryId":"CAT2"}"""
                 });
             seed.PaymentDeposits.Add(new PaymentDepositEntity
             {
