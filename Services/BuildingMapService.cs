@@ -67,7 +67,7 @@ public class BuildingMapService
             foreach (var apt in apts)
             {
                 var card = BuildApartmentCard(
-                    building, apt, currentMonth, presenceMap,
+                    apt, presenceMap,
                     walletSnapshot.Balances.GetValueOrDefault(apt.Id),
                     pendingCounts.GetValueOrDefault(apt.Id));
 
@@ -92,9 +92,7 @@ public class BuildingMapService
     // Helper: بناء بطاقة شقة
     // ============================================================
     private ApartmentCardVm BuildApartmentCard(
-        Building building,
         Apartment apt,
-        string currentMonth,
         Dictionary<string, Presence> presenceMap,
         decimal balance,
         int pending)
