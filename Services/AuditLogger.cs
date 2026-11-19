@@ -52,7 +52,7 @@ public class AuditLogger : IAuditLogger
                 ActorReference = Cut(userId, 160),
                 BuildingId = effectiveBuildingId,
                 EventCategory = "Business",
-                EventType = Cut(action, 120),
+                EventType = Cut(action, 120) ?? string.Empty,
                 ResourceType = string.IsNullOrWhiteSpace(apartmentId) ? null : "Apartment",
                 ResourceReference = Cut(apartmentId, 200),
                 CorrelationId = Cut(correlationId, 100),
