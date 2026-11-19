@@ -18,6 +18,15 @@ public sealed class Phase55_ResidentInitialPinChange : Migration
             type: "bit",
             nullable: false,
             defaultValue: false);
+
+        // The resident role is a code-owned baseline role. It carries no admin grants.
+        migrationBuilder.Sql("""
+            IF NOT EXISTS (SELECT 1 FROM dbo.RoleDefinitions WHERE RoleKey = N'resident')
+            BEGIN
+                INSERT dbo.RoleDefinitions(RoleKey, DisplayName, IsSystemRole, IsActive)
+                VALUES (N'resident', N'Resident', 1, 1);
+            END
+            """);
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
