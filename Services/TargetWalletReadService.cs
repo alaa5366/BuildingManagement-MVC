@@ -205,8 +205,8 @@ public sealed class TargetWalletReadService
         if (string.IsNullOrWhiteSpace(buildingId))
             throw new ArgumentException("Building is required.", nameof(buildingId));
         ArgumentNullException.ThrowIfNull(monthKeys);
-        if (monthKeys.Count > 120)
-            throw new ArgumentOutOfRangeException(nameof(monthKeys), "At most 120 report months can be queried.");
+        if (monthKeys.Count > 600)
+            throw new ArgumentOutOfRangeException(nameof(monthKeys), "At most 600 report months can be queried.");
         foreach (var monthKey in monthKeys)
             ValidateMonth(monthKey, nameof(monthKeys));
 
