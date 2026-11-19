@@ -84,7 +84,8 @@ public sealed class AccountManagementService
                 row.Roles = "بدون دور نشط";
                 row.RoleContexts = "لا يوجد نطاق صلاحية نشط";
             }
-            row.IsDuplicatePhone = duplicateIds.Contains(row.PersonId);
+            row.IsDuplicatePhone = !row.Roles.Split(", ", StringSplitOptions.RemoveEmptyEntries)
+                .Contains("superadmin", StringComparer.OrdinalIgnoreCase) && duplicateIds.Contains(row.PersonId);
             row.StatusLabel = row.AccountStatus switch
             {
                 1 => "نشط", 0 => "غير نشط", 2 => "موقوف / مقفل", 3 => "معلق", _ => "غير معروف"
