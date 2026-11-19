@@ -170,7 +170,7 @@ SELECT COUNT(*) ExistingRoleAssignments FROM dbo.UserRoleAssignments;
             $sql = @"
 SET NOCOUNT ON;
 DECLARE @now datetime2(3)=SYSUTCDATETIME();
-DECLARE @buildingAdminRoleKey nvarchar(50)=@buildingAdminRoleKey;
+DECLARE @buildingAdminRoleKey nvarchar(50)=N'building-admin';
 DECLARE @admins TABLE(AccountId uniqueidentifier PRIMARY KEY,BuildingId nvarchar(64) NOT NULL);
 INSERT @admins(AccountId,BuildingId)
 SELECT m.AccountId,CONVERT(nvarchar(64),b.Id)
