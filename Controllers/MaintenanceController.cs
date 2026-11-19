@@ -1,4 +1,5 @@
 ﻿using BuildingManagementMvc.Attributes;
+using BuildingManagementMvc.Data;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -24,6 +25,9 @@ public class MaintenanceController : Controller
     private readonly NotificationsService _notify;
     private readonly TargetNotificationsService _targetNotifications;
     private readonly Microsoft.Extensions.Logging.ILogger<MaintenanceController> _logger;
+    private readonly TargetExpenseRevenueWorkflowService _financeWorkflow;
+    private readonly TargetFinanceReadService _targetFinance;
+    private readonly TargetAccountIdentityResolver _identityResolver;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MaintenanceController"/> class.
@@ -34,7 +38,10 @@ public class MaintenanceController : Controller
         AuditLogService audit,
         NotificationsService notify,
         TargetNotificationsService targetNotifications,
-        Microsoft.Extensions.Logging.ILogger<MaintenanceController> logger)
+        Microsoft.Extensions.Logging.ILogger<MaintenanceController> logger,
+        TargetExpenseRevenueWorkflowService financeWorkflow,
+        TargetFinanceReadService targetFinance,
+        TargetAccountIdentityResolver identityResolver)
     {
         _buildings = buildings;
         _maint = maint;
@@ -42,6 +49,9 @@ public class MaintenanceController : Controller
         _notify = notify;
         _targetNotifications = targetNotifications;
         _logger = logger;
+        _financeWorkflow = financeWorkflow;
+        _targetFinance = targetFinance;
+        _identityResolver = identityResolver;
     }
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
@@ -167,35 +177,87 @@ public class MaintenanceController : Controller
     /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddToExpenses(string id, string? month)
+    public async Task<IActionResult> AddToExpenses(string id, string? month, Guid commandId)
     {
         var building = await _buildings.GetByIdAsync(BuildingId);
         if (building == null) return NotFound();
 
         var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
-        var expense = _maint.AddCostToExpenses(building, id, mk, User.Identity?.Name ?? "admin");
-        if (expense != null)
+        var record = building.MaintenanceLog.FirstOrDefault(item => item.Id == id);
+        if (record is null || record.AddedToExpense || record.Cost <= 0)
         {
-            _audit.Push(building, "maint_add_expense", $"{expense.Note} — {expense.Amount:0.##}", "admin", User.Identity?.Name ?? "admin");
-            var catName = building.ExpenseCategories.FirstOrDefault(c => c.Id == expense.CategoryId)?.Name ?? expense.CategoryId;
-            _notify.NotifyResidentsNewExpense(building, catName, expense.Amount);
+            TempData["Error"] = "سجل الصيانة غير موجود أو تمت إضافته للمصروفات بالفعل.";
+            return RedirectToAction("Index");
+        }
+
+        var actorAccountId = await _identityResolver.ResolveAsync(User, HttpContext.RequestAborted);
+        if (actorAccountId is null)
+        {
+            TempData["Error"] = "تعذر تحديد حساب المسؤول في النظام المستهدف.";
+            return RedirectToAction("Index");
+        }
+
+        try
+        {
+            var financeMonth = await _targetFinance.GetMonthAsync(
+                BuildingId, mk, "expense", HttpContext.RequestAborted);
+            var category = financeMonth.Categories.FirstOrDefault(item => item.Active &&
+                    (item.Name.Contains("صيانة", StringComparison.OrdinalIgnoreCase) ||
+                     item.Name.Contains("maintenance", StringComparison.OrdinalIgnoreCase)))
+                ?? financeMonth.Categories.FirstOrDefault(item => item.Active && item.Id == "other")
+                ?? financeMonth.Categories.FirstOrDefault(item => item.Active);
+            if (category is null)
+            {
+                TempData["Error"] = "لا توجد فئة مصروفات نشطة لتسجيل تكلفة الصيانة.";
+                return RedirectToAction("Index");
+            }
+
+            if (commandId == Guid.Empty)
+            {
+                TempData["Error"] = "انتهت صلاحية النموذج. حدّث الصفحة وحاول مرة أخرى.";
+                return RedirectToAction("Index");
+            }
+
+            var expenseDate = string.IsNullOrWhiteSpace(record.Date)
+                ? DateTime.UtcNow.ToString("yyyy-MM-dd")
+                : record.Date;
+            var note = "🔧 " + record.Title +
+                (string.IsNullOrWhiteSpace(record.Vendor) ? "" : $" — {record.Vendor}");
+            await _financeWorkflow.AddExpenseAsync(
+                BuildingId, mk, category.Id, note, record.Cost, expenseDate,
+                commandId, actorAccountId.Value, HttpContext.RequestAborted);
+
+            record.AddedToExpense = true;
+            record.AddedToExpenseAt = DateTime.UtcNow.ToString("O");
             await _buildings.SaveFullAsync(building);
+
+            await _audit.LogAsync("maint_add_expense", BuildingId,
+                userId: actorAccountId.Value.ToString("D"), userRole: "admin",
+                metadata: new { maintenanceId = record.Id, categoryId = category.Id, amount = record.Cost });
+
             foreach (var apartment in building.Apartments.Where(item => !item.Closed))
             {
                 try
                 {
                     await _targetNotifications.CreateResidentDepositNoticeAsync(
-                        building.Id, apartment.Id, "مصروف جديد",
-                        $"{catName}: {expense.Amount:0.##} ج.م — {building.Name}",
+                        building.Id, apartment.Id, "مصروف صيانة جديد",
+                        $"{category.Name}: {record.Cost:0.##} — {building.Name}",
                         HttpContext.RequestAborted, "expense_new", "💸");
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Expense notification failed for building {BuildingId}, apartment {ApartmentId}.",
+                    _logger.LogError(ex, "Maintenance expense notification failed for building {BuildingId}, apartment {ApartmentId}.",
                         building.Id, apartment.Id);
                 }
             }
             TempData["Message"] = Loc.T("Cost_Added_To_Expenses");
+        }
+        catch (ArgumentException ex) { TempData["Error"] = ex.Message; }
+        catch (InvalidOperationException ex) { TempData["Error"] = ex.Message; }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unable to post maintenance cost {MaintenanceId} to target finance.", id);
+            TempData["Error"] = "تعذر إضافة تكلفة الصيانة إلى المصروفات.";
         }
 
         return RedirectToAction("Index");
