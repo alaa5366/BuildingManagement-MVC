@@ -1,5 +1,6 @@
 namespace BuildingManagementMvc.Models;
 
+    /// <summary>Contains the building, apartment, resident, and floor details encoded for QR workflows.</summary>
 public sealed class QrApartmentInfo
 {
     public string BuildingId { get; set; } = "";
@@ -13,6 +14,7 @@ public sealed class QrApartmentInfo
     public int FloorOrder { get; set; }
 }
 
+    /// <summary>Provides the building and apartment data displayed on the QR management page.</summary>
 public sealed class QrBuildingPageModel
 {
     public string BuildingName { get; set; } = "";
