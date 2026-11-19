@@ -13,6 +13,7 @@ public sealed class LanguageManagementController : Controller
     private readonly IWebHostEnvironment _environment;
     public LanguageManagementController(LanguageAdministrationService service, IWebHostEnvironment environment) { _service=service; _environment=environment; }
 
+    /// <summary>Displays the administration page and its current records.</summary>
     [HttpGet]
     public async Task<IActionResult> Index(string? culture,string? category,string? search,bool missingOnly=false,CancellationToken ct=default)
     {
@@ -21,6 +22,7 @@ public sealed class LanguageManagementController : Controller
         return View(await _service.GetPageAsync(culture,category,search,missingOnly,ct));
     }
 
+    /// <summary>Scans application source files for localization resources.</summary>
     [HttpPost,ValidateAntiForgeryToken]
     public async Task<IActionResult> ScanSources(CancellationToken ct)
     {
@@ -31,6 +33,7 @@ public sealed class LanguageManagementController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>Exports localization data as a CSV file.</summary>
     [HttpGet]
     public async Task<IActionResult> ExportCsv(CancellationToken ct)
     {
@@ -39,6 +42,7 @@ public sealed class LanguageManagementController : Controller
         return File(System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(csv)).ToArray(),"text/csv; charset=utf-8","translations.csv");
     }
 
+    /// <summary>Imports localization data from a CSV file.</summary>
     [HttpPost,ValidateAntiForgeryToken,RequestSizeLimit(5*1024*1024)]
     public async Task<IActionResult> ImportCsv(IFormFile? file,CancellationToken ct)
     {
@@ -63,6 +67,7 @@ public sealed class LanguageManagementController : Controller
         result.Add(value.ToString());return result;
     }
 
+    /// <summary>Creates or updates a language definition.</summary>
     [HttpPost,ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveLanguage(string culture,string englishName,string nativeName,string direction,string? fallback,string? flag,bool enabled,bool isDefault,int sortOrder,CancellationToken ct)
     {
@@ -72,6 +77,7 @@ public sealed class LanguageManagementController : Controller
         TempData[result.Success?"Message":"Error"]=result.Message; return RedirectToAction(nameof(Index),new{culture});
     }
 
+    /// <summary>Creates or updates a translation entry.</summary>
     [HttpPost,ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveTranslation(string key,string category,string sourceGroup,string? description,string culture,string value,CancellationToken ct)
     {
