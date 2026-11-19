@@ -19,6 +19,7 @@ public sealed class LanguageAdministrationService
     private static readonly object CacheLock = new();
     private static Dictionary<string, Dictionary<string, string>> _runtime = new(StringComparer.OrdinalIgnoreCase);
     private static Dictionary<string, string?> _fallbacks = new(StringComparer.OrdinalIgnoreCase);
+    private static Dictionary<string, string> _directions = new(StringComparer.OrdinalIgnoreCase);
     private static string _defaultCulture = "ar";
     private static readonly Regex CulturePattern = new(@"^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})*$", RegexOptions.Compiled);
 
@@ -40,6 +41,8 @@ public sealed class LanguageAdministrationService
         }
     }
 
+    public static string GetDirection(string culture) { lock (CacheLock) return _directions.GetValueOrDefault(culture, culture.StartsWith("ar", StringComparison.OrdinalIgnoreCase) ? "RTL" : "LTR"); }
+
     public async Task RefreshRuntimeAsync(CancellationToken ct = default)
     {
         try
@@ -53,6 +56,7 @@ public sealed class LanguageAdministrationService
             {
                 _runtime = cache;
                 _fallbacks = languages.ToDictionary(x => x.CultureCode, x => x.FallbackCulture, StringComparer.OrdinalIgnoreCase);
+                _directions = languages.ToDictionary(x => x.CultureCode, x => x.Direction, StringComparer.OrdinalIgnoreCase);
                 _defaultCulture = languages.FirstOrDefault(x => x.IsDefault)?.CultureCode ?? "ar";
             }
         }
