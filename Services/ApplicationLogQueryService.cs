@@ -303,6 +303,9 @@ public sealed class ApplicationLogQueryService
         if (!string.IsNullOrWhiteSpace(query.ComponentType) &&
             !entry.ComponentType.Equals(query.ComponentType, StringComparison.OrdinalIgnoreCase)) return false;
         if (query.HasException.HasValue && entry.HasException != query.HasException.Value) return false;
+        if (query.HttpStatusCode.HasValue && entry.HttpStatusCode != query.HttpStatusCode.Value) return false;
+        if (query.MinDurationMs.HasValue && (!entry.DurationMs.HasValue || entry.DurationMs.Value < query.MinDurationMs.Value)) return false;
+        if (query.MaxDurationMs.HasValue && (!entry.DurationMs.HasValue || entry.DurationMs.Value > query.MaxDurationMs.Value)) return false;
         if (!string.IsNullOrWhiteSpace(query.Search) &&
             !entry.Message.Contains(query.Search, StringComparison.OrdinalIgnoreCase) &&
             !entry.Details.Contains(query.Search, StringComparison.OrdinalIgnoreCase) &&
@@ -322,7 +325,10 @@ public sealed class ApplicationLogQueryService
         Source = Limit(query.Source?.Trim(), 200),
         ComponentType = new[] { "Controller", "Service", "View", "Middleware", "Repository", "Database", "BackgroundJob", "ExternalDependency", "Other" }
             .FirstOrDefault(x => x.Equals(query.ComponentType?.Trim(), StringComparison.OrdinalIgnoreCase)),
-        HasException = query.HasException
+        HasException = query.HasException,
+        HttpStatusCode = query.HttpStatusCode is >= 100 and <= 599 ? query.HttpStatusCode : null,
+        MinDurationMs = query.MinDurationMs is >= 0 and <= 3600000 ? query.MinDurationMs : null,
+        MaxDurationMs = query.MaxDurationMs is >= 0 and <= 3600000 ? query.MaxDurationMs : null
     };
 
     private static string Redact(string? value)
