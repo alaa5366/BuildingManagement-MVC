@@ -1021,9 +1021,9 @@ public class AccountController : Controller
 
         var payload = ctx.Payload!;
         var apartment = ctx.Apartment!;
-        var resident = ctx.Resident!;
 
-        // ✅ استهلاك atomic قبل تسجيل الدخول — لو طلب تاني سبقنا يفشل هنا
+        // Consume before resolving the account. A stale token cannot be revived if it
+        // was revoked/reissued between the preview GET and this confirmation POST.
         var consumed = await qrSecurity.TryConsumeQuickTokenAsync(payload);
         if (!consumed)
         {
@@ -1031,21 +1031,33 @@ public class AccountController : Controller
             return View("QuickLoginError");
         }
 
-        var result = AuthResult.Ok(
-            uid: resident.Uid,
-            role: "resident",
-            email: resident.Email ?? "",
-            name: string.IsNullOrWhiteSpace(resident.Name)
-                ? Loc.T("Resident_Of_Apartment_N", apartment.ApartmentNumber) : resident.Name,
-            buildingIds: new List<string> { apartment.BuildingId },
-            aptId: resident.ApartmentId,
-            aptNumber: apartment.ApartmentNumber);
+        // QR sign-in must use Persons/UserAccounts/ApartmentOccupancies and scoped
+        // resident grants only. Never authenticate through the transitional Residents table.
+        var result = await _identityAuth.AuthenticateResidentWithQuickQrAsync(
+            payload.BuildingId, payload.AptId, HttpContext.RequestAborted);
+        if (!result.Success)
+        {
+            ViewBag.Error = Loc.T("Invalid_Token");
+            return View("QuickLoginError");
+        }
+
+        result.ApartmentNumber = apartment.ApartmentNumber;
+        if (string.Equals(payload.Purpose, "recovery", StringComparison.OrdinalIgnoreCase))
+            result.MustChangePin = true;
+
+        if (result.MustChangePin)
+        {
+            if (string.IsNullOrWhiteSpace(result.Phone))
+            {
+                ViewBag.Error = "تعذر بدء تغيير الرقم السري؛ راجع رقم الهاتف الأساسي المسجل للحساب مع الإدارة.";
+                return View("QuickLoginError");
+            }
+            return StartPinChangeChallenge(result, result.Phone, payload.BuildingId, payload.AptId);
+        }
 
         await SignInCookieAsync(result);
-
-        _log.LogInformation("[QuickLogin] Resident logged in: {Name} (apt {Apt})",
-            resident.Name, apartment.ApartmentNumber);
-
+        _log.LogInformation("[QuickLogin] Target resident account logged in for apartment {Apt}",
+            apartment.ApartmentNumber);
         return RedirectToAction("Index", "ResidentHome");
     }
 
