@@ -21,7 +21,6 @@ namespace BuildingManagementMvc.Controllers;
 public class CamerasController : Controller
 {
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
-    private readonly BuildingsService _buildings;
     private readonly IConfiguration _config;
     private readonly ILogger<CamerasController> _log;
     private readonly IWebHostEnvironment _env;
@@ -31,13 +30,11 @@ public class CamerasController : Controller
     /// </summary>
     public CamerasController(
         IDbContextFactory<AppDbContext> sqlFactory,
-        BuildingsService buildings,
         IConfiguration config,
         ILogger<CamerasController> log,
         IWebHostEnvironment env)
     {
         _sqlFactory = sqlFactory;
-        _buildings = buildings;
         _config = config;
         _log = log;
         _env = env;
@@ -74,10 +71,13 @@ public class CamerasController : Controller
                 return Forbid();
         }
 
-        var building = await _buildings.GetByIdAsync(buildingId);
-        if (building == null) return NotFound();
-
         await using var db = await _sqlFactory.CreateDbContextAsync();
+        var buildingName = await db.Buildings.AsNoTracking()
+            .Where(building => building.Id == buildingId)
+            .Select(building => building.Name)
+            .FirstOrDefaultAsync();
+        if (buildingName is null) return NotFound();
+
         var cameras = await db.Cameras
             .Include(c => c.Dvr)
             .Where(c => c.BuildingId == buildingId && c.IsActive && c.Dvr!.IsActive)
@@ -85,7 +85,7 @@ public class CamerasController : Controller
             .AsNoTracking()
             .ToListAsync();
 
-        ViewBag.Building = building;
+        ViewBag.BuildingName = buildingName;
         ViewBag.BuildingId = buildingId;
         return View(cameras);
     }
