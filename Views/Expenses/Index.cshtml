@@ -29,6 +29,7 @@
     <h5>@Loc.T("Add_Expense")</h5>
     <form method="post" asp-action="Add" class="row g-2 align-items-end">
         <input type="hidden" name="month" value="@month" />
+        <input type="hidden" name="commandId" value="@Guid.NewGuid()" />
         <div class="col-md-3">
             <label class="form-label small">@Loc.T("Item")</label>
             <select name="categoryId" class="form-select" required>
