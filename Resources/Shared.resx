@@ -4204,4 +4204,8 @@ This operation can take a few seconds.</value>
   <data name="Backup_Collection_languages" xml:space="preserve"><value>Languages</value></data>
   <data name="Backup_Collection_translationEntries" xml:space="preserve"><value>Translation keys</value></data>
   <data name="Backup_Collection_translationValues" xml:space="preserve"><value>Translation values</value></data>
+  <data name="Backup_Collection_maintenanceRequests" xml:space="preserve"><value>Maintenance requests</value></data>
+  <data name="Backup_Collection_maintenanceAssignments" xml:space="preserve"><value>Maintenance assignments</value></data>
+  <data name="Backup_Collection_maintenanceComments" xml:space="preserve"><value>Maintenance comments</value></data>
+  <data name="Backup_Collection_maintenanceStatusEvents" xml:space="preserve"><value>Maintenance status history</value></data>
 </root>
