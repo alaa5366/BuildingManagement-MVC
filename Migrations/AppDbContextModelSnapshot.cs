@@ -2041,8 +2041,8 @@ namespace BuildingManagementMvc.Migrations
                     b.Property<byte[]>("RowVersion").IsConcurrencyToken().IsRequired().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
                     b.HasKey("RequestId");
                     b.HasIndex("PersonId", "Status").HasDatabaseName("IX_PersonPhoneChangeRequests_Person_Status");
-                    b.HasIndex("ReviewedByAccountId");
                     b.HasIndex("Status", "BuildingId", "RequestedAtUtc").HasDatabaseName("IX_PersonPhoneChangeRequests_Queue");
+                    b.HasOne("BuildingManagementMvc.Data.Entities.PersonEntity", null).WithMany().HasForeignKey("PersonId").OnDelete(DeleteBehavior.NoAction).IsRequired();
                     b.ToTable("PersonPhoneChangeRequests", null, t =>
                     {
                         t.HasCheckConstraint("CK_PersonPhoneChangeRequests_Review", "(([Status] = 0 AND [ReviewedAtUtc] IS NULL AND [ReviewedByAccountId] IS NULL) OR ([Status] IN (1,2) AND [ReviewedAtUtc] IS NOT NULL AND [ReviewedByAccountId] IS NOT NULL))");
