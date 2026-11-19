@@ -173,6 +173,9 @@ public class AppDbContext : DbContext
     /// </summary>
     public DbSet<ResidentEntity> Residents => Set<ResidentEntity>();
 
+    public DbSet<PresenceSessionEntity> PresenceSessions => Set<PresenceSessionEntity>();
+    public DbSet<PresenceHeartbeatEntity> PresenceHeartbeats => Set<PresenceHeartbeatEntity>();
+
     // Canonical identity and authorization foundation (Gate A).
     public DbSet<PersonEntity> Persons => Set<PersonEntity>();
     public DbSet<UserAccountEntity> UserAccounts => Set<UserAccountEntity>();
@@ -208,6 +211,7 @@ public class AppDbContext : DbContext
     {
         IdentityModelConfiguration.Configure(mb);
         FinanceModelConfiguration.Configure(mb);
+        OperationalModelConfiguration.Configure(mb);
 
         // -----------------------------------------------------------------
         // Phase 04: Explicit SQL Server lengths for PK/FK and key columns.
