@@ -297,6 +297,7 @@ public class AppDbContext : DbContext
         mb.Entity<AuditLogEntity>().Property(x => x.ApartmentId).HasMaxLength(64);
         mb.Entity<AuditLogEntity>().Property(x => x.MonthKey).HasMaxLength(7);
 
+        mb.Entity<SavedWhatsAppTemplateEntity>().Property(x => x.BuildingId).HasMaxLength(64);
         mb.Entity<NotificationEntity>().Property(x => x.BuildingId).HasMaxLength(64);
         mb.Entity<NotificationEntity>().Property(x => x.Id).HasMaxLength(64);
         mb.Entity<NotificationEntity>().Property(x => x.RecipientApartmentId).HasMaxLength(64);
