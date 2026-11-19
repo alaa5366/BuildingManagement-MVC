@@ -26,7 +26,7 @@ function Query($c,[string]$sql) {
     return ,$dt
 }
 function Quote([string]$n) { '[' + $n.Replace(']',']]') + ']' }
-$source=$null; $target=$null; $backupPath=$null; $dropped=@()
+$source=$null; $target=$null; $backupPath=$null; $dropped=@(); $failure=$null
 try {
     $source=Open-Checked $SourceConnectionString 'BuildingManagement'
     $target=Open-Checked $TargetConnectionString 'BuildingManagement_RestoreTest'
@@ -127,7 +127,7 @@ WHERE EXISTS(SELECT 1 FROM @Legacy l WHERE l.TableName=pt.name AND l.SchemaName=
         Log "Tables dropped: $($dropped.Count)"
     }
 }
-catch { Log "ERROR: $($_.Exception.Message)"; throw }
+catch { $failure=$_.Exception.Message; Log "ERROR: $failure" }
 finally {
     if($source -and $source.State -ne 'Closed'){$source.Close()}
     if($target -and $target.State -ne 'Closed'){$target.Close()}
@@ -153,3 +153,4 @@ try {
         git push origin development/database-redesign-enterprise
     }
 } finally { Pop-Location }
+if($failure){ throw $failure }
