@@ -191,3 +191,13 @@ These phases are additive migration steps, not application cutover. Legacy table
 - `StartedAtUtc`, `AccountId`, and `DeviceReference` remain NULL; the legacy UID is retained only as a source reference.
 - `ExpiresAtUtc` is derived as LastSeen + the existing two-minute online threshold. No historical heartbeat rows are fabricated.
 - One source row maps to one deterministic PresenceSessions row with LegacyDataMigrationMap provenance. The legacy table is never modified or deleted.
+
+
+| 16 | QrTokens / QrUsages | QrCapabilities / LegacyDataMigrationMap | Schema and idempotent backfill published; apply pending |
+
+### QR legacy migration rules (Phase 16)
+- A capability lookup digest is SHA-256 of the legacy opaque UID. The existing legacy HMAC signature must still be validated before this digest is used for authorization; the digest alone is not proof of a valid QR token.
+- Account/person identity is not inferred. Target type remains unclassified and target reference explicitly retains legacy apartment scope.
+- Single-use tokens retain MaxUses=1; legacy multi-use semantics are represented by the maximum integer bound.
+- QrUsages are aggregate counters, not event-level records. They are retained as provenance evidence and are not expanded into invented QrCapabilityUses events.
+- Device fingerprints are intentionally excluded from migration output. Source QR rows remain unchanged.
