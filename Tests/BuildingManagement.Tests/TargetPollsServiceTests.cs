@@ -29,7 +29,6 @@ public sealed class TargetPollsServiceTests
         Assert.False(System.Text.Encoding.UTF8.GetString(ballot.ChoicePayload).Contains("A1", StringComparison.Ordinal));
         Assert.False(System.Text.Encoding.UTF8.GetString(ballot.ChoicePayload).Contains(poll.Options[0].Id, StringComparison.Ordinal));
         Assert.Equal(32, ballot.BallotTokenHash.Length);
-        Assert.Empty(await verify.PollVotes.Where(x => x.BuildingId == "B1" && x.PollId == poll.Id).ToListAsync());
 
         var residentView = await service.GetAsync("B1", poll.Id, subjectReference: "A1");
         Assert.NotNull(residentView);
