@@ -157,6 +157,8 @@ public class WalletController : Controller
         return RedirectToAction("Index", new { month = mk });
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> CancelDeposit(string month, string depositId, string? reason)
     {
         var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
@@ -195,6 +197,8 @@ public class WalletController : Controller
         return RedirectToAction("Index", new { month = mk });
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddAdjustment(
         string month, string aptId, decimal amount, string? reason, Guid commandId)
     {
