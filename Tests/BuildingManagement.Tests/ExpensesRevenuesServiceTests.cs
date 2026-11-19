@@ -62,7 +62,8 @@ public class ExpensesServiceTests
     public void AddExpense_NullNote_StoresEmpty()
     {
         var b = CreateBuilding();
-        var expense = _service.AddExpense(b, "cat1", "", 500, null, "2025-01");
+        var month = WalletService.CurrentMonthKey();
+        var expense = _service.AddExpense(b, "cat1", "", 500, null, month);
         Assert.Equal("", expense.Note);
     }
 
