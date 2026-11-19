@@ -104,6 +104,7 @@ GROUP BY s.SourceTable ORDER BY s.SourceTable;
         try {
             $applySql = @"
 SET NOCOUNT ON;
+IF OBJECT_ID(N'tempdb..#FinanceSource') IS NOT NULL DROP TABLE #FinanceSource;
 CREATE TABLE #FinanceSource(
  SourceTable nvarchar(128) NOT NULL, SourceKey nvarchar(256) NOT NULL, BuildingId nvarchar(64) NULL,
  PayloadJson nvarchar(max) NOT NULL, SourceFingerprint varbinary(32) NOT NULL
