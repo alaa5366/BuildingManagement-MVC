@@ -1,3 +1,4 @@
+using System.Text.Json;
 using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
@@ -116,21 +117,34 @@ public sealed class TargetWalletReadService
                 entry.EffectiveAtUtc
             }).ToListAsync(cancellationToken);
 
-        var pending = await db.PaymentDeposits.AsNoTracking()
+        var pendingRows = await db.PaymentDeposits.AsNoTracking()
             .Where(d => d.BuildingId == buildingId && d.ApartmentId == apartmentId
                 && periodIds.Contains(d.PeriodId) && d.Status == PaymentDepositStatus.Pending
                 && d.CurrencyCode == currencyCode)
             .OrderByDescending(d => d.SubmittedAtUtc)
-            .Select(d => new Deposit
+            .Select(d => new
             {
-                Id = d.PaymentDepositId.ToString("D"),
-                AptId = d.ApartmentId,
-                Amount = d.Amount,
-                Note = "",
-                Status = "pending",
-                CreatedAt = d.SubmittedAtUtc.ToString("O"),
-                CreatedBy = ""
-            }).ToListAsync(cancellationToken);
+                d.PaymentDepositId,
+                d.ApartmentId,
+                d.Amount,
+                d.Note,
+                d.ReceiptMetadataJson,
+                d.SubmittedAtUtc
+            })
+            .ToListAsync(cancellationToken);
+
+        var pending = pendingRows.Select(d => new Deposit
+        {
+            Id = d.PaymentDepositId.ToString("D"),
+            Number = d.PaymentDepositId.ToString("N")[..8].ToUpperInvariant(),
+            AptId = d.ApartmentId,
+            Amount = d.Amount,
+            Note = d.Note ?? "",
+            Receipt = DeserializeReceipt(d.ReceiptMetadataJson),
+            Status = "pending",
+            CreatedAt = d.SubmittedAtUtc.ToString("O"),
+            CreatedBy = ""
+        }).ToList();
 
         var transactions = posted.Select(entry => new WalletTransactionVm
         {
@@ -179,6 +193,13 @@ public sealed class TargetWalletReadService
             cumulativeBalance,
             transactions,
             pending);
+    }
+
+    private static ReceiptData? DeserializeReceipt(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try { return JsonSerializer.Deserialize<ReceiptData>(json); }
+        catch (JsonException) { return null; }
     }
 
     private static string ToLegacyType(LedgerEntryKind kind) => kind switch
