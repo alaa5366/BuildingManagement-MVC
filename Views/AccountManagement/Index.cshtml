@@ -67,7 +67,7 @@
                     @if (account.ActiveRoleCount == 0) { <span class="badge bg-danger">بدون دور نشط</span> }
                 </td>
                 <td>
-                    @if (!account.IsLegacyAccount && !account.IsArchived && account.Roles.Split(", ", StringSplitOptions.RemoveEmptyEntries).Contains("resident", StringComparer.OrdinalIgnoreCase))
+                    @if (!account.IsLegacyAccount && !account.IsArchived && account.Roles == "resident")
                     {
                         <div class="d-flex flex-wrap gap-1">
                             @if (account.AccountStatus == 1)
