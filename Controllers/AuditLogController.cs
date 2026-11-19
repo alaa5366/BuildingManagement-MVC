@@ -164,6 +164,8 @@ public class AuditLogController : Controller
     string? actionFilter, string? severity, string? from, string? to, string? correlationId = null)
     {
         if (!HasAuditLogPermission) return Forbid();
+        correlationId = string.IsNullOrWhiteSpace(correlationId) ? null : correlationId.Trim();
+        if (correlationId?.Length > 100) correlationId = correlationId[..100];
         if ((IsResident && (string.IsNullOrWhiteSpace(CurrentBuildingId) ||
                             string.IsNullOrWhiteSpace(CurrentApartmentId) ||
                             string.IsNullOrWhiteSpace(User.FindFirstValue(ClaimTypes.NameIdentifier)))) ||
