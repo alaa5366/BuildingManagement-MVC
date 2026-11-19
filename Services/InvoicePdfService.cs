@@ -80,10 +80,10 @@ public class InvoicePdfService
                         c.Item().Row(r =>
                         {
                             r.RelativeItem().Text(Loc.T("Deposits_This_Month"));
-                            r.RelativeItem().AlignRight().Text((d.MonthDeposits >= 0 ? Loc.T("N_EGP_3", d.MonthDeposits) : Loc.T("N_EGP_2", d.MonthDeposits))).FontColor("#2E7D5B");
+                            r.RelativeItem().AlignRight().Text((d.MonthDeposits >= 0 ? Loc.T("N_EGP_3", d.MonthDeposits) : Loc.T("N_EGP_2", d.MonthDeposits))).FontColor(d.MonthDeposits >= 0 ? "#2E7D5B" : "#A0432A");
                         });
 
-                        // ✅ الرسم الشهري (دايماً لو > 0)
+                        // Show both charges and reversal credits when non-zero.
                         if (d.MonthFee != 0)
                         {
                             c.Item().Row(r =>
@@ -98,13 +98,13 @@ public class InvoicePdfService
                             c.Item().Row(r =>
                             {
                                 r.RelativeItem().Text(Loc.T("Your_Share_Of_Revenues"));
-                                r.RelativeItem().AlignRight().Text((d.MonthRevenuesShare >= 0 ? Loc.T("N_EGP_3", d.MonthRevenuesShare) : Loc.T("N_EGP_2", d.MonthRevenuesShare))).FontColor("#1F6B2E");
+                                r.RelativeItem().AlignRight().Text((d.MonthRevenuesShare >= 0 ? Loc.T("N_EGP_3", d.MonthRevenuesShare) : Loc.T("N_EGP_2", d.MonthRevenuesShare))).FontColor(d.MonthRevenuesShare >= 0 ? "#1F6B2E" : "#A0432A");
                             });
                         }
                         c.Item().Row(r =>
                         {
                             r.RelativeItem().Text(Loc.T("Your_Share_Of_Expenses"));
-                            r.RelativeItem().AlignRight().Text((d.MonthExpensesShare >= 0 ? Loc.T("N_EGP_4", d.MonthExpensesShare) : Loc.T("N_EGP_2", d.MonthExpensesShare))).FontColor("#A0432A");
+                            r.RelativeItem().AlignRight().Text((d.MonthExpensesShare >= 0 ? Loc.T("N_EGP_4", d.MonthExpensesShare) : Loc.T("N_EGP_2", d.MonthExpensesShare))).FontColor(d.MonthExpensesShare >= 0 ? "#A0432A" : "#2E7D5B");
                         });
                         c.Item().PaddingTop(6).BorderTop(1).BorderColor("#B9853B").PaddingTop(6).Row(r =>
                         {
@@ -143,7 +143,7 @@ public class InvoicePdfService
                                     table.Cell().Text(cs.Name).FontSize(9);
                                     table.Cell().Text($"{cs.Total:0.##}").FontSize(9);
                                     table.Cell().Text(cs.AptCount.ToString()).FontSize(9);
-                                    table.Cell().Text($"{cs.Share:0.##}").FontSize(9).FontColor("#A0432A");
+                                    table.Cell().Text($"{cs.Share:0.##}").FontSize(9).FontColor(cs.Share >= 0 ? "#A0432A" : "#2E7D5B");
                                 }
                             });
                         });
