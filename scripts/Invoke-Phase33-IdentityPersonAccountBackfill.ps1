@@ -33,7 +33,11 @@ SELECT
  (SELECT COUNT(*) FROM dbo.LegacyIdentityMap WHERE SourceSystem=N'legacy-sql' AND SourceTable=N'Users' AND (MappingStatus<>0 OR PersonId IS NOT NULL OR AccountId IS NOT NULL)) NonPendingUserMappings,
  (SELECT COUNT(*) FROM dbo.LegacyIdentityMap WHERE SourceSystem=N'legacy-sql' AND SourceTable=N'Residents' AND (MappingStatus<>0 OR PersonId IS NOT NULL OR AccountId IS NOT NULL)) NonPendingResidentMappings,
  (SELECT COUNT(*) FROM dbo.LegacyIdentityMap WHERE SourceSystem=N'legacy-sql' AND SourceTable=N'Users') UserMaps,
- (SELECT COUNT(*) FROM dbo.LegacyIdentityMap WHERE SourceSystem=N'legacy-sql' AND SourceTable=N'Residents') ResidentMaps;
+ (SELECT COUNT(*) FROM dbo.LegacyIdentityMap WHERE SourceSystem=N'legacy-sql' AND SourceTable=N'Residents') ResidentMaps,
+ (SELECT COUNT(*) FROM dbo.LegacyIdentityMap m WHERE m.SourceSystem=N'legacy-sql' AND m.SourceTable=N'Residents'
+   AND (SELECT COUNT(*) FROM dbo.Residents r WHERE m.SourceKey=r.Id OR m.SourceKey=CONCAT(r.BuildingId,N'|',r.Id) OR m.SourceKey=r.Uid)<>1) UnmatchedOrAmbiguousResidentMapKeys,
+ (SELECT COUNT(*) FROM dbo.LegacyIdentityMap m WHERE m.SourceSystem=N'legacy-sql' AND m.SourceTable=N'Users'
+   AND (SELECT COUNT(*) FROM dbo.Users u WHERE m.SourceKey=u.Uid)<>1) UnmatchedOrAmbiguousUserMapKeys;
 "@
  $cmd=$c.CreateCommand();$cmd.CommandText=$preflight
  $dt=[System.Data.DataTable]::new();$da=[System.Data.SqlClient.SqlDataAdapter]::new($cmd);[void]$da.Fill($dt);$r=$dt.Rows[0]
@@ -41,6 +45,7 @@ SELECT
  if([int]$r.InvalidUsers -gt 0 -or [int]$r.InvalidResidents -gt 0 -or [int]$r.UsersMissingEmail -gt 0 -or [int]$r.UsersMissingName -gt 0 -or [int]$r.ResidentsMissingName -gt 0){throw 'Source profile exceeds target constraints or required identity fields are missing.'}
  if([int]$r.NonPendingUserMappings -gt 0 -or [int]$r.NonPendingResidentMappings -gt 0){throw 'Existing identity mappings are not all pending; refusing partial or conflicting backfill.'}
  if([int]$r.UserMaps -ne 5 -or [int]$r.ResidentMaps -ne 79){throw 'Expected exact identity mapping candidate counts Users=5 and Residents=79.'}
+ if([int]$r.UnmatchedOrAmbiguousResidentMapKeys -gt 0 -or [int]$r.UnmatchedOrAmbiguousUserMapKeys -gt 0){throw 'Identity map source keys do not resolve one-to-one to exact legacy rows; refusing backfill.'}
  if(-not $Apply){Log 'DRY RUN - no data changed';return}
  $tx=$c.BeginTransaction()
  try{
@@ -54,7 +59,7 @@ DECLARE @uid nvarchar(256),@active bit,@disabled bit;
 DECLARE resident_cursor CURSOR LOCAL FAST_FORWARD FOR
  SELECT m.SourceKey,r.Name,r.Email,r.Phone,r.Whatsapp,r.PhotoUrl
  FROM dbo.LegacyIdentityMap m
- JOIN dbo.Residents r ON m.SourceKey=CONCAT(r.BuildingId,N'|',r.Id)
+ JOIN dbo.Residents r ON m.SourceKey=r.Id OR m.SourceKey=CONCAT(r.BuildingId,N'|',r.Id) OR m.SourceKey=r.Uid
  WHERE m.SourceSystem=N'legacy-sql' AND m.SourceTable=N'Residents'
    AND m.MappingStatus=0 AND m.PersonId IS NULL AND m.AccountId IS NULL
  ORDER BY m.SourceKey;
