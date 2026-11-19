@@ -25,6 +25,8 @@ public class WalletController : Controller
     private readonly TargetWalletReadService _targetWallet;
     private readonly TargetAccountIdentityResolver _identityResolver;
     private readonly TargetWalletAdjustmentWorkflowService _adjustmentWorkflow;
+    private readonly TargetNotificationsService _targetNotifications;
+    private readonly Microsoft.Extensions.Logging.ILogger<WalletController> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WalletController"/> class.
@@ -34,13 +36,17 @@ public class WalletController : Controller
         TargetDepositWorkflowService depositWorkflow,
         TargetWalletReadService targetWallet,
         TargetAccountIdentityResolver identityResolver,
-        TargetWalletAdjustmentWorkflowService adjustmentWorkflow)
+        TargetWalletAdjustmentWorkflowService adjustmentWorkflow,
+        TargetNotificationsService targetNotifications,
+        Microsoft.Extensions.Logging.ILogger<WalletController> logger)
     {
         _buildings = buildings;
         _depositWorkflow = depositWorkflow;
         _targetWallet = targetWallet;
         _identityResolver = identityResolver;
         _adjustmentWorkflow = adjustmentWorkflow;
+        _targetNotifications = targetNotifications;
+        _logger = logger;
     }
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
@@ -82,12 +88,10 @@ public class WalletController : Controller
         var allPending = snapshot.PendingDeposits
             .Select(item =>
             {
-                var apartment = building.Apartments.FirstOrDefault(a => a.Id == item.ApartmentId);
-                return apartment is null ? ((Apartment Apt, Deposit Deposit, string MonthKey)?)null
-                    : (apartment, item.Deposit, item.MonthKey);
+                var apartment = building.Apartments.FirstOrDefault(a => a.Id == item.ApartmentId)
+                    ?? new Apartment { Id = item.ApartmentId, Number = 0, Label = item.ApartmentId };
+                return (apartment, item.Deposit, item.MonthKey);
             })
-            .Where(item => item.HasValue)
-            .Select(item => item!.Value)
             .ToList();
         var pagedPending = PagedResult<(Apartment Apt, Deposit Deposit, string MonthKey)>
             .Create(allPending, 1, pageSize);
@@ -137,6 +141,8 @@ public class WalletController : Controller
 
         try
         {
+            var pendingBefore = (await _targetWallet.GetPendingForBuildingAsync(BuildingId, HttpContext.RequestAborted))
+                .FirstOrDefault(item => item.PaymentDepositId == paymentDepositId);
             var transactionId = await _depositWorkflow.ConfirmAsync(
                 paymentDepositId, actorAccountId.Value,
                 User.FindFirstValue(ClaimTypes.NameIdentifier),
@@ -148,6 +154,9 @@ public class WalletController : Controller
             }
 
             // The target workflow owns the state transition, ledger posting and audit event.
+            if (pendingBefore is not null)
+                await TryCreateDepositNoticeAsync(pendingBefore.ApartmentId, "تم تأكيد الإيداع",
+                    $"تم تأكيد إيداع بقيمة {pendingBefore.Amount:0.##} {pendingBefore.CurrencyCode}.");
             TempData["Message"] = Loc.T("Deposit_Confirmed_Successfully");
         }
         catch (ArgumentException ex) { TempData["Error"] = ex.Message; }
@@ -183,9 +192,14 @@ public class WalletController : Controller
 
         try
         {
+            var pendingBefore = (await _targetWallet.GetPendingForBuildingAsync(BuildingId, HttpContext.RequestAborted))
+                .FirstOrDefault(item => item.PaymentDepositId == paymentDepositId);
             var cancelled = await _depositWorkflow.CancelAsync(
                 paymentDepositId, actorAccountId.Value, reason,
                 HttpContext.RequestAborted);
+            if (cancelled && pendingBefore is not null)
+                await TryCreateDepositNoticeAsync(pendingBefore.ApartmentId, "تم إلغاء الإيداع",
+                    $"تم إلغاء الإيداع بقيمة {pendingBefore.Amount:0.##} {pendingBefore.CurrencyCode}. السبب: {reason.Trim()}");
             TempData[cancelled ? "Message" : "Error"] = cancelled
                 ? Loc.T("Deposit_Cancelled_Successfully")
                 : "الدفعة غير موجودة.";
@@ -261,6 +275,14 @@ public class WalletController : Controller
             var updated = await _depositWorkflow.UpdatePendingAsync(
                 paymentDepositId, actorAccountId.Value, amount, note, reason ?? "",
                 HttpContext.RequestAborted);
+            if (updated)
+            {
+                var pendingAfter = (await _targetWallet.GetPendingForBuildingAsync(BuildingId, HttpContext.RequestAborted))
+                    .FirstOrDefault(item => item.PaymentDepositId == paymentDepositId);
+                if (pendingAfter is not null)
+                    await TryCreateDepositNoticeAsync(pendingAfter.ApartmentId, "تم تعديل بيانات الإيداع",
+                        $"تم تحديث مبلغ الإيداع إلى {amount:0.##} {pendingAfter.CurrencyCode}.");
+            }
             TempData[updated ? "Message" : "Error"] = updated
                 ? Loc.T("Payment_Updated_Successfully")
                 : Loc.T("The_Payment_Does_Not_Exist");
@@ -270,5 +292,19 @@ public class WalletController : Controller
         catch (Exception) { TempData["Error"] = Loc.T("Update_Failed_2"); }
 
         return RedirectToAction("Index", new { month = mk });
+    }
+
+    private async Task TryCreateDepositNoticeAsync(string apartmentId, string title, string body)
+    {
+        try
+        {
+            await _targetNotifications.CreateResidentDepositNoticeAsync(
+                BuildingId, apartmentId, title, body, HttpContext.RequestAborted);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Deposit notification failed for building {BuildingId}, apartment {ApartmentId}.",
+                BuildingId, apartmentId);
+        }
     }
 }
