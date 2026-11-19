@@ -81,14 +81,20 @@ public sealed class TargetNotificationsService
         };
     }
 
-    public async Task CreateResidentDepositNoticeAsync(
+    public Task CreateResidentDepositNoticeAsync(
+        string buildingId, string apartmentId, string title, string body,
+        CancellationToken cancellationToken = default, string type = "deposit", string icon = "💳") =>
+        CreateResidentNotificationAsync(buildingId, apartmentId, title, body, type, icon, cancellationToken);
+
+    /// <summary>Publishes a resident notification to the canonical in-app inbox.</summary>
+    public async Task CreateResidentNotificationAsync(
         string buildingId,
         string apartmentId,
         string title,
         string body,
-        CancellationToken cancellationToken = default,
-        string type = "deposit",
-        string icon = "💳")
+        string type = "info",
+        string icon = "🔔",
+        CancellationToken cancellationToken = default)
     {
         ValidateScope(buildingId, apartmentId);
         if (string.IsNullOrWhiteSpace(title) || title.Length > 200)
