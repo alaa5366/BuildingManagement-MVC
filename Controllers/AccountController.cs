@@ -997,6 +997,7 @@ public class AccountController : Controller
     /// </remarks>
     [HttpPost]
     [EnableRateLimiting("login")]
+    [ValidateAntiForgeryToken]
     [AllowAnonymous]
     public async Task<IActionResult> QuickLoginConfirm(
         string token,
@@ -1166,7 +1167,8 @@ public class AccountController : Controller
         var payload = validation.Data!;
 
         // توكن تعيين الـ PIN مايعملش دخول
-        if (!string.Equals(payload.Purpose, "login", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(payload.Purpose, "login", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(payload.Purpose, "recovery", StringComparison.OrdinalIgnoreCase))
             return new QuickLoginContext { Error = Loc.T("Invalid_Token") };
 
         var apartment = await _targetQr.GetApartmentAsync(
