@@ -28,6 +28,7 @@ public class NotificationsController : Controller
     private string? ApartmentId => User.FindFirstValue("apartmentId");
     private string RecipientType => User.IsInRole("admin") ? "admin" : "resident";
 
+    /// <summary>Displays the administration page and its current records.</summary>
     [HttpGet]
     public async Task<IActionResult> Index(int page = 1, int pageSize = 50)
     {
@@ -47,6 +48,7 @@ public class NotificationsController : Controller
         return View(paged);
     }
 
+    /// <summary>Prepares a notification for publication.</summary>
     [HttpGet]
     [AdminPermission(AdminPermissions.UseWhatsApp)]
     public async Task<IActionResult> Compose()
@@ -57,6 +59,7 @@ public class NotificationsController : Controller
         return View(model);
     }
 
+    /// <summary>Publishes the prepared notification.</summary>
     [HttpPost]
     [AdminPermission(AdminPermissions.UseWhatsApp)]
     [ValidateAntiForgeryToken]
@@ -117,6 +120,7 @@ public class NotificationsController : Controller
         return RedirectToAction(nameof(Compose));
     }
 
+    /// <summary>Marks the specified notification as read.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> MarkRead(string id, string? returnUrl)
@@ -135,6 +139,7 @@ public class NotificationsController : Controller
             : returnUrl);
     }
 
+    /// <summary>Marks all applicable notifications as read.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> MarkAllRead()
