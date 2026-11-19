@@ -177,13 +177,19 @@ public class MaintenanceController : Controller
     /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddToExpenses(string id, string? month, Guid commandId)
+    public async Task<IActionResult> AddToExpenses(string id, string? month)
     {
         var building = await _buildings.GetByIdAsync(BuildingId);
         if (building == null) return NotFound();
 
         var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
         var record = building.MaintenanceLog.FirstOrDefault(item => item.Id == id);
+        var sourceCommand = id.StartsWith("mnt-", StringComparison.OrdinalIgnoreCase) ? id[4..] : id;
+        if (!Guid.TryParse(sourceCommand, out var commandId) || commandId == Guid.Empty)
+        {
+            TempData["Error"] = "معرّف سجل الصيانة غير صالح لتسجيل العملية المالية.";
+            return RedirectToAction("Index");
+        }
         if (record is null || record.AddedToExpense || record.Cost <= 0)
         {
             TempData["Error"] = "سجل الصيانة غير موجود أو تمت إضافته للمصروفات بالفعل.";
@@ -209,12 +215,6 @@ public class MaintenanceController : Controller
             if (category is null)
             {
                 TempData["Error"] = "لا توجد فئة مصروفات نشطة لتسجيل تكلفة الصيانة.";
-                return RedirectToAction("Index");
-            }
-
-            if (commandId == Guid.Empty)
-            {
-                TempData["Error"] = "انتهت صلاحية النموذج. حدّث الصفحة وحاول مرة أخرى.";
                 return RedirectToAction("Index");
             }
 
