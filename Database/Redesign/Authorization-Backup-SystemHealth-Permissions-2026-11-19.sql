@@ -10,10 +10,14 @@ SET XACT_ABORT ON;
 
 IF OBJECT_ID(N'dbo.RoleDefinitions', N'U') IS NULL
    OR OBJECT_ID(N'dbo.RolePermissions', N'U') IS NULL
-    THROW 51119, 'Target authorization tables are missing; apply the identity foundation first.', 1;
+BEGIN
+    ;THROW 51119, 'Target authorization tables are missing; apply the identity foundation first.', 1;
+END;
 
 IF NOT EXISTS (SELECT 1 FROM dbo.RoleDefinitions WHERE RoleKey = N'superadmin' AND IsActive = 1)
-    THROW 51120, 'An active superadmin role definition is required.', 1;
+BEGIN
+    ;THROW 51120, 'An active superadmin role definition is required.', 1;
+END;
 
 BEGIN TRANSACTION;
 

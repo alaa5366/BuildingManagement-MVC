@@ -227,7 +227,7 @@ public static class AdminPermissions
     ManageSettingsGlobal, ManageSettingsBuilding, ManageSettingsOwn,
     ManageTools, ViewBackups, CreateBackup, DownloadBackup, RestoreBackup, DeleteBackup, ViewSystemHealth, ManageSync, SecretAccess
 };
-    // ← 27 عنصر
+    // ← 31 عنصر
 
     /// <summary>
     /// The super admin all field.
