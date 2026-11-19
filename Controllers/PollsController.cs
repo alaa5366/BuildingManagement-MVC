@@ -21,6 +21,7 @@ public class PollsController : Controller
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
 
+    /// <summary>Displays the current records and associated management actions.</summary>
     [HttpGet]
     public async Task<IActionResult> Index(int page = 1, int pageSize = 50)
     {
@@ -34,6 +35,7 @@ public class PollsController : Controller
         return View(paged);
     }
 
+    /// <summary>Handles the Create operation.</summary>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(string question, string? description, string? deadline, List<string> options)
     {
@@ -52,6 +54,7 @@ public class PollsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>Handles the Close operation.</summary>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Close(string id)
     {
@@ -60,6 +63,7 @@ public class PollsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>Handles the Reopen operation.</summary>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Reopen(string id)
     {
@@ -68,6 +72,7 @@ public class PollsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>Deletes the specified record.</summary>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string id)
     {
