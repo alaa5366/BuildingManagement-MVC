@@ -67,6 +67,43 @@ public sealed class TargetMaintenanceServiceTests
             service.DeleteAsync("B1", recordId));
     }
 
+
+    [Fact]
+    public async Task UpdateAndDeleteAsync_ProtectSourceWhenLedgerPostingExistsButFlagIsStale()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        var sourceId = Guid.NewGuid();
+        var maintenanceId = "mnt-" + sourceId.ToString("N");
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.Buildings.Add(new BuildingEntity { Id = "B1", BuildingNumber = "1", Name = "One" });
+            seed.MaintenanceRecords.Add(new MaintenanceRecordEntity
+            {
+                BuildingId = "B1", Id = maintenanceId, Title = "Posted repair",
+                MaintenanceDate = new DateOnly(2026, 11, 1), Cost = 100m,
+                Status = "done", AddedToExpense = false
+            });
+            seed.LedgerTransactions.Add(new LedgerTransactionEntity
+            {
+                LedgerTransactionId = Guid.NewGuid(), BuildingId = "B1",
+                Kind = LedgerTransactionKind.Expense, Status = LedgerTransactionStatus.Posted,
+                SourceType = "Expense", SourceKey = sourceId.ToString("D"),
+                IdempotencyKey = "maintenance-posted-expense",
+                CreatedAtUtc = DateTime.UtcNow, PostedAtUtc = DateTime.UtcNow
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetMaintenanceService(new TestContextFactory(options));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.UpdateAsync("B1", maintenanceId, "Changed", null, "2026-11-02",
+                200m, null, "done"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.DeleteAsync("B1", maintenanceId));
+    }
+
     [Fact]
     public async Task MarkAddedToExpenseAsync_UpdatesOnlyTheMatchingBuildingRecord()
     {
