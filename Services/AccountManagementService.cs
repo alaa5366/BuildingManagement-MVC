@@ -146,9 +146,10 @@ public sealed class AccountManagementService
         }
         else
         {
-            var remaining = await db.Users.CountAsync(x => x.Role == "superadmin" && x.Uid != legacyUserId
-                && x.IsActive && !x.IsDisabled, ct);
-            if (remaining == 0)
+            var remainingEmails = await db.Users.AsNoTracking()
+                .Where(x => x.Role == "superadmin" && x.Uid != legacyUserId && x.IsActive && !x.IsDisabled)
+                .Select(x => x.Email).ToListAsync(ct);
+            if (!remainingEmails.Any(SqlAuthService.IsSuperAdminEmail))
                 return AccountManagementMutationResult.Fail("لا يمكن إيقاف آخر حساب SuperAdmin نشط.");
             account.IsActive = false;
             account.IsDisabled = true;
