@@ -190,10 +190,17 @@ public class QrSecurityService
         await using var db = await _sqlFactory.CreateDbContextAsync();
 
         var updated = await db.QrUsages
-            .Where(x => x.TokenId == p.TokenId && x.UseCount < limit)
+            .Where(x => x.TokenId == p.TokenId && x.UseCount < limit &&
+                (string.IsNullOrEmpty(deviceFingerprint) ||
+                 string.IsNullOrEmpty(x.DeviceFingerprint) ||
+                 x.DeviceFingerprint == deviceFingerprint))
             .ExecuteUpdateAsync(s => s
                 .SetProperty(x => x.UseCount, x => x.UseCount + 1)
-                .SetProperty(x => x.LastUsedAt, now));
+                .SetProperty(x => x.LastUsedAt, now)
+                .SetProperty(x => x.DeviceFingerprint,
+                    x => string.IsNullOrEmpty(x.DeviceFingerprint)
+                        ? deviceFingerprint
+                        : x.DeviceFingerprint));
         if (updated == 1) return true;
 
         if (await db.QrUsages.AnyAsync(x => x.TokenId == p.TokenId)) return false;
@@ -217,10 +224,17 @@ public class QrSecurityService
         {
             db.ChangeTracker.Clear();
             updated = await db.QrUsages
-                .Where(x => x.TokenId == p.TokenId && x.UseCount < limit)
+                .Where(x => x.TokenId == p.TokenId && x.UseCount < limit &&
+                    (string.IsNullOrEmpty(deviceFingerprint) ||
+                     string.IsNullOrEmpty(x.DeviceFingerprint) ||
+                     x.DeviceFingerprint == deviceFingerprint))
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(x => x.UseCount, x => x.UseCount + 1)
-                    .SetProperty(x => x.LastUsedAt, now));
+                    .SetProperty(x => x.LastUsedAt, now)
+                    .SetProperty(x => x.DeviceFingerprint,
+                        x => string.IsNullOrEmpty(x.DeviceFingerprint)
+                            ? deviceFingerprint
+                            : x.DeviceFingerprint));
             return updated == 1;
         }
     }
