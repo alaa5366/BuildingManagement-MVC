@@ -110,6 +110,39 @@ public sealed class TargetNotificationsServiceTests
             service.CreateResidentDepositNoticeAsync("B2", "A1", "Deposit", "Notice"));
     }
 
+
+    [Fact]
+    public async Task MarkAllReadAsync_ChangesOnlyTheExactResidentApartmentScope()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N")).Options;
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.Buildings.AddRange(
+                new BuildingEntity { Id = "B1", BuildingNumber = "1", Name = "One" },
+                new BuildingEntity { Id = "B2", BuildingNumber = "2", Name = "Two" });
+            seed.Notifications.AddRange(
+                Create("B1", "a1-unread", "resident", "A1"),
+                Create("B1", "a2-unread", "resident", "A2"),
+                Create("B1", "admin-unread", "admin", null),
+                Create("B2", "other-building", "resident", "A1"));
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetNotificationsService(new TestContextFactory(options));
+        Assert.Equal(1, await service.MarkAllReadAsync("B1", "resident", "A1"));
+
+        await using var verify = new AppDbContext(options);
+        Assert.True(await verify.Notifications.Where(item => item.Id == "a1-unread")
+            .Select(item => item.IsRead).SingleAsync());
+        Assert.False(await verify.Notifications.Where(item => item.Id == "a2-unread")
+            .Select(item => item.IsRead).SingleAsync());
+        Assert.False(await verify.Notifications.Where(item => item.Id == "admin-unread")
+            .Select(item => item.IsRead).SingleAsync());
+        Assert.False(await verify.Notifications.Where(item => item.Id == "other-building")
+            .Select(item => item.IsRead).SingleAsync());
+    }
+
     private static NotificationEntity Create(string buildingId, string id, string recipientType, string? apartmentId) => new()
     {
         BuildingId = buildingId,
