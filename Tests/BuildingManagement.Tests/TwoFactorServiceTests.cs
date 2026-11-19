@@ -91,11 +91,15 @@ public sealed class TwoFactorServiceTests
                 SecurityStamp = Guid.NewGuid().ToString("N"),
                 CreatedAtUtc = now
             });
+            db.RoleDefinitions.Add(new RoleDefinitionEntity
+            {
+                RoleKey = "building-admin", DisplayName = "Building Administrator", IsActive = true
+            });
             db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
             {
                 RoleAssignmentId = Guid.NewGuid(),
                 AccountId = accountId,
-                RoleKey = "admin",
+                RoleKey = "building-admin",
                 ScopeType = 1,
                 ScopeBuildingId = "building-1",
                 ValidFromUtc = now.AddDays(-1),
