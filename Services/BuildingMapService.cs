@@ -248,7 +248,7 @@ public class BuildingMapService
                     Number = item.Number,
                     Amount = item.Amount,
                     Status = item.Status,
-                    Note = item.Note,
+                    Note = item.Note ?? string.Empty,
                     DateText = FormatDate(item.CreatedAt)
                 }
             })
