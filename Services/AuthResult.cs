@@ -42,6 +42,8 @@ public class AuthResult
     public string? Name { get; set; }
     /// <summary>Marks a principal issued from the target identity schema.</summary>
     public bool UsesTargetIdentity { get; set; }
+    /// <summary>Requires replacement of a temporary initial resident PIN before access is granted.</summary>
+    public bool MustChangePin { get; set; }
     /// <summary>Target account security stamp for session revalidation.</summary>
     public string? SecurityStamp { get; set; }
     /// <summary>
