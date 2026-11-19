@@ -300,7 +300,7 @@ internal static class IdentityModelConfiguration
             e.ToTable("PersonPhoneChangeRequests", t =>
             {
                 t.HasCheckConstraint("CK_PersonPhoneChangeRequests_Status", "[Status] IN (0,1,2)");
-                t.HasCheckConstraint("CK_PersonPhoneChangeRequests_Review", "(([Status] = 0 AND [ReviewedAtUtc] IS NULL AND [ReviewedByAccountId] IS NULL) OR ([Status] IN (1,2) AND [ReviewedAtUtc] IS NOT NULL AND [ReviewedByAccountId] IS NOT NULL))");
+                t.HasCheckConstraint("CK_PersonPhoneChangeRequests_Review", "(([Status] = 0 AND [ReviewedAtUtc] IS NULL AND [ReviewedByUserId] IS NULL) OR ([Status] IN (1,2) AND [ReviewedAtUtc] IS NOT NULL AND [ReviewedByUserId] IS NOT NULL))");
             });
             e.HasKey(x => x.RequestId);
             e.Property(x => x.RequestId).ValueGeneratedNever();
@@ -309,6 +309,7 @@ internal static class IdentityModelConfiguration
             e.Property(x => x.PreviousPhone).HasMaxLength(32).IsRequired();
             e.Property(x => x.RequestedPhone).HasMaxLength(32).IsRequired();
             e.Property(x => x.ReviewReason).HasMaxLength(500);
+            e.Property(x => x.ReviewedByUserId).HasMaxLength(128);
             Utc3(e.Property(x => x.RequestedAtUtc)).HasDefaultValueSql("SYSUTCDATETIME()");
             Utc3(e.Property(x => x.ReviewedAtUtc));
             e.Property(x => x.RowVersion).IsRowVersion();
