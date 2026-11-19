@@ -235,11 +235,10 @@ public class AdminAptsController : Controller
         _wallet.RecalculateRevenueDistribution(building, currentMonth);
 
         _notify.NotifyResidentApartmentReopened(building, apt, null);
+        await _buildings.SaveFullAsync(building);
         await TryNotifyResidentAsync(apt.Id, "تم إعادة تفعيل شقتك",
             $"تم إعادة تفعيل شقتك رقم {apt.Number} في {building.Name}.",
             "apartment_reopened", "🔓");
-
-        await _buildings.SaveFullAsync(building);
 
         await _auditLogger.LogAsync(
             action: "apartment.opened",
@@ -294,11 +293,10 @@ public class AdminAptsController : Controller
         _wallet.RecalculateRevenueDistribution(building, currentMonth);
 
         _notify.NotifyResidentApartmentClosed(building, apt, reason);
+        await _buildings.SaveFullAsync(building);
         await TryNotifyResidentAsync(apt.Id, "تم إغلاق شقتك",
             $"تم إغلاق شقتك رقم {apt.Number} في {building.Name}. {reason}".Trim(),
             "apartment_closed", "🔒");
-
-        await _buildings.SaveFullAsync(building);
 
         await _auditLogger.LogAsync(
             action: "apartment.closed",
@@ -342,11 +340,10 @@ public class AdminAptsController : Controller
         apt.DisabledReason = reason ?? "";
 
         _notify.NotifyResidentApartmentDisabled(building, apt, reason);
+        await _buildings.SaveFullAsync(building);
         await TryNotifyResidentAsync(apt.Id, "تم تعطيل حساب الشقة",
             $"تم تعطيل الشقة رقم {apt.Number} في {building.Name}. {reason}".Trim(),
             "apartment_disabled", "🚫");
-
-        await _buildings.SaveFullAsync(building);
 
         await _auditLogger.LogAsync(
             action: "apartment.disabled",
@@ -390,11 +387,10 @@ public class AdminAptsController : Controller
         apt.DisabledReason = "";
 
         _notify.NotifyResidentApartmentEnabled(building, apt, reason);
+        await _buildings.SaveFullAsync(building);
         await TryNotifyResidentAsync(apt.Id, "تم إعادة تفعيل حساب الشقة",
             $"تم إعادة تفعيل الشقة رقم {apt.Number} في {building.Name}. {reason}".Trim(),
             "apartment_enabled", "✅");
-
-        await _buildings.SaveFullAsync(building);
 
         await _auditLogger.LogAsync(
             action: "apartment.enabled",
