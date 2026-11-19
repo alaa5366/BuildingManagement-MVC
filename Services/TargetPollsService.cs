@@ -214,14 +214,7 @@ public sealed class TargetPollsService
             if (transaction is not null) await transaction.CommitAsync(cancellationToken);
             return true;
         }
-        catch (DbUpdateException)
-        {
-            if (transaction is not null) await transaction.RollbackAsync(cancellationToken);
-            var consumed = await db.PollEligibility.AsNoTracking().AnyAsync(x => x.BuildingId == buildingId &&
-                x.PollId == pollId && x.SubjectReference == apartmentId && x.ConsumedAtUtc != null, cancellationToken);
-            if (consumed) return false;
-            throw;
-        }
+
     }
 
     /// <summary>Gets the building name and count of active apartments.</summary>
