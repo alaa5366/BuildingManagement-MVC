@@ -62,15 +62,31 @@ public sealed class TargetPollsService
         IReadOnlyCollection<string> optionTexts, string? deadline, string createdBy,
         CancellationToken cancellationToken = default)
     {
-        var options = optionTexts.Where(x => !string.IsNullOrWhiteSpace(x))
-            .Select(x => x.Trim()).Distinct(StringComparer.Ordinal).ToList();
-        if (string.IsNullOrWhiteSpace(question)) throw new ArgumentException("Poll question is required.");
-        if (options.Count < 2) throw new ArgumentException("At least two distinct poll options are required.");
-        if (!string.IsNullOrWhiteSpace(deadline) &&
-            !DateTime.TryParse(deadline, System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal,
-                out _))
-            throw new ArgumentException("Poll deadline is invalid.");
+        ValidateScope(buildingId, nameof(buildingId));
+        ValidateText(question, 300, nameof(question), required: true);
+        ValidateText(description, 2000, nameof(description));
+        ValidateText(createdBy, 256, nameof(createdBy), required: true);
+
+        var options = optionTexts
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (options.Count < 2)
+            throw new ArgumentException("At least two distinct poll options are required.");
+        if (options.Count > 20)
+            throw new ArgumentException("A poll cannot contain more than 20 options.");
+        if (options.Any(option => option.Length > 200))
+            throw new ArgumentException("Poll options cannot exceed 200 characters.");
+        DateTime? deadlineDate = null;
+        if (!string.IsNullOrWhiteSpace(deadline))
+        {
+            if (!DateTime.TryParseExact(deadline, "yyyy-MM-dd",
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var parsedDeadline))
+                throw new ArgumentException("Poll deadline must use yyyy-MM-dd.");
+            deadlineDate = DateTime.SpecifyKind(parsedDeadline.Date, DateTimeKind.Utc);
+        }
 
         var now = DateTime.UtcNow;
         var poll = new PollEntity
@@ -81,8 +97,7 @@ public sealed class TargetPollsService
             Description = description?.Trim() ?? "",
             CreatedBy = createdBy,
             CreatedAt = now,
-            Deadline = string.IsNullOrWhiteSpace(deadline) ? null :
-                DateTime.Parse(deadline, System.Globalization.CultureInfo.InvariantCulture).Date,
+            Deadline = deadlineDate,
             IsClosed = false,
             Options = options.Select((text, index) => new PollOptionEntity
             {
@@ -116,9 +131,19 @@ public sealed class TargetPollsService
     public async Task<bool> DeleteAsync(string buildingId, string pollId, CancellationToken cancellationToken = default)
     {
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        ValidateScope(buildingId, nameof(buildingId));
+        ValidateScope(pollId, nameof(pollId));
         var poll = await db.Polls.FirstOrDefaultAsync(
             p => p.BuildingId == buildingId && p.Id == pollId, cancellationToken);
         if (poll is null) return false;
+
+        // A poll with recorded votes is business evidence. Never cascade-delete its
+        // options/votes; close it and retain the result instead.
+        var hasVotes = await db.PollVotes.AsNoTracking().AnyAsync(
+            vote => vote.BuildingId == buildingId && vote.PollId == pollId,
+            cancellationToken);
+        if (hasVotes) return false;
+
         db.Polls.Remove(poll);
         await db.SaveChangesAsync(cancellationToken);
         return true;
@@ -132,7 +157,7 @@ public sealed class TargetPollsService
         var now = DateTime.UtcNow;
         var eligible = await db.Polls.AnyAsync(p =>
             p.BuildingId == buildingId && p.Id == pollId && !p.IsClosed &&
-            (p.Deadline == null || p.Deadline >= now) &&
+            (p.Deadline == null || p.Deadline.Value.Date >= now.Date) &&
             p.Options.Any(o => o.Id == optionId), cancellationToken) &&
             await db.Apartments.AsNoTracking().AnyAsync(a =>
                 a.BuildingId == buildingId && a.Id == apartmentId && !a.IsClosed && !a.IsDisabled,
@@ -182,6 +207,20 @@ public sealed class TargetPollsService
         return await db.Apartments.AsNoTracking().AnyAsync(
             x => x.BuildingId == buildingId && x.Id == apartmentId && !x.IsClosed && !x.IsDisabled,
             cancellationToken);
+    }
+
+    private static void ValidateScope(string value, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length > 64)
+            throw new ArgumentException("A valid poll scope is required.", parameterName);
+    }
+
+    private static void ValidateText(string? value, int maxLength, string parameterName, bool required = false)
+    {
+        if (required && string.IsNullOrWhiteSpace(value))
+            throw new ArgumentException("A required poll field is missing.", parameterName);
+        if (value?.Length > maxLength)
+            throw new ArgumentException($"The {parameterName} field exceeds {maxLength} characters.", parameterName);
     }
 
     private static Poll Map(PollEntity entity) => new()
