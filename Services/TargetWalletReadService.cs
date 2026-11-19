@@ -94,6 +94,7 @@ public sealed class TargetWalletReadService
 
     public async Task<Building?> GetBuildingShellAsync(
         string buildingId,
+        string? apartmentId = null,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(buildingId))
@@ -108,8 +109,11 @@ public sealed class TargetWalletReadService
             .Where(item => item.BuildingId == buildingId)
             .OrderBy(item => item.SortOrder)
             .ToListAsync(cancellationToken);
-        var apartments = await db.Apartments.AsNoTracking()
-            .Where(item => item.BuildingId == buildingId)
+        var apartmentQuery = db.Apartments.AsNoTracking()
+            .Where(item => item.BuildingId == buildingId);
+        if (!string.IsNullOrWhiteSpace(apartmentId))
+            apartmentQuery = apartmentQuery.Where(item => item.Id == apartmentId);
+        var apartments = await apartmentQuery
             .OrderBy(item => item.Number)
             .ToListAsync(cancellationToken);
 
