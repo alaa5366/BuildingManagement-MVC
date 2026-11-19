@@ -219,6 +219,21 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
         Assert.Equal("Unknown source", Assert.Single(other.Items).Message);
     }
 
+    [Fact]
+    public async Task QueryPageAsync_ExtractsHttpStatusAndResponseLatency()
+    {
+        WriteLog(
+            "2026-11-17 10:00:00.000 +00:00 [INF] HTTP GET /AuditLog responded 200 in 12.3456 ms {\\"SourceContext\\":\\"Serilog.AspNetCore.RequestLoggingMiddleware\\",\\"CorrelationId\\":\\"request-42\\"}");
+
+        var item = Assert.Single((await CreateService().QueryPageAsync(new ApplicationLogQuery())).Items);
+
+        Assert.Equal("GET", item.HttpMethod);
+        Assert.Equal("/AuditLog", item.RequestPath);
+        Assert.Equal(200, item.HttpStatusCode);
+        Assert.Equal(12.3456, item.DurationMs);
+        Assert.Equal("request-42", item.CorrelationId);
+    }
+
     private ApplicationLogQueryService CreateService() =>
         new(new TestHostEnvironment { ContentRootPath = _root },
             NullLogger<ApplicationLogQueryService>.Instance);
