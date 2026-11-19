@@ -148,6 +148,7 @@ builder.Services.AddScoped<TargetFinanceReadService>();
 builder.Services.AddScoped<TargetAccountIdentityResolver>();
 builder.Services.AddScoped<TargetPollsService>();
 builder.Services.AddScoped<TargetMaintenanceService>();
+builder.Services.AddScoped<TargetWhatsAppService>();
 
     // ✅ Health Checks (فحص صحة الداتابيز)
     builder.Services.AddHealthChecks()
