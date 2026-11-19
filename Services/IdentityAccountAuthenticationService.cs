@@ -18,20 +18,30 @@ public sealed class IdentityAccountAuthenticationService
         _hasher = hasher;
     }
 
-    /// <summary>Returns null only when the identifier is absent from the target identity tables.</summary>
-    public async Task<AuthResult?> AuthenticateResidentAsync(string identifier, string credential)
+    /// <summary>
+    /// Returns null only when no target account matches the identifier. A matching but
+    /// inactive, unauthorized, or incorrectly credentialed account fails closed.
+    /// </summary>
+    public async Task<AuthResult?> AuthenticateResidentAsync(
+        string identifier,
+        string credential,
+        CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(identifier) || credential is null)
+            return AuthResult.Fail("wrong-credentials");
+
         var email = identifier.Trim().ToUpperInvariant();
         var phone = AuthHelpers.NormalizePhone(identifier);
 
-        await using var db = await _dbFactory.CreateDbContextAsync();
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         var matches = await (
             from account in db.UserAccounts
             join person in db.Persons on account.PersonId equals person.PersonId
-            where account.NormalizedEmail == email || person.PrimaryPhone == phone
+            where account.NormalizedEmail == email ||
+                  (!string.IsNullOrEmpty(phone) && person.PrimaryPhone == phone)
             select new { Account = account, Person = person })
             .Take(2)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         if (matches.Count == 0) return null;
         if (matches.Count != 1) return AuthResult.Fail("wrong-credentials");
@@ -50,18 +60,25 @@ public sealed class IdentityAccountAuthenticationService
                   && assignment.ValidFromUtc <= now
                   && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
                   && assignment.RevokedAtUtc == null
-            select assignment.RoleAssignmentId).AnyAsync();
+            select assignment.RoleAssignmentId)
+            .AnyAsync(cancellationToken);
         if (!roleExists) return AuthResult.Fail("wrong-credentials");
 
-        var storedCredential = await db.UserCredentials.AsNoTracking()
+        // Do not let a newer expired/revoked credential shadow an older still-valid
+        // credential. Credential material is opaque: the submitted value is never trimmed.
+        var credentials = await db.UserCredentials.AsNoTracking()
             .Where(item => item.AccountId == match.Account.AccountId
                 && item.RevokedAtUtc == null
                 && (item.ExpiresAtUtc == null || item.ExpiresAtUtc > now))
             .OrderByDescending(item => item.CreatedAtUtc)
-            .FirstOrDefaultAsync();
-        if (storedCredential == null ||
-            (storedCredential.HashAlgorithm != "BCrypt.Net-Next" && storedCredential.HashAlgorithm != "bcrypt-v1") ||
-            !_hasher.Verify(credential, storedCredential.CredentialHash))
+            .Select(item => new { item.CredentialHash, item.HashAlgorithm })
+            .Take(8)
+            .ToListAsync(cancellationToken);
+
+        var credentialValid = credentials.Any(item =>
+            (item.HashAlgorithm == "BCrypt.Net-Next" || item.HashAlgorithm == "bcrypt-v1") &&
+            _hasher.Verify(credential, item.CredentialHash));
+        if (!credentialValid)
             return AuthResult.Fail("wrong-credentials");
 
         var occupancy = await db.ApartmentOccupancies.AsNoTracking()
@@ -69,12 +86,12 @@ public sealed class IdentityAccountAuthenticationService
                 && item.ValidFromUtc <= now
                 && (item.ValidToUtc == null || item.ValidToUtc > now))
             .OrderByDescending(item => item.IsPrimary)
-            .ThenBy(item => item.ValidFromUtc)
+            .ThenByDescending(item => item.ValidFromUtc)
             .Select(item => new { item.BuildingId, item.ApartmentId })
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
 
         match.Account.LastLoginAtUtc = now;
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(cancellationToken);
 
         var result = AuthResult.Ok(
             uid: match.Account.AccountId.ToString("D"),
