@@ -8,6 +8,22 @@ internal static class OperationalModelConfiguration
 {
     internal static void Configure(ModelBuilder mb)
     {
+        mb.Entity<SavedWhatsAppTemplateEntity>(e =>
+        {
+            e.ToTable("SavedWhatsAppTemplates", t =>
+                t.HasCheckConstraint("CK_SavedWhatsAppTemplates_Name", "LEN(LTRIM(RTRIM([Name]))) > 0"));
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).ValueGeneratedNever();
+            e.Property(x => x.BuildingId).HasMaxLength(64).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Message).HasMaxLength(4000).IsRequired();
+            e.Property(x => x.CreatedByUid).HasMaxLength(128);
+            e.Property(x => x.CreatedAtUtc).HasColumnType("datetime2(3)").HasDefaultValueSql("SYSUTCDATETIME()");
+            e.Property(x => x.UpdatedAtUtc).HasColumnType("datetime2(3)").HasDefaultValueSql("SYSUTCDATETIME()");
+            e.HasIndex(x => new { x.BuildingId, x.IsActive, x.Name })
+                .HasDatabaseName("IX_SavedWhatsAppTemplates_Building_Active_Name");
+        });
+
         mb.Entity<AuditEventEntity>(e =>
         {
             e.ToTable("AuditEvents");
