@@ -62,6 +62,8 @@ public sealed class TargetDepositWorkflowService
             select account.AccountId).AnyAsync(cancellationToken);
         if (!actorIsActive)
             throw new InvalidOperationException("An active target account is required to submit a deposit.");
+        if (!await HasScopedRoleAsync(db, actorAccountId, "resident", buildingId, apartmentId, now, cancellationToken))
+            throw new InvalidOperationException("The actor has no active resident assignment for this apartment.");
 
         var apartmentExists = await db.Apartments.AsNoTracking()
             .AnyAsync(a => a.BuildingId == buildingId && a.Id == apartmentId, cancellationToken);
@@ -148,6 +150,9 @@ public sealed class TargetDepositWorkflowService
             select account.AccountId).AnyAsync(cancellationToken);
         if (!actorIsActive)
             throw new InvalidOperationException("An active target account is required to confirm a deposit.");
+        var authorizationTime = _timeProvider.GetUtcNow().UtcDateTime;
+        if (!await HasFinanceManagementRoleAsync(db, actorAccountId, deposit.BuildingId, authorizationTime, cancellationToken))
+            throw new InvalidOperationException("The actor has no active finance-management assignment for this building.");
 
         var period = await db.FinancialPeriods.SingleOrDefaultAsync(
             p => p.PeriodId == deposit.PeriodId && p.BuildingId == deposit.BuildingId, cancellationToken);
@@ -231,6 +236,9 @@ public sealed class TargetDepositWorkflowService
             select account.AccountId).AnyAsync(cancellationToken);
         if (!actorIsActive)
             throw new InvalidOperationException("An active target account is required to cancel a deposit.");
+        var authorizationTime = _timeProvider.GetUtcNow().UtcDateTime;
+        if (!await HasFinanceManagementRoleAsync(db, actorAccountId, deposit.BuildingId, authorizationTime, cancellationToken))
+            throw new InvalidOperationException("The actor has no active finance-management assignment for this building.");
 
         deposit.Status = PaymentDepositStatus.Cancelled;
         deposit.CancelledAtUtc = _timeProvider.GetUtcNow().UtcDateTime;
@@ -244,6 +252,45 @@ public sealed class TargetDepositWorkflowService
         await tx.CommitAsync(cancellationToken);
         return true;
     }
+
+    private static Task<bool> HasScopedRoleAsync(
+        AppDbContext db,
+        Guid accountId,
+        string roleKey,
+        string buildingId,
+        string apartmentId,
+        DateTime now,
+        CancellationToken cancellationToken) =>
+        (from assignment in db.UserRoleAssignments.AsNoTracking()
+         join role in db.RoleDefinitions.AsNoTracking() on assignment.RoleKey equals role.RoleKey
+         where assignment.AccountId == accountId && assignment.RoleKey == roleKey && role.IsActive &&
+             assignment.ValidFromUtc <= now &&
+             (assignment.ValidToUtc == null || assignment.ValidToUtc > now) &&
+             assignment.RevokedAtUtc == null &&
+             ((assignment.ScopeType == 1 && assignment.ScopeBuildingId == buildingId &&
+               assignment.ScopeApartmentId == null) ||
+              (assignment.ScopeType == 2 && assignment.ScopeBuildingId == buildingId &&
+               assignment.ScopeApartmentId == apartmentId))
+         select assignment.RoleAssignmentId).AnyAsync(cancellationToken);
+
+    private static Task<bool> HasFinanceManagementRoleAsync(
+        AppDbContext db,
+        Guid accountId,
+        string buildingId,
+        DateTime now,
+        CancellationToken cancellationToken) =>
+        (from assignment in db.UserRoleAssignments.AsNoTracking()
+         join role in db.RoleDefinitions.AsNoTracking() on assignment.RoleKey equals role.RoleKey
+         where assignment.AccountId == accountId && role.IsActive &&
+             (assignment.RoleKey == "building-admin" || assignment.RoleKey == "superadmin") &&
+             assignment.ValidFromUtc <= now &&
+             (assignment.ValidToUtc == null || assignment.ValidToUtc > now) &&
+             assignment.RevokedAtUtc == null &&
+             ((assignment.RoleKey == "building-admin" && assignment.ScopeType == 1 &&
+               assignment.ScopeBuildingId == buildingId && assignment.ScopeApartmentId == null) ||
+              (assignment.RoleKey == "superadmin" && assignment.ScopeType == 0 &&
+               assignment.ScopeBuildingId == null && assignment.ScopeApartmentId == null))
+         select assignment.RoleAssignmentId).AnyAsync(cancellationToken);
 
     private static AuditEventEntity CreateAuditEvent(
         string buildingId,
