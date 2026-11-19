@@ -195,6 +195,9 @@ public class AccountController : Controller
             return View(vm);
         }
 
+        if (res.UsesTargetIdentity && res.MustChangePin)
+            return StartPinChangeChallenge(res, vm.Phone, vm.BuildingId);
+
         return await CompleteSignInAsync(res, throttleKey);
     }
 
@@ -536,8 +539,7 @@ public class AccountController : Controller
         }
 
         if (!string.IsNullOrWhiteSpace(throttleKey)) _throttle.Reset(throttleKey);
-        await SignInCookieAsync(result);
-        return RedirectBasedOnRole(result.Role!);
+        return await CompleteSignInAsync(result, AcctKey(identifier));
     }
 
     /// <summary>Legacy route retained for compatibility; the challenge is rendered by UnifiedLogin.</summary>

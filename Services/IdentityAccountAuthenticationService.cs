@@ -325,6 +325,91 @@ public sealed class IdentityAccountAuthenticationService
         return result;
     }
 
+
+    /// <summary>Authenticates a target-schema admin by the person's primary mobile, PIN, and selected building scope.</summary>
+    /// <returns>Null only when no target admin identity owns the phone; a matching target identity always fails closed.</returns>
+    public async Task<AuthResult?> AuthenticateAdminAsync(
+        string identifier, string credential, string buildingId, CancellationToken cancellationToken = default)
+    {
+        var normalizedPhone = AuthHelpers.NormalizePhone(identifier);
+        if (string.IsNullOrWhiteSpace(normalizedPhone) || string.IsNullOrWhiteSpace(buildingId) || credential is null)
+            return AuthResult.Fail("wrong-credentials");
+
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var people = await db.Persons.AsNoTracking()
+            .Where(person => person.PrimaryPhone != null)
+            .Select(person => new { person.PersonId, person.PrimaryPhone })
+            .ToListAsync(cancellationToken);
+        var matchingPeople = people.Where(person => string.Equals(
+            AuthHelpers.NormalizePhone(person.PrimaryPhone), normalizedPhone, StringComparison.Ordinal)).ToList();
+        if (matchingPeople.Count == 0) return null;
+        if (matchingPeople.Count != 1) return AuthResult.Fail("wrong-credentials");
+
+        var match = await (
+            from account in db.UserAccounts
+            join person in db.Persons on account.PersonId equals person.PersonId
+            where account.PersonId == matchingPeople[0].PersonId
+            select new { Account = account, Person = person })
+            .SingleOrDefaultAsync(cancellationToken);
+        if (match is null) return null;
+
+        var now = DateTime.UtcNow;
+        var hasSuperAdminRole = await db.UserRoleAssignments.AsNoTracking().AnyAsync(
+            assignment => assignment.AccountId == match.Account.AccountId
+                && assignment.RoleKey == "superadmin" && assignment.RevokedAtUtc == null,
+            cancellationToken);
+        if (hasSuperAdminRole) return AuthResult.Fail("wrong-credentials");
+
+        var adminAssignments = await (
+            from assignment in db.UserRoleAssignments.AsNoTracking()
+            join definition in db.RoleDefinitions.AsNoTracking() on assignment.RoleKey equals definition.RoleKey
+            where assignment.AccountId == match.Account.AccountId && assignment.RoleKey == "admin"
+                && definition.IsActive && assignment.ValidFromUtc <= now
+                && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
+                && assignment.RevokedAtUtc == null && assignment.ScopeType == 1
+            select assignment.ScopeBuildingId).Distinct().ToListAsync(cancellationToken);
+        if (adminAssignments.Count == 0) return null;
+        if (!adminAssignments.Contains(buildingId, StringComparer.Ordinal))
+            return AuthResult.Fail("wrong-credentials");
+        if (match.Account.AccountStatus != 1 || match.Person.IsArchived)
+            return AuthResult.Fail("wrong-credentials");
+
+        var credentials = await db.UserCredentials.AsNoTracking()
+            .Where(item => item.AccountId == match.Account.AccountId && item.CredentialType == 0
+                && item.RevokedAtUtc == null && (item.ExpiresAtUtc == null || item.ExpiresAtUtc > now))
+            .OrderByDescending(item => item.CreatedAtUtc)
+            .Select(item => new { item.CredentialHash, item.HashAlgorithm })
+            .Take(8)
+            .ToListAsync(cancellationToken);
+        var valid = credentials.Any(item =>
+            (item.HashAlgorithm == "BCrypt.Net-Next" || item.HashAlgorithm == "bcrypt-v1")
+            && _hasher.Verify(credential, item.CredentialHash));
+        if (!valid) return AuthResult.Fail("wrong-credentials");
+
+        var permissions = await db.RolePermissions.AsNoTracking()
+            .Where(item => item.RoleKey == "admin" && item.Effect == 1)
+            .Select(item => item.PermissionKey)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        match.Account.LastLoginAtUtc = now;
+        await db.SaveChangesAsync(cancellationToken);
+
+        var result = AuthResult.Ok(
+            uid: match.Account.AccountId.ToString("D"),
+            role: "admin",
+            email: match.Account.NormalizedEmail ?? match.Person.PrimaryEmail ?? "",
+            name: match.Person.DisplayName,
+            buildingIds: new List<string> { buildingId },
+            permissions: permissions);
+        result.UsesTargetIdentity = true;
+        result.SecurityStamp = match.Account.SecurityStamp;
+        result.MustChangePin = match.Account.MustChangePin;
+        result.Phone = match.Person.PrimaryPhone;
+        return result;
+    }
+
+
     public async Task<bool> ChangeResidentPinAsync(
         Guid accountId,
         string expectedSecurityStamp,

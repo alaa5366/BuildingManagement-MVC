@@ -404,6 +404,60 @@ public sealed class IdentityAccountAuthenticationServiceTests
         Assert.Equal(expected, AuthHelpers.NormalizePhone(input));
     }
 
+
+    [Fact]
+    public async Task AuthenticateAdminAsync_UsesTargetMobilePinAndSelectedBuildingScope()
+    {
+        var factory = new TestContextFactory();
+        var hasher = new BcryptPasswordHasher();
+        var now = DateTime.UtcNow;
+        var personId = Guid.NewGuid();
+        var accountId = Guid.NewGuid();
+        await using (var db = await factory.CreateDbContextAsync())
+        {
+            db.Persons.Add(new PersonEntity
+            {
+                PersonId = personId, DisplayName = "Target Admin",
+                PrimaryPhone = "+201000000555", PrimaryEmail = "admin@example.invalid", CreatedAtUtc = now
+            });
+            db.UserAccounts.Add(new UserAccountEntity
+            {
+                AccountId = accountId, PersonId = personId, AccountStatus = 1,
+                SecurityStamp = "admin-stamp", CreatedAtUtc = now
+            });
+            db.RoleDefinitions.Add(new RoleDefinitionEntity { RoleKey = "admin", DisplayName = "Admin", IsActive = true });
+            db.RolePermissions.Add(new RolePermissionEntity { RoleKey = "admin", PermissionKey = "residents.manage", Effect = 1 });
+            db.UserRoleAssignments.AddRange(
+                new UserRoleAssignmentEntity { RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "admin", ScopeType = 1, ScopeBuildingId = "building-a", ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1) },
+                new UserRoleAssignmentEntity { RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "admin", ScopeType = 1, ScopeBuildingId = "building-b", ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1) });
+            db.UserCredentials.Add(new UserCredentialEntity
+            {
+                CredentialId = Guid.NewGuid(), AccountId = accountId, CredentialType = 0,
+                CredentialHash = hasher.HashPin("583921"), HashAlgorithm = "BCrypt.Net-Next", CreatedAtUtc = now
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var service = new IdentityAccountAuthenticationService(factory, hasher);
+        var result = await service.AuthenticateAdminAsync("01000000555", "583921", "building-b");
+
+        Assert.NotNull(result);
+        Assert.True(result.Success);
+        Assert.True(result.UsesTargetIdentity);
+        Assert.Equal("admin", result.Role);
+        Assert.Equal(accountId.ToString("D"), result.Uid);
+        Assert.Equal(new[] { "building-b" }, result.BuildingIds);
+        Assert.Contains("residents.manage", result.Permissions);
+
+        var wrongPin = await service.AuthenticateAdminAsync("+201000000555", "000000", "building-b");
+        Assert.NotNull(wrongPin);
+        Assert.False(wrongPin.Success);
+
+        var wrongBuilding = await service.AuthenticateAdminAsync("+201000000555", "583921", "building-c");
+        Assert.NotNull(wrongBuilding);
+        Assert.False(wrongBuilding.Success);
+    }
+
     private sealed class TestContextFactory : IDbContextFactory<AppDbContext>
     {
         private readonly DbContextOptions<AppDbContext> _options = new DbContextOptionsBuilder<AppDbContext>()
