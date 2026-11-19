@@ -662,13 +662,16 @@ public sealed class TargetWalletReadService
     }
 }
 
+    /// <summary>Represents an apartment wallet balance, transaction history, and pending deposits.</summary>
 public sealed record TargetWalletSnapshot(
     decimal Balance,
     IReadOnlyList<WalletTransactionVm> Transactions,
     IReadOnlyList<Deposit> PendingDeposits);
 
+    /// <summary>Contains the financial period and currency used for a wallet submission.</summary>
 public sealed record TargetWalletSubmissionContext(Guid PeriodId, string CurrencyCode);
 
+    /// <summary>Represents a pending deposit with its apartment and period details.</summary>
 public sealed record TargetPendingDeposit(
     Guid PaymentDepositId,
     string ApartmentId,
@@ -681,13 +684,16 @@ public sealed record TargetPendingDeposit(
     DateTime SubmittedAtUtc,
     string PeriodKey);
 
+    /// <summary>Pairs a pending wallet deposit with its apartment and month.</summary>
 public sealed record TargetPendingWalletDeposit(Deposit Deposit, string ApartmentId, string MonthKey);
 
+    /// <summary>Contains the collected, expense, and revenue totals for a wallet period.</summary>
 public sealed record TargetWalletPeriodTotals(
     decimal Collected,
     decimal Expenses,
     decimal Revenues);
 
+    /// <summary>Contains the balances, pending deposits, and totals shown in wallet administration.</summary>
 public sealed record TargetWalletAdminSnapshot(
     IReadOnlyDictionary<string, decimal> Balances,
     IReadOnlyList<TargetPendingWalletDeposit> PendingDeposits,
