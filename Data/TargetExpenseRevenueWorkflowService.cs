@@ -126,7 +126,19 @@ public sealed class TargetExpenseRevenueWorkflowService
         if (period is null || period.Status == FinancialPeriodStatus.Closed)
             throw new InvalidOperationException("The selected financial period is unavailable or closed.");
 
-        var effectiveAtUtc = DateTime.SpecifyKind(effectiveDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
+        TimeZoneInfo buildingTimeZone;
+        try
+        {
+            buildingTimeZone = TimeZoneInfo.FindSystemTimeZoneById(period.TimeZoneId);
+        }
+        catch (TimeZoneNotFoundException ex)
+        {
+            throw new InvalidOperationException("The building financial period has an unknown time zone.", ex);
+        }
+        var localEffectiveTime = DateTime.SpecifyKind(effectiveDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Unspecified);
+        if (buildingTimeZone.IsInvalidTime(localEffectiveTime))
+            throw new InvalidOperationException("The selected date begins at an invalid local time in the building time zone.");
+        var effectiveAtUtc = TimeZoneInfo.ConvertTimeToUtc(localEffectiveTime, buildingTimeZone);
         if (effectiveAtUtc < period.StartsAtUtc || effectiveAtUtc >= period.EndsAtUtc)
             throw new InvalidOperationException("The transaction date is outside the selected financial period.");
 
@@ -295,7 +307,6 @@ public sealed class TargetExpenseRevenueWorkflowService
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
         var sourceType = isRevenue ? "Revenue" : "Expense";
         var sourceKey = sourceGuid.ToString("D");
-        var sourceRowId = sourceGuid.ToString("N");
         var original = await db.LedgerTransactions.SingleOrDefaultAsync(x =>
             x.BuildingId == buildingId && x.SourceSystem == "application" &&
             x.SourceType == sourceType && x.SourceKey == sourceKey &&
