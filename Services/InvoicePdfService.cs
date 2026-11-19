@@ -80,7 +80,7 @@ public class InvoicePdfService
                         c.Item().Row(r =>
                         {
                             r.RelativeItem().Text(Loc.T("Deposits_This_Month"));
-                            r.RelativeItem().AlignRight().Text(Loc.T("N_EGP_3", d.MonthDeposits)).FontColor("#2E7D5B");
+                            r.RelativeItem().AlignRight().Text((d.MonthDeposits >= 0 ? Loc.T("N_EGP_3", d.MonthDeposits) : Loc.T("N_EGP_2", d.MonthDeposits))).FontColor("#2E7D5B");
                         });
 
                         // ✅ الرسم الشهري (دايماً لو > 0)
@@ -89,7 +89,7 @@ public class InvoicePdfService
                             c.Item().Row(r =>
                             {
                                 r.RelativeItem().Text(Loc.T("Monthly_Fee_Due"));
-                                r.RelativeItem().AlignRight().Text(Loc.T("N_EGP_4", d.MonthFee)).FontColor("#A0432A");
+                                r.RelativeItem().AlignRight().Text((d.MonthFee >= 0 ? Loc.T("N_EGP_4", d.MonthFee) : Loc.T("N_EGP_2", d.MonthFee))).FontColor("#A0432A");
                             });
                         }
 
@@ -98,13 +98,13 @@ public class InvoicePdfService
                             c.Item().Row(r =>
                             {
                                 r.RelativeItem().Text(Loc.T("Your_Share_Of_Revenues"));
-                                r.RelativeItem().AlignRight().Text(Loc.T("N_EGP_3", d.MonthRevenuesShare)).FontColor("#1F6B2E");
+                                r.RelativeItem().AlignRight().Text((d.MonthRevenuesShare >= 0 ? Loc.T("N_EGP_3", d.MonthRevenuesShare) : Loc.T("N_EGP_2", d.MonthRevenuesShare))).FontColor("#1F6B2E");
                             });
                         }
                         c.Item().Row(r =>
                         {
                             r.RelativeItem().Text(Loc.T("Your_Share_Of_Expenses"));
-                            r.RelativeItem().AlignRight().Text(Loc.T("N_EGP_4", d.MonthExpensesShare)).FontColor("#A0432A");
+                            r.RelativeItem().AlignRight().Text((d.MonthExpensesShare >= 0 ? Loc.T("N_EGP_4", d.MonthExpensesShare) : Loc.T("N_EGP_2", d.MonthExpensesShare))).FontColor("#A0432A");
                         });
                         c.Item().PaddingTop(6).BorderTop(1).BorderColor("#B9853B").PaddingTop(6).Row(r =>
                         {
