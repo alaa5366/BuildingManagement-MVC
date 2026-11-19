@@ -79,7 +79,7 @@ public class SessionRevalidator
         if (role == "resident")
             return await ValidateResidentAsync(user);
 
-        if (role != "admin") return new Result(true, null);
+        if (role != "admin") return new Result(false, null);
 
         var uid = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(uid)) return new Result(false, null);
@@ -334,15 +334,33 @@ public class SessionRevalidator
         try
         {
             await using var db = await _sqlFactory.CreateDbContextAsync();
+            var now = DateTime.UtcNow;
+            var buildingId = user.FindFirst("buildingId")?.Value;
+            var apartmentId = user.FindFirst("apartmentId")?.Value;
             var account = await (
                 from item in db.UserAccounts.AsNoTracking()
                 join person in db.Persons.AsNoTracking() on item.PersonId equals person.PersonId
                 where item.AccountId == accountId
-                select new { item.AccountStatus, item.SecurityStamp, person.IsArchived })
+                select new { item.AccountStatus, item.SecurityStamp, person.PersonId, person.IsArchived })
                 .SingleOrDefaultAsync();
-            var valid = account is not null && account.AccountStatus == 1 && !account.IsArchived
-                && string.Equals(account.SecurityStamp, user.FindFirst("securityStamp")?.Value, StringComparison.Ordinal);
-            return new Result(valid, null);
+            if (account is null || account.AccountStatus != 1 || account.IsArchived ||
+                !string.Equals(account.SecurityStamp, user.FindFirst("securityStamp")?.Value, StringComparison.Ordinal) ||
+                string.IsNullOrWhiteSpace(buildingId) || string.IsNullOrWhiteSpace(apartmentId))
+                return new Result(false, null);
+
+            var activeResidentRole = await (
+                from assignment in db.UserRoleAssignments.AsNoTracking()
+                join role in db.RoleDefinitions.AsNoTracking() on assignment.RoleKey equals role.RoleKey
+                where assignment.AccountId == accountId && assignment.RoleKey == "resident" && role.IsActive
+                    && assignment.RevokedAtUtc == null && assignment.ValidFromUtc <= now
+                    && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
+                select assignment.RoleAssignmentId).AnyAsync();
+            if (!activeResidentRole) return new Result(false, null);
+
+            var activeOccupancy = await db.ApartmentOccupancies.AsNoTracking().AnyAsync(item =>
+                item.PersonId == account.PersonId && item.BuildingId == buildingId && item.ApartmentId == apartmentId
+                && item.ValidFromUtc <= now && (item.ValidToUtc == null || item.ValidToUtc > now));
+            return new Result(activeOccupancy, null);
         }
         catch (Exception ex)
         {
