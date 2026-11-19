@@ -121,17 +121,24 @@ public sealed class TargetWalletReadServiceTests
             {
                 BuildingId = "B1", Id = "F1", Label = "First Floor", SortOrder = 1
             });
-            seed.Apartments.Add(new ApartmentEntity
-            {
-                BuildingId = "B1", Id = "A1", FloorId = "F1", Number = 101,
-                Owner = "Resident", Phone = "201000000001", MonthlyFee = 500m,
-                Label = "North", IsClosed = false, IsDisabled = false
-            });
+            seed.Apartments.AddRange(
+                new ApartmentEntity
+                {
+                    BuildingId = "B1", Id = "A1", FloorId = "F1", Number = 101,
+                    Owner = "Resident", Phone = "201000000001", MonthlyFee = 500m,
+                    Label = "North", IsClosed = false, IsDisabled = false
+                },
+                new ApartmentEntity
+                {
+                    BuildingId = "B1", Id = "A2", FloorId = "F1", Number = 102,
+                    Owner = "Other resident", Phone = "201000000002", MonthlyFee = 500m,
+                    Label = "South", IsClosed = false, IsDisabled = false
+                });
             await seed.SaveChangesAsync();
         }
 
         var service = new TargetWalletReadService(new TestContextFactory(options));
-        var building = await service.GetBuildingShellAsync("B1");
+        var building = await service.GetBuildingShellAsync("B1", "A1");
 
         Assert.NotNull(building);
         Assert.Equal("Target Building", building!.Name);
@@ -140,6 +147,9 @@ public sealed class TargetWalletReadServiceTests
         Assert.Equal("A1", apartment.Id);
         Assert.Equal(101, apartment.Number);
         Assert.Equal("North", apartment.Label);
+
+        var adminBuilding = await service.GetBuildingShellAsync("B1");
+        Assert.Equal(2, adminBuilding!.Apartments.Count);
     }
 
     [Fact]
