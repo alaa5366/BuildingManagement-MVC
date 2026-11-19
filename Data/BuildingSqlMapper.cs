@@ -124,41 +124,51 @@ public static class BuildingSqlMapper
     {
         if (string.IsNullOrWhiteSpace(id)) return null;
 
+        // The retired aggregate tables (Expenses, Revenues, Deposits, Notifications,
+        // Polls and MaintenanceRecords) are intentionally not queried here. The
+        // deployed database now uses the target ledger and operational schema.
         var be = await db.Buildings.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
         if (be == null) return null;
 
         var floors = await db.Floors.AsNoTracking().Where(x => x.BuildingId == id).ToListAsync(ct);
         var apts = await db.Apartments.AsNoTracking().Where(x => x.BuildingId == id).ToListAsync(ct);
         var cats = await db.FinancialCategories.AsNoTracking().Where(x => x.BuildingId == id).ToListAsync(ct);
-        var expenses = await db.Expenses.AsNoTracking().Where(x => x.BuildingId == id).ToListAsync(ct);
-        var revenues = await db.Revenues.AsNoTracking().Where(x => x.BuildingId == id).ToListAsync(ct);
-        var shares = await db.MonthlyApartmentShares.AsNoTracking().Where(x => x.BuildingId == id).ToListAsync(ct);
-        var deposits = await db.Deposits.AsNoTracking().Where(x => x.BuildingId == id).ToListAsync(ct);
-        var edits = await db.DepositEditHistory.AsNoTracking().Where(x => x.BuildingId == id)
-            .OrderBy(x => x.EditId).ToListAsync(ct);
-        var adjustments = await db.WalletAdjustments.AsNoTracking().Where(x => x.BuildingId == id).ToListAsync(ct);
-        var notifs = await db.Notifications.AsNoTracking().Where(x => x.BuildingId == id).ToListAsync(ct);
-        var polls = await db.Polls.AsNoTracking().Where(x => x.BuildingId == id).ToListAsync(ct);
-        var options = await db.PollOptions.AsNoTracking().Where(x => x.BuildingId == id).ToListAsync(ct);
-        var votes = await db.PollVotes.AsNoTracking().Where(x => x.BuildingId == id).ToListAsync(ct);
-        var maint = await db.MaintenanceRecords.AsNoTracking().Where(x => x.BuildingId == id).ToListAsync(ct);
         var admins = await db.BuildingAdmins.AsNoTracking().Where(x => x.BuildingId == id)
             .Select(x => x.AdminUid).ToListAsync(ct);
-        // Aggregate audit entries live in the append-only target audit stream.
-        // Direct business audit events use a different category and are not folded back into this snapshot.
         var audit = await db.AuditEvents.AsNoTracking()
             .Where(x => x.BuildingId == id && x.EventCategory == "BuildingAggregate" &&
                         x.ResourceType == "BuildingAuditEntry" && x.ResourceReference != null)
             .OrderByDescending(x => x.OccurredAtUtc).ThenByDescending(x => x.AuditEventId)
             .Take(AuditCap).ToListAsync(ct);
-        audit.Reverse(); // oldest first, matching the aggregate snapshot order
+        audit.Reverse();
+
+        var periods = await db.FinancialPeriods.AsNoTracking()
+            .Where(x => x.BuildingId == id)
+            .Select(x => new { x.PeriodId, x.PeriodKey })
+            .ToDictionaryAsync(x => x.PeriodId, x => x.PeriodKey, ct);
+        var postedTransactions = await db.LedgerTransactions.AsNoTracking()
+            .Where(x => x.BuildingId == id && x.Status == LedgerTransactionStatus.Posted)
+            .OrderBy(x => x.CreatedAtUtc)
+            .ToListAsync(ct);
+        var transactionIds = postedTransactions.Select(x => x.LedgerTransactionId).ToList();
+        var ledgerEntries = transactionIds.Count == 0
+            ? new List<LedgerEntryEntity>()
+            : await db.LedgerEntries.AsNoTracking()
+                .Where(x => x.BuildingId == id && transactionIds.Contains(x.LedgerTransactionId))
+                .ToListAsync(ct);
+        var entriesByTransaction = ledgerEntries.GroupBy(x => x.LedgerTransactionId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+        var payments = await db.PaymentDeposits.AsNoTracking()
+            .Where(x => x.BuildingId == id)
+            .OrderBy(x => x.SubmittedAtUtc)
+            .ToListAsync(ct);
 
         var b = new Building
         {
             Id = be.Id,
             BuildingNumber = be.BuildingNumber,
             Name = be.Name,
-            AdminPin = "", // لم يعد يُخزَّن (كان نص صريح)
+            AdminPin = "",
             DataVersion = be.DataVersion,
             LogoUrl = be.LogoUrl,
             AdminWhatsapp = be.AdminWhatsapp,
@@ -172,8 +182,8 @@ public static class BuildingSqlMapper
                 Notes = be.PaymentNotes
             },
             AdminUids = admins,
-            Floors = floors.OrderBy(f => f.SortOrder)
-                .Select(f => new Floor { Id = f.Id, Label = f.Label, Order = f.SortOrder }).ToList(),
+            Floors = floors.OrderBy(x => x.SortOrder)
+                .Select(x => new Floor { Id = x.Id, Label = x.Label, Order = x.SortOrder }).ToList(),
             Apartments = apts.Select(a => new Apartment
             {
                 Id = a.Id,
@@ -193,156 +203,105 @@ public static class BuildingSqlMapper
                 DisabledReason = a.DisabledReason,
                 Settings = ToSettings(a)
             }).ToList(),
-            ExpenseCategories = cats.Where(c => c.Kind == "expense").OrderBy(c => c.SortOrder)
+            ExpenseCategories = cats.Where(x => x.Kind == "expense").OrderBy(x => x.SortOrder)
                 .Select(ToCategory).ToList(),
-            RevenueCategories = cats.Where(c => c.Kind == "revenue").OrderBy(c => c.SortOrder)
+            RevenueCategories = cats.Where(x => x.Kind == "revenue").OrderBy(x => x.SortOrder)
                 .Select(ToCategory).ToList(),
-            WalletAdjustments = adjustments.OrderBy(a => a.CreatedAt).Select(a => new WalletAdjustment
-            {
-                Id = a.Id,
-                AptId = a.ApartmentId,
-                Amount = a.Amount,
-                Reason = a.Reason,
-                MonthKey = a.MonthKey,
-                CreatedAt = FormatTs(a.CreatedAt) ?? "",
-                CreatedBy = a.CreatedBy
-            }).ToList(),
-            Notifications = notifs.OrderBy(n => n.Ts).Select(n => new Notification
-            {
-                Id = n.Id,
-                Ts = FormatTs(n.Ts) ?? "",
-                RecipientType = n.RecipientType,
-                RecipientId = n.RecipientApartmentId,
-                Type = n.Type,
-                Icon = n.Icon,
-                Title = n.Title,
-                Body = n.Body,
-                Read = n.IsRead,
-                ReadAt = FormatTs(n.ReadAt)
-            }).ToList(),
-            MaintenanceLog = maint.OrderBy(m => m.MaintenanceDate).ThenBy(m => m.CreatedAt)
-                .Select(m => new MaintenanceRecord
-                {
-                    Id = m.Id,
-                    Title = m.Title,
-                    Description = m.Description,
-                    Date = FormatDate(m.MaintenanceDate) ?? "",
-                    Cost = m.Cost,
-                    Vendor = m.Vendor,
-                    Status = m.Status,
-                    CreatedBy = m.CreatedBy,
-                    CreatedAt = FormatTs(m.CreatedAt) ?? "",
-                    AddedToExpense = m.AddedToExpense,
-                    AddedToExpenseAt = FormatTs(m.AddedToExpenseAt)
-                }).ToList(),
             AuditLog = audit.Select(MapAggregateAuditEvent).ToList()
         };
 
-        // ---- الشهور ----
-        MonthData Month(string key)
+        // The target ledger is the financial source of truth. Build the legacy
+        // presentation DTOs from posted ledger transactions without touching
+        // retired detail tables. Ledger entries are per-apartment signed movements.
+        foreach (var transaction in postedTransactions)
         {
-            if (!b.Months.TryGetValue(key, out var m)) b.Months[key] = m = new MonthData();
-            return m;
-        }
+            if (!periods.TryGetValue(transaction.PeriodId, out var monthKey) ||
+                !MonthKeyRx.IsMatch(monthKey))
+                continue;
 
-        foreach (var e in expenses.OrderBy(x => x.ExpenseDate).ThenBy(x => x.Id))
-            Month(e.MonthKey).Expenses.Add(new Expense
+            var amount = entriesByTransaction.TryGetValue(transaction.LedgerTransactionId, out var entries)
+                ? entries.Sum(x => Math.Abs(x.SignedAmount))
+                : 0m;
+            if (amount <= 0) continue;
+
+            var month = b.Months.TryGetValue(monthKey, out var existingMonth)
+                ? existingMonth
+                : (b.Months[monthKey] = new MonthData());
+
+            var transactionId = transaction.LedgerTransactionId.ToString("N");
+            var effectiveDate = entries is { Count: > 0 }
+                ? entries.Min(x => x.EffectiveAtUtc).ToString("yyyy-MM-dd", Inv)
+                : transaction.CreatedAtUtc.ToString("yyyy-MM-dd", Inv);
+
+            if (transaction.Kind == LedgerTransactionKind.Expense)
             {
-                Id = e.Id,
-                CategoryId = e.CategoryId ?? "",
-                Note = e.Note,
-                Amount = e.Amount,
-                Date = FormatDate(e.ExpenseDate) ?? "",
-                Receipt = e.ReceiptUrl
-            });
-
-        foreach (var r in revenues.OrderBy(x => x.RevenueDate).ThenBy(x => x.Id))
-            Month(r.MonthKey).Revenues.Add(new Revenue
+                month.Expenses.Add(new Expense
+                {
+                    Id = transactionId,
+                    CategoryId = "",
+                    Note = transaction.Reason ?? "Expense",
+                    Amount = amount,
+                    Date = effectiveDate
+                });
+            }
+            else if (transaction.Kind == LedgerTransactionKind.Revenue)
             {
-                Id = r.Id,
-                CategoryId = r.CategoryId ?? "",
-                Note = r.Note,
-                Amount = r.Amount,
-                Date = FormatDate(r.RevenueDate) ?? ""
-            });
-
-        // ملحوظة: أي شقة ليها صف share بتظهر في الـ 3 dictionaries (القيمة 0 لو ماكانتش موجودة).
-        foreach (var s in shares)
-        {
-            var m = Month(s.MonthKey);
-            m.Distribution[s.ApartmentId] = s.ExpenseShare;
-            m.RevenueDistribution[s.ApartmentId] = s.RevenueShare;
-            m.CarryOver[s.ApartmentId] = s.CarryOver;
-        }
-
-        var editsByDep = edits.GroupBy(x => x.DepositId).ToDictionary(g => g.Key, g => g.ToList());
-        foreach (var d in deposits.OrderBy(x => x.CreatedAt).ThenBy(x => x.Id))
-        {
-            var dep = new Deposit
+                month.Revenues.Add(new Revenue
+                {
+                    Id = transactionId,
+                    CategoryId = "",
+                    Note = transaction.Reason ?? "Revenue",
+                    Amount = amount,
+                    Date = effectiveDate
+                });
+            }
+            else if (transaction.Kind == LedgerTransactionKind.WalletAdjustment)
             {
-                Id = d.Id,
-                Number = d.Number,
-                AptId = d.ApartmentId,
-                Amount = d.Amount,
-                Note = d.Note,
-                Status = d.Status,
-                Receipt = HasReceipt(d)
-                    ? new ReceiptData
+                foreach (var entry in entries ?? new List<LedgerEntryEntity>())
+                {
+                    b.WalletAdjustments.Add(new WalletAdjustment
                     {
-                        Url = d.ReceiptUrl ?? "",
-                        Path = d.ReceiptPath ?? "",
-                        FileName = d.ReceiptFileName ?? "",
-                        FileSize = d.ReceiptFileSize ?? 0,
-                        FileType = d.ReceiptFileType ?? "",
-                        Success = d.ReceiptSuccess ?? false
-                    }
-                    : null,
-                CreatedAt = FormatTs(d.CreatedAt) ?? "",
-                CreatedBy = d.CreatedBy,
-                ConfirmedAt = FormatTs(d.ConfirmedAt),
-                ConfirmedBy = d.ConfirmedBy,
-                CancelledAt = FormatTs(d.CancelledAt),
-                CancelledBy = d.CancelledBy,
-                CancelledReason = d.CancelledReason,
-                UpdatedAt = FormatTs(d.UpdatedAt),
-                UpdatedBy = d.UpdatedBy,
-                UpdateReason = d.UpdateReason,
-                EditHistory = editsByDep.TryGetValue(d.Id, out var list)
-                    ? list.Select(x => new DepositEditEntry
-                    {
-                        Ts = FormatTs(x.Ts) ?? "",
-                        By = x.ByUser,
-                        Reason = x.Reason,
-                        OldAmount = x.OldAmount,
-                        NewAmount = x.NewAmount,
-                        OldNote = x.OldNote,
-                        NewNote = x.NewNote
-                    }).ToList()
-                    : null
-            };
-            Month(d.MonthKey).Deposits.Add(dep);
+                        Id = transactionId + "-" + entry.ApartmentId,
+                        AptId = entry.ApartmentId,
+                        Amount = entry.SignedAmount,
+                        Reason = transaction.Reason ?? "Wallet adjustment",
+                        MonthKey = monthKey,
+                        CreatedAt = FormatTs(transaction.CreatedAtUtc) ?? "",
+                        CreatedBy = transaction.ActorReference ?? ""
+                    });
+                }
+            }
         }
 
-        // ---- التصويت ----
-        var optsByPoll = options.GroupBy(o => o.PollId).ToDictionary(g => g.Key, g => g.OrderBy(o => o.SortOrder).ToList());
-        var votesByPoll = votes.GroupBy(v => v.PollId).ToDictionary(g => g.Key, g => g.ToList());
-        b.Polls = polls.OrderBy(p => p.CreatedAt).Select(p => new Poll
+        foreach (var payment in payments)
         {
-            Id = p.Id,
-            Question = p.Question,
-            Description = p.Description,
-            CreatedBy = p.CreatedBy,
-            CreatedAt = FormatTs(p.CreatedAt) ?? "",
-            Deadline = FormatTs(p.Deadline),
-            Closed = p.IsClosed,
-            Options = optsByPoll.TryGetValue(p.Id, out var os)
-                ? os.Select(o => new PollOption { Id = o.Id, Text = o.Text }).ToList()
-                : new List<PollOption>(),
-            Votes = votesByPoll.TryGetValue(p.Id, out var vs)
-                ? vs.ToDictionary(v => v.ApartmentId, v => v.OptionId)
-                : new Dictionary<string, string>()
-        }).ToList();
+            if (!periods.TryGetValue(payment.PeriodId, out var monthKey) ||
+                !MonthKeyRx.IsMatch(monthKey))
+                continue;
+            var month = b.Months.TryGetValue(monthKey, out var existingMonth)
+                ? existingMonth
+                : (b.Months[monthKey] = new MonthData());
+            month.Deposits.Add(new Deposit
+            {
+                Id = payment.PaymentDepositId.ToString("N"),
+                AptId = payment.ApartmentId,
+                Amount = payment.Amount,
+                Note = payment.Note ?? "",
+                Status = payment.Status switch
+                {
+                    PaymentDepositStatus.Pending => "pending",
+                    PaymentDepositStatus.Confirmed => "confirmed",
+                    PaymentDepositStatus.Cancelled => "cancelled",
+                    PaymentDepositStatus.Reversed => "reversed",
+                    _ => "pending"
+                },
+                CreatedAt = FormatTs(payment.SubmittedAtUtc) ?? "",
+                CreatedBy = payment.SourceSystem
+            });
+        }
 
+        // Notifications, maintenance and voting are now independent target
+        // aggregates and are loaded by their dedicated services/controllers.
         return b;
     }
 
