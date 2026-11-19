@@ -4196,4 +4196,9 @@ This operation can take a few seconds.</value>
     <value>Phone correction requests</value>
   </data>
   <data name="Backup_Collection_savedWhatsAppTemplates" xml:space="preserve"><value>Saved WhatsApp templates</value></data>
+  <data name="Backup_Collection_notificationMessages" xml:space="preserve"><value>Notification messages</value></data>
+  <data name="Backup_Collection_notificationRecipients" xml:space="preserve"><value>Notification recipients</value></data>
+  <data name="Backup_Collection_notificationDeliveries" xml:space="preserve"><value>Notification delivery attempts</value></data>
+  <data name="Backup_Collection_notificationReadStates" xml:space="preserve"><value>Notification read states</value></data>
+  <data name="Backup_Collection_notificationPreferences" xml:space="preserve"><value>Notification preferences</value></data>
 </root>
