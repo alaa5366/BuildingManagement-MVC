@@ -127,6 +127,14 @@ public sealed class TargetDepositWorkflowService
         {
             if (deposit.PostedTransactionId is null)
                 throw new InvalidOperationException("Confirmed deposit has no posted ledger transaction.");
+            var confirmedPostingExists = await db.LedgerTransactions.AsNoTracking().AnyAsync(
+                item => item.LedgerTransactionId == deposit.PostedTransactionId &&
+                    item.PeriodId == deposit.PeriodId && item.BuildingId == deposit.BuildingId &&
+                    item.Kind == LedgerTransactionKind.Deposit &&
+                    item.Status == LedgerTransactionStatus.Posted,
+                cancellationToken);
+            if (!confirmedPostingExists)
+                throw new InvalidOperationException("Confirmed deposit ledger provenance is inconsistent.");
             await tx.CommitAsync(cancellationToken);
             return deposit.PostedTransactionId;
         }
@@ -216,8 +224,11 @@ public sealed class TargetDepositWorkflowService
         if (deposit.Status != PaymentDepositStatus.Pending)
             throw new InvalidOperationException("Only a pending deposit can be cancelled.");
 
-        var actorIsActive = await db.UserAccounts.AsNoTracking()
-            .AnyAsync(a => a.AccountId == actorAccountId && a.AccountStatus == 1, cancellationToken);
+        var actorIsActive = await (
+            from account in db.UserAccounts.AsNoTracking()
+            join person in db.Persons.AsNoTracking() on account.PersonId equals person.PersonId
+            where account.AccountId == actorAccountId && account.AccountStatus == 1 && !person.IsArchived
+            select account.AccountId).AnyAsync(cancellationToken);
         if (!actorIsActive)
             throw new InvalidOperationException("An active target account is required to cancel a deposit.");
 
