@@ -71,6 +71,9 @@ public class AuditLogQueryService
 
         // Deposits
         "deposit_create", "deposit_confirm", "deposit_cancel", "deposit_update",
+        "PaymentDepositSubmitted", "PaymentDepositConfirmed", "PaymentDepositCancelled",
+        "PaymentDepositReversed", "PaymentDepositUpdated", "WalletAdjustmentPosted",
+        "ExpensePosted", "RevenuePosted", "ExpenseReversed", "RevenueReversed",
 
         // Expenses / Revenues
         "expense_add", "expense_delete", "revenue_add", "revenue_delete",
@@ -133,6 +136,16 @@ public class AuditLogQueryService
         "deposit_confirm" => Loc.T("Confirm_Payment"),
         "deposit_cancel" => Loc.T("Cancel_Payment"),
         "deposit_update" => Loc.T("Edit_Payment_2"),
+        "PaymentDepositSubmitted" => "تقديم دفعة جديدة",
+        "PaymentDepositConfirmed" => "تأكيد دفعة",
+        "PaymentDepositCancelled" => "إلغاء دفعة",
+        "PaymentDepositReversed" => "عكس دفعة مؤكدة",
+        "PaymentDepositUpdated" => "تعديل دفعة معلقة",
+        "WalletAdjustmentPosted" => "تسجيل تسوية بالمحفظة",
+        "ExpensePosted" => "تسجيل مصروف",
+        "RevenuePosted" => "تسجيل إيراد",
+        "ExpenseReversed" => "عكس مصروف",
+        "RevenueReversed" => "عكس إيراد",
         "expense_add" => Loc.T("Add_Expense_2"),
         "expense_delete" => Loc.T("Delete_Expense"),
         "revenue_add" => Loc.T("Add_Revenue_2"),
