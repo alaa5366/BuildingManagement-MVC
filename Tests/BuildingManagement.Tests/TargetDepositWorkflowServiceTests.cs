@@ -164,6 +164,69 @@ public sealed class TargetDepositWorkflowServiceTests
     }
 
 
+
+    [Fact]
+    public async Task UpdatePending_PreservesSourceAndWritesAppendOnlyAuditEvidence()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+        var now = DateTime.UtcNow;
+        var periodId = Guid.NewGuid();
+        var actorId = Guid.NewGuid();
+        var depositId = Guid.NewGuid();
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.FinancialPeriods.Add(new FinancialPeriodEntity
+            {
+                PeriodId = periodId, BuildingId = "B1", PeriodKey = now.ToString("yyyy-MM"),
+                TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Open,
+                StartsAtUtc = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndsAtUtc = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1),
+                CreatedAtUtc = now
+            });
+            var personId = Guid.NewGuid();
+            seed.Persons.Add(new PersonEntity { PersonId = personId, DisplayName = "Actor", CreatedAtUtc = now });
+            seed.UserAccounts.Add(new UserAccountEntity
+            {
+                AccountId = actorId, PersonId = personId, AccountStatus = 1,
+                SecurityStamp = "test", CreatedAtUtc = now
+            });
+            seed.RoleDefinitions.Add(new RoleDefinitionEntity
+            {
+                RoleKey = "building-admin", DisplayName = "Building Admin", IsActive = true
+            });
+            seed.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            {
+                RoleAssignmentId = Guid.NewGuid(), AccountId = actorId, RoleKey = "building-admin",
+                ScopeType = 1, ScopeBuildingId = "B1", ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now
+            });
+            seed.PaymentDeposits.Add(new PaymentDepositEntity
+            {
+                PaymentDepositId = depositId, PeriodId = periodId, BuildingId = "B1",
+                ApartmentId = "A1", Amount = 50m, CurrencyCode = "EGP",
+                Status = PaymentDepositStatus.Pending, SubmittedAtUtc = now,
+                Note = "Original note", ReceiptMetadataJson = """{"Url":"https://example.test/r.png","Success":true}""",
+                SourceSystem = "application", SourceKey = "resident-submit-1"
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetDepositWorkflowService(new TestContextFactory(options), TimeProvider.System);
+        Assert.True(await service.UpdatePendingAsync(depositId, actorId, 75m, "Corrected note", "bank slip verified"));
+
+        await using var verify = new AppDbContext(options);
+        var deposit = await verify.PaymentDeposits.SingleAsync();
+        Assert.Equal(75m, deposit.Amount);
+        Assert.Equal("Corrected note", deposit.Note);
+        Assert.Equal("resident-submit-1", deposit.SourceKey);
+        Assert.Contains("example.test/r.png", deposit.ReceiptMetadataJson);
+        var audit = await verify.AuditEvents.SingleAsync(item => item.EventType == "PaymentDepositUpdated");
+        Assert.Contains("bank slip verified", audit.SafeDetailsJson);
+        Assert.Contains("Original note", audit.SafeDetailsJson);
+    }
+
     [Fact]
     public async Task CreatePending_RejectsInvalidOrOversizedReceiptMetadata()
     {
