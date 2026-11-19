@@ -27,3 +27,23 @@ public sealed class PresenceHeartbeatEntity
     public byte Signal { get; set; }
     public PresenceSessionEntity Session { get; set; } = null!;
 }
+
+/// <summary>Append-only business audit event stored independently from diagnostic application logs.</summary>
+public sealed class AuditEventEntity
+{
+    public Guid AuditEventId { get; set; }
+    public DateTime OccurredAtUtc { get; set; }
+    public Guid? ActorAccountId { get; set; }
+    public string? ActorReference { get; set; }
+    public string? BuildingId { get; set; }
+    public string EventCategory { get; set; } = "Business";
+    public string EventType { get; set; } = "";
+    public string? ResourceType { get; set; }
+    public string? ResourceReference { get; set; }
+    public string? CorrelationId { get; set; }
+    /// <summary>0 = success/info, 1 = warning, 2 = error, 3 = critical.</summary>
+    public byte Outcome { get; set; }
+    public string? SafeDetailsJson { get; set; }
+    public byte[]? PreviousHash { get; set; }
+    public byte[]? EventHash { get; set; }
+}
