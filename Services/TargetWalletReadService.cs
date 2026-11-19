@@ -102,7 +102,7 @@ public sealed class TargetWalletReadService
             join transaction in db.LedgerTransactions.AsNoTracking()
                 on entry.LedgerTransactionId equals transaction.LedgerTransactionId
             join depositRow in db.PaymentDeposits.AsNoTracking()
-                on transaction.LedgerTransactionId equals depositRow.PostedTransactionId into depositRows
+                on (Guid?)transaction.LedgerTransactionId equals depositRow.PostedTransactionId into depositRows
             from deposit in depositRows.DefaultIfEmpty()
             where entry.BuildingId == buildingId && entry.ApartmentId == apartmentId
                 && periodIds.Contains(entry.PeriodId)
