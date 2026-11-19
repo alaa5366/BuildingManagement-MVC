@@ -357,454 +357,146 @@ public static class BuildingSqlMapper
         if (string.IsNullOrWhiteSpace(src.Id))
             throw new ArgumentException("Building.Id مطلوب", nameof(src));
 
-        var warn = new List<string>();
-        var bid = src.Id;
+        var warnings = new List<string>();
+        var buildingId = Cut(src.Id, 64);
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
-
-        // ---------------- 1) العمارة ----------------
-        var be = await db.Buildings.FirstOrDefaultAsync(x => x.Id == bid, ct);
-        if (be == null)
+        var building = await db.Buildings.FirstOrDefaultAsync(x => x.Id == buildingId, ct);
+        if (building is null)
         {
-            be = new BuildingEntity { Id = bid, CreatedAt = ParseTs(src.CreatedAt) ?? NowSec() };
-            db.Buildings.Add(be);
+            building = new BuildingEntity
+            {
+                Id = buildingId,
+                CreatedAt = ParseTs(src.CreatedAt) ?? NowSec()
+            };
+            db.Buildings.Add(building);
         }
         else
         {
-            ValidateAggregateConcurrency(src.RowVersion, be.RowVersion);
-
-            // A child-only aggregate change would otherwise leave the Buildings row untouched,
-            // so SQL Server would not advance RowVersion and another app instance could pass
-            // the same token check. Force a no-op parent update; the rowversion predicate then
-            // protects every aggregate save, including changes limited to child tables.
-            MarkAggregateWrite(db, be);
+            ValidateAggregateConcurrency(src.RowVersion, building.RowVersion);
+            MarkAggregateWrite(db, building);
         }
-        be.BuildingNumber = Cut(src.BuildingNumber, 50);
-        be.Name = Cut(src.Name, 200);
-        be.AdminPin = ""; // لم يعد يُخزَّن
-        be.DataVersion = Cut(src.DataVersion, 20);
-        be.LogoUrl = Cut(src.LogoUrl, 1000);
-        be.AdminWhatsapp = Cut(src.AdminWhatsapp, 32);
-        var pay = src.PaymentInfo ?? new PaymentInfo();
-        be.PaymentLabel = Cut(pay.Label, 200);
-        be.PaymentAccountNumber = Cut(pay.AccountNumber, 100);
-        be.PaymentPhone = Cut(pay.Phone, 32);
-        be.PaymentNotes = Cut(pay.Notes, 500);
 
-        // ---------------- 2) الأدمنز (لازم يكونوا موجودين في Users) ----------------
-        var uids = (src.AdminUids ?? new()).Where(u => !string.IsNullOrWhiteSpace(u)).Distinct().ToList();
-        var knownUids = await db.Users.Where(u => uids.Contains(u.Uid)).Select(u => u.Uid).ToListAsync(ct);
-        foreach (var u in uids.Except(knownUids))
-            warn.Add($"admin uid '{u}' مش موجود في جدول Users - اتخطّى");
-        var adminsExisting = await db.BuildingAdmins.Where(x => x.BuildingId == bid).ToListAsync(ct);
-        Sync(db, adminsExisting,
-            knownUids.Select(u => new BuildingAdminEntity { BuildingId = bid, AdminUid = u }),
-            x => x.AdminUid, warn, "admins");
+        building.BuildingNumber = Cut(src.BuildingNumber, 50);
+        building.Name = Cut(src.Name, 200);
+        building.AdminPin = "";
+        building.DataVersion = Cut(src.DataVersion, 20);
+        building.LogoUrl = Cut(src.LogoUrl, 1000);
+        building.AdminWhatsapp = Cut(src.AdminWhatsapp, 32);
+        var payment = src.PaymentInfo ?? new PaymentInfo();
+        building.PaymentLabel = Cut(payment.Label, 200);
+        building.PaymentAccountNumber = Cut(payment.AccountNumber, 100);
+        building.PaymentPhone = Cut(payment.Phone, 32);
+        building.PaymentNotes = Cut(payment.Notes, 500);
 
-        // ---------------- 3) الأدوار ----------------
+        // Identity assignments and financial/operational records are separate
+        // target aggregates. Never synchronize them from a stale Building snapshot.
+        if (src.AdminUids is { Count: > 0 })
+            warnings.Add("Building administrator assignments are managed by target identity/access services.");
+
         var floors = (src.Floors ?? new())
-            .Where(f => !string.IsNullOrWhiteSpace(f.Id))
-            .Select(f => new FloorEntity
+            .Where(x => !string.IsNullOrWhiteSpace(x.Id))
+            .Select(x => new FloorEntity
             {
-                BuildingId = bid, Id = Cut(f.Id, 64), Label = Cut(f.Label, 100), SortOrder = f.Order
+                BuildingId = buildingId,
+                Id = Cut(x.Id, 64),
+                Label = Cut(x.Label, 100),
+                SortOrder = x.Order
             }).ToList();
-        var floorIds = floors.Select(f => f.Id).ToHashSet();
-        var floorsExisting = await db.Floors.Where(x => x.BuildingId == bid).ToListAsync(ct);
-        Sync(db, floorsExisting, floors, x => x.Id, warn, "floors");
+        var floorIds = floors.Select(x => x.Id).ToHashSet(StringComparer.Ordinal);
+        var existingFloors = await db.Floors.Where(x => x.BuildingId == buildingId).ToListAsync(ct);
+        Sync(db, existingFloors, floors, x => x.Id, warnings, "floors");
 
-        // ---------------- 4) الشقق ----------------
         var apartments = new List<ApartmentEntity>();
-        var numbers = new HashSet<int>();
-        foreach (var a in src.Apartments ?? new())
+        var apartmentNumbers = new HashSet<int>();
+        foreach (var apartment in src.Apartments ?? new())
         {
-            if (string.IsNullOrWhiteSpace(a.Id)) { warn.Add("شقة بدون Id - اتخطّت"); continue; }
-            if (!floorIds.Contains(a.FloorId))
-            { warn.Add($"شقة {a.Number} ({a.Id}): الدور '{a.FloorId}' مش موجود - اتخطّت"); continue; }
-            if (!numbers.Add(a.Number))
-            { warn.Add($"رقم الشقة {a.Number} مكرر - اتخطّت النسخة التانية ({a.Id})"); continue; }
+            if (string.IsNullOrWhiteSpace(apartment.Id))
+            {
+                warnings.Add("شقة بدون Id - اتخطّت");
+                continue;
+            }
+            if (!floorIds.Contains(apartment.FloorId))
+            {
+                warnings.Add($"شقة {apartment.Number} ({apartment.Id}): الدور '{apartment.FloorId}' مش موجود - اتخطّت");
+                continue;
+            }
+            if (!apartmentNumbers.Add(apartment.Number))
+            {
+                warnings.Add($"رقم الشقة {apartment.Number} مكرر - اتخطّت النسخة التانية ({apartment.Id})");
+                continue;
+            }
 
-            var fee = Dec(a.MonthlyFee);
-            if (fee < 0) { warn.Add($"شقة {a.Number}: رسوم سالبة اتحوّلت لصفر"); fee = 0; }
-            var s = a.Settings;
+            var fee = Dec(apartment.MonthlyFee);
+            if (fee < 0)
+            {
+                warnings.Add($"شقة {apartment.Number}: رسوم سالبة اتحوّلت لصفر");
+                fee = 0;
+            }
+            var settings = apartment.Settings;
             apartments.Add(new ApartmentEntity
             {
-                BuildingId = bid,
-                Id = Cut(a.Id, 64),
-                FloorId = a.FloorId,
-                Number = a.Number,
-                Owner = Cut(a.Owner, 200),
-                Phone = Cut(a.Phone, 32),
-                Email = Cut(a.Email, 256),
+                BuildingId = buildingId,
+                Id = Cut(apartment.Id, 64),
+                FloorId = apartment.FloorId,
+                Number = apartment.Number,
+                Owner = Cut(apartment.Owner, 200),
+                Phone = Cut(apartment.Phone, 32),
+                Email = Cut(apartment.Email, 256),
                 MonthlyFee = fee,
                 Pin = "",
-                IsClosed = a.Closed,
-                Label = Cut(a.Label, 100),
-                Notes = Cut(a.Notes, 1000),
-                OpenDate = ParseDate(a.OpenDate),
-                CloseDate = ParseDate(a.CloseDate),
-                IsDisabled = a.Disabled,
-                DisabledReason = Cut(a.DisabledReason, 500),
-                Language = Cut(s?.Language ?? "ar", 10),
-                NotifyWhatsApp = s?.NotificationPreferences?.WhatsApp ?? true,
-                NotifyEmail = s?.NotificationPreferences?.Email ?? false,
-                NotifyInApp = s?.NotificationPreferences?.InApp ?? true,
-                PreferredPaymentMethod = Cut(s?.PreferredPaymentMethod ?? "instapay", 30),
-                SettingsUpdatedAt = ParseTs(s?.UpdatedAt),
-                SettingsUpdatedBy = s?.UpdatedBy
+                IsClosed = apartment.Closed,
+                Label = Cut(apartment.Label, 100),
+                Notes = Cut(apartment.Notes, 1000),
+                OpenDate = ParseDate(apartment.OpenDate),
+                CloseDate = ParseDate(apartment.CloseDate),
+                IsDisabled = apartment.Disabled,
+                DisabledReason = Cut(apartment.DisabledReason, 500),
+                Language = Cut(settings?.Language ?? "ar", 10),
+                NotifyWhatsApp = settings?.NotificationPreferences?.WhatsApp ?? true,
+                NotifyEmail = settings?.NotificationPreferences?.Email ?? false,
+                NotifyInApp = settings?.NotificationPreferences?.InApp ?? true,
+                PreferredPaymentMethod = Cut(settings?.PreferredPaymentMethod ?? "instapay", 30),
+                SettingsUpdatedAt = ParseTs(settings?.UpdatedAt),
+                SettingsUpdatedBy = settings?.UpdatedBy
             });
         }
-        var aptIds = apartments.Select(a => a.Id).ToHashSet();
-        var aptsExisting = await db.Apartments.Where(x => x.BuildingId == bid).ToListAsync(ct);
-        Sync(db, aptsExisting, apartments, x => x.Id, warn, "apartments");
+        var existingApartments = await db.Apartments.Where(x => x.BuildingId == buildingId).ToListAsync(ct);
+        Sync(db, existingApartments, apartments, x => x.Id, warnings, "apartments");
 
-        // ---------------- 5) الفئات المالية ----------------
-        var cats = new List<FinancialCategoryEntity>();
-        void AddCats(string kind, List<FinancialCategory>? list)
+        var categories = new List<FinancialCategoryEntity>();
+        void AddCategories(string kind, List<FinancialCategory>? source)
         {
-            foreach (var c in list ?? new())
+            foreach (var category in source ?? new())
             {
-                if (string.IsNullOrWhiteSpace(c.Id)) { warn.Add($"فئة {kind} بدون Id - اتخطّت"); continue; }
-                cats.Add(new FinancialCategoryEntity
+                if (string.IsNullOrWhiteSpace(category.Id))
                 {
-                    BuildingId = bid, Kind = kind, Id = Cut(c.Id, 64), Name = Cut(c.Name, 200),
-                    Color = Cut(c.Color, 20), IsActive = c.Active, SortOrder = c.Order
+                    warnings.Add($"فئة {kind} بدون Id - اتخطّت");
+                    continue;
+                }
+                categories.Add(new FinancialCategoryEntity
+                {
+                    BuildingId = buildingId,
+                    Kind = kind,
+                    Id = Cut(category.Id, 64),
+                    Name = Cut(category.Name, 200),
+                    Color = Cut(category.Color, 20),
+                    IsActive = category.Active,
+                    SortOrder = category.Order
                 });
             }
         }
-        AddCats("expense", src.ExpenseCategories);
-        AddCats("revenue", src.RevenueCategories);
-        var expCatIds = cats.Where(c => c.Kind == "expense").Select(c => c.Id).ToHashSet();
-        var revCatIds = cats.Where(c => c.Kind == "revenue").Select(c => c.Id).ToHashSet();
-        var catsExisting = await db.FinancialCategories.Where(x => x.BuildingId == bid).ToListAsync(ct);
-        Sync(db, catsExisting, cats, x => (x.Kind, x.Id), warn, "categories");
-
-        // ---------------- 6) الشهور: مصروفات / إيرادات / توزيع / دفعات ----------------
-        var expenses = new List<ExpenseEntity>();
-        var revenues = new List<RevenueEntity>();
-        var shareMap = new Dictionary<(string Month, string Apt), MonthlyApartmentShareEntity>();
-        var deposits = new List<DepositEntity>();
-        var depositIds = new HashSet<string>();
-        var editsByDeposit = new Dictionary<string, List<DepositEditEntity>>();
-
-        void Share(string mk, string aptId, Action<MonthlyApartmentShareEntity> set)
-        {
-            if (!aptIds.Contains(aptId))
-            { warn.Add($"{mk}: توزيع لشقة غير موجودة '{aptId}' - اتخطّى"); return; }
-            if (!shareMap.TryGetValue((mk, aptId), out var s))
-                shareMap[(mk, aptId)] = s = new MonthlyApartmentShareEntity
-                { BuildingId = bid, MonthKey = mk, ApartmentId = aptId };
-            set(s);
-        }
-
-        foreach (var (mk, m) in src.Months ?? new())
-        {
-            if (!MonthKeyRx.IsMatch(mk)) { warn.Add($"شهر بمفتاح غير صالح '{mk}' - اتخطّى"); continue; }
-
-            foreach (var e in m.Expenses ?? new())
-            {
-                if (string.IsNullOrWhiteSpace(e.Id)) { warn.Add($"{mk}: مصروف بدون Id - اتخطّى"); continue; }
-                var amount = Dec(e.Amount);
-                if (amount < 0) { warn.Add($"{mk}: مصروف {e.Id} مبلغه سالب - اتخطّى"); continue; }
-                var catId = string.IsNullOrWhiteSpace(e.CategoryId) ? null : e.CategoryId;
-                if (catId != null && !expCatIds.Contains(catId))
-                { warn.Add($"{mk}: مصروف {e.Id} فئته '{catId}' مش موجودة - اتحفظ بدون فئة"); catId = null; }
-                expenses.Add(new ExpenseEntity
-                {
-                    BuildingId = bid, Id = Cut(e.Id, 64), MonthKey = mk, CategoryId = catId,
-                    Note = Cut(e.Note, 1000), Amount = amount,
-                    ExpenseDate = ParseDate(e.Date) ?? FirstOfMonth(mk),
-                    ReceiptUrl = e.Receipt == null ? null : Cut(e.Receipt, 1000)
-                });
-            }
-
-            foreach (var r in m.Revenues ?? new())
-            {
-                if (string.IsNullOrWhiteSpace(r.Id)) { warn.Add($"{mk}: إيراد بدون Id - اتخطّى"); continue; }
-                var amount = Dec(r.Amount);
-                if (amount < 0) { warn.Add($"{mk}: إيراد {r.Id} مبلغه سالب - اتخطّى"); continue; }
-                var catId = string.IsNullOrWhiteSpace(r.CategoryId) ? null : r.CategoryId;
-                if (catId != null && !revCatIds.Contains(catId))
-                { warn.Add($"{mk}: إيراد {r.Id} فئته '{catId}' مش موجودة - اتحفظ بدون فئة"); catId = null; }
-                revenues.Add(new RevenueEntity
-                {
-                    BuildingId = bid, Id = Cut(r.Id, 64), MonthKey = mk, CategoryId = catId,
-                    Note = Cut(r.Note, 1000), Amount = amount,
-                    RevenueDate = ParseDate(r.Date) ?? FirstOfMonth(mk)
-                });
-            }
-
-            foreach (var (aptId, v) in m.Distribution ?? new()) Share(mk, aptId, s => s.ExpenseShare = Dec(v));
-            foreach (var (aptId, v) in m.RevenueDistribution ?? new()) Share(mk, aptId, s => s.RevenueShare = Dec(v));
-            foreach (var (aptId, v) in m.CarryOver ?? new()) Share(mk, aptId, s => s.CarryOver = Dec(v));
-
-            foreach (var d in m.Deposits ?? new())
-            {
-                if (string.IsNullOrWhiteSpace(d.Id)) { warn.Add($"{mk}: دفعة بدون Id - اتخطّت"); continue; }
-                if (!aptIds.Contains(d.AptId))
-                { warn.Add($"{mk}: دفعة {d.Id} لشقة غير موجودة '{d.AptId}' - اتخطّت"); continue; }
-                var amount = Dec(d.Amount);
-                if (amount <= 0) { warn.Add($"{mk}: دفعة {d.Id} مبلغها <= 0 - اتخطّت"); continue; }
-                if (d.Status is not ("pending" or "confirmed" or "cancelled"))
-                { warn.Add($"{mk}: دفعة {d.Id} حالتها '{d.Status}' غير معروفة - اتخطّت"); continue; }
-                if (!depositIds.Add(d.Id)) { warn.Add($"دفعة مكررة {d.Id} - اتخطّت النسخة التانية"); continue; }
-
-                var rc = d.Receipt;
-                deposits.Add(new DepositEntity
-                {
-                    BuildingId = bid, Id = Cut(d.Id, 64), MonthKey = mk, Number = Cut(d.Number, 50),
-                    ApartmentId = d.AptId, Amount = amount, Note = Cut(d.Note, 1000), Status = d.Status,
-                    ReceiptUrl = rc == null ? null : Cut(rc.Url, 1000),
-                    ReceiptPath = rc == null ? null : Cut(rc.Path, 500),
-                    ReceiptFileName = rc == null ? null : Cut(rc.FileName, 260),
-                    ReceiptFileSize = rc?.FileSize,
-                    ReceiptFileType = rc == null ? null : Cut(rc.FileType, 100),
-                    ReceiptSuccess = rc?.Success,
-                    CreatedAt = ParseTs(d.CreatedAt) ?? NowSec(),
-                    CreatedBy = Cut(d.CreatedBy, 128),
-                    ConfirmedAt = ParseTs(d.ConfirmedAt), ConfirmedBy = d.ConfirmedBy,
-                    CancelledAt = ParseTs(d.CancelledAt), CancelledBy = d.CancelledBy,
-                    CancelledReason = d.CancelledReason,
-                    UpdatedAt = ParseTs(d.UpdatedAt), UpdatedBy = d.UpdatedBy, UpdateReason = d.UpdateReason
-                });
-
-                if (d.EditHistory is { Count: > 0 })
-                    editsByDeposit[d.Id] = d.EditHistory.Select(x => new DepositEditEntity
-                    {
-                        BuildingId = bid, DepositId = d.Id, Ts = ParseTs(x.Ts) ?? NowSec(),
-                        ByUser = Cut(x.By, 128), Reason = Cut(x.Reason, 500),
-                        OldAmount = Dec(x.OldAmount), NewAmount = Dec(x.NewAmount),
-                        OldNote = Cut(x.OldNote, 1000), NewNote = Cut(x.NewNote, 1000)
-                    }).ToList();
-            }
-        }
-
-        Sync(db, await db.Expenses.Where(x => x.BuildingId == bid).ToListAsync(ct),
-            expenses, x => x.Id, warn, "expenses");
-        Sync(db, await db.Revenues.Where(x => x.BuildingId == bid).ToListAsync(ct),
-            revenues, x => x.Id, warn, "revenues");
-        Sync(db, await db.MonthlyApartmentShares.Where(x => x.BuildingId == bid).ToListAsync(ct),
-            shareMap.Values, x => (x.MonthKey, x.ApartmentId), warn, "shares");
-        Sync(db, await db.Deposits.Where(x => x.BuildingId == bid).ToListAsync(ct),
-            deposits, x => x.Id, warn, "deposits");
-
-        // سجل تعديلات الدفعات: بنستبدله بس لو اتغيّر
-        var editsExisting = (await db.DepositEditHistory.Where(x => x.BuildingId == bid)
-                .OrderBy(x => x.EditId).ToListAsync(ct))
-            .GroupBy(x => x.DepositId).ToDictionary(g => g.Key, g => g.ToList());
-        foreach (var (depId, incoming) in editsByDeposit)
-        {
-            editsExisting.TryGetValue(depId, out var cur);
-            cur ??= new List<DepositEditEntity>();
-            if (SameEdits(cur, incoming)) continue;
-            db.DepositEditHistory.RemoveRange(cur);
-            db.DepositEditHistory.AddRange(incoming);
-        }
-        foreach (var (depId, cur) in editsExisting)
-            if (depositIds.Contains(depId) && !editsByDeposit.ContainsKey(depId))
-                db.DepositEditHistory.RemoveRange(cur);
-
-        // ---------------- 7) تعديلات المحفظة ----------------
-        var adjustments = new List<WalletAdjustmentEntity>();
-        foreach (var a in src.WalletAdjustments ?? new())
-        {
-            if (string.IsNullOrWhiteSpace(a.Id)) { warn.Add("تعديل محفظة بدون Id - اتخطّى"); continue; }
-            if (!aptIds.Contains(a.AptId))
-            { warn.Add($"تعديل محفظة {a.Id} لشقة غير موجودة '{a.AptId}' - اتخطّى"); continue; }
-            if (!MonthKeyRx.IsMatch(a.MonthKey ?? ""))
-            { warn.Add($"تعديل محفظة {a.Id} شهره '{a.MonthKey}' غير صالح - اتخطّى"); continue; }
-            adjustments.Add(new WalletAdjustmentEntity
-            {
-                BuildingId = bid, Id = Cut(a.Id, 64), ApartmentId = a.AptId, Amount = Dec(a.Amount),
-                Reason = Cut(a.Reason, 500), MonthKey = a.MonthKey!,
-                CreatedAt = ParseTs(a.CreatedAt) ?? NowSec(), CreatedBy = Cut(a.CreatedBy, 128)
-            });
-        }
-        Sync(db, await db.WalletAdjustments.Where(x => x.BuildingId == bid).ToListAsync(ct),
-            adjustments, x => x.Id, warn, "walletAdjustments");
-
-        // ---------------- 8) الإشعارات ----------------
-        var notifs = new List<NotificationEntity>();
-        foreach (var n in src.Notifications ?? new())
-        {
-            if (string.IsNullOrWhiteSpace(n.Id)) { warn.Add("إشعار بدون Id - اتخطّى"); continue; }
-            if (n.RecipientType is not ("admin" or "resident"))
-            { warn.Add($"إشعار {n.Id} نوع مستلمه '{n.RecipientType}' غير معروف - اتخطّى"); continue; }
-            string? aptRef = null;
-            if (n.RecipientType == "resident")
-            {
-                if (string.IsNullOrWhiteSpace(n.RecipientId) || !aptIds.Contains(n.RecipientId))
-                { warn.Add($"إشعار {n.Id} لشقة غير موجودة '{n.RecipientId}' - اتخطّى"); continue; }
-                aptRef = n.RecipientId;
-            }
-            notifs.Add(new NotificationEntity
-            {
-                BuildingId = bid, Id = Cut(n.Id, 64), Ts = ParseTs(n.Ts) ?? NowSec(),
-                RecipientType = n.RecipientType, RecipientApartmentId = aptRef,
-                Type = Cut(n.Type, 30), Icon = Cut(n.Icon, 20), Title = Cut(n.Title, 300),
-                Body = Cut(n.Body, 2000), IsRead = n.Read, ReadAt = ParseTs(n.ReadAt)
-            });
-        }
-        Sync(db, await db.Notifications.Where(x => x.BuildingId == bid).ToListAsync(ct),
-            notifs, x => x.Id, warn, "notifications");
-
-        // ---------------- 9) التصويت ----------------
-        var pollsIn = new List<PollEntity>();
-        var optsIn = new List<PollOptionEntity>();
-        var votesIn = new List<PollVoteEntity>();
-        foreach (var p in src.Polls ?? new())
-        {
-            if (string.IsNullOrWhiteSpace(p.Id)) { warn.Add("تصويت بدون Id - اتخطّى"); continue; }
-            pollsIn.Add(new PollEntity
-            {
-                BuildingId = bid, Id = Cut(p.Id, 64), Question = Cut(p.Question, 500),
-                Description = Cut(p.Description, 2000), CreatedBy = Cut(p.CreatedBy, 128),
-                CreatedAt = ParseTs(p.CreatedAt) ?? NowSec(), Deadline = ParseTs(p.Deadline), IsClosed = p.Closed
-            });
-            var optIds = new HashSet<string>();
-            var i = 0;
-            foreach (var o in p.Options ?? new())
-            {
-                if (string.IsNullOrWhiteSpace(o.Id)) { warn.Add($"تصويت {p.Id}: اختيار بدون Id - اتخطّى"); continue; }
-                if (!optIds.Add(o.Id)) continue;
-                optsIn.Add(new PollOptionEntity
-                { BuildingId = bid, PollId = p.Id, Id = Cut(o.Id, 64), Text = Cut(o.Text, 500), SortOrder = i++ });
-            }
-            foreach (var (aptId, optId) in p.Votes ?? new())
-            {
-                if (!aptIds.Contains(aptId) || !optIds.Contains(optId))
-                { warn.Add($"تصويت {p.Id}: صوت الشقة '{aptId}' للاختيار '{optId}' غير صالح - اتخطّى"); continue; }
-                votesIn.Add(new PollVoteEntity
-                { BuildingId = bid, PollId = p.Id, ApartmentId = aptId, OptionId = optId });
-            }
-        }
-        Sync(db, await db.Polls.Where(x => x.BuildingId == bid).ToListAsync(ct),
-            pollsIn, x => x.Id, warn, "polls");
-        Sync(db, await db.PollOptions.Where(x => x.BuildingId == bid).ToListAsync(ct),
-            optsIn, x => (x.PollId, x.Id), warn, "pollOptions");
-        Sync(db, await db.PollVotes.Where(x => x.BuildingId == bid).ToListAsync(ct),
-            votesIn, x => (x.PollId, x.ApartmentId), warn, "pollVotes");
-
-        // ---------------- 10) الصيانة ----------------
-        var maint = new List<MaintenanceRecordEntity>();
-        foreach (var r in src.MaintenanceLog ?? new())
-        {
-            if (string.IsNullOrWhiteSpace(r.Id)) { warn.Add("سجل صيانة بدون Id - اتخطّى"); continue; }
-            if (r.Status is not ("open" or "inprogress" or "done" or "cancelled"))
-            { warn.Add($"صيانة {r.Id} حالتها '{r.Status}' غير معروفة - اتخطّت"); continue; }
-            var cost = Dec(r.Cost);
-            if (cost < 0) { warn.Add($"صيانة {r.Id}: تكلفة سالبة اتحوّلت لصفر"); cost = 0; }
-            maint.Add(new MaintenanceRecordEntity
-            {
-                BuildingId = bid, Id = Cut(r.Id, 64), Title = Cut(r.Title, 300),
-                Description = Cut(r.Description, 2000),
-                MaintenanceDate = ParseDate(r.Date) ?? DateOnly.FromDateTime(DateTime.UtcNow),
-                Cost = cost, Vendor = Cut(r.Vendor, 200), Status = r.Status, CreatedBy = Cut(r.CreatedBy, 128),
-                CreatedAt = ParseTs(r.CreatedAt) ?? NowSec(), AddedToExpense = r.AddedToExpense,
-                AddedToExpenseAt = ParseTs(r.AddedToExpenseAt)
-            });
-        }
-        Sync(db, await db.MaintenanceRecords.Where(x => x.BuildingId == bid).ToListAsync(ct),
-            maint, x => x.Id, warn, "maintenance");
-
-        // ---------------- 11) Aggregate audit: append-only target events ----------------
-        var knownAudit = (await db.AuditEvents
-                .Where(x => x.BuildingId == bid && x.EventCategory == "BuildingAggregate" &&
-                            x.ResourceType == "BuildingAuditEntry" && x.ResourceReference != null)
-                .Select(x => x.ResourceReference!).ToListAsync(ct)).ToHashSet(StringComparer.Ordinal);
-        foreach (var e in src.AuditLog ?? new())
-        {
-            var key = AuditKey(e);
-            if (!knownAudit.Add(key)) continue;
-            var severity = string.IsNullOrWhiteSpace(e.Severity) ? "info" : e.Severity;
-            db.AuditEvents.Add(new AuditEventEntity
-            {
-                AuditEventId = Guid.NewGuid(),
-                OccurredAtUtc = ParseTs(e.Ts) ?? NowSec(),
-                ActorReference = Cut(e.Actor, 160),
-                BuildingId = bid,
-                EventCategory = "BuildingAggregate",
-                EventType = Cut(e.Action, 120),
-                ResourceType = "BuildingAuditEntry",
-                ResourceReference = key,
-                Outcome = AuditOutcome(severity),
-                SafeDetailsJson = JsonSerializer.Serialize(new
-                {
-                    label = Cut(e.Label, 300),
-                    actorRole = Cut(e.ActorRole, 20),
-                    details = RedactAuditDetails(e.Details),
-                    month = Cut(e.Month, 7),
-                    buildingNumber = e.BuildingNumber == null ? null : Cut(e.BuildingNumber, 50),
-                    aptNumber = e.AptNumber
-                })
-            });
-        }
+        AddCategories("expense", src.ExpenseCategories);
+        AddCategories("revenue", src.RevenueCategories);
+        var existingCategories = await db.FinancialCategories
+            .Where(x => x.BuildingId == buildingId).ToListAsync(ct);
+        Sync(db, existingCategories, categories, x => (x.Kind, x.Id), warnings, "categories");
 
         await db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
-        src.RowVersion = be.RowVersion.ToArray();
-        return warn;
+        await transaction.CommitAsync(ct);
+        SqlMirrorHealth.RecordSuccess();
+        return warnings;
     }
-
-    internal static AuditLogEntry MapAggregateAuditEvent(AuditEventEntity auditEvent)
-    {
-        ArgumentNullException.ThrowIfNull(auditEvent);
-        using var payload = JsonDocument.Parse(
-            string.IsNullOrWhiteSpace(auditEvent.SafeDetailsJson) ? "{}" : auditEvent.SafeDetailsJson);
-        var root = payload.RootElement;
-        return new AuditLogEntry
-        {
-            Id = auditEvent.ResourceReference ?? auditEvent.AuditEventId.ToString("N"),
-            Ts = FormatTs(auditEvent.OccurredAtUtc) ?? "",
-            Action = auditEvent.EventType,
-            Label = JsonString(root, "label") ?? "",
-            Actor = auditEvent.ActorReference ?? "",
-            ActorRole = JsonString(root, "actorRole") ?? "",
-            Details = JsonString(root, "details") ?? "",
-            Month = JsonString(root, "month") ?? "",
-            BuildingNumber = JsonNullableString(root, "buildingNumber"),
-            AptNumber = JsonNullableInt(root, "aptNumber"),
-            Severity = AuditSeverity(auditEvent.Outcome)
-        };
-    }
-
-    internal static string RedactAuditDetails(string? details)
-    {
-        if (string.IsNullOrEmpty(details)) return "";
-        return Regex.Replace(
-            details,
-            @"(?i)(password|secret|token|credential|pin|recovery(?:code|codes)?)(\s*[:=]\s*)(?:""[^""]*""|'[^']*'|[^,\s;]+)",
-            "$1$2[REDACTED]");
-    }
-
-    private static string? JsonString(JsonElement root, string name)
-    {
-        if (!root.TryGetProperty(name, out var value) || value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
-            return null;
-        return value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString();
-    }
-
-    private static string? JsonNullableString(JsonElement root, string name) => JsonString(root, name);
-
-    private static int? JsonNullableInt(JsonElement root, string name) =>
-        root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var parsed)
-            ? parsed
-            : null;
-
-    private static string AuditSeverity(byte outcome) => outcome switch
-    {
-        1 => "warning",
-        2 => "error",
-        3 => "critical",
-        _ => "info"
-    };
-
-    private static byte AuditOutcome(string? severity) => severity?.Trim().ToLowerInvariant() switch
-    {
-        "warning" or "warn" => 1,
-        "error" => 2,
-        "critical" or "fatal" => 3,
-        _ => 0
-    };
 
     internal static void MarkAggregateWrite(AppDbContext db, BuildingEntity building)
     {
