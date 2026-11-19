@@ -310,6 +310,69 @@ public sealed class TargetWalletReadServiceTests
         Assert.Null(await service.GetSubmissionContextAsync("B1", "2026-10"));
     }
 
+
+    [Fact]
+    public async Task GetPendingForBuildingAsync_ReturnsOnlyPendingDepositsInTheRequestedBuilding()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        var now = DateTime.UtcNow;
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.FinancialPeriods.AddRange(
+                new FinancialPeriodEntity
+                {
+                    PeriodId = Guid.NewGuid(), BuildingId = "B1", PeriodKey = now.ToString("yyyy-MM"),
+                    TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Open,
+                    StartsAtUtc = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc),
+                    EndsAtUtc = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1),
+                    CreatedAtUtc = now
+                },
+                new FinancialPeriodEntity
+                {
+                    PeriodId = Guid.NewGuid(), BuildingId = "B2", PeriodKey = now.ToString("yyyy-MM"),
+                    TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Open,
+                    StartsAtUtc = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc),
+                    EndsAtUtc = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1),
+                    CreatedAtUtc = now
+                });
+            var periods = await seed.FinancialPeriods.ToListAsync();
+            seed.Apartments.AddRange(
+                new ApartmentEntity { BuildingId = "B1", Id = "A1", FloorId = "F1", Number = 1, Label = "Unit 1" },
+                new ApartmentEntity { BuildingId = "B2", Id = "A1", FloorId = "F1", Number = 1, Label = "Other unit" });
+            seed.PaymentDeposits.AddRange(
+                new PaymentDepositEntity
+                {
+                    PaymentDepositId = Guid.NewGuid(), PeriodId = periods.Single(p => p.BuildingId == "B1").PeriodId,
+                    BuildingId = "B1", ApartmentId = "A1", Amount = 120m, CurrencyCode = "EGP",
+                    Status = PaymentDepositStatus.Pending, SubmittedAtUtc = now, SourceSystem = "application"
+                },
+                new PaymentDepositEntity
+                {
+                    PaymentDepositId = Guid.NewGuid(), PeriodId = periods.Single(p => p.BuildingId == "B2").PeriodId,
+                    BuildingId = "B2", ApartmentId = "A1", Amount = 220m, CurrencyCode = "EGP",
+                    Status = PaymentDepositStatus.Pending, SubmittedAtUtc = now, SourceSystem = "application"
+                },
+                new PaymentDepositEntity
+                {
+                    PaymentDepositId = Guid.NewGuid(), PeriodId = periods.Single(p => p.BuildingId == "B1").PeriodId,
+                    BuildingId = "B1", ApartmentId = "A1", Amount = 320m, CurrencyCode = "EGP",
+                    Status = PaymentDepositStatus.Cancelled, SubmittedAtUtc = now, SourceSystem = "application"
+                });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetWalletReadService(new TestContextFactory(options));
+        var pending = await service.GetPendingForBuildingAsync("B1");
+
+        var item = Assert.Single(pending);
+        Assert.Equal("A1", item.ApartmentId);
+        Assert.Equal(1, item.ApartmentNumber);
+        Assert.Equal("Unit 1", item.ApartmentLabel);
+        Assert.Equal(120m, item.Amount);
+    }
+
     private sealed class TestContextFactory(DbContextOptions<AppDbContext> options)
         : IDbContextFactory<AppDbContext>
     {
