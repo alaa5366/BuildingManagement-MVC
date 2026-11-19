@@ -102,7 +102,7 @@ public sealed class LegacyIdentityMappingServiceTests
         Assert.Equal(targetAccountId, mapping.AccountId);
         Assert.Equal(reviewer.AccountId, mapping.ReviewedByAccountId);
         Assert.NotNull(mapping.ReviewedAtUtc);
-        Assert.Equal(2, await verify.AuditLog.CountAsync());
+        Assert.Equal(2, await verify.AuditEvents.CountAsync());
     }
 
     private static LegacyIdentityMappingService CreateService(TestContextFactory factory, DateTime now)
