@@ -119,45 +119,6 @@ public sealed class AccountManagementService
             Rows = result.Skip((page - 1) * pageSize).Take(pageSize).ToList()
         };
     }
-}
-
-public sealed class AccountManagementPage
-{
-    public string? Search { get; init; }
-    public string? Role { get; init; }
-    public string? Status { get; init; }
-    public int Page { get; init; }
-    public int PageSize { get; init; }
-    public int Total { get; init; }
-    public int TotalPages { get; init; }
-    public int TotalAccounts { get; init; }
-    public int ActiveAccounts { get; init; }
-    public int InactiveAccounts { get; init; }
-    public int DuplicatePhoneAccounts { get; init; }
-    public int LegacySuperAdminAccounts { get; init; }
-    public int AccountsWithoutActiveRole { get; init; }
-    public List<AccountManagementRow> Rows { get; init; } = new();
-}
-
-public sealed class AccountManagementRow
-{
-    public Guid AccountId { get; set; }
-    public Guid PersonId { get; set; }
-    public string? LegacyUserId { get; set; }
-    public bool IsLegacyAccount { get; set; }
-    public string Name { get; set; } = "";
-    public string? Phone { get; set; }
-    public string? Email { get; set; }
-    public byte AccountStatus { get; set; }
-    public bool MustChangePin { get; set; }
-    public bool IsArchived { get; set; }
-    public bool IsDuplicatePhone { get; set; }
-    public string Roles { get; set; } = "";
-    public string RoleContexts { get; set; } = "";
-    public string StatusLabel { get; set; } = "";
-    public int ActiveRoleCount { get; set; }
-    public DateTime? LastLoginAtUtc { get; set; }
-
     public async Task<AccountManagementMutationResult> SetResidentStatusAsync(Guid accountId, bool activate, string actorId, CancellationToken ct = default)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
@@ -215,6 +176,47 @@ public sealed class AccountManagementRow
         await _audit.LogAsync("identity.resident.pin.reset", userId: actorId, userRole: "superadmin", metadata: new { AccountId = accountId, MustChangePin = true });
         return AccountManagementMutationResult.Ok("تم إصدار PIN مؤقت. اعرضه للمستخدم مرة واحدة واطلب تغييره عند أول دخول.", pin);
     }
+}
+
+}
+
+public sealed class AccountManagementPage
+{
+    public string? Search { get; init; }
+    public string? Role { get; init; }
+    public string? Status { get; init; }
+    public int Page { get; init; }
+    public int PageSize { get; init; }
+    public int Total { get; init; }
+    public int TotalPages { get; init; }
+    public int TotalAccounts { get; init; }
+    public int ActiveAccounts { get; init; }
+    public int InactiveAccounts { get; init; }
+    public int DuplicatePhoneAccounts { get; init; }
+    public int LegacySuperAdminAccounts { get; init; }
+    public int AccountsWithoutActiveRole { get; init; }
+    public List<AccountManagementRow> Rows { get; init; } = new();
+}
+
+public sealed class AccountManagementRow
+{
+    public Guid AccountId { get; set; }
+    public Guid PersonId { get; set; }
+    public string? LegacyUserId { get; set; }
+    public bool IsLegacyAccount { get; set; }
+    public string Name { get; set; } = "";
+    public string? Phone { get; set; }
+    public string? Email { get; set; }
+    public byte AccountStatus { get; set; }
+    public bool MustChangePin { get; set; }
+    public bool IsArchived { get; set; }
+    public bool IsDuplicatePhone { get; set; }
+    public string Roles { get; set; } = "";
+    public string RoleContexts { get; set; } = "";
+    public string StatusLabel { get; set; } = "";
+    public int ActiveRoleCount { get; set; }
+    public DateTime? LastLoginAtUtc { get; set; }
+
 }
 
 public sealed record AccountManagementMutationResult(bool Success, string Message, string? TemporaryPin = null)
