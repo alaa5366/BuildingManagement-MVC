@@ -483,3 +483,32 @@ body.no-sidebar .auth-content .btn { min-height: 42px; }
   .content-wrapper .ui-stat-tile { min-height: 78px; padding: 12px !important; }
   .content-wrapper .ui-panel .table-responsive { margin-inline: -2px; }
 }
+
+
+/* DVR and live camera cards */
+.content-wrapper .ui-device-card,
+.content-wrapper .ui-camera-card {
+  height: 100%; border: 1px solid var(--ui-border);
+  border-radius: 15px; box-shadow: var(--ui-shadow); overflow: hidden;
+}
+.content-wrapper .ui-device-card .card-header,
+.content-wrapper .ui-camera-card .card-header {
+  min-height: 54px; display: flex; align-items: center;
+  justify-content: space-between; gap: 10px;
+}
+.content-wrapper .ui-device-card .card-footer {
+  border-top: 1px solid var(--ui-border); padding: 12px 16px;
+}
+.content-wrapper .ui-device-card .card-body { min-width: 0; }
+.content-wrapper .ui-camera-card .card-body { background: #111c20 !important; }
+.content-wrapper .ui-camera-card video {
+  display: block; width: 100%; min-height: 220px; object-fit: contain;
+  border-radius: 0; background: #101719;
+}
+.content-wrapper .ui-camera-card .card-header.bg-dark {
+  background: #193b35 !important;
+}
+@media (max-width: 575.98px) {
+  .content-wrapper .ui-device-card .card-footer { flex-wrap: wrap; }
+  .content-wrapper .ui-camera-card video { min-height: 180px; }
+}
