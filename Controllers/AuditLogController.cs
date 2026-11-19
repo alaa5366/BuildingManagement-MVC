@@ -64,7 +64,7 @@ public class AuditLogController : Controller
     public async Task<IActionResult> Index(
     string? buildingId, string? apartmentId, string? userId,
     string? actionFilter, string? severity, string? from, string? to,
-    int page = 1, int pageSize = 50)
+    int page = 1, int pageSize = 50, string? correlationId = null)
     {
         if (!HasAuditLogPermission) return Forbid();
         if ((IsResident && (string.IsNullOrWhiteSpace(CurrentBuildingId) ||
@@ -112,7 +112,7 @@ public class AuditLogController : Controller
             userId: qUserId,
             action: string.IsNullOrWhiteSpace(actionFilter) ? null : actionFilter,
             severity: string.IsNullOrWhiteSpace(severity) ? null : severity,
-            from: ParseDate(from, endOfDay: false), to: ParseDate(to, endOfDay: true), page: page, pageSize: pageSize);
+            from: ParseDate(from, endOfDay: false), to: ParseDate(to, endOfDay: true), page: page, pageSize: pageSize, correlationId: correlationId);
         page = pagedResult.CurrentPage;
         pageSize = pagedResult.PageSize;
 
@@ -124,6 +124,7 @@ public class AuditLogController : Controller
         ViewBag.KnownActions = AuditLogQueryService.KnownActions;
         ViewBag.SelectedAction = actionFilter;
         ViewBag.SelectedSeverity = severity;
+        ViewBag.SelectedCorrelationId = correlationId;
         ViewBag.SelectedBuildingId = buildingId;
         ViewBag.SelectedApartmentId = apartmentId;
         ViewBag.SelectedUserId = IsResident ? null : userId;
@@ -139,6 +140,7 @@ public class AuditLogController : Controller
             ["userId"] = IsResident ? null : userId,
             ["actionFilter"] = actionFilter,
             ["severity"] = severity,
+            ["correlationId"] = correlationId,
             ["from"] = from,
             ["to"] = to,
             ["pageSize"] = pageSize.ToString()
@@ -157,7 +159,7 @@ public class AuditLogController : Controller
     [EnableRateLimiting("lookup")]
     public async Task<IActionResult> ExportCsv(
     string? buildingId, string? apartmentId, string? userId,
-    string? actionFilter, string? severity, string? from, string? to)
+    string? actionFilter, string? severity, string? from, string? to, string? correlationId = null)
     {
         if (!HasAuditLogPermission) return Forbid();
         if ((IsResident && (string.IsNullOrWhiteSpace(CurrentBuildingId) ||
@@ -195,7 +197,8 @@ public class AuditLogController : Controller
             severity: string.IsNullOrWhiteSpace(severity) ? null : severity,
             from: ParseDate(from, endOfDay: false),
             to: ParseDate(to, endOfDay: true),
-            limit: 50000);  // ← كل السجلات
+            limit: 50000,
+            correlationId: correlationId);  // ← كل السجلات
 
         var sb = new StringBuilder();
         sb.Append('\uFEFF');
