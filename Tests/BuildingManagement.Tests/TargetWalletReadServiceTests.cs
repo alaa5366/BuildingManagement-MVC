@@ -50,6 +50,19 @@ public sealed class TargetWalletReadServiceTests
                     IdempotencyKey = "draft",
                     CreatedAtUtc = DateTime.UtcNow
                 });
+            seed.PaymentDeposits.AddRange(
+                new PaymentDepositEntity
+                {
+                    PaymentDepositId = Guid.NewGuid(), PeriodId = periodId, BuildingId = "B1",
+                    ApartmentId = "A1", Amount = 45m, CurrencyCode = "EGP",
+                    Status = PaymentDepositStatus.Pending, SubmittedAtUtc = new DateTime(2026, 11, 10, 12, 0, 0, DateTimeKind.Utc)
+                },
+                new PaymentDepositEntity
+                {
+                    PaymentDepositId = Guid.NewGuid(), PeriodId = periodId, BuildingId = "B1",
+                    ApartmentId = "A2", Amount = 75m, CurrencyCode = "EGP",
+                    Status = PaymentDepositStatus.Pending, SubmittedAtUtc = new DateTime(2026, 11, 11, 12, 0, 0, DateTimeKind.Utc)
+                });
             seed.LedgerEntries.AddRange(
                 new LedgerEntryEntity
                 {
@@ -82,6 +95,10 @@ public sealed class TargetWalletReadServiceTests
         var entry = Assert.Single(result.Transactions);
         Assert.Equal("deposit", entry.Type);
         Assert.Equal(100m, entry.Amount);
+        var pending = Assert.Single(result.PendingDeposits);
+        Assert.Equal("A1", pending.AptId);
+        Assert.Equal(45m, pending.Amount);
+        Assert.Equal("pending", pending.Status);
     }
 
     [Fact]
