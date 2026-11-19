@@ -172,5 +172,18 @@ public sealed class LanguageAdministrationService
         return discovered.Count;
     }
 
+    public async Task<string> ExportCsvAsync(CancellationToken ct)
+    {
+        await using var db=await _factory.CreateDbContextAsync(ct);
+        var rows=await (from e in db.TranslationEntries.AsNoTracking().Where(x=>!x.IsArchived)
+                        join v in db.TranslationValues.AsNoTracking() on e.Key equals v.Key
+                        orderby e.Category,e.SourceGroup,e.Key,v.CultureCode
+                        select new { e.Key,e.Category,e.SourceGroup,e.Description,v.CultureCode,v.Value }).ToListAsync(ct);
+        static string Q(string? value) => "\""+(value??"").Replace("\"","\"\"")+"\"";
+        var lines=new List<string>{"Key,Category,SourceGroup,Description,Culture,Value"};
+        lines.AddRange(rows.Select(x=>string.Join(",",Q(x.Key),Q(x.Category),Q(x.SourceGroup),Q(x.Description),Q(x.CultureCode),Q(x.Value))));
+        return "\\uFEFF"+string.Join("\\r\\n",lines);
+    }
+
     private static string NormalizeCategory(string? value) => value is "Controllers" or "Services" or "Views" or "Shared" or "JavaScript" or "Validation" or "System" ? value : "System";
 }
