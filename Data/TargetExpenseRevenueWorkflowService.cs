@@ -148,7 +148,6 @@ public sealed class TargetExpenseRevenueWorkflowService
             .Select(x => x.Id).OrderBy(x => x).ToListAsync(cancellationToken);
         var allocation = FinancialAllocationCalculator.AllocateEqually(amount, apartments);
         var transactionId = Guid.NewGuid();
-        var sourceId = commandId.ToString("N");
         var description = note.Trim();
         var entryKind = isRevenue ? LedgerEntryKind.RevenueAllocation : LedgerEntryKind.ExpenseAllocation;
         var signedFactor = isRevenue ? 1m : -1m;
