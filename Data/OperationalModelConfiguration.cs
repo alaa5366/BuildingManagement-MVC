@@ -42,8 +42,10 @@ internal static class OperationalModelConfiguration
             e.Property(x => x.LastSeenAtUtc).HasColumnType("datetime2(3)");
             e.Property(x => x.ExpiresAtUtc).HasColumnType("datetime2(3)");
             e.Property(x => x.EndedAtUtc).HasColumnType("datetime2(3)");
-            e.HasIndex(x => new { x.BuildingId, x.ApartmentId, x.LastSeenAtUtc });
-            e.HasIndex(x => new { x.LegacyUid, x.Status, x.LastSeenAtUtc });
+            e.HasIndex(x => new { x.BuildingId, x.ApartmentId, x.LastSeenAtUtc })
+                .HasDatabaseName("IX_PresenceSessions_Building_Apartment_LastSeen");
+            e.HasIndex(x => new { x.LegacyUid, x.Status, x.LastSeenAtUtc })
+                .HasDatabaseName("IX_PresenceSessions_LegacyUid_Status_LastSeen");
             e.HasMany(x => x.Heartbeats).WithOne(x => x.Session)
                 .HasForeignKey(x => x.PresenceSessionId).OnDelete(DeleteBehavior.Cascade);
         });
@@ -54,7 +56,8 @@ internal static class OperationalModelConfiguration
             e.HasKey(x => x.HeartbeatId);
             e.Property(x => x.HeartbeatId).UseIdentityColumn();
             e.Property(x => x.ObservedAtUtc).HasColumnType("datetime2(3)");
-            e.HasIndex(x => new { x.PresenceSessionId, x.ObservedAtUtc });
+            e.HasIndex(x => new { x.PresenceSessionId, x.ObservedAtUtc })
+                .HasDatabaseName("IX_PresenceHeartbeats_Session_Observed");
         });
     }
 }
