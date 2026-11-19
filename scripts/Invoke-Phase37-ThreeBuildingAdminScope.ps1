@@ -170,6 +170,7 @@ SELECT COUNT(*) ExistingRoleAssignments FROM dbo.UserRoleAssignments;
             $sql = @"
 SET NOCOUNT ON;
 DECLARE @now datetime2(3)=SYSUTCDATETIME();
+DECLARE @buildingAdminRoleKey nvarchar(50)=@buildingAdminRoleKey;
 DECLARE @admins TABLE(AccountId uniqueidentifier PRIMARY KEY,BuildingId nvarchar(64) NOT NULL);
 INSERT @admins(AccountId,BuildingId)
 SELECT m.AccountId,CONVERT(nvarchar(64),b.Id)
@@ -196,20 +197,20 @@ BEGIN
     ;THROW 51038, 'Admin/building mapping changed after preflight.', 1;
 END;
 
-IF NOT EXISTS (SELECT 1 FROM dbo.RoleDefinitions WHERE RoleKey=N'building-admin')
+IF NOT EXISTS (SELECT 1 FROM dbo.RoleDefinitions WHERE [RoleKey]=@buildingAdminRoleKey)
 BEGIN
-    INSERT dbo.RoleDefinitions(RoleKey,DisplayName,IsSystemRole,IsActive)
-    VALUES (N'building-admin',N'Building Administrator',0,1);
+    INSERT dbo.RoleDefinitions([RoleKey],DisplayName,IsSystemRole,IsActive)
+    VALUES (@buildingAdminRoleKey,N'Building Administrator',0,1);
 END
 ELSE
 BEGIN
     UPDATE dbo.RoleDefinitions
     SET DisplayName=N'Building Administrator',IsSystemRole=0,IsActive=1
-    WHERE RoleKey=N'building-admin';
+    WHERE [RoleKey]=@buildingAdminRoleKey;
 END;
 
-DECLARE @permissions TABLE(PermissionKey nvarchar(100) PRIMARY KEY);
-INSERT @permissions(PermissionKey) VALUES
+DECLARE @permissionCatalog TABLE([PermissionKey] nvarchar(100) PRIMARY KEY);
+INSERT @permissionCatalog([PermissionKey]) VALUES
 (N'residents.manage'),(N'apartment.disable'),(N'dvrs.manage'),(N'cameras.view'),(N'cameras.manage'),
 (N'reports.view'),(N'polls.manage'),(N'maintenance.manage'),(N'audit.view.building'),
 (N'settings.manage.building'),(N'wallet.read'),(N'deposit.read'),(N'deposit.confirm'),(N'deposit.cancel'),
@@ -218,19 +219,19 @@ INSERT @permissions(PermissionKey) VALUES
 (N'finance.period.reopen'),(N'notification.dispatch'),(N'integration.whatsapp.send'),
 (N'integration.whatsapp.configure'),(N'apartment.access.grant.manage);
 
-INSERT dbo.RolePermissions(RoleKey,PermissionKey,Effect)
-SELECT N'building-admin',p.PermissionKey,1 FROM @permissions p
-WHERE NOT EXISTS(SELECT 1 FROM dbo.RolePermissions rp WHERE rp.RoleKey=N'building-admin' AND rp.PermissionKey=p.PermissionKey);
+INSERT dbo.[RolePermissions]([RoleKey],[PermissionKey],[Effect])
+SELECT @buildingAdminRoleKey,p.[PermissionKey],1 FROM @permissionCatalog p
+WHERE NOT EXISTS(SELECT 1 FROM dbo.[RolePermissions] rp WHERE rp.[RoleKey]=@buildingAdminRoleKey AND rp.[PermissionKey]=p.[PermissionKey]);
 
-IF EXISTS (SELECT 1 FROM dbo.RolePermissions rp
- WHERE rp.RoleKey=N'building-admin' AND rp.Effect<>1)
+IF EXISTS (SELECT 1 FROM dbo.[RolePermissions] rp
+ WHERE rp.[RoleKey]=@buildingAdminRoleKey AND rp.[Effect]<>1)
 BEGIN
     ;THROW 51038, 'Building admin role contains a non-Allow permission effect.', 1;
 END;
 
-IF EXISTS (SELECT 1 FROM dbo.RolePermissions rp
- WHERE rp.RoleKey=N'building-admin'
- AND rp.PermissionKey NOT IN
+IF EXISTS (SELECT 1 FROM dbo.[RolePermissions] rp
+ WHERE rp.[RoleKey]=@buildingAdminRoleKey
+ AND rp.[PermissionKey] NOT IN
  (N'residents.manage',N'apartment.disable',N'dvrs.manage',N'cameras.view',N'cameras.manage',
   N'reports.view',N'polls.manage',N'maintenance.manage',N'audit.view.building',
   N'settings.manage.building',N'wallet.read',N'deposit.read',N'deposit.confirm',N'deposit.cancel',
@@ -243,19 +244,19 @@ BEGIN
 END;
 
 INSERT dbo.UserRoleAssignments
-(RoleAssignmentId,AccountId,RoleKey,ScopeType,ScopeBuildingId,ScopeApartmentId,ValidFromUtc,ValidToUtc,GrantedAtUtc,GrantedByAccountId,GrantReason,RevokedAtUtc,RevokedByAccountId,RevocationReason)
-SELECT NEWID(),a.AccountId,N'building-admin',1,a.BuildingId,NULL,@now,NULL,@now,NULL,
+(RoleAssignmentId,AccountId,[RoleKey],ScopeType,ScopeBuildingId,ScopeApartmentId,ValidFromUtc,ValidToUtc,GrantedAtUtc,GrantedByAccountId,GrantReason,RevokedAtUtc,RevokedByAccountId,RevocationReason)
+SELECT NEWID(),a.AccountId,@buildingAdminRoleKey,1,a.BuildingId,NULL,@now,NULL,@now,NULL,
  N'Phase37: exact legacy Admin identity map; explicit BuildingAdmins link or owner-confirmed unique remaining Building 3 scope',NULL,NULL,NULL
 FROM @admins a
 WHERE NOT EXISTS(SELECT 1 FROM dbo.UserRoleAssignments existing
- WHERE existing.AccountId=a.AccountId AND existing.RoleKey=N'building-admin'
+ WHERE existing.AccountId=a.AccountId AND existing.[RoleKey]=@buildingAdminRoleKey
    AND existing.ScopeType=1 AND existing.ScopeBuildingId=a.BuildingId
    AND existing.ScopeApartmentId IS NULL AND existing.RevokedAtUtc IS NULL
    AND (existing.ValidToUtc IS NULL OR existing.ValidToUtc>@now));
 
 IF (SELECT COUNT(*) FROM dbo.UserRoleAssignments a
  JOIN @admins x ON x.AccountId=a.AccountId
- WHERE a.RoleKey=N'building-admin' AND a.ScopeType=1
+ WHERE a.[RoleKey]=@buildingAdminRoleKey AND a.ScopeType=1
    AND a.ScopeBuildingId=x.BuildingId AND a.ScopeApartmentId IS NULL
    AND a.RevokedAtUtc IS NULL AND (a.ValidToUtc IS NULL OR a.ValidToUtc>@now))<>3
 BEGIN
