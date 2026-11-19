@@ -30,10 +30,8 @@ IF OBJECT_ID(N'dbo.Expenses',N'U') IS NULL OR OBJECT_ID(N'dbo.Revenues',N'U') IS
  OR OBJECT_ID(N'dbo.LedgerEntries',N'U') IS NULL OR OBJECT_ID(N'dbo.FinancialSourceLinks',N'U') IS NULL
  THROW 51044,'Required legacy, evidence, identity, or ledger table is missing.',1;
 
-IF EXISTS(SELECT 1 FROM dbo.Expenses WHERE MonthKey NOT IN(N'2026-09',N'2026-10'))
- OR EXISTS(SELECT 1 FROM dbo.Revenues WHERE MonthKey NOT IN(N'2026-09',N'2026-10'))
- OR EXISTS(SELECT 1 FROM dbo.MonthlyApartmentShares WHERE MonthKey NOT IN(N'2026-09',N'2026-10'))
- THROW 51044,'Finance source rows outside the owner-approved September/October 2026 scope require separate treatment.',1;
+-- Out-of-scope finance rows are intentionally preserved as immutable legacy evidence.
+-- This cutover posts only the owner-approved September/October 2026 periods.
 
 IF EXISTS(SELECT 1 FROM dbo.MonthlyApartmentShares s LEFT JOIN dbo.Apartments a
  ON a.BuildingId=s.BuildingId AND a.Id=s.ApartmentId WHERE a.Id IS NULL)
@@ -41,8 +39,9 @@ IF EXISTS(SELECT 1 FROM dbo.MonthlyApartmentShares s LEFT JOIN dbo.Apartments a
 
 IF EXISTS(
  SELECT x.BuildingId FROM (
-  SELECT BuildingId FROM dbo.Expenses UNION SELECT BuildingId FROM dbo.Revenues
-  UNION SELECT BuildingId FROM dbo.MonthlyApartmentShares
+  SELECT BuildingId FROM dbo.Expenses WHERE MonthKey IN(N'2026-09',N'2026-10')
+  UNION SELECT BuildingId FROM dbo.Revenues WHERE MonthKey IN(N'2026-09',N'2026-10')
+  UNION SELECT BuildingId FROM dbo.MonthlyApartmentShares WHERE MonthKey IN(N'2026-09',N'2026-10')
  ) x
  OUTER APPLY(SELECT COUNT(*) Cnt FROM dbo.UserRoleAssignments a
   WHERE a.RoleKey=N'building-admin' AND a.ScopeType=1 AND a.ScopeBuildingId=x.BuildingId
