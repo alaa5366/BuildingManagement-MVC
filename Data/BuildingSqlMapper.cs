@@ -133,8 +133,6 @@ public static class BuildingSqlMapper
         var floors = await db.Floors.AsNoTracking().Where(x => x.BuildingId == id).ToListAsync(ct);
         var apts = await db.Apartments.AsNoTracking().Where(x => x.BuildingId == id).ToListAsync(ct);
         var cats = await db.FinancialCategories.AsNoTracking().Where(x => x.BuildingId == id).ToListAsync(ct);
-        var admins = await db.BuildingAdmins.AsNoTracking().Where(x => x.BuildingId == id)
-            .Select(x => x.AdminUid).ToListAsync(ct);
         var audit = await db.AuditEvents.AsNoTracking()
             .Where(x => x.BuildingId == id && x.EventCategory == "BuildingAggregate" &&
                         x.ResourceType == "BuildingAuditEntry" && x.ResourceReference != null)
@@ -181,7 +179,7 @@ public static class BuildingSqlMapper
                 Phone = be.PaymentPhone,
                 Notes = be.PaymentNotes
             },
-            AdminUids = admins,
+            AdminUids = new List<string>(),
             Floors = floors.OrderBy(x => x.SortOrder)
                 .Select(x => new Floor { Id = x.Id, Label = x.Label, Order = x.SortOrder }).ToList(),
             Apartments = apts.Select(a => new Apartment
