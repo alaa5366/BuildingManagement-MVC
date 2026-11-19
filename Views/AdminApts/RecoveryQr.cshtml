@@ -1,0 +1,74 @@
+@{
+    ViewData["Title"] = "QR مؤقت لاستعادة دخول الساكن";
+    var buildingName = (string)ViewBag.BuildingName;
+    var apartmentNumber = (int)ViewBag.ApartmentNumber;
+    var apartmentPhone = (string)ViewBag.ApartmentPhone;
+    var quickUrl = (string)ViewBag.QuickUrl;
+    var waLink = (string)ViewBag.WhatsAppLink;
+    var qrBase64 = (string)ViewBag.QrBase64;
+}
+
+<div class="container py-3" style="max-width:760px">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h3 class="mb-0">QR استعادة الدخول</h3>
+        <span class="badge bg-warning text-dark">صالح 5 دقائق — استخدام واحد</span>
+    </div>
+
+    <div class="alert alert-warning">
+        هذا الرمز يمنح دخولاً مباشراً لحساب الشقة. أرسله فقط إلى رقم الساكن المسجل وتأكد من هويته قبل الإرسال.
+        بعد أول استخدام أو انتهاء الخمس دقائق يصبح غير صالح.
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body text-center">
+            <h5>@buildingName — الشقة رقم @apartmentNumber</h5>
+            <div class="text-muted mb-3" dir="ltr">@apartmentPhone</div>
+            <img id="recoveryQrImage" src="data:image/png;base64,@qrBase64"
+                 alt="QR استعادة دخول الساكن"
+                 class="img-fluid border rounded p-2 bg-white"
+                 style="width:300px;max-width:100%" />
+            <div class="d-flex justify-content-center flex-wrap gap-2 mt-3">
+                <button type="button" class="btn btn-outline-primary" onclick="downloadRecoveryQr()">
+                    <i class="bi bi-download"></i> تحميل صورة QR
+                </button>
+                <a href="@waLink" target="_blank" rel="noopener" class="btn btn-success">
+                    <i class="bi bi-whatsapp"></i> فتح واتساب للساكن
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-info small">
+        واتساب يفتح برسالة جاهزة تحتوي رابط الدخول. لإرسال صورة QR نفسها، حمّل الصورة وأرفقها في المحادثة؛
+        رابط wa.me لا يستطيع إرفاق الصور تلقائياً.
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label fw-bold">رابط الدخول المؤقت</label>
+        <div class="input-group">
+            <input id="recoveryUrl" class="form-control" value="@quickUrl" readonly dir="ltr" />
+            <button type="button" class="btn btn-outline-secondary" onclick="copyRecoveryUrl()">نسخ الرابط</button>
+        </div>
+    </div>
+
+    <a asp-action="Index" class="btn btn-secondary">العودة إلى الشقق</a>
+</div>
+
+@section Scripts {
+    <script>
+        function downloadRecoveryQr() {
+            const image = document.getElementById('recoveryQrImage');
+            const link = document.createElement('a');
+            link.href = image.src;
+            link.download = 'Resident-Recovery-QR-Apt-@apartmentNumber.png';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }
+
+        async function copyRecoveryUrl() {
+            const input = document.getElementById('recoveryUrl');
+            await navigator.clipboard.writeText(input.value);
+        }
+    </script>
+}
