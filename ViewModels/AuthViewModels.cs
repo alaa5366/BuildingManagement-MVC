@@ -68,10 +68,10 @@ public class ResidentLoginVm
     public string AptId { get; set; } = "";
 
     /// <summary>
-    /// Gets or sets the WhatsApp.
+    /// Gets or sets the primary phone number used for resident sign-in.
     /// </summary>
     [Required]
-    public string Whatsapp { get; set; } = "";
+    public string Phone { get; set; } = "";
 
     /// <summary>
     /// Gets or sets the PIN.
