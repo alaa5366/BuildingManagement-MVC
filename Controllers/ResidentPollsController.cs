@@ -4,87 +4,49 @@ using Microsoft.AspNetCore.Mvc;
 using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
-// ============================================================
-//  ResidentPollsController	تصويتات الساكن
-// ============================================================
-/// <summary>
-/// Resident view of active polls and voting (one vote per apartment).
-/// </summary>
-/// <remarks>
-/// Access: requires one of the roles <c>resident</c>.
-/// </remarks>
+
 [Authorize(Roles = "resident")]
 public class ResidentPollsController : Controller
 {
     private readonly BuildingsService _buildings;
-    private readonly PollsService _polls;
-    private readonly AuditLogService _audit;
+    private readonly TargetPollsService _polls;
+    private readonly ILogger<ResidentPollsController> _logger;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ResidentPollsController"/> class.
-    /// </summary>
-    public ResidentPollsController(BuildingsService buildings, PollsService polls, AuditLogService audit)
+    public ResidentPollsController(BuildingsService buildings, TargetPollsService polls, ILogger<ResidentPollsController> logger)
     {
-        _buildings = buildings; _polls = polls; _audit = audit;
+        _buildings = buildings;
+        _polls = polls;
+        _logger = logger;
     }
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
     private string ApartmentId => User.FindFirstValue("apartmentId")!;
 
-    /// <summary>
-    /// Shows the main page of the resident polls screen.
-    /// </summary>
-    /// <remarks>
-    /// HTTP GET.
-    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Index(int page = 1, int pageSize = 50)
     {
         var building = await _buildings.GetByIdAsync(BuildingId);
         if (building == null) return NotFound();
-
         var apt = building.Apartments.FirstOrDefault(a => a.Id == ApartmentId);
-        var allPolls = _polls.GetPolls(building).Where(p => !p.Closed).ToList();
-        var paged = BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Poll>
-            .Create(allPolls, page, pageSize);
+        if (apt == null) return Forbid();
 
+        var paged = await _polls.GetPageAsync(BuildingId, page, pageSize, activeOnly: true, HttpContext.RequestAborted);
         ViewBag.Building = building;
         ViewBag.Apt = apt;
-        ViewBag.RouteValues = new Dictionary<string, string?>
-        {
-            ["pageSize"] = pageSize.ToString()
-        };
-
+        ViewBag.RouteValues = new Dictionary<string, string?> { ["pageSize"] = paged.PageSize.ToString() };
         return View(paged);
     }
 
-    /// <summary>
-    /// Handles the vote form submission of the resident polls screen.
-    /// </summary>
-    /// <remarks>
-    /// HTTP POST.
-    /// </remarks>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Vote(string pollId, string optionId)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
-        var apt = building.Apartments.FirstOrDefault(a => a.Id == ApartmentId);
-        if (apt == null) return NotFound();
-
-        if (_polls.Vote(building, pollId, apt.Id, optionId))
-        {
-            var poll = building.Polls.First(p => p.Id == pollId);
-            var optText = poll.Options.First(o => o.Id == optionId).Text;
-            _audit.Push(building, "poll_vote", $"{poll.Question} — {optText}", "resident", User.Identity?.Name ?? "resident", apt.Number.ToString());
-            await _buildings.SaveFullAsync(building);
-        }
+        if (string.IsNullOrWhiteSpace(ApartmentId)) return Forbid();
+        var voted = await _polls.VoteAsync(BuildingId, pollId, ApartmentId, optionId, HttpContext.RequestAborted);
+        if (voted)
+            _logger.LogInformation("Apartment {ApartmentId} voted in poll {PollId} for building {BuildingId}.",
+                ApartmentId, pollId, BuildingId);
         else
-        {
             TempData["Error"] = Loc.T("The_Poll_Is_Closed_Or_You");
-        }
-
-        return RedirectToAction("Index");
+        return RedirectToAction(nameof(Index));
     }
 }
