@@ -161,8 +161,9 @@ public sealed class InvoiceService
         foreach (var row in expenseLedgerRows)
         {
             var sourceKey = NormalizeSourceKey(row.SourceKey);
-            if (!expenseCategoryBySource.TryGetValue(sourceKey, out var categoryId))
-                continue;
+            // Keep unclassified source rows in an explicit "—" bucket so the
+            // category breakdown still reconciles to the posted ledger total.
+            var categoryId = expenseCategoryBySource.GetValueOrDefault(sourceKey) ?? "";
 
             // Expense allocations are negative wallet movements; reversal entries
             // are positive. Negating the signed amount yields a net expense value.
