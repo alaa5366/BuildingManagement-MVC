@@ -74,7 +74,7 @@ internal static class FinanceModelConfiguration
             e.Property(x => x.Status).HasConversion<byte>();
             e.Property(x => x.ResolutionReason).HasMaxLength(500);
             e.Property(x => x.Note).HasMaxLength(1000);
-            e.Property(x => x.ReceiptMetadataJson).HasMaxLength(8000);
+            e.Property(x => x.ReceiptMetadataJson).HasColumnType("nvarchar(max)");
             e.Property(x => x.SourceSystem).HasMaxLength(80).IsRequired();
             e.Property(x => x.SourceKey).HasMaxLength(256);
             Utc3(e.Property(x => x.SubmittedAtUtc));
