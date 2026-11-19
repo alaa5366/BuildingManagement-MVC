@@ -1,69 +1,169 @@
-using BuildingManagementMvc.Models;
 using System.Text.Json;
+using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Data.Entities;
+using BuildingManagementMvc.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
 
-// ترجمة حرفية للجزء الحسابي من js/features/invoice.js (من غير html2canvas/jsPDF)
-/// <summary>
-/// Builds invoice data (balances, shares, deposits) for an apartment and month.
-/// </summary>
-public class InvoiceService
+/// <summary>Builds invoice data from target financial periods, allocations and immutable ledger entries.</summary>
+public sealed class InvoiceService
 {
-    private readonly TargetWalletReadService _targetWallet;
-    /// <summary>
-    /// Initializes a new instance of the <see cref="InvoiceService"/> class.
-    /// </summary>
-    public InvoiceService(TargetWalletReadService targetWallet) => _targetWallet = targetWallet;
+    private readonly IDbContextFactory<AppDbContext> _factory;
+    private readonly TargetWalletReadService _wallet;
 
-    /// <summary>
-    /// Builds invoice data from the canonical ledger without creating or mutating legacy month aggregates.
-    /// </summary>
-    public async Task<InvoiceData> BuildInvoiceDataAsync(
-        Building building, Apartment apt, string monthKey, CancellationToken cancellationToken = default)
+    public InvoiceService(IDbContextFactory<AppDbContext> factory, TargetWalletReadService wallet)
     {
-        var floor = building.Floors.FirstOrDefault(f => f.Id == apt.FloorId);
-        var wallet = await _targetWallet.GetApartmentAsync(
-            building.Id, apt.Id, monthKey, monthKey, cancellationToken: cancellationToken);
+        _factory = factory;
+        _wallet = wallet;
+    }
+
+    public async Task<string?> FindBuildingIdByApartmentAsync(string apartmentId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(apartmentId)) return null;
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        return await db.Apartments.AsNoTracking()
+            .Where(item => item.Id == apartmentId)
+            .Select(item => item.BuildingId)
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<InvoiceData?> BuildInvoiceDataAsync(
+        string buildingId, string apartmentId, string monthKey,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(buildingId)) throw new ArgumentException("Building is required.", nameof(buildingId));
+        if (!DateOnly.TryParseExact(monthKey + "-01", "yyyy-MM-dd",
+            System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _))
+            throw new ArgumentException("Month must use yyyy-MM format.", nameof(monthKey));
+
+        var building = await _wallet.GetBuildingShellAsync(buildingId, apartmentId, cancellationToken);
+        var apartment = building?.Apartments.SingleOrDefault(item => item.Id == apartmentId);
+        if (building is null || apartment is null) return null;
+        var floor = building.Floors.FirstOrDefault(item => item.Id == apartment.FloorId);
+
         var previousMonth = ReportsService.ShiftMonth(monthKey, -1);
-        var previousWallet = await _targetWallet.GetApartmentAsync(
-            building.Id, apt.Id, toMonth: previousMonth, cancellationToken: cancellationToken);
+        var currentSnapshot = await _wallet.GetApartmentAsync(buildingId, apartmentId, monthKey, monthKey,
+            cancellationToken: cancellationToken);
+        var previousSnapshot = await _wallet.GetApartmentAsync(buildingId, apartmentId, null, previousMonth,
+            cancellationToken: cancellationToken);
 
-        var balance = wallet.Balance;
-        var previousBalance = previousWallet.Balance;
-        var monthDeposits = wallet.Transactions
-            .Where(item => item.Type == "deposit" && item.Status == "confirmed")
-            .Sum(item => item.Amount);
-        var monthExpenses = Math.Abs(wallet.Transactions
-            .Where(item => item.Type == "expense")
-            .Sum(item => item.Amount));
-        var monthRevenues = wallet.Transactions
-            .Where(item => item.Type == "revenue")
-            .Sum(item => item.Amount);
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        var periodIds = await db.FinancialPeriods.AsNoTracking()
+            .Where(period => period.BuildingId == buildingId && period.PeriodKey == monthKey)
+            .Select(period => period.PeriodId).ToListAsync(cancellationToken);
 
-        // Category labels remain sourced from the category catalog; the monetary
-        // invoice totals above are ledger-derived and do not depend on legacy wallet calculations.
-        building.Months.TryGetValue(monthKey, out var legacyMonth);
-        var monthExpensesByCategory = legacyMonth?.Expenses ?? new List<Expense>();
-        var openCount = building.Apartments.Count(a => !a.Closed);
-        var catShares = building.ExpenseCategories.Select(cat =>
+        var currencyCode = await db.BuildingSettings.AsNoTracking()
+            .Where(settings => settings.BuildingId == buildingId)
+            .Select(settings => settings.Currency).SingleOrDefaultAsync(cancellationToken) ?? "EGP";
+        currencyCode = currencyCode.ToUpperInvariant();
+
+        var monthDeposits = await db.PaymentDeposits.AsNoTracking()
+            .Where(deposit => deposit.BuildingId == buildingId && periodIds.Contains(deposit.PeriodId) &&
+                deposit.ApartmentId == apartmentId && deposit.CurrencyCode == currencyCode &&
+                deposit.Status == PaymentDepositStatus.Confirmed)
+            .SumAsync(deposit => (decimal?)deposit.Amount, cancellationToken) ?? 0m;
+
+        var activeExpenseRows = await db.Expenses.AsNoTracking()
+            .Where(item => item.BuildingId == buildingId && item.MonthKey == monthKey)
+            .ToListAsync(cancellationToken);
+        var activeRevenueRows = await db.Revenues.AsNoTracking()
+            .Where(item => item.BuildingId == buildingId && item.MonthKey == monthKey)
+            .ToListAsync(cancellationToken);
+
+        var expenseTransactions = await db.LedgerTransactions.AsNoTracking()
+            .Where(item => item.BuildingId == buildingId && periodIds.Contains(item.PeriodId) &&
+                item.SourceSystem == "application" && item.SourceType == "Expense" &&
+                item.Kind == LedgerTransactionKind.Expense && item.Status == LedgerTransactionStatus.Posted)
+            .ToListAsync(cancellationToken);
+        var revenueTransactions = await db.LedgerTransactions.AsNoTracking()
+            .Where(item => item.BuildingId == buildingId && periodIds.Contains(item.PeriodId) &&
+                item.SourceSystem == "application" && item.SourceType == "Revenue" &&
+                item.Kind == LedgerTransactionKind.Revenue && item.Status == LedgerTransactionStatus.Posted)
+            .ToListAsync(cancellationToken);
+
+        var originalIds = expenseTransactions.Concat(revenueTransactions)
+            .Select(item => item.LedgerTransactionId).ToList();
+        var reversedIds = await db.LedgerTransactions.AsNoTracking()
+            .Where(item => item.BuildingId == buildingId && item.Kind == LedgerTransactionKind.Reversal &&
+                item.Status == LedgerTransactionStatus.Posted && item.ReversesTransactionId.HasValue &&
+                originalIds.Contains(item.ReversesTransactionId.Value))
+            .Select(item => item.ReversesTransactionId!.Value).ToListAsync(cancellationToken);
+        var reversedSet = reversedIds.ToHashSet();
+        expenseTransactions = expenseTransactions.Where(item => !reversedSet.Contains(item.LedgerTransactionId)).ToList();
+        revenueTransactions = revenueTransactions.Where(item => !reversedSet.Contains(item.LedgerTransactionId)).ToList();
+
+        var activeExpenseTransactions = expenseTransactions.ToDictionary(item => NormalizeSourceKey(item.SourceKey));
+        var activeRevenueTransactions = revenueTransactions.ToDictionary(item => NormalizeSourceKey(item.SourceKey));
+        var transactionIds = expenseTransactions.Concat(revenueTransactions)
+            .Select(item => item.LedgerTransactionId).ToList();
+        var batches = await db.FinancialAllocationBatches.AsNoTracking()
+            .Where(batch => batch.BuildingId == buildingId && transactionIds.Contains(batch.SourceTransactionId) &&
+                batch.Status == FinancialAllocationStatus.Completed)
+            .ToListAsync(cancellationToken);
+        var batchIds = batches.Select(batch => batch.AllocationBatchId).ToList();
+        var lines = await db.FinancialAllocationLines.AsNoTracking()
+            .Where(line => line.BuildingId == buildingId && batchIds.Contains(line.AllocationBatchId))
+            .ToListAsync(cancellationToken);
+        var apartmentLines = lines.Where(line => line.ApartmentId == apartmentId).ToList();
+        var batchByTransaction = batches.ToDictionary(batch => batch.SourceTransactionId);
+
+        decimal expenseShare = 0, revenueShare = 0;
+        var categoryShares = new List<CategoryShare>();
+        var categories = await db.FinancialCategories.AsNoTracking()
+            .Where(category => category.BuildingId == buildingId && category.Kind == "expense")
+            .ToListAsync(cancellationToken);
+        var categoryById = categories.ToDictionary(category => category.Id, StringComparer.Ordinal);
+        var expenseRowsById = activeExpenseRows.ToDictionary(item => NormalizeSourceKey(item.Id), StringComparer.OrdinalIgnoreCase);
+        var categoryTotals = new Dictionary<string, decimal>(StringComparer.Ordinal);
+        var categoryApartmentShares = new Dictionary<string, decimal>(StringComparer.Ordinal);
+
+        foreach (var transaction in expenseTransactions)
         {
-            var total = monthExpensesByCategory.Where(e => e.CategoryId == cat.Id).Sum(e => e.Amount);
-            var share = openCount > 0 ? total / openCount : 0;
-            return new CategoryShare { Name = cat.Name, ColorHex = cat.Color, Total = total, AptCount = openCount, Share = share };
-        }).Where(x => x.Total > 0).ToList();
+            var sourceId = NormalizeSourceKey(transaction.SourceKey);
+            if (!expenseRowsById.TryGetValue(sourceId, out var expense) ||
+                !batchByTransaction.TryGetValue(transaction.LedgerTransactionId, out var batch))
+                continue;
+            var share = apartmentLines.Where(line => line.AllocationBatchId == batch.AllocationBatchId)
+                .Sum(line => line.AllocatedAmount);
+            expenseShare += share;
+            var categoryId = expense.CategoryId ?? "";
+            categoryTotals[categoryId] = categoryTotals.GetValueOrDefault(categoryId) + expense.Amount;
+            categoryApartmentShares[categoryId] = categoryApartmentShares.GetValueOrDefault(categoryId) + share;
+        }
 
-        var rnd = Random.Shared.Next(0, 1000).ToString("D3");
-        var invoiceNo = $"INV-{building.BuildingNumber}-{apt.Number}-{monthKey.Replace("-", "")}-{rnd}";
+        foreach (var transaction in revenueTransactions)
+        {
+            if (!batchByTransaction.TryGetValue(transaction.LedgerTransactionId, out var batch)) continue;
+            revenueShare += apartmentLines.Where(line => line.AllocationBatchId == batch.AllocationBatchId)
+                .Sum(line => line.AllocatedAmount);
+        }
+
+        var openCount = building.Apartments.Count(item => !item.Closed && !item.Disabled);
+        foreach (var categoryTotal in categoryTotals)
+        {
+            categoryById.TryGetValue(categoryTotal.Key, out var category);
+            categoryShares.Add(new CategoryShare
+            {
+                Name = category?.Name ?? "—",
+                ColorHex = category?.Color ?? "#888888",
+                Total = categoryTotal.Value,
+                AptCount = openCount,
+                Share = categoryApartmentShares.GetValueOrDefault(categoryTotal.Key)
+            });
+        }
+
+        var random = Random.Shared.Next(0, 1000).ToString("D3");
+        var invoiceNo = $"INV-{building.BuildingNumber}-{apartment.Number}-{monthKey.Replace("-", "")}-{random}";
         var issueDate = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
-
         var qrPayload = JsonSerializer.Serialize(new
         {
-            v = "3.2",
+            v = "4.0",
             no = invoiceNo,
             bld = building.BuildingNumber,
-            apt = apt.Number,
+            apt = apartment.Number,
             month = monthKey,
-            balance
+            balance = currentSnapshot.Balance
         });
 
         return new InvoiceData
@@ -71,19 +171,22 @@ public class InvoiceService
             InvoiceNo = invoiceNo,
             IssueDate = issueDate,
             Building = building,
-            Apt = apt,
+            Apt = apartment,
             Floor = floor,
-            Balance = balance,
-            PreviousBalance = previousBalance,
+            Balance = currentSnapshot.Balance,
+            PreviousBalance = previousSnapshot.Balance,
             MonthDeposits = monthDeposits,
-            MonthExpensesShare = monthExpenses,
-            MonthRevenuesShare = monthRevenues,
-            MonthFee = apt.MonthlyFee,  
-            CategoryShares = catShares,
+            MonthExpensesShare = expenseShare,
+            MonthRevenuesShare = revenueShare,
+            MonthFee = apartment.MonthlyFee,
+            CategoryShares = categoryShares.OrderBy(item => item.Name, StringComparer.CurrentCulture).ToList(),
             Payment = building.PaymentInfo,
             MonthKey = monthKey,
             MonthLabelText = ReportsService.MonthLabel(monthKey),
             QrPayload = qrPayload
         };
     }
+
+    private static string NormalizeSourceKey(string? key) =>
+        Guid.TryParse(key, out var id) ? id.ToString("N") : key ?? "";
 }
