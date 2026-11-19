@@ -118,7 +118,7 @@ public class AuditLogger : IAuditLogger
         if (!string.IsNullOrWhiteSpace(action))
             query = query.Where(x => x.EventType == action);
         if (!string.IsNullOrWhiteSpace(correlationId))
-            query = query.Where(x => x.CorrelationId != null && x.CorrelationId.Contains(correlationId));
+            query = query.Where(x => x.CorrelationId != null && x.CorrelationId == correlationId);
         if (!string.IsNullOrWhiteSpace(severity))
         {
             var outcome = severity.Trim().ToLowerInvariant() switch
