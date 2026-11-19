@@ -49,7 +49,10 @@ public sealed class ReportsService
     {
         ArgumentNullException.ThrowIfNull(building);
         var normalizedRange = range is "all" or "year" or "12m" or "6m" ? range : "6m";
-        var allKeys = await _wallet.GetFinancialPeriodKeysAsync(building.Id, cancellationToken);
+        var allKeys = (await _wallet.GetFinancialPeriodKeysAsync(building.Id, cancellationToken))
+            .Where(key => string.CompareOrdinal(key, currentMonth) <= 0)
+            .TakeLast(600)
+            .ToList();
         var months = SelectMonths(allKeys, normalizedRange, currentMonth);
         var periodTotals = await _wallet.GetPeriodTotalsAsync(building.Id, months, cancellationToken);
 
