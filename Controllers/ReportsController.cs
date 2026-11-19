@@ -19,14 +19,16 @@ namespace BuildingManagementMvc.Controllers;
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ViewReports)]
 public class ReportsController : Controller
 {
+    private readonly TargetWalletReadService _targetWallet;
     private readonly ReportsService _reports;
     private readonly IAuditLogger _audit;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReportsController"/> class.
     /// </summary>
-    public ReportsController(ReportsService reports, IAuditLogger audit)
+    public ReportsController(TargetWalletReadService targetWallet, ReportsService reports, IAuditLogger audit)
     {
+        _targetWallet = targetWallet;
         _reports = reports;
         _audit = audit;
     }
@@ -42,19 +44,28 @@ public class ReportsController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(string? range)
     {
+        var building = await _targetWallet.GetBuildingShellAsync(
+            BuildingId, cancellationToken: HttpContext.RequestAborted);
+        if (building is null) return NotFound();
+
         var selectedRange = string.IsNullOrWhiteSpace(range) ? "6m" : range;
         var currentMonth = WalletService.CurrentMonthKey();
-        var vm = await _reports.BuildReportAsync(BuildingId, selectedRange, currentMonth, HttpContext.RequestAborted);
+        var vm = await _reports.BuildReportAsync(
+            building, selectedRange, currentMonth, HttpContext.RequestAborted);
         return View(vm);
     }
 
     [HttpGet]
     public async Task<IActionResult> ExportCsv(string? range)
     {
+        var building = await _targetWallet.GetBuildingShellAsync(
+            BuildingId, cancellationToken: HttpContext.RequestAborted);
+        if (building is null) return NotFound();
+
         var selectedRange = string.IsNullOrWhiteSpace(range) ? "6m" : range;
         var currentMonth = WalletService.CurrentMonthKey();
-        var vm = await _reports.BuildReportAsync(BuildingId, selectedRange, currentMonth, HttpContext.RequestAborted);
-        var building = vm.Building;
+        var vm = await _reports.BuildReportAsync(
+            building, selectedRange, currentMonth, HttpContext.RequestAborted);
 
         var sb = new StringBuilder();
         sb.Append('\uFEFF');
@@ -81,8 +92,7 @@ public class ReportsController : Controller
         Row(Loc.T("Apartment"), Loc.T("Owner"), Loc.T("Balance"));
         foreach (var point in vm.Wallet)
         {
-            var apartment = building.Apartments.FirstOrDefault(item => item.Number == point.Number);
-            Row(point.Number.ToString(), apartment?.Owner ?? "", point.Balance.ToString("0.##"));
+            Row(point.Number.ToString(), point.Owner ?? "", point.Balance.ToString("0.##"));
         }
 
         await _audit.LogAsync("report_export", building.Id, userId: User.Identity?.Name ?? "admin",
