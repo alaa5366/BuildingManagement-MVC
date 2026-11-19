@@ -12,11 +12,16 @@ public class NotificationsController : Controller
 {
     private readonly TargetNotificationsService _notifications;
     private readonly TargetWhatsAppService _whatsApp;
+    private readonly IAuditLogger _auditLogger;
 
-    public NotificationsController(TargetNotificationsService notifications, TargetWhatsAppService whatsApp)
+    public NotificationsController(
+        TargetNotificationsService notifications,
+        TargetWhatsAppService whatsApp,
+        IAuditLogger auditLogger)
     {
         _notifications = notifications;
         _whatsApp = whatsApp;
+        _auditLogger = auditLogger;
     }
 
     private string? BuildingId => User.FindFirstValue("buildingId");
@@ -57,7 +62,9 @@ public class NotificationsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Publish(string aptId, string title, string body)
     {
-        if (!User.IsInRole("admin") || string.IsNullOrWhiteSpace(BuildingId)) return Forbid();
+        if (!User.IsInRole("admin") || string.IsNullOrWhiteSpace(BuildingId) ||
+            User.HasClaim("impersonated", "true"))
+            return Forbid();
         if (string.IsNullOrWhiteSpace(title) || title.Length > 200 ||
             string.IsNullOrWhiteSpace(body) || body.Length > 800)
         {
@@ -75,6 +82,25 @@ public class NotificationsController : Controller
 
             await _notifications.CreateResidentNotificationAsync(
                 BuildingId, aptId, title.Trim(), body.Trim(), "general", "📢", HttpContext.RequestAborted);
+
+            // wa.me only prepares a user-confirmed draft; record that exact outcome
+            // without ever claiming that WhatsApp sent or delivered the message.
+            await _auditLogger.LogAsync(
+                action: "notification.whatsapp_draft_created",
+                buildingId: BuildingId,
+                apartmentId: aptId,
+                userId: User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "",
+                userRole: "admin",
+                metadata: new
+                {
+                    channel = "whatsapp",
+                    deliveryStatus = "draft_ready",
+                    inAppStatus = "published",
+                    apartmentNumber = result.ApartmentNumber,
+                    template = "general"
+                },
+                severity: "info");
+
             return View("~/Views/WhatsApp/Result.cshtml", result);
         }
         catch (ArgumentException ex)
