@@ -45,6 +45,12 @@
         </div>
     </header>
 
+    <nav class="observability-nav" aria-label="Log sections">
+        <a class="active" asp-controller="ApplicationLogs" asp-action="Index"><i class="bi bi-terminal"></i> Application Logs</a>
+        <a asp-controller="AuditLog" asp-action="Index"><i class="bi bi-shield-check"></i> Audit Trail</a>
+        <span><i class="bi bi-graph-up"></i> Analytics <small>Telemetry pipeline</small></span>
+    </nav>
+
     @if (!ViewData.ModelState.IsValid)
     {
         <div class="alert alert-warning log-validation" role="alert">
