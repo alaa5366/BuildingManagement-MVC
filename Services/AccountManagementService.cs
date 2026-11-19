@@ -202,7 +202,7 @@ public sealed class AccountManagementService
                                && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
                                && assignment.RevokedAtUtc == null
                            select assignment.RoleKey).Distinct().ToListAsync(ct);
-        return roles.Count == 1 && (roles[0] == "resident" || roles[0] == "admin") ? roles[0] : null;
+        return roles.Count == 1 && (roles[0] == "resident" || roles[0] == "admin" || roles[0] == "building-admin") ? roles[0] : null;
     }
 
     /// <summary>Updates the status of a managed account.</summary>
