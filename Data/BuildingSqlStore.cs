@@ -32,10 +32,10 @@ public class BuildingSqlStore
     /// <summary>
     /// Gets the by ID.
     /// </summary>
-    public virtual async Task<Building?> GetByIdAsync(string id)
+    public virtual async Task<Building?> GetByIdAsync(string id, CancellationToken ct = default)
     {
-        await using var db = await _factory.CreateDbContextAsync();
-        return await BuildingSqlMapper.LoadAsync(db, id);
+        await using var db = await _factory.CreateDbContextAsync(ct);
+        return await BuildingSqlMapper.LoadAsync(db, id, ct);
     }
 
     // تحذير أداء: 16 استعلام لكل عمارة. للقوائم (اختيار العمارة) الأفضل بعدين
@@ -43,15 +43,15 @@ public class BuildingSqlStore
     /// <summary>
     /// Gets the all.
     /// </summary>
-    public async Task<List<Building>> GetAllAsync()
+    public async Task<List<Building>> GetAllAsync(CancellationToken ct = default)
     {
-        await using var db = await _factory.CreateDbContextAsync();
+        await using var db = await _factory.CreateDbContextAsync(ct);
         var ids = await db.Buildings.AsNoTracking()
-            .OrderBy(b => b.BuildingNumber).Select(b => b.Id).ToListAsync();
+            .OrderBy(b => b.BuildingNumber).Select(b => b.Id).ToListAsync(ct);
         var list = new List<Building>(ids.Count);
         foreach (var id in ids)
         {
-            var b = await BuildingSqlMapper.LoadAsync(db, id);
+            var b = await BuildingSqlMapper.LoadAsync(db, id, ct);
             if (b != null) list.Add(b);
         }
         return list;
@@ -64,13 +64,13 @@ public class BuildingSqlStore
     /// <summary>
     /// Gets the summaries.
     /// </summary>
-    public virtual async Task<List<Building>> GetSummariesAsync()
+    public virtual async Task<List<Building>> GetSummariesAsync(CancellationToken ct = default)
     {
-        await using var db = await _factory.CreateDbContextAsync();
+        await using var db = await _factory.CreateDbContextAsync(ct);
         var rows = await db.Buildings.AsNoTracking()
             .OrderBy(b => b.BuildingNumber)
             .Select(b => new { b.Id, b.Name, b.BuildingNumber })
-            .ToListAsync();
+            .ToListAsync(ct);
         return rows.Select(r => new Building
         {
             Id = r.Id,
@@ -84,17 +84,17 @@ public class BuildingSqlStore
     /// <param name="page">رقم الصفحة (يبدأ من 1).</param>
     /// <param name="pageSize">عدد العناصر في الصفحة.</param>
     /// <returns>صفحة من ملخصات المباني.</returns>
-    public virtual async Task<BuildingManagementMvc.Models.PagedResult<Building>> GetSummariesPagedAsync(int page, int pageSize)
+    public virtual async Task<BuildingManagementMvc.Models.PagedResult<Building>> GetSummariesPagedAsync(int page, int pageSize, CancellationToken ct = default)
     {
-        await using var db = await _factory.CreateDbContextAsync();
+        await using var db = await _factory.CreateDbContextAsync(ct);
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 200);
         var query = db.Buildings.AsNoTracking().OrderBy(b => b.BuildingNumber);
-        var total = await query.CountAsync();
+        var total = await query.CountAsync(ct);
         var totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
         page = Math.Min(page, totalPages);
         var rows = await query.Skip((page - 1) * pageSize).Take(pageSize)
-            .Select(b => new { b.Id, b.Name, b.BuildingNumber }).ToListAsync();
+            .Select(b => new { b.Id, b.Name, b.BuildingNumber }).ToListAsync(ct);
         return new BuildingManagementMvc.Models.PagedResult<Building>
         {
             Items = rows.Select(x => new Building { Id = x.Id, Name = x.Name, BuildingNumber = x.BuildingNumber }).ToList(),
@@ -110,9 +110,9 @@ public class BuildingSqlStore
     /// <summary>
     /// Gets the summaries with counts.
     /// </summary>
-    public virtual async Task<List<Building>> GetSummariesWithCountsAsync()
+    public virtual async Task<List<Building>> GetSummariesWithCountsAsync(CancellationToken ct = default)
     {
-        await using var db = await _factory.CreateDbContextAsync();
+        await using var db = await _factory.CreateDbContextAsync(ct);
 
         // استعلام واحد — بترجع البيانات الأساسية + Counts
         var rows = await db.Buildings.AsNoTracking()
@@ -125,7 +125,7 @@ public class BuildingSqlStore
                 ApartmentsCount = b.Apartments.Count(),
                 FloorsCount = b.Floors.Count()
             })
-            .ToListAsync();
+            .ToListAsync(ct);
 
         return rows.Select(r => new Building
         {
@@ -140,22 +140,22 @@ public class BuildingSqlStore
     /// <summary>
     /// Finds the building ID by apartment.
     /// </summary>
-    public virtual async Task<string?> FindBuildingIdByApartmentAsync(string apartmentId)
+    public virtual async Task<string?> FindBuildingIdByApartmentAsync(string apartmentId, CancellationToken ct = default)
     {
-        await using var db = await _factory.CreateDbContextAsync();
+        await using var db = await _factory.CreateDbContextAsync(ct);
         return await db.Apartments.AsNoTracking()
             .Where(a => a.Id == apartmentId)
             .Select(a => a.BuildingId)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
     }
 
     /// <summary>
     /// Saves the full.
     /// </summary>
-    public async Task SaveFullAsync(Building building)
+    public async Task SaveFullAsync(Building building, CancellationToken ct = default)
     {
-        await using var db = await _factory.CreateDbContextAsync();
-        var warnings = await BuildingSqlMapper.SaveAsync(db, building);
+        await using var db = await _factory.CreateDbContextAsync(ct);
+        var warnings = await BuildingSqlMapper.SaveAsync(db, building, ct);
         foreach (var w in warnings)
             _log.LogWarning("Building {BuildingId}: {Warning}", building.Id, w);
     }
@@ -163,10 +163,10 @@ public class BuildingSqlStore
     /// <summary>
     /// Deletes the operation on the building SQL.
     /// </summary>
-    public async Task DeleteAsync(string id)
+    public async Task DeleteAsync(string id, CancellationToken ct = default)
     {
-        await using var db = await _factory.CreateDbContextAsync();
-        await db.Buildings.Where(x => x.Id == id).ExecuteDeleteAsync();
+        await using var db = await _factory.CreateDbContextAsync(ct);
+        await db.Buildings.Where(x => x.Id == id).ExecuteDeleteAsync(ct);
     }
 
     // =====================================================================
@@ -176,9 +176,9 @@ public class BuildingSqlStore
     /// <summary>
     /// Saves the settings.
     /// </summary>
-    public async Task SaveSettingsAsync(string buildingId, Dictionary<string, object> settings)
+    public async Task SaveSettingsAsync(string buildingId, Dictionary<string, object> settings, CancellationToken ct = default)
     {
-        await using var db = await _factory.CreateDbContextAsync();
+        await using var db = await _factory.CreateDbContextAsync(ct);
 
         var entity = await db.BuildingSettings.FirstOrDefaultAsync(x => x.BuildingId == buildingId);
         if (entity == null)
@@ -197,7 +197,7 @@ public class BuildingSqlStore
         entity.UpdatedAt = ParseTs(settings, "updatedAt");
         entity.UpdatedBy = GetString(settings, "updatedBy");
 
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(ct);
         SqlMirrorHealth.RecordSuccess();
     }
 
