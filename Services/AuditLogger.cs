@@ -19,6 +19,7 @@ public class AuditLogger : IAuditLogger
         _log = log;
     }
 
+    /// <summary>Writes an audit event asynchronously.</summary>
     public async Task LogAsync(
         string action, string? buildingId = null, string? apartmentId = null,
         string? userId = null, string? userRole = null, object? metadata = null,
@@ -67,6 +68,7 @@ public class AuditLogger : IAuditLogger
         }
     }
 
+    /// <summary>Queries audit events using the supplied filters.</summary>
     public async Task<List<AuditEntryDoc>> QueryAsync(
         string? buildingId = null, string? apartmentId = null, string? userId = null,
         DateTime? from = null, DateTime? to = null, string? action = null,
@@ -81,6 +83,7 @@ public class AuditLogger : IAuditLogger
         return rows.Select(ToDoc).ToList();
     }
 
+    /// <summary>Retrieves a filtered page of audit events.</summary>
     public async Task<BuildingManagementMvc.Models.PagedResult<AuditEntryDoc>> QueryPageAsync(
         string? buildingId, string? apartmentId, string? userId, DateTime? from, DateTime? to,
         string? action, string? severity, int page, int pageSize, string? correlationId = null)
