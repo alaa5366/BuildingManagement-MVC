@@ -8,7 +8,7 @@
 @{
     var currentCulture = Context.Features.Get<IRequestCultureFeature>()?.RequestCulture?.UICulture?.Name ?? "ar";
     
-    // ✅ نأخد أول حرفين بس (عشان لو جاي en-US أو en-GB)
+    // نأخذ أول حرفين فقط (عشان لو جاي en-US أو en-GB)
     if (currentCulture.Length > 2) currentCulture = currentCulture.Substring(0, 2);
 
     var isRtl = currentCulture == "ar";
@@ -43,6 +43,7 @@
     {
         <link rel="stylesheet" href="~/css/admin-dashboard.css" asp-append-version="true" />
     }
+    <link rel="stylesheet" href="~/css/ui-refresh.css" asp-append-version="true" />
 
     @await RenderSectionAsync("Styles", required: false)
 </head>
@@ -111,7 +112,7 @@
     {
         <script src="~/js/admin-sidebar.js" asp-append-version="true"></script>
 
-        @* ✅ Presence Heartbeat — يسجّل المستخدم كـ "نشط" *@
+        @* Presence Heartbeat — يسجّل المستخدم كـ "نشط" *@
         <script src="~/js/presence-heartbeat.js" asp-append-version="true"></script>
     }
 
