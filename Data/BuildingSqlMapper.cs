@@ -796,7 +796,7 @@ public static class BuildingSqlMapper
         };
     }
 
-    private static string RedactAuditDetails(string? details)
+    internal static string RedactAuditDetails(string? details)
     {
         if (string.IsNullOrEmpty(details)) return "";
         return Regex.Replace(
