@@ -252,6 +252,7 @@ public class AccountController : Controller
     public IActionResult UnifiedLogin(string? returnUrl = null)
     {
         ViewBag.ReturnUrl = returnUrl;
+        ViewBag.Error = TempData["Error"];
         ViewBag.TwoFactorStep = GetPendingTwoFactorSignIn() != null;
         return View(new UnifiedLoginVm());
     }
@@ -489,7 +490,7 @@ public class AccountController : Controller
             !await _identityAuth.ChangeResidentPinAsync(accountId, stamp, vm.NewPin))
         {
             HttpContext.Session.Clear();
-            ViewBag.Error = Loc.T("The_Session_Has_Expired_Please_Try");
+            TempData["Error"] = Loc.T("The_Session_Has_Expired_Please_Try");
             return RedirectToAction(nameof(UnifiedLogin));
         }
 
@@ -497,7 +498,7 @@ public class AccountController : Controller
         if (result == null || !result.Success || result.MustChangePin)
         {
             HttpContext.Session.Clear();
-            ViewBag.Error = Loc.T("Invalid_Login_Details");
+            TempData["Error"] = Loc.T("Invalid_Login_Details");
             return RedirectToAction(nameof(UnifiedLogin));
         }
 
