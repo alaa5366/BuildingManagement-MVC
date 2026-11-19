@@ -24,3 +24,10 @@
  .observability-nav { gap:.35rem; }
  .observability-nav a { min-width:155px; padding:.6rem .7rem; }
 }
+.log-center .log-source-filter,.log-center .audit-event-filter { color:#426b8d; text-decoration:none; }
+.log-center .log-source-filter { display:inline-flex; align-items:center; gap:.35rem; overflow-wrap:anywhere; }
+.log-center .log-source-filter:hover,.log-center .audit-event-filter:hover { color:#0878c9; text-decoration:underline; }
+.log-center .log-source-filter i { opacity:0; font-size:.68rem; }
+.log-center tr:hover .log-source-filter i { opacity:1; }
+.log-center .audit-event-filter { display:inline-block; }
+.log-center .audit-event-filter strong { color:#29445f; }
