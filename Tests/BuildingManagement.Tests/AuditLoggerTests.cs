@@ -38,6 +38,28 @@ public class AuditLoggerTests
     }
 
     [Fact]
+    public async Task QueryPage_PreservesDistinctErrorAndCriticalSeverities()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        var factory = new Mock<IDbContextFactory<AppDbContext>>();
+        factory.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new AppDbContext(options));
+        await using (var db = new AppDbContext(options))
+        {
+            db.AuditEvents.AddRange(Event(null, null, 2, "error-event"), Event(null, null, 3, "critical-event"));
+            await db.SaveChangesAsync();
+        }
+
+        var logger = new AuditLogger(factory.Object, NullLogger<AuditLogger>.Instance);
+        var page = await logger.QueryPageAsync(null, null, null, null, null, null, null, 1, 10);
+
+        Assert.Equal(2, page.Items.Count);
+        Assert.Contains(page.Items, x => x.Action == "error-event" && x.Severity == "error");
+        Assert.Contains(page.Items, x => x.Action == "critical-event" && x.Severity == "critical");
+    }
+
+    [Fact]
     public async Task LogAsync_PersistsCorrelationAndActorRoleInSafeAuditMetadata()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
