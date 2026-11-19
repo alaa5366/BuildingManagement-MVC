@@ -60,9 +60,13 @@ public class WhatsAppController : Controller
             // Publish the same content to the resident's in-app inbox. WhatsApp remains
             // a user-confirmed wa.me draft; the browser cannot truthfully confirm delivery.
             var templateName = WhatsAppTemplateService.Templates[templateId].Name;
-            var notificationBody = result.Message.Length <= 1000
-                ? result.Message
-                : result.Message[..997] + "...";
+            // Welcome messages contain bearer links (SetPin / QuickLogin). Never persist
+            // those secrets in the in-app notification table.
+            var notificationBody = string.Equals(templateId, "welcome", StringComparison.Ordinal)
+                ? $"تم تجهيز رسالة الترحيب للشقة رقم {result.ApartmentNumber}. افتح WhatsApp لإرسالها مباشرة إلى رقم الساكن؛ الروابط المؤقتة لا تُحفظ داخل صندوق الإشعارات."
+                : result.Message.Length <= 1000
+                    ? result.Message
+                    : result.Message[..997] + "...";
             await _notifications.CreateResidentNotificationAsync(
                 BuildingId, aptId, templateName, notificationBody,
                 "whatsapp-draft", "📲", HttpContext.RequestAborted);
