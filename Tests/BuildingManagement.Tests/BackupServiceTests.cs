@@ -429,6 +429,7 @@ public class BackupServiceTests
         }
     }
 
+    [Fact]
     public void GetKnownCollections_ReturnsAllKnownTables()
     {
         var collections = BackupService.GetKnownCollections();
