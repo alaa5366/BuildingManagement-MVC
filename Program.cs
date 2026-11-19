@@ -233,7 +233,7 @@ builder.Services.AddScoped<TargetQrService>();
     builder.Services.Configure<RequestLocalizationOptions>(options =>
     {
         // Enabled languages are selected from the database; register valid .NET cultures so adding a language does not require redeployment.
-        var supportedCultures = CultureInfo.GetCultures(CultureTypes.SpecificCultures)
+        var supportedCultures = CultureInfo.GetCultures(CultureTypes.AllCultures)
             .Where(c => !string.IsNullOrWhiteSpace(c.Name))
             .DistinctBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -249,8 +249,7 @@ builder.Services.AddScoped<TargetQrService>();
             CookieName = CookieRequestCultureProvider.DefaultCookieName
         });
 
-        options.RequestCultureProviders.Add(new QueryStringRequestCultureProvider());
-        options.RequestCultureProviders.Add(new AcceptLanguageHeaderRequestCultureProvider());
+        // Culture selection is explicit through the validated language cookie; untrusted query/header cultures are ignored.
     });
 
     builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
