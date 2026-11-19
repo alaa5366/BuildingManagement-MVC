@@ -215,6 +215,8 @@ public sealed class InvoiceService
             .Where(item => item.Type == "revenue")
             .Sum(item => item.Amount);
 
+        var categoryShares = new List<CategoryShare>();
+
         foreach (var categoryTotal in categoryTotals)
         {
             var apartmentShare = categoryApartmentShares.GetValueOrDefault(categoryTotal.Key);
