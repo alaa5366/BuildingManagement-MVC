@@ -188,6 +188,7 @@ builder.Services.AddScoped<TargetQrService>();
     builder.Services.AddScoped<ImpersonationService>();
 
     builder.Services.AddScoped<SettingsService>();
+    builder.Services.AddSingleton<LanguageAdministrationService>();
 
     builder.Services.AddSingleton<PresenceService>();
     builder.Services.AddScoped<BuildingMapService>();
@@ -375,6 +376,7 @@ builder.Services.AddScoped<TargetQrService>();
     builder.Services.Configure<KeyManagementOptions>(o => o.XmlEncryptor = new AesGcmXmlEncryptor(dpKeyHolder.Key));
 
     var app = builder.Build();
+    await app.Services.GetRequiredService<LanguageAdministrationService>().RefreshRuntimeAsync();
 
     if (app.Environment.IsDevelopment())
     {
