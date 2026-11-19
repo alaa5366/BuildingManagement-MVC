@@ -180,9 +180,18 @@ public class AdminAptsController : Controller
             ["login_url"] = WhatsAppTemplateService.BuildLoginUrl(baseUrl)
         };
 
-        var welcomeDraft = await _targetWhatsApp.GenerateAsync(
-            BuildingId, apt.ApartmentId, "welcome", extra, baseUrl, HttpContext.RequestAborted);
-        if (welcomeDraft is null) return NotFound();
+        WhatsAppResultViewModel welcomeDraft;
+        try
+        {
+            welcomeDraft = await _targetWhatsApp.GenerateAsync(
+                BuildingId, apt.ApartmentId, "welcome", extra, baseUrl, HttpContext.RequestAborted)
+                ?? throw new InvalidOperationException("تعذر العثور على بيانات الشقة في النظام المستهدف.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+            return RedirectToAction(nameof(Index));
+        }
         var messageText = welcomeDraft.Message;
         var waLink = welcomeDraft.Link;
 
