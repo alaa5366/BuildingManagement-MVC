@@ -9,30 +9,45 @@ namespace BuildingManagementMvc.Services;
 /// </summary>
 public class InvoiceService
 {
-    private readonly WalletService _wallet;
+    private readonly TargetWalletReadService _targetWallet;
     /// <summary>
     /// Initializes a new instance of the <see cref="InvoiceService"/> class.
     /// </summary>
-    public InvoiceService(WalletService wallet) => _wallet = wallet;
+    public InvoiceService(TargetWalletReadService targetWallet) => _targetWallet = targetWallet;
 
     /// <summary>
-    /// Builds the invoice data.
+    /// Builds invoice data from the canonical ledger without creating or mutating legacy month aggregates.
     /// </summary>
-    public InvoiceData BuildInvoiceData(Building building, Apartment apt, string monthKey)
+    public async Task<InvoiceData> BuildInvoiceDataAsync(
+        Building building, Apartment apt, string monthKey, CancellationToken cancellationToken = default)
     {
         var floor = building.Floors.FirstOrDefault(f => f.Id == apt.FloorId);
-        var m = _wallet.GetOrCreateMonth(building, monthKey);
+        var wallet = await _targetWallet.GetApartmentAsync(
+            building.Id, apt.Id, monthKey, monthKey, cancellationToken: cancellationToken);
+        var previousMonth = ReportsService.ShiftMonth(monthKey, -1);
+        var previousWallet = await _targetWallet.GetApartmentAsync(
+            building.Id, apt.Id, toMonth: previousMonth, cancellationToken: cancellationToken);
 
-        var balance = _wallet.ComputeWalletBalance(building, apt.Id, monthKey);
-        var previousBalance = m.CarryOver != null && m.CarryOver.TryGetValue(apt.Id, out var carry) ? carry : 0;
-        var monthDeposits = _wallet.TotalConfirmedDeposits(building, apt.Id, monthKey);
-        var monthExpenses = m.Distribution.TryGetValue(apt.Id, out var dist) ? dist : 0;
-        var monthRevenues = m.RevenueDistribution.TryGetValue(apt.Id, out var rev) ? rev : 0;
+        var balance = wallet.Balance;
+        var previousBalance = previousWallet.Balance;
+        var monthDeposits = wallet.Transactions
+            .Where(item => item.Type == "deposit" && item.Status == "confirmed")
+            .Sum(item => item.Amount);
+        var monthExpenses = Math.Abs(wallet.Transactions
+            .Where(item => item.Type == "expense")
+            .Sum(item => item.Amount));
+        var monthRevenues = wallet.Transactions
+            .Where(item => item.Type == "revenue")
+            .Sum(item => item.Amount);
 
+        // Category labels remain sourced from the category catalog; the monetary
+        // invoice totals above are ledger-derived and do not depend on legacy wallet calculations.
+        building.Months.TryGetValue(monthKey, out var legacyMonth);
+        var monthExpensesByCategory = legacyMonth?.Expenses ?? new List<Expense>();
         var openCount = building.Apartments.Count(a => !a.Closed);
         var catShares = building.ExpenseCategories.Select(cat =>
         {
-            var total = m.Expenses.Where(e => e.CategoryId == cat.Id).Sum(e => e.Amount);
+            var total = monthExpensesByCategory.Where(e => e.CategoryId == cat.Id).Sum(e => e.Amount);
             var share = openCount > 0 ? total / openCount : 0;
             return new CategoryShare { Name = cat.Name, ColorHex = cat.Color, Total = total, AptCount = openCount, Share = share };
         }).Where(x => x.Total > 0).ToList();
