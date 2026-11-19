@@ -20,7 +20,8 @@ public sealed class PhoneCorrectionController : Controller
 
     [HttpGet]
     [AllowAnonymous]
-    public async Task<IActionResult> Request()
+    [ActionName("Request")]
+    public async Task<IActionResult> GetRequestPage()
     {
         ViewBag.Buildings = await _buildings.GetSummariesAsync();
         return View();
@@ -30,7 +31,8 @@ public sealed class PhoneCorrectionController : Controller
     [AllowAnonymous]
     [ValidateAntiForgeryToken]
     [EnableRateLimiting("login")]
-    public async Task<IActionResult> Request(string previousPhone, string requestedPhone, string buildingId, string apartmentId)
+    [ActionName("Request")]
+    public async Task<IActionResult> SubmitRequest(string previousPhone, string requestedPhone, string buildingId, string apartmentId)
     {
         await _service.SubmitAsync(previousPhone, requestedPhone, buildingId, apartmentId);
         ViewBag.Message = "إذا كانت البيانات صحيحة وتنطبق عليها شروط المراجعة، فسيظهر الطلب لإدارة العمارة للتحقق من هويتك. لا يتم تغيير الرقم تلقائيًا.";
