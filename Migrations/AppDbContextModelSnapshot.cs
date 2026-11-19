@@ -3890,7 +3890,7 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                     b.Property<byte>("VotingMode").HasColumnType("tinyint");
                     b.HasKey("PolicyId");
                     b.HasAlternateKey("BuildingId", "PollId", "PolicyVersion").HasName("UQ_PollVotingPolicies_PollVersion");
-                    b.ToTable("PollVotingPolicies");
+                    b.ToTable("PollVotingPolicies", t => t.HasCheckConstraint("CK_PollVotingPolicies_Mode", "[VotingMode] IN (0,1,2) AND [EligibilityMode] IN (0,1,2)"));
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollEligibilityEntity", b =>
@@ -3906,7 +3906,7 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                     b.Property<DateTime>("IssuedAtUtc").HasColumnType("datetime2(3)");
                     b.HasKey("EligibilityId");
                     b.HasIndex("BuildingId", "PollId", "SubjectReference").IsUnique().HasDatabaseName("UX_PollEligibility_Subject");
-                    b.ToTable("PollEligibility");
+                    b.ToTable("PollEligibility", t => t.HasCheckConstraint("CK_PollEligibility_Expiry", "[ExpiresAtUtc] > [IssuedAtUtc]"));
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollBallotEntity", b =>
