@@ -133,7 +133,10 @@ public sealed class TargetPollsService
         var eligible = await db.Polls.AnyAsync(p =>
             p.BuildingId == buildingId && p.Id == pollId && !p.IsClosed &&
             (p.Deadline == null || p.Deadline >= now) &&
-            p.Options.Any(o => o.Id == optionId), cancellationToken);
+            p.Options.Any(o => o.Id == optionId), cancellationToken) &&
+            await db.Apartments.AsNoTracking().AnyAsync(a =>
+                a.BuildingId == buildingId && a.Id == apartmentId && !a.IsClosed && !a.IsDisabled,
+                cancellationToken);
         if (!eligible) return false;
 
         db.PollVotes.Add(new PollVoteEntity
@@ -151,8 +154,12 @@ public sealed class TargetPollsService
         }
         catch (DbUpdateException)
         {
-            // Composite PK (BuildingId, PollId, ApartmentId) enforces one vote per apartment.
-            return false;
+            // The composite key makes concurrent duplicate submissions safe.
+            var alreadyVoted = await db.PollVotes.AsNoTracking().AnyAsync(v =>
+                v.BuildingId == buildingId && v.PollId == pollId && v.ApartmentId == apartmentId,
+                cancellationToken);
+            if (alreadyVoted) return false;
+            throw;
         }
     }
 
