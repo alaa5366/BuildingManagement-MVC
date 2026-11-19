@@ -130,6 +130,10 @@ public class AdminAptsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> GenerateRecoveryQr(string aptId)
     {
+        Response.Headers["Cache-Control"] = "no-store, no-cache, max-age=0";
+        Response.Headers["Pragma"] = "no-cache";
+        Response.Headers["Referrer-Policy"] = "no-referrer";
+
         if (User.HasClaim("impersonated", "true"))
             return Forbid();
 
@@ -188,6 +192,7 @@ public class AdminAptsController : Controller
             severity: "warning");
 
         ViewBag.BuildingName = apt.BuildingName;
+        ViewBag.ApartmentId = apt.ApartmentId;
         ViewBag.ApartmentNumber = apt.ApartmentNumber;
         ViewBag.ApartmentPhone = apt.Phone;
         ViewBag.QuickUrl = quickUrl;
