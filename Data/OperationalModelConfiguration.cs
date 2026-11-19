@@ -8,6 +8,27 @@ internal static class OperationalModelConfiguration
 {
     internal static void Configure(ModelBuilder mb)
     {
+        mb.Entity<AuditEventEntity>(e =>
+        {
+            e.ToTable("AuditEvents", t =>
+                t.HasCheckConstraint("CK_AuditEvents_Outcome", "[Outcome] IN (0,1,2,3)"));
+            e.HasKey(x => x.AuditEventId);
+            e.Property(x => x.AuditEventId).ValueGeneratedNever();
+            e.Property(x => x.ActorReference).HasMaxLength(160);
+            e.Property(x => x.BuildingId).HasMaxLength(64);
+            e.Property(x => x.EventCategory).HasMaxLength(80).IsRequired();
+            e.Property(x => x.EventType).HasMaxLength(120).IsRequired();
+            e.Property(x => x.ResourceType).HasMaxLength(100);
+            e.Property(x => x.ResourceReference).HasMaxLength(200);
+            e.Property(x => x.CorrelationId).HasMaxLength(100);
+            e.Property(x => x.OccurredAtUtc).HasColumnType("datetime2(3)");
+            e.Property(x => x.Outcome).HasDefaultValue((byte)0);
+            e.HasIndex(x => new { x.OccurredAtUtc, x.AuditEventId })
+                .HasDatabaseName("IX_AuditEvents_OccurredAt");
+            e.HasIndex(x => new { x.ResourceType, x.ResourceReference, x.OccurredAtUtc })
+                .HasDatabaseName("IX_AuditEvents_Resource");
+        });
+
         mb.Entity<PresenceSessionEntity>(e =>
         {
             e.ToTable("PresenceSessions", t =>
