@@ -156,6 +156,7 @@ public sealed class InvoiceService
         var categoryById = categories.ToDictionary(category => category.Id, StringComparer.Ordinal);
         var categoryTotals = new Dictionary<string, decimal>(StringComparer.Ordinal);
         var categoryApartmentShares = new Dictionary<string, decimal>(StringComparer.Ordinal);
+        var categoryApartmentIds = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
 
         foreach (var row in expenseLedgerRows)
         {
@@ -166,6 +167,10 @@ public sealed class InvoiceService
             // Expense allocations are negative wallet movements; reversal entries
             // are positive. Negating the signed amount yields a net expense value.
             categoryTotals[categoryId] = categoryTotals.GetValueOrDefault(categoryId) - row.SignedAmount;
+            if (!categoryApartmentIds.TryGetValue(categoryId, out var apartmentIds))
+                categoryApartmentIds[categoryId] = apartmentIds = new HashSet<string>(StringComparer.Ordinal);
+            apartmentIds.Add(row.ApartmentId);
+
             if (row.ApartmentId == apartmentId)
                 categoryApartmentShares[categoryId] =
                     categoryApartmentShares.GetValueOrDefault(categoryId) - row.SignedAmount;
@@ -178,7 +183,6 @@ public sealed class InvoiceService
             .Where(item => item.Type == "revenue")
             .Sum(item => item.Amount);
 
-        var openCount = building.Apartments.Count(item => !item.Closed && !item.Disabled);
         foreach (var categoryTotal in categoryTotals)
         {
             var apartmentShare = categoryApartmentShares.GetValueOrDefault(categoryTotal.Key);
@@ -190,7 +194,7 @@ public sealed class InvoiceService
                 Name = category?.Name ?? "—",
                 ColorHex = category?.Color ?? "#888888",
                 Total = categoryTotal.Value,
-                AptCount = openCount,
+                AptCount = categoryApartmentIds.GetValueOrDefault(categoryTotal.Key)?.Count ?? 0,
                 Share = apartmentShare
             });
         }
