@@ -40,7 +40,7 @@ GROUP BY s.name,t.name ORDER BY s.name,t.name;
 "@
     $targetTables=Query $target @"
 SELECT s.name SchemaName,t.name TableName,
-       SUM(ps.row_count) RowCount
+       SUM(ps.row_count) AS TotalRows
 FROM sys.tables t JOIN sys.schemas s ON s.schema_id=t.schema_id
 JOIN sys.dm_db_partition_stats ps ON ps.object_id=t.object_id AND ps.index_id IN (0,1)
 WHERE t.is_ms_shipped=0
@@ -73,7 +73,7 @@ GROUP BY SourceTable;
         $status='READY_FOR_REVIEW'
         if([string]$s.TableName -eq '__EFMigrationsHistory') {
             $status='RETAIN_EF_METADATA'
-        } elseif([long]$s.RowCount -gt 0) {
+        } elseif([long]$s.TotalRows -gt 0) {
             $status='BLOCKED_NONEMPTY_REQUIRES_TARGET_PAYLOAD_PROOF'
             $blockers.Add("$name contains $($s.RowCount) non-empty source rows. Migration-map counts alone cannot prove the mapped target payloads are complete and identical; table-specific target fingerprint reconciliation is required before DROP.")
         } elseif([long]$s.RowCount -gt 0 -and $mapRows -lt [long]$s.RowCount) {
