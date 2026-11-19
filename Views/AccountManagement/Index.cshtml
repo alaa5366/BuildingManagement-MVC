@@ -1,27 +1,68 @@
 @model BuildingManagementMvc.Services.AccountManagementPage
-@{ViewData["Title"]="مركز إدارة الحسابات";}
+@{ ViewData["Title"] = "مركز إدارة الحسابات"; }
 <div class="container-fluid py-3" dir="rtl">
- <div class="d-flex justify-content-between align-items-center mb-3"><div><h2>مركز إدارة الحسابات</h2><div class="text-muted">حسابات الهوية الجديدة</div></div><a asp-controller="ResidentAccountProvisioning" asp-action="Index" class="btn btn-outline-primary">تجهيز حسابات السكان</a>
-        <a asp-controller="Admins" asp-action="Index" class="btn btn-outline-secondary">إدارة الإدمن القديم</a>
-        <a asp-controller="AdminResidents" asp-action="Index" class="btn btn-outline-secondary">إدارة السكان القديمة</a></div>
- <div class="row g-3 mb-3">
-  <div class="col-md-3"><div class="card card-body"><span>إجمالي الحسابات</span><strong class="fs-3">@Model.TotalAccounts</strong></div></div>
-  <div class="col-md-3"><div class="card card-body"><span>نشطة</span><strong class="fs-3 text-success">@Model.ActiveAccounts</strong></div></div>
-  <div class="col-md-3"><div class="card card-body"><span>غير نشطة / أخرى</span><strong class="fs-3">@Model.InactiveAccounts</strong></div></div>
-  <div class="col-md-3"><div class="card card-body"><span>أرقام مكررة</span><strong class="fs-3 text-warning">@Model.DuplicatePhoneAccounts</strong></div></div>
- </div>
- <div class="card mb-3"><div class="card-body"><form method="get" class="row g-2 align-items-end">
-  <div class="col-md-5"><label class="form-label">بحث بالاسم أو الموبايل أو الإيميل أو Account ID</label><input class="form-control" name="search" value="@Model.Search"/></div>
-  <div class="col-md-3"><label class="form-label">الدور</label><select class="form-select" name="role"><option value="">الكل</option>@foreach(var r in new[]{"resident","admin","superadmin"}){<option value="@r" selected="@(Model.Role==r)">@r</option>}</select></div>
-  <div class="col-md-2"><label class="form-label">الحالة</label><select class="form-select" name="status"><option value="">الكل</option><option value="active" selected="@(Model.Status=="active")">نشط</option><option value="inactive" selected="@(Model.Status=="inactive")">غير نشط</option></select></div>
-  <div class="col-md-2 d-flex gap-2"><button class="btn btn-primary">بحث</button><a asp-action="Index" class="btn btn-outline-secondary">مسح</a></div>
- </form></div></div>
- <div class="alert alert-info">الجدول يعرض UserAccounts فقط. حسابات SuperAdmin القديمة في مخزن الدخول السابق منفصلة ولم يتم دمجها أو تعديلها هنا. لا يتم عرض أي PIN أو password hash.</div>
- <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>الاسم / Account ID</th><th>الموبايل</th><th>الإيميل</th><th>الدور</th><th>الحالة</th><th>PIN</th><th>آخر دخول</th><th>ملاحظات</th></tr></thead><tbody>
- @if(Model.Rows.Count==0){<tr><td colspan="8" class="text-center text-muted">لا توجد نتائج</td></tr>}
- @foreach(var x in Model.Rows){<tr><td>@x.Name<br/><small class="text-muted">@x.AccountId</small></td><td>@(x.Phone??"—")</td><td>@(x.Email??"—")</td><td>@x.Roles</td><td>@x.StatusLabel</td><td>@(x.MustChangePin?"يتطلب التغيير":"مُعد")</td><td>@(x.LastLoginAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm")??"لم يسجل")</td><td>@if(x.IsArchived){<span class="badge bg-secondary">شخص مؤرشف</span>}@if(x.IsDuplicatePhone){<span class="badge bg-warning text-dark">موبايل مكرر</span>}</td></tr>}
- </tbody></table></div><div class="card-body d-flex justify-content-between"><span>النتائج @Model.Total — صفحة @Model.Page من @Model.TotalPages</span><div>
- @if(Model.Page>1){<a class="btn btn-sm btn-outline-primary" asp-action="Index" asp-route-search="@Model.Search" asp-route-role="@Model.Role" asp-route-status="@Model.Status" asp-route-page="@(Model.Page-1)" asp-route-pageSize="@Model.PageSize">السابق</a>}
- @if(Model.Page<Model.TotalPages){<a class="btn btn-sm btn-outline-primary" asp-action="Index" asp-route-search="@Model.Search" asp-route-role="@Model.Role" asp-route-status="@Model.Status" asp-route-page="@(Model.Page+1)" asp-route-pageSize="@Model.PageSize">التالي</a>}
- </div></div></div>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div><h2 class="mb-1">مركز إدارة الحسابات</h2><div class="text-muted">مراجعة حسابات الهوية الموحدة ونطاقات صلاحياتها</div></div>
+        <div class="d-flex flex-wrap gap-2">
+            <a asp-controller="ResidentAccountProvisioning" asp-action="Index" class="btn btn-outline-primary">تجهيز حسابات السكان</a>
+            <a asp-controller="Admins" asp-action="Index" class="btn btn-outline-secondary">إدارة الإدمن القديم</a>
+            <a asp-controller="AdminResidents" asp-action="Index" class="btn btn-outline-secondary">إدارة السكان القديمة</a>
+        </div>
+    </div>
+    <div class="row g-3 mb-3">
+        <div class="col-sm-6 col-xl-3"><div class="card card-body h-100"><span>إجمالي حسابات الهوية الجديدة</span><strong class="fs-3">@Model.TotalAccounts</strong></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card card-body h-100"><span>نشطة</span><strong class="fs-3 text-success">@Model.ActiveAccounts</strong></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card card-body h-100"><span>غير نشطة / حالات أخرى</span><strong class="fs-3">@Model.InactiveAccounts</strong></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card card-body h-100"><span>حسابات بأرقام مكررة</span><strong class="fs-3 text-warning">@Model.DuplicatePhoneAccounts</strong></div></div>
+    </div>
+    @if (Model.AccountsWithoutActiveRole > 0)
+    {
+        <div class="alert alert-warning">يوجد @Model.AccountsWithoutActiveRole حساب بدون إسناد دور نشط. راجعها قبل منح أي صلاحيات.</div>
+    }
+    <div class="card mb-3"><div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-5"><label class="form-label" for="account-search">بحث بالاسم أو الموبايل أو الإيميل أو Account ID أو Person ID</label><input id="account-search" class="form-control" name="search" value="@Model.Search" /></div>
+            <div class="col-md-3"><label class="form-label" for="account-role">الدور</label><select id="account-role" class="form-select" name="role">
+                <option value="">كل الأدوار</option>
+                @foreach (var item in new[] { "resident", "admin", "superadmin" }) { <option value="@item" selected="@(Model.Role == item)">@item</option> }
+            </select></div>
+            <div class="col-md-2"><label class="form-label" for="account-status">الحالة</label><select id="account-status" class="form-select" name="status">
+                <option value="">كل الحالات</option><option value="active" selected="@(Model.Status == "active")">نشط</option><option value="inactive" selected="@(Model.Status == "inactive")">غير نشط / أخرى</option>
+            </select></div>
+            <div class="col-md-2 d-flex gap-2"><button type="submit" class="btn btn-primary">بحث</button><a asp-action="Index" class="btn btn-outline-secondary">مسح</a></div>
+        </form>
+    </div></div>
+    <div class="alert alert-info">
+        الشاشة للقراءة فقط وتعرض UserAccounts وPersons وUserRoleAssignments؛ لا تغيّر حالة الحساب أو بيانات الاعتماد.
+        حسابات SuperAdmin الموجودة في مخزن الدخول القديم منفصلة ولم يتم دمجها دون خريطة ربط موثّقة.
+        يظل دخول SuperAdmin بالإيميل وكلمة المرور، ودخول السكان والإدمن العادي بالموبايل وPIN. لا يتم عرض PIN أو password hash.
+    </div>
+    <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+        <thead><tr><th>الشخص / الحساب</th><th>الموبايل</th><th>الإيميل</th><th>الدور والنطاق</th><th>الحالة</th><th>PIN</th><th>آخر دخول</th><th>ملاحظات</th></tr></thead>
+        <tbody>
+        @if (Model.Rows.Count == 0) { <tr><td colspan="8" class="text-center text-muted py-4">لا توجد نتائج مطابقة</td></tr> }
+        @foreach (var account in Model.Rows)
+        {
+            <tr>
+                <td><strong>@account.Name</strong><div><small class="text-muted">Account: @account.AccountId</small></div><div><small class="text-muted">Person: @account.PersonId</small></div></td>
+                <td>@(account.Phone ?? "—")</td><td>@(account.Email ?? "—")</td>
+                <td><strong>@account.Roles</strong><div><small class="text-muted">@account.RoleContexts</small></div></td>
+                <td>@account.StatusLabel</td><td>@(account.MustChangePin ? "يتطلب التغيير" : "مُعد")</td>
+                <td>@(account.LastLoginAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "لم يسجل")</td>
+                <td>
+                    @if (account.IsArchived) { <span class="badge bg-secondary">شخص مؤرشف</span> }
+                    @if (account.IsDuplicatePhone) { <span class="badge bg-warning text-dark">موبايل مكرر</span> }
+                    @if (account.ActiveRoleCount == 0) { <span class="badge bg-danger">بدون دور نشط</span> }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table></div>
+    <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span>النتائج @Model.Total — صفحة @Model.Page من @Model.TotalPages</span>
+        <div class="d-flex gap-2">
+            @if (Model.Page > 1) { <a class="btn btn-sm btn-outline-primary" asp-action="Index" asp-route-search="@Model.Search" asp-route-role="@Model.Role" asp-route-status="@Model.Status" asp-route-page="@(Model.Page - 1)" asp-route-pageSize="@Model.PageSize">السابق</a> }
+            @if (Model.Page < Model.TotalPages) { <a class="btn btn-sm btn-outline-primary" asp-action="Index" asp-route-search="@Model.Search" asp-route-role="@Model.Role" asp-route-status="@Model.Status" asp-route-page="@(Model.Page + 1)" asp-route-pageSize="@Model.PageSize">التالي</a> }
+        </div>
+    </div></div>
 </div>
