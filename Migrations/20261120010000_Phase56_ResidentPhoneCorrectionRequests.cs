@@ -34,7 +34,7 @@ public sealed class Phase56_ResidentPhoneCorrectionRequests : Migration
                 table.PrimaryKey("PK_PersonPhoneChangeRequests", x => x.RequestId);
                 table.ForeignKey("FK_PersonPhoneChangeRequests_Persons_PersonId", x => x.PersonId, "Persons", "PersonId");
                 table.CheckConstraint("CK_PersonPhoneChangeRequests_Status", "[Status] IN (0,1,2)");
-                table.CheckConstraint("CK_PersonPhoneChangeRequests_Review", "(([Status] = 0 AND [ReviewedAtUtc] IS NULL AND [ReviewedByUserId] IS NULL) OR ([Status] IN (1,2) AND [ReviewedAtUtc] IS NOT NULL AND [ReviewedByUserId] IS NOT NULL))");
+                table.CheckConstraint("CK_PersonPhoneChangeRequests_Review", "(([Status] = 0 AND [ReviewedAtUtc] IS NULL AND [ReviewedByUserId] IS NULL AND [ReviewReason] IS NULL) OR ([Status] IN (1,2) AND [ReviewedAtUtc] IS NOT NULL AND [ReviewedByUserId] IS NOT NULL AND [ReviewReason] IS NOT NULL AND LEN(LTRIM(RTRIM([ReviewReason]))) > 0))");
             });
 
         migrationBuilder.CreateIndex("IX_PersonPhoneChangeRequests_Queue", "PersonPhoneChangeRequests", new[] { "Status", "BuildingId", "RequestedAtUtc" });
