@@ -193,6 +193,34 @@ public class QrSecurityService
         var registryId = RecoveryRegistryId(buildingId, apartmentId);
         var now = DateTime.UtcNow;
 
+        if (!db.Database.IsRelational())
+        {
+            var existing = await db.QrUsages.SingleOrDefaultAsync(x => x.Id == registryId, cancellationToken);
+            if (existing is null)
+            {
+                db.QrUsages.Add(new QrUsageEntity
+                {
+                    Id = registryId,
+                    TokenId = payload.TokenId,
+                    UseCount = 0,
+                    FirstUsedAt = string.Empty,
+                    LastUsedAt = string.Empty,
+                    DeviceFingerprint = null,
+                    CreatedAt = now
+                });
+            }
+            else
+            {
+                existing.TokenId = payload.TokenId;
+                existing.UseCount = 0;
+                existing.FirstUsedAt = string.Empty;
+                existing.LastUsedAt = string.Empty;
+                existing.DeviceFingerprint = null;
+            }
+            await db.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
         // Replace an existing apartment registry entry with one atomic update.
         // Any previously issued token immediately stops matching TokenId.
         var updated = await db.QrUsages
@@ -243,6 +271,17 @@ public class QrSecurityService
         await using var db = await _sqlFactory.CreateDbContextAsync(cancellationToken);
         var registryId = RecoveryRegistryId(buildingId, apartmentId);
         var now = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+        if (!db.Database.IsRelational())
+        {
+            var existing = await db.QrUsages.SingleOrDefaultAsync(
+                x => x.Id == registryId && x.UseCount == 0, cancellationToken);
+            if (existing is null) return false;
+            existing.UseCount = 1;
+            existing.LastUsedAt = now;
+            await db.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+
         var changed = await db.QrUsages.Where(x => x.Id == registryId && x.UseCount == 0)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(x => x.UseCount, 1)
@@ -270,6 +309,40 @@ public class QrSecurityService
         var now = DateTime.UtcNow.ToString("o");
 
         await using var db = await _sqlFactory.CreateDbContextAsync();
+
+        if (!db.Database.IsRelational())
+        {
+            var usage = await db.QrUsages.SingleOrDefaultAsync(x => x.TokenId == p.TokenId);
+            if (usage is null)
+            {
+                if (string.Equals(p.Purpose, "recovery", StringComparison.OrdinalIgnoreCase))
+                    return false;
+                usage = new QrUsageEntity
+                {
+                    Id = p.TokenId,
+                    TokenId = p.TokenId,
+                    UseCount = 0,
+                    FirstUsedAt = string.Empty,
+                    LastUsedAt = string.Empty,
+                    DeviceFingerprint = null,
+                    CreatedAt = DateTime.UtcNow
+                };
+                db.QrUsages.Add(usage);
+            }
+
+            if (usage.UseCount >= limit ||
+                !string.IsNullOrEmpty(deviceFingerprint) &&
+                !string.IsNullOrEmpty(usage.DeviceFingerprint) &&
+                usage.DeviceFingerprint != deviceFingerprint)
+                return false;
+
+            usage.UseCount++;
+            usage.FirstUsedAt = string.IsNullOrEmpty(usage.FirstUsedAt) ? now : usage.FirstUsedAt;
+            usage.LastUsedAt = now;
+            usage.DeviceFingerprint ??= deviceFingerprint;
+            await db.SaveChangesAsync();
+            return true;
+        }
 
         var updated = await db.QrUsages
             .Where(x => x.TokenId == p.TokenId && x.UseCount < limit &&
