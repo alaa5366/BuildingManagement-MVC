@@ -355,4 +355,7 @@
   <data name="Choose_New_PIN_And_Confirm" xml:space="preserve">
     <value>Choose a new 4–12 digit PIN, different from 1234, and confirm it.</value>
   </data>
+  <data name="Phone_Correction_Requests" xml:space="preserve">
+    <value>Phone correction requests</value>
+  </data>
 </root>
