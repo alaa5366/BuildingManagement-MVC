@@ -104,7 +104,7 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        var throttleKey = AcctKey(vm.Whatsapp);
+        var throttleKey = AcctKey(vm.Phone);
         if (_throttle.IsLocked(throttleKey, ClientIp))
         {
             ViewBag.Error = LockedMsg;
@@ -121,7 +121,7 @@ public class AccountController : Controller
         var res = building == null || floor == null || apartment == null
             ? AuthResult.Fail("wrong-credentials")
             : await _identityAuth.AuthenticateResidentAsync(
-                vm.Whatsapp, vm.Pin, vm.BuildingId, vm.AptId);
+                vm.Phone, vm.Pin, vm.BuildingId, vm.AptId);
 
         if (res == null || !res.Success ||
             !string.Equals(res.Role, "resident", StringComparison.Ordinal) ||
@@ -136,7 +136,7 @@ public class AccountController : Controller
 
         _throttle.Reset(throttleKey);
         if (res.MustChangePin)
-            return StartPinChangeChallenge(res, vm.Whatsapp, vm.BuildingId, vm.AptId);
+            return StartPinChangeChallenge(res, vm.Phone, vm.BuildingId, vm.AptId);
         await SignInCookieAsync(res);
         return RedirectToAction("Index", "ResidentHome");
     }
