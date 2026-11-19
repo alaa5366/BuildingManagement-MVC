@@ -83,11 +83,11 @@ IF EXISTS(
  LEFT JOIN dbo.LegacyOperationalRecords t ON t.SourceSystem=N'BuildingManagement.Legacy' AND t.SourceTable=s.SourceTable AND t.SourceKey=s.SourceKey
  WHERE t.LegacyOperationalRecordId IS NULL OR m.SourceFingerprint<>s.SourceFingerprint
 ) THROW 51003,'Inconsistent existing finance provenance detected.',1;
-SELECT SourceTable,COUNT(*) SourceRows,
+SELECT s.SourceTable,COUNT(*) SourceRows,
  SUM(CASE WHEN t.LegacyOperationalRecordId IS NULL THEN 1 ELSE 0 END) PendingRows
 FROM #FinanceSource s
 LEFT JOIN dbo.LegacyOperationalRecords t ON t.SourceSystem=N'BuildingManagement.Legacy' AND t.SourceTable=s.SourceTable AND t.SourceKey=s.SourceKey
-GROUP BY SourceTable ORDER BY SourceTable;
+GROUP BY s.SourceTable ORDER BY s.SourceTable;
 "@
     $profile = Query $c $sql
     Log "Database: $db"
