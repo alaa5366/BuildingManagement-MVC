@@ -44,6 +44,7 @@ internal static class IdentityModelConfiguration
             });
             e.HasKey(x => x.AccountId);
             e.Property(x => x.AccountId).ValueGeneratedNever();
+            e.Property(x => x.MustChangePin).HasDefaultValue(false);
             e.Property(x => x.NormalizedEmail).HasMaxLength(254);
             e.Property(x => x.ExternalProvider).HasMaxLength(40);
             e.Property(x => x.ExternalSubject).HasMaxLength(200);
