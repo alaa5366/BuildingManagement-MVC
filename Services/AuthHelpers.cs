@@ -59,7 +59,10 @@ public static class AuthHelpers
     }
 
     private static string DigitsOnly(string? s) =>
-        new string((s ?? "").Where(char.IsDigit).ToArray());
+        new string((s ?? "")
+            .Where(char.IsDigit)
+            .Select(character => (char)('0' + (int)char.GetNumericValue(character)))
+            .ToArray());
 
     private static string Last(string s, int n) =>
         string.IsNullOrEmpty(s) ? "" : (s.Length <= n ? s : s[^n..]);
