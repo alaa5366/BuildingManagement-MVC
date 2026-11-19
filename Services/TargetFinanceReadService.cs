@@ -140,6 +140,7 @@ public sealed class TargetFinanceReadService
     }
 }
 
+    /// <summary>Represents the finance snapshot for a building and financial month.</summary>
 public sealed record TargetFinanceMonthSnapshot(
     IReadOnlyList<FinancialCategory> Categories,
     IReadOnlyList<Expense> Expenses,
