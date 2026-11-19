@@ -19,14 +19,19 @@ public class RevenuesService
     /// </summary>
     public Revenue AddRevenue(Building building, string categoryId, string note, decimal amount, string? date, string monthKey)
     {
+        ArgumentNullException.ThrowIfNull(building);
+        FinanceCommandValidation.ValidateMonthKey(monthKey);
+        FinanceCommandValidation.ValidatePositiveMoney(amount, nameof(amount));
+        FinanceCommandValidation.ValidateActiveCategory(building.RevenueCategories, categoryId, nameof(categoryId));
+        var transactionDate = FinanceCommandValidation.ResolveTransactionDate(date, monthKey);
         var m = _wallet.GetOrCreateMonth(building, monthKey);
         var revenue = new Revenue
         {
             Id = Guid.NewGuid().ToString("N"),
             CategoryId = categoryId,
-            Note = note ?? "",
+            Note = note?.Trim() ?? "",
             Amount = amount,
-            Date = string.IsNullOrWhiteSpace(date) ? DateTime.UtcNow.ToString("yyyy-MM-dd") : date
+            Date = transactionDate
         };
         m.Revenues.Add(revenue);
         return revenue;
