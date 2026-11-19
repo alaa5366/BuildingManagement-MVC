@@ -48,7 +48,7 @@ SET NOCOUNT ON;
  SELECT a.*,
  CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONCAT(N'legacy.audit.event.v1|',a.AuditId)),1,16)) EventId,
  CONVERT(nvarchar(30),a.AuditId) SourceKey,
- HASHBYTES('SHA2_256',CONCAT(a.AuditId,N'|',COALESCE(a.SourceId,N''),N'|',COALESCE(a.BuildingId,N''),N'|',CONVERT(nvarchar(33),a.Ts,126),N'|',a.Action,N'|',a.Label,N'|',a.Actor,N'|',a.ActorRole,N'|',a.MonthKey,N'|',a.Severity)) Fingerprint
+ HASHBYTES('SHA2_256',CONCAT(a.AuditId,N'|',COALESCE(a.SourceId,N''),N'|',COALESCE(a.BuildingId,N''),N'|',CONVERT(nvarchar(33),a.Ts,126),N'|',a.Action,N'|',a.Label,N'|',a.Actor,N'|',a.ActorRole,N'|',a.MonthKey,N'|',a.Severity,N'|',COALESCE(a.BuildingNumber,N''),N'|',COALESCE(CONVERT(nvarchar(20),a.AptNumber),N''),N'|',COALESCE(a.ApartmentId,N''))) Fingerprint
  FROM dbo.AuditLog a
 )
 INSERT dbo.AuditEvents(
@@ -57,10 +57,9 @@ INSERT dbo.AuditEvents(
  Outcome,SafeDetailsJson,PreviousHash,EventHash
 )
 SELECT s.EventId,s.Ts,NULL,s.Actor,s.BuildingId,
- N'Legacy',s.Action,N'LegacyAuditLabel',s.Label,
- CASE WHEN s.SourceId IS NOT NULL AND LEN(s.SourceId)<=100 THEN s.SourceId ELSE NULL END,
+ N'Legacy',s.Action,NULL,s.SourceId,NULL,
  0,
- (SELECT s.ActorRole AS legacyActorRole,s.Severity AS legacySeverity,
+ (SELECT s.Label AS legacyLabel,s.ActorRole AS legacyActorRole,s.Severity AS legacySeverity,
          s.MonthKey AS legacyMonthKey,s.BuildingNumber AS legacyBuildingNumber,
          s.AptNumber AS legacyApartmentNumber,s.ApartmentId AS legacyApartmentId
   FOR JSON PATH,WITHOUT_ARRAY_WRAPPER),
@@ -108,7 +107,7 @@ finally{
  $lines+=@("","## Preservation rules",
  "- Actor is copied as a reference string only; no account identity is inferred.",
  "- Event outcome is 0 (unknown) because legacy outcome semantics are not defined.",
- "- Legacy role, severity, month and apartment/building context are retained in SafeDetailsJson.",
+ "- Legacy label, role, severity, month and apartment/building context are retained in SafeDetailsJson; SourceId is retained as ResourceReference when present.",
  "- Legacy Details remains intact in the source table; it is not copied into a field labelled safe without content classification.",
  "- EventHash is the SHA-256 fingerprint of selected immutable source fields; PreviousHash remains NULL because no verified chain order/hash contract exists.",
  "- Oversized Actor or Label blocks the run; no truncation is performed.",
