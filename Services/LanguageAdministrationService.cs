@@ -48,6 +48,8 @@ public sealed class LanguageAdministrationService
         }
     }
 
+    public static string GetDefaultCulture() { lock (CacheLock) return _defaultCulture; }
+
     public static string GetDirection(string culture) { lock (CacheLock) { if (_directions.TryGetValue(culture,out var direction)) return direction; try { var parent=CultureInfo.GetCultureInfo(culture).Parent.Name; if (_directions.TryGetValue(parent,out direction)) return direction; } catch (CultureNotFoundException) { } return culture.StartsWith("ar", StringComparison.OrdinalIgnoreCase) ? "RTL" : "LTR"; } }
 
     public async Task RefreshRuntimeAsync(CancellationToken ct = default)
