@@ -191,19 +191,49 @@ public class QrSecurityService
 
         await using var db = await _sqlFactory.CreateDbContextAsync(cancellationToken);
         var registryId = RecoveryRegistryId(buildingId, apartmentId);
-        var entry = await db.QrUsages.SingleOrDefaultAsync(x => x.Id == registryId, cancellationToken);
         var now = DateTime.UtcNow;
-        if (entry == null)
+
+        // Replace an existing apartment registry entry with one atomic update.
+        // Any previously issued token immediately stops matching TokenId.
+        var updated = await db.QrUsages
+            .Where(x => x.Id == registryId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(x => x.TokenId, payload.TokenId)
+                .SetProperty(x => x.UseCount, 0)
+                .SetProperty(x => x.FirstUsedAt, string.Empty)
+                .SetProperty(x => x.LastUsedAt, string.Empty)
+                .SetProperty(x => x.DeviceFingerprint, (string?)null), cancellationToken);
+        if (updated == 1) return;
+
+        // First issuance: insert the apartment registry row. If another admin
+        // issued concurrently, its unique-key insert wins; replace that row.
+        db.QrUsages.Add(new QrUsageEntity
         {
-            entry = new QrUsageEntity { Id = registryId, CreatedAt = now };
-            db.QrUsages.Add(entry);
+            Id = registryId,
+            TokenId = payload.TokenId,
+            UseCount = 0,
+            FirstUsedAt = string.Empty,
+            LastUsedAt = string.Empty,
+            DeviceFingerprint = null,
+            CreatedAt = now
+        });
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
         }
-        entry.TokenId = payload.TokenId;
-        entry.UseCount = 0;
-        entry.FirstUsedAt = string.Empty;
-        entry.LastUsedAt = string.Empty;
-        entry.DeviceFingerprint = null;
-        await db.SaveChangesAsync(cancellationToken);
+        catch (DbUpdateException)
+        {
+            db.ChangeTracker.Clear();
+            var replaced = await db.QrUsages
+                .Where(x => x.Id == registryId)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(x => x.TokenId, payload.TokenId)
+                    .SetProperty(x => x.UseCount, 0)
+                    .SetProperty(x => x.FirstUsedAt, string.Empty)
+                    .SetProperty(x => x.LastUsedAt, string.Empty)
+                    .SetProperty(x => x.DeviceFingerprint, (string?)null), cancellationToken);
+            if (replaced != 1) throw;
+        }
     }
 
     /// <summary>Revokes the currently registered recovery token. Reissuing replaces its token id.</summary>
@@ -254,6 +284,13 @@ public class QrSecurityService
                         ? deviceFingerprint
                         : x.DeviceFingerprint));
         if (updated == 1) return true;
+
+        // Recovery tokens must already exist in the apartment-scoped registry.
+        // Never create a fallback usage row for them: a token can be validated,
+        // then revoked/reissued before this consume call. Creating a new row here
+        // would resurrect that stale token after its registry entry was replaced.
+        if (string.Equals(p.Purpose, "recovery", StringComparison.OrdinalIgnoreCase))
+            return false;
 
         if (await db.QrUsages.AnyAsync(x => x.TokenId == p.TokenId)) return false;
 
