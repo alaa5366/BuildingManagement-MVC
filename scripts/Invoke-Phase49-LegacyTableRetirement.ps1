@@ -83,15 +83,6 @@ GROUP BY SourceTable;
         if($status -eq 'READY_FOR_REVIEW'){$legacyToDrop.Add($name)}
         $tableResults.Add([pscustomobject]@{Table=$name;SourceRows=[long]$s.RowCount;TargetRows=[long]$t.RowCount;MapRows=$mapRows;Status=$status})
     }
-    $fk=Query $target @"
-SELECT fk.name ForeignKeyName,ps.name ParentSchema,pt.name ParentTable,
-       rs.name ReferencedSchema,rt.name ReferencedTable
-FROM sys.foreign_keys fk
-JOIN sys.tables pt ON pt.object_id=fk.parent_object_id JOIN sys.schemas ps ON ps.schema_id=pt.schema_id
-JOIN sys.tables rt ON rt.object_id=fk.referenced_object_id JOIN sys.schemas rs ON rs.schema_id=rt.schema_id
-WHERE EXISTS(SELECT 1 FROM @Legacy l WHERE l.TableName=pt.name AND l.SchemaName=ps.name)
-   OR EXISTS(SELECT 1 FROM @Legacy l WHERE l.TableName=rt.name AND l.SchemaName=rs.name);
-"@
     # Build FK check using a temporary table populated from the exact source-table inventory.
     $legacyValues=($sourceTables.Rows | Where-Object { $_.TableName -ne '__EFMigrationsHistory' } | ForEach-Object { "(N'$($_.SchemaName.Replace("'","''"))',N'$($_.TableName.Replace("'","''"))')" }) -join ','
     $fkSql="DECLARE @Legacy TABLE(SchemaName sysname,TableName sysname); INSERT @Legacy VALUES $legacyValues; " + @"
