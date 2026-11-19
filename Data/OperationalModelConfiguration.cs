@@ -31,8 +31,7 @@ internal static class OperationalModelConfiguration
 
         mb.Entity<PresenceSessionEntity>(e =>
         {
-            e.ToTable("PresenceSessions", t =>
-                t.HasCheckConstraint("CK_PresenceSessions_Status", "[Status] IN (0,1,2)"));
+            e.ToTable("PresenceSessions");
             e.HasKey(x => x.PresenceSessionId);
             e.Property(x => x.PresenceSessionId).ValueGeneratedNever();
             e.Property(x => x.LegacyUid).HasMaxLength(128);
