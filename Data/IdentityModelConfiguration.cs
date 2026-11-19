@@ -295,6 +295,28 @@ internal static class IdentityModelConfiguration
                 .HasDatabaseName("IX_AccountPermissionOverrides_Permission_Scope");
         });
 
+        mb.Entity<PersonPhoneChangeRequestEntity>(e =>
+        {
+            e.ToTable("PersonPhoneChangeRequests", t =>
+            {
+                t.HasCheckConstraint("CK_PersonPhoneChangeRequests_Status", "[Status] IN (0,1,2)");
+                t.HasCheckConstraint("CK_PersonPhoneChangeRequests_Review", "(([Status] = 0 AND [ReviewedAtUtc] IS NULL AND [ReviewedByAccountId] IS NULL) OR ([Status] IN (1,2) AND [ReviewedAtUtc] IS NOT NULL AND [ReviewedByAccountId] IS NOT NULL))");
+            });
+            e.HasKey(x => x.RequestId);
+            e.Property(x => x.RequestId).ValueGeneratedNever();
+            e.Property(x => x.BuildingId).HasMaxLength(64).IsRequired();
+            e.Property(x => x.ApartmentId).HasMaxLength(64).IsRequired();
+            e.Property(x => x.PreviousPhone).HasMaxLength(32).IsRequired();
+            e.Property(x => x.RequestedPhone).HasMaxLength(32).IsRequired();
+            e.Property(x => x.ReviewReason).HasMaxLength(500);
+            Utc3(e.Property(x => x.RequestedAtUtc)).HasDefaultValueSql("SYSUTCDATETIME()");
+            Utc3(e.Property(x => x.ReviewedAtUtc));
+            e.Property(x => x.RowVersion).IsRowVersion();
+            e.HasOne<PersonEntity>().WithMany().HasForeignKey(x => x.PersonId).OnDelete(DeleteBehavior.NoAction);
+            e.HasIndex(x => new { x.Status, x.BuildingId, x.RequestedAtUtc }).HasDatabaseName("IX_PersonPhoneChangeRequests_Queue");
+            e.HasIndex(x => new { x.PersonId, x.Status }).HasDatabaseName("IX_PersonPhoneChangeRequests_Person_Status");
+        });
+
         mb.Entity<LegacyIdentityMapEntity>(e =>
         {
             e.ToTable("LegacyIdentityMap", t =>
