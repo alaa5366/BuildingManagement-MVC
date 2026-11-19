@@ -141,6 +141,23 @@ public sealed class TargetMaintenanceService
             x => x.BuildingId == buildingId && x.Id == id && x.AddedToExpense, cancellationToken);
     }
 
+    public async Task<string?> GetBuildingNameAsync(
+        string buildingId, CancellationToken cancellationToken = default)
+    {
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        return await db.Buildings.AsNoTracking().Where(x => x.Id == buildingId)
+            .Select(x => x.Name).FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<List<string>> GetActiveApartmentIdsAsync(
+        string buildingId, CancellationToken cancellationToken = default)
+    {
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        return await db.Apartments.AsNoTracking()
+            .Where(x => x.BuildingId == buildingId && !x.IsClosed && !x.IsDisabled)
+            .OrderBy(x => x.Number).Select(x => x.Id).ToListAsync(cancellationToken);
+    }
+
     private static string NormalizeStatus(string? status, bool allowEmpty)
     {
         var value = string.IsNullOrWhiteSpace(status) && allowEmpty ? "open" : (status ?? "").Trim().ToLowerInvariant();
