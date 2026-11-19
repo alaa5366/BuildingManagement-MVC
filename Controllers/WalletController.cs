@@ -24,8 +24,7 @@ public class WalletController : Controller
     private readonly TargetDepositWorkflowService _depositWorkflow;
     private readonly TargetWalletReadService _targetWallet;
     private readonly TargetAccountIdentityResolver _identityResolver;
-    private readonly AuditLogService _audit;
-    private readonly NotificationsService _notify;
+    private readonly TargetWalletAdjustmentWorkflowService _adjustmentWorkflow;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WalletController"/> class.
@@ -35,15 +34,13 @@ public class WalletController : Controller
         TargetDepositWorkflowService depositWorkflow,
         TargetWalletReadService targetWallet,
         TargetAccountIdentityResolver identityResolver,
-        AuditLogService audit,
-        NotificationsService notify)
+        TargetWalletAdjustmentWorkflowService adjustmentWorkflow)
     {
         _buildings = buildings;
         _depositWorkflow = depositWorkflow;
         _targetWallet = targetWallet;
         _identityResolver = identityResolver;
-        _audit = audit;
-        _notify = notify;
+        _adjustmentWorkflow = adjustmentWorkflow;
     }
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
@@ -124,7 +121,7 @@ public class WalletController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ConfirmDeposit(string month, string depositId)
     {
-        var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
+        var mk = string.IsNullOrWhiteSpace(month) ? DateTime.UtcNow.ToString("yyyy-MM") : month;
         if (!Guid.TryParse(depositId, out var paymentDepositId))
         {
             TempData["Error"] = "معرّف الدفعة غير صالح.";
@@ -198,28 +195,30 @@ public class WalletController : Controller
         return RedirectToAction("Index", new { month = mk });
     }
 
-    public async Task<IActionResult> AddAdjustment(string month, string aptId, decimal amount, string? reason)
+    public async Task<IActionResult> AddAdjustment(
+        string month, string aptId, decimal amount, string? reason, Guid commandId)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
+        var mk = string.IsNullOrWhiteSpace(month) ? DateTime.UtcNow.ToString("yyyy-MM") : month;
+        var actorAccountId = await _identityResolver.ResolveAsync(User, HttpContext.RequestAborted);
+        if (actorAccountId is null)
+        {
+            TempData["Error"] = "تعذر تحديد حساب المسؤول في النظام المستهدف.";
+            return RedirectToAction("Index", new { month = mk });
+        }
 
         try
         {
-            _wallet.AddWalletAdjustment(building, aptId, amount, reason, month, User.Identity?.Name ?? "admin");
-            _audit.Push(building, "wallet_adjustment", $"{amount:0.##} ج.م — {reason}", "admin", User.Identity?.Name ?? "admin");
-            await _buildings.SaveFullAsync(building);
-            TempData["Message"] = "تم تسجيل التسوية بنجاح.";
+            if (commandId == Guid.Empty) commandId = Guid.NewGuid();
+            await _adjustmentWorkflow.AddAsync(
+                BuildingId, aptId, mk, actorAccountId.Value, amount, reason ?? "",
+                commandId.ToString("D"), HttpContext.RequestAborted);
+            TempData["Message"] = "تم تسجيل التسوية في دفتر الأستاذ بنجاح.";
         }
-        catch (ArgumentException ex)
-        {
-            TempData["Error"] = ex.Message;
-        }
-        catch (Exception)
-        {
-            TempData["Error"] = "تعذر تسجيل التسوية.";
-        }
+        catch (ArgumentException ex) { TempData["Error"] = ex.Message; }
+        catch (InvalidOperationException ex) { TempData["Error"] = ex.Message; }
+        catch (Exception) { TempData["Error"] = "تعذر تسجيل التسوية. لم يتم تعديل الرصيد."; }
 
-        return RedirectToAction("Index", new { month });
+        return RedirectToAction("Index", new { month = mk });
     }
 
     // ============================================================
