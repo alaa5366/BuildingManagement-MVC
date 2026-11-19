@@ -3882,14 +3882,14 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                 {
                     b.Property<Guid>("PolicyId").HasColumnType("uniqueidentifier");
                     b.Property<string>("BuildingId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
-                    b.Property<DateTime>("CreatedAtUtc").HasColumnType("datetime2(3)");
-                    b.Property<bool>("IsActive").HasColumnType("bit");
+                    b.Property<DateTime>("CreatedAtUtc").HasColumnType("datetime2(3)").HasDefaultValueSql("SYSUTCDATETIME()");
+                    b.Property<bool>("IsActive").HasDefaultValue(true).HasColumnType("bit");
                     b.Property<string>("PollId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
                     b.Property<int>("PolicyVersion").HasColumnType("int");
                     b.Property<byte>("EligibilityMode").HasColumnType("tinyint");
                     b.Property<byte>("VotingMode").HasColumnType("tinyint");
                     b.HasKey("PolicyId");
-                    b.HasIndex("BuildingId", "PollId", "PolicyVersion").IsUnique();
+                    b.HasAlternateKey("BuildingId", "PollId", "PolicyVersion").HasName("UQ_PollVotingPolicies_PollVersion");
                     b.ToTable("PollVotingPolicies");
                 });
 
@@ -3905,7 +3905,7 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                     b.Property<string>("SubjectReference").IsRequired().HasMaxLength(160).HasColumnType("nvarchar(160)");
                     b.Property<DateTime>("IssuedAtUtc").HasColumnType("datetime2(3)");
                     b.HasKey("EligibilityId");
-                    b.HasIndex("BuildingId", "PollId", "SubjectReference").IsUnique();
+                    b.HasIndex("BuildingId", "PollId", "SubjectReference").IsUnique().HasDatabaseName("UX_PollEligibility_Subject");
                     b.ToTable("PollEligibility");
                 });
 
@@ -3919,8 +3919,8 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                     b.Property<byte[]>("ChoicePayload").IsRequired().HasColumnType("varbinary(max)");
                     b.Property<string>("PollId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
                     b.HasKey("BallotId");
-                    b.HasIndex("BallotTokenHash").IsUnique();
-                    b.HasIndex("BuildingId", "PollId", "CastAtUtc");
+                    b.HasAlternateKey("BallotTokenHash").HasName("UQ_PollBallots_Token");
+                    b.HasIndex("BuildingId", "PollId", "CastAtUtc").HasDatabaseName("IX_PollBallots_Building_Poll_CastAt");
                     b.ToTable("PollBallots");
                 });
 
@@ -3935,7 +3935,7 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                     b.Property<string>("PollId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
                     b.Property<string>("Reason").HasMaxLength(1000).HasColumnType("nvarchar(1000)");
                     b.HasKey("EventId");
-                    b.HasIndex("BuildingId", "PollId", "OccurredAtUtc");
+                    b.HasIndex("BuildingId", "PollId", "OccurredAtUtc").HasDatabaseName("IX_PollLifecycleEvents_LegacyPoll");
                     b.ToTable("PollLifecycleEvents");
                 });
 
