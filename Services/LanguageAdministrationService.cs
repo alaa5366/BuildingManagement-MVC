@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿﻿using System.Globalization;
 using System.Text.RegularExpressions;
 using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
@@ -110,7 +110,7 @@ public sealed class LanguageAdministrationService
         if (string.IsNullOrWhiteSpace(englishName) || string.IsNullOrWhiteSpace(nativeName) || (direction!="RTL" && direction!="LTR"))
             return (false,"بيانات اللغة أو اتجاه الكتابة غير صحيحة.");
         if (!string.IsNullOrWhiteSpace(fallback) && (!CulturePattern.IsMatch(fallback) || fallback.Equals(culture,StringComparison.OrdinalIgnoreCase)))
-            return (false,"لغة fallback غير صحيحة.");
+            return (false,"ظ„ط؛ط© fallback ط؛ظٹط± طµط­ظٹط­ط©.");
         await using var db = await _factory.CreateDbContextAsync(ct);
         var entity = await db.Languages.FindAsync([culture],ct);
         if (entity == null) { entity = new LanguageEntity { CultureCode=culture }; db.Languages.Add(entity); }

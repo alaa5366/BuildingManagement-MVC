@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Services;
+﻿using BuildingManagementMvc.Services;
 using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -49,18 +49,7 @@ public sealed class ReportsServiceTests
                 BuildingId = "B1", Id = "C1", Kind = "expense",
                 Name = "Maintenance", Color = "#123456", IsActive = true, SortOrder = 1
             });
-            seed.Expenses.Add(new ExpenseEntity
-            {
-                BuildingId = "B1", Id = expenseId.ToString("N"), MonthKey = month,
-                CategoryId = "C1", CategoryKind = "expense", Note = "Repair",
-                Amount = 200m, ExpenseDate = DateOnly.FromDateTime(now)
-            });
-            seed.Revenues.Add(new RevenueEntity
-            {
-                BuildingId = "B1", Id = revenueId.ToString("N"), MonthKey = month,
-                CategoryId = null, CategoryKind = "revenue", Note = "Other income",
-                Amount = 100m, RevenueDate = DateOnly.FromDateTime(now)
-            });
+
             seed.LedgerTransactions.AddRange(
                 new LedgerTransactionEntity
                 {

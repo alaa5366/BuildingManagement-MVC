@@ -13,7 +13,6 @@ public class SessionRevalidatorCacheInvalidationTests
     public void InvalidateAdmin_AdvancesPermissionCacheVersion()
     {
         var sut = new SessionRevalidator(
-            users: null!,
             sqlFactory: null!,
             cache: new MemoryCache(new MemoryCacheOptions()),
             logger: NullLogger<SessionRevalidator>.Instance);
@@ -38,7 +37,6 @@ public class SessionRevalidatorCacheInvalidationTests
     public void InvalidateAdmin_IgnoresBlankUserIds()
     {
         var sut = new SessionRevalidator(
-            users: null!,
             sqlFactory: null!,
             cache: new MemoryCache(new MemoryCacheOptions()),
             logger: NullLogger<SessionRevalidator>.Instance);

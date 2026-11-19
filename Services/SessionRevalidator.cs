@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Security.Claims;
 using System.Text.Json;
 using BuildingManagementMvc.Data;
@@ -12,15 +12,10 @@ namespace BuildingManagementMvc.Services;
 /// </summary>
 public class SessionRevalidator
 {
-    private static readonly TimeSpan CacheFor = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan ImpersonationCacheFor = TimeSpan.FromSeconds(30);
-
-    // لو الـ DB وقعت لحظيًا: نكمّل بآخر نتيجة سليمة لحد 15 دقيقة، وبعدها نقفل الجلسة (fail closed)
-    private static readonly TimeSpan LastKnownGoodFor = TimeSpan.FromMinutes(15);
 
     private readonly ConcurrentDictionary<string, long> _permissionVersions = new(StringComparer.Ordinal);
 
-    private readonly UsersService _users;
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly IMemoryCache _cache;
     private readonly ILogger<SessionRevalidator> _logger;
@@ -29,12 +24,10 @@ public class SessionRevalidator
     /// Initializes a new instance of the <see cref="SessionRevalidator"/> class.
     /// </summary>
     public SessionRevalidator(
-        UsersService users,
         IDbContextFactory<AppDbContext> sqlFactory,
         IMemoryCache cache,
         ILogger<SessionRevalidator> logger)
     {
-        _users = users;
         _sqlFactory = sqlFactory;
         _cache = cache;
         _logger = logger;
@@ -59,144 +52,22 @@ public class SessionRevalidator
     /// </summary>
     public async Task<Result> ValidateAsync(ClaimsPrincipal user)
     {
-        var role = user.FindFirst(ClaimTypes.Role)?.Value;
-
-        // Impersonated principals are validated against the initiating account and target scope.
-        // Synthetic resident identities must never be treated as ordinary resident database users.
+        // Impersonated principals are validated against the initiating target-schema account.
         if (user.HasClaim("impersonated", "true"))
             return await ValidateImpersonatedAsync(user);
 
-        if (user.HasClaim("targetIdentityAccount", "true"))
-            return await ValidateTargetIdentityAccountAsync(user);
-
-        // The authenticated role claim is authoritative for normal sign-ins.
-        // An allow-listed e-mail must not turn a resident/admin context into a super-admin
-        // session; the allow-list is checked inside ValidateSuperAdminPrincipalAsync.
-        if (IsSuperAdminPrincipal(user))
-            return await ValidateSuperAdminPrincipalAsync(user);
-
-        // ✅ الساكن (دخول عادي أو QR): لازم لسه موجود ونشط وغير معطّل
-        if (role == "resident")
-            return await ValidateResidentAsync(user);
-
-        if (role != "admin") return new Result(false, null);
-
-        var uid = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(uid)) return new Result(false, null);
-
-        var claimedBuildings = user.FindAll("buildingId").Select(c => c.Value).OrderBy(x => x).ToList();
-        var twoFactorClaim = user.FindFirst("twoFactorVerified")?.Value ?? "missing";
-        var permissionVersion = _permissionVersions.GetOrAdd(uid, 0);
-        var cacheKey = "sessval:" + uid + ":v:" + permissionVersion + ":" + string.Join(",", claimedBuildings) + ":2fa:" + twoFactorClaim;
-        if (_cache.TryGetValue(cacheKey, out Result? cached) && cached != null)
-            return cached;
-
-        try
-        {
-            var doc = await _users.GetByUidAsync(uid);
-
-            // 2FA status is checked separately: database errors must fail closed rather than
-            // reusing a last-known-good result that predates an enrollment change.
-            bool twoFactorEnabled;
-            try
-            {
-                await using var securityDb = await _sqlFactory.CreateDbContextAsync();
-                twoFactorEnabled = await securityDb.Users.AsNoTracking()
-                    .Where(x => x.Uid == uid)
-                    .Select(x => x.TwoFactorEnabled)
-                    .FirstOrDefaultAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "[SessionRevalidator] two-factor status lookup failed for {Uid}; rejecting session", uid);
-                return new Result(false, null);
-            }
-
-            if (doc != null && doc.Role == "superadmin")
-                return await ValidateSuperAdminPrincipalAsync(user);
-
-            var twoFactorValid = !twoFactorEnabled || user.HasClaim("twoFactorVerified", "true");
-            var valid = twoFactorValid && doc != null && doc.Role == "admin" && !doc.Disabled && doc.IsActive
-                        && claimedBuildings.All(b => doc.BuildingIds.Contains(b));
-            var result = new Result(valid, valid ? doc!.Permissions ?? new List<string>() : null);
-            _cache.Set(cacheKey, result, CacheFor);
-            _cache.Set(cacheKey + ":lkg", result, LastKnownGoodFor);
-            return result;
-        }
-        catch (Exception ex)
-        {
-            // A principal without a verified second factor must not use a stale result
-            // when the account's current 2FA policy cannot be checked.
-            if (!user.HasClaim("twoFactorVerified", "true"))
-            {
-                _logger.LogError(ex, "[SessionRevalidator] lookup failed for {Uid} without verified 2FA; rejecting session", uid);
-                return new Result(false, null);
-            }
-
-            if (_cache.TryGetValue(cacheKey + ":lkg", out Result? lkg) && lkg != null)
-            {
-                _logger.LogWarning(ex, "[SessionRevalidator] lookup failed for {Uid}; using last known result for a 2FA-verified session", uid);
-                return lkg;
-            }
-
-            _logger.LogError(ex, "[SessionRevalidator] lookup failed for {Uid}; rejecting session", uid);
-            return new Result(false, null);
-        }
-    }
-
-    private static bool IsSuperAdminPrincipal(ClaimsPrincipal user)
-    {
-        var role = user.FindFirst(ClaimTypes.Role)?.Value;
-        return role == "superadmin" || user.HasClaim("originalRole", "superadmin");
-    }
-
-    private async Task<Result> ValidateSuperAdminPrincipalAsync(ClaimsPrincipal user)
-    {
-        var uid = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var email = user.FindFirst(ClaimTypes.Email)?.Value;
-        if (string.IsNullOrWhiteSpace(uid) || !SqlAuthService.IsSuperAdminEmail(email))
+        // Legacy cookies are rejected without querying retired Users/Residents tables.
+        // All newly issued sessions must carry the canonical target identity marker.
+        if (!user.HasClaim("targetIdentityAccount", "true"))
             return new Result(false, null);
 
-        try
-        {
-            await using var db = await _sqlFactory.CreateDbContextAsync();
-            var account = await db.Users.AsNoTracking()
-                .Where(x => x.Uid == uid && x.Email == email && x.Role == "superadmin")
-                .Select(x => new
-                {
-                    x.IsActive,
-                    x.IsDisabled,
-                    x.TwoFactorEnabled,
-                    x.CreatedAt,
-                    x.UpdatedAt,
-                    x.Pin,
-                    Permissions = x.Permissions.Select(p => p.Permission).ToList()
-                })
-                .FirstOrDefaultAsync();
-
-            var currentSecurityStamp = account == null ? null
-                : SqlAuthService.CreateSuperAdminSecurityStamp(
-                    account.Pin, account.UpdatedAt ?? account.CreatedAt, account.IsActive, account.IsDisabled);
-            var securityStampMatches = string.Equals(
-                currentSecurityStamp,
-                user.FindFirst("legacySuperAdminSecurityStamp")?.Value,
-                StringComparison.Ordinal);
-            var valid = account != null && account.IsActive && !account.IsDisabled
-                && securityStampMatches
-                && (!account.TwoFactorEnabled || user.HasClaim("twoFactorVerified", "true"));
-            return new Result(valid, valid ? account!.Permissions.Distinct(StringComparer.Ordinal).ToList() : null);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "[SessionRevalidator] super-admin validation failed for {Uid}; rejecting session", uid);
-            return new Result(false, null);
-        }
+        return await ValidateTargetIdentityAccountAsync(user);
     }
 
     private async Task<Result> ValidateTargetIdentitySuperAdminAsync(ClaimsPrincipal user, Guid accountId)
     {
         var email = user.FindFirst(ClaimTypes.Email)?.Value;
-        if (string.IsNullOrWhiteSpace(email) || !SqlAuthService.IsSuperAdminEmail(email))
+        if (string.IsNullOrWhiteSpace(email) || !SuperAdminIdentityPolicy.IsEmailAllowed(email))
             return new Result(false, null);
 
         try
@@ -254,143 +125,141 @@ public class SessionRevalidator
         var buildingId = user.FindFirst("impersonationTargetBuildingId")?.Value;
         var apartmentId = user.FindFirst("impersonationTargetApartmentId")?.Value;
         var effectiveRole = user.FindFirst(ClaimTypes.Role)?.Value;
-        var impersonatedBy = user.FindFirst("impersonatedBy")?.Value;
 
-        if (string.IsNullOrWhiteSpace(actorUid) ||
-            string.IsNullOrWhiteSpace(actorRole) ||
+        if (!Guid.TryParse(actorUid, out var actorAccountId) ||
+            !string.Equals(user.FindFirst("impersonatedBy")?.Value, actorUid, StringComparison.Ordinal) ||
             string.IsNullOrWhiteSpace(buildingId) ||
-            !string.Equals(impersonatedBy, actorUid, StringComparison.Ordinal) ||
-            (actorRole == "superadmin" && string.IsNullOrWhiteSpace(actorEmail)) ||
-            (actorRole == "admin" && string.IsNullOrWhiteSpace(actorPermissionsJson)) ||
             (actorRole != "admin" && actorRole != "superadmin") ||
+            (actorRole == "admin" && string.IsNullOrWhiteSpace(actorPermissionsJson)) ||
+            (actorRole == "superadmin" && string.IsNullOrWhiteSpace(actorEmail)) ||
             (effectiveRole == "resident" && string.IsNullOrWhiteSpace(apartmentId)) ||
             (effectiveRole == "admin" && !string.IsNullOrWhiteSpace(apartmentId)) ||
             (effectiveRole != "resident" && effectiveRole != "admin"))
-        {
-            _logger.LogWarning("[SessionRevalidator] Rejecting impersonation with incomplete actor/target claims");
             return new Result(false, null);
-        }
 
-        var actorPermissionVersion = _permissionVersions.GetOrAdd(actorUid, 0);
-        var cacheKey = $"sessval:imp:{actorUid}:v:{actorPermissionVersion}:{actorRole}:{buildingId}:{apartmentId ?? "-"}:2fa:{actorTwoFactorVerified ?? "missing"}";
+        var actorPermissionVersion = _permissionVersions.GetOrAdd(actorUid!, 0);
+        var cacheKey = $"sessval:imp:{actorUid}:v:{actorPermissionVersion}:{actorRole}:{buildingId}:{apartmentId ?? "-"}:{actorSecurityStamp}:{actorTwoFactorVerified}";
         if (_cache.TryGetValue(cacheKey, out Result? cached) && cached != null)
             return cached;
 
         try
         {
-            bool actorValid;
-            if (actorRole == "superadmin")
+            var actorClaims = new List<Claim>
             {
-                // Super-admin eligibility is currently governed by the configured allow-list.
-                actorValid = SqlAuthService.IsSuperAdminEmail(actorEmail);
-            }
-            else
-            {
-                var actor = await _users.GetByUidAsync(actorUid);
-                var capturedPermissions = JsonSerializer.Deserialize<List<string>>(actorPermissionsJson!) ?? new List<string>();
-                var currentPermissions = actor?.Permissions?.Distinct().OrderBy(p => p).ToList() ?? new List<string>();
-                var permissionsMatch = capturedPermissions.Distinct().OrderBy(p => p)
-                    .SequenceEqual(currentPermissions, StringComparer.Ordinal);
+                new(ClaimTypes.NameIdentifier, actorUid!),
+                new(ClaimTypes.Role, actorRole!),
+                new("securityStamp", actorSecurityStamp ?? ""),
+                new("targetIdentityAccount", "true"),
+                new("twoFactorVerified", actorTwoFactorVerified ?? "false"),
+                new("buildingId", buildingId)
+            };
+            if (!string.IsNullOrWhiteSpace(actorEmail))
+                actorClaims.Add(new Claim(ClaimTypes.Email, actorEmail));
+            var actorPrincipal = new ClaimsPrincipal(new ClaimsIdentity(actorClaims, "ImpersonationValidation"));
 
-                actorValid = actor != null &&
-                    actor.Role == "admin" &&
-                    !actor.Disabled &&
-                    actor.IsActive &&
-                    actor.BuildingIds.Contains(buildingId) &&
-                    permissionsMatch;
-            }
-
-            if (!actorValid)
+            var actorResult = actorRole == "superadmin"
+                ? await ValidateTargetIdentitySuperAdminAsync(actorPrincipal, actorAccountId)
+                : await ValidateTargetIdentityAdminAsync(actorPrincipal, actorAccountId);
+            if (!actorResult.Valid)
             {
                 var rejected = new Result(false, null);
                 _cache.Set(cacheKey, rejected, ImpersonationCacheFor);
                 return rejected;
+            }
+
+            if (actorRole == "admin")
+            {
+                var capturedPermissions = JsonSerializer.Deserialize<List<string>>(actorPermissionsJson!) ?? new List<string>();
+                if (!capturedPermissions.Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal)
+                    .SequenceEqual((actorResult.Permissions ?? new List<string>()).Distinct(StringComparer.Ordinal)
+                        .OrderBy(x => x, StringComparer.Ordinal), StringComparer.Ordinal))
+                {
+                    var rejected = new Result(false, null);
+                    _cache.Set(cacheKey, rejected, ImpersonationCacheFor);
+                    return rejected;
+                }
             }
 
             await using var db = await _sqlFactory.CreateDbContextAsync();
-            var actorSecurity = await db.Users.AsNoTracking()
-                .Where(u => u.Uid == actorUid && u.Role == actorRole)
-                .Select(u => new { u.Email, u.IsActive, u.IsDisabled, u.TwoFactorEnabled, u.Pin, u.CreatedAt, u.UpdatedAt })
-                .FirstOrDefaultAsync();
-
-            actorValid = actorValid && actorSecurity != null
-                && actorSecurity.IsActive && !actorSecurity.IsDisabled;
-            if (actorRole == "superadmin")
-            {
-                var currentActorStamp = actorSecurity == null ? null
-                    : SqlAuthService.CreateSuperAdminSecurityStamp(
-                        actorSecurity.Pin, actorSecurity.UpdatedAt ?? actorSecurity.CreatedAt,
-                        actorSecurity.IsActive, actorSecurity.IsDisabled);
-                actorValid = actorValid && actorSecurity?.Email == actorEmail
-                    && SqlAuthService.IsSuperAdminEmail(actorEmail)
-                    && !string.IsNullOrWhiteSpace(actorSecurityStamp)
-                    && string.Equals(currentActorStamp, actorSecurityStamp, StringComparison.Ordinal);
-            }
-            if (actorSecurity?.TwoFactorEnabled == true && actorTwoFactorVerified != "true")
-                actorValid = false;
-
-            if (!actorValid)
-            {
-                var rejected = new Result(false, null);
-                _cache.Set(cacheKey, rejected, ImpersonationCacheFor);
-                return rejected;
-            }
-
-            var buildingExists = await db.Buildings.AsNoTracking()
-                .AnyAsync(b => b.Id == buildingId);
-            if (!buildingExists)
-            {
-                var rejected = new Result(false, null);
-                _cache.Set(cacheKey, rejected, ImpersonationCacheFor);
-                return rejected;
-            }
-
-            var targetExists = string.IsNullOrWhiteSpace(apartmentId) ||
-                await db.Apartments.AsNoTracking()
-                    .AnyAsync(a => a.BuildingId == buildingId && a.Id == apartmentId);
-
-            var result = new Result(targetExists, null);
+            var buildingExists = await db.Buildings.AsNoTracking().AnyAsync(item => item.Id == buildingId);
+            var apartmentExists = string.IsNullOrWhiteSpace(apartmentId) ||
+                await db.Apartments.AsNoTracking().AnyAsync(item => item.BuildingId == buildingId && item.Id == apartmentId);
+            var result = new Result(buildingExists && apartmentExists, null);
             _cache.Set(cacheKey, result, ImpersonationCacheFor);
             return result;
         }
         catch (Exception ex)
         {
-            // No last-known-good fallback for impersonation: an unavailable authority source
-            // must not silently preserve elevated access.
-            _logger.LogError(ex, "[SessionRevalidator] Impersonation validation failed for actor {ActorUid}", actorUid);
+            _logger.LogError(ex, "[SessionRevalidator] Target identity impersonation validation failed for actor {ActorUid}", actorUid);
             return new Result(false, null);
         }
     }
 
-    private async Task<Result> ValidateResidentAsync(ClaimsPrincipal user)
+    private async Task<Result> ValidateTargetIdentityAdminAsync(ClaimsPrincipal user, Guid accountId)
     {
-        var uid = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(uid)) return new Result(false, null);
-
-        var cacheKey = "sessval:res:" + uid;
-        if (_cache.TryGetValue(cacheKey, out Result? cached) && cached != null)
-            return cached;
-
         try
         {
             await using var db = await _sqlFactory.CreateDbContextAsync();
-            var ok = await db.Residents.AsNoTracking()
-                .AnyAsync(r => r.Uid == uid && r.IsActive && !r.IsDisabled);
+            var now = DateTime.UtcNow;
+            var account = await (
+                from item in db.UserAccounts.AsNoTracking()
+                join person in db.Persons.AsNoTracking() on item.PersonId equals person.PersonId
+                where item.AccountId == accountId
+                select new { item.AccountStatus, item.SecurityStamp, person.IsArchived })
+                .SingleOrDefaultAsync();
+            if (account is null || account.AccountStatus != 1 || account.IsArchived ||
+                !string.Equals(account.SecurityStamp, user.FindFirst("securityStamp")?.Value, StringComparison.Ordinal))
+                return new Result(false, null);
 
-            var result = new Result(ok, null);
-            _cache.Set(cacheKey, result, CacheFor);
-            _cache.Set(cacheKey + ":lkg", result, LastKnownGoodFor);
-            return result;
+            var claimedBuildings = user.FindAll("buildingId").Select(item => item.Value)
+                .ToHashSet(StringComparer.Ordinal);
+            if (claimedBuildings.Count == 0) return new Result(false, null);
+
+            var activeBuildings = await db.UserRoleAssignments.AsNoTracking()
+                .Where(item => item.AccountId == accountId && item.RoleKey == "admin"
+                    && item.ScopeType == 1 && item.ScopeBuildingId != null
+                    && item.ScopeApartmentId == null && item.RevokedAtUtc == null
+                    && item.ValidFromUtc <= now
+                    && (item.ValidToUtc == null || item.ValidToUtc > now))
+                .Join(db.RoleDefinitions.AsNoTracking().Where(role => role.RoleKey == "admin" && role.IsActive),
+                    assignment => assignment.RoleKey, role => role.RoleKey,
+                    (assignment, role) => assignment.ScopeBuildingId!)
+                .Distinct().ToListAsync();
+            if (activeBuildings.Count == 0 || claimedBuildings.Any(building => !activeBuildings.Contains(building, StringComparer.Ordinal)))
+                return new Result(false, null);
+
+            var twoFactorEnabled = await db.UserTwoFactorSettings.AsNoTracking()
+                .AnyAsync(item => item.AccountId == accountId && item.IsEnabled);
+            if (twoFactorEnabled && !user.HasClaim("twoFactorVerified", "true"))
+                return new Result(false, null);
+
+            var basePermissions = await db.RolePermissions.AsNoTracking()
+                .Where(item => item.RoleKey == "admin" && item.Effect == 1)
+                .Select(item => item.PermissionKey).Distinct().ToListAsync();
+            var overrides = await db.AccountPermissionOverrides.AsNoTracking()
+                .Where(item => item.AccountId == accountId && item.ScopeType == 1
+                    && item.ScopeBuildingId != null && claimedBuildings.Contains(item.ScopeBuildingId)
+                    && item.ValidFromUtc <= now && (item.ValidToUtc == null || item.ValidToUtc > now)
+                    && item.RevokedAtUtc == null)
+                .ToListAsync();
+            var perBuilding = claimedBuildings.Select(building =>
+            {
+                var scoped = overrides.Where(item => item.ScopeBuildingId == building).ToList();
+                return basePermissions.Where(permission => !scoped.Any(item =>
+                        item.PermissionKey == permission && item.Effect == 0))
+                    .Concat(scoped.Where(item => item.Effect == 1).Select(item => item.PermissionKey))
+                    .Distinct(StringComparer.Ordinal).ToHashSet(StringComparer.Ordinal);
+            }).ToList();
+            var permissions = perBuilding.Skip(1).Aggregate(perBuilding[0], (current, next) =>
+            {
+                current.IntersectWith(next);
+                return current;
+            }).OrderBy(value => value, StringComparer.Ordinal).ToList();
+            return new Result(true, permissions);
         }
         catch (Exception ex)
         {
-            if (_cache.TryGetValue(cacheKey + ":lkg", out Result? lkg) && lkg != null)
-            {
-                _logger.LogWarning(ex, "[SessionRevalidator] resident lookup failed for {Uid}; using last known result", uid);
-                return lkg;
-            }
-
-            _logger.LogError(ex, "[SessionRevalidator] resident lookup failed for {Uid}; rejecting session", uid);
+            _logger.LogError(ex, "[SessionRevalidator] target admin validation failed for {AccountId}; rejecting session", accountId);
             return new Result(false, null);
         }
     }
@@ -402,6 +271,8 @@ public class SessionRevalidator
             return new Result(false, null);
         if (claimedRole == "superadmin")
             return await ValidateTargetIdentitySuperAdminAsync(user, accountId);
+        if (claimedRole == "admin")
+            return await ValidateTargetIdentityAdminAsync(user, accountId);
         if (claimedRole != "resident")
             return new Result(false, null);
 

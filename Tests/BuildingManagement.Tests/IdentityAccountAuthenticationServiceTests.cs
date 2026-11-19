@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Data;
+﻿using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Services;
 using Microsoft.EntityFrameworkCore;
@@ -462,7 +462,7 @@ public sealed class IdentityAccountAuthenticationServiceTests
     [Fact]
     public async Task AuthenticateSuperAdminAsync_AuthenticatesTwoIndependentTargetAccounts()
     {
-        SqlAuthService.ConfigureSuperAdmins("alaa5366@hotmail.com,alaa5366@gmail.com");
+        SuperAdminIdentityPolicy.Configure("alaa5366@hotmail.com,alaa5366@gmail.com");
         var factory = new TestContextFactory();
         var hasher = new BcryptPasswordHasher();
         var now = DateTime.UtcNow;

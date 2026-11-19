@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -332,7 +332,7 @@ public sealed class IdentityAccountAuthenticationService
     {
         var normalizedEmail = email?.Trim().ToUpperInvariant();
         if (string.IsNullOrWhiteSpace(normalizedEmail) ||
-            !SqlAuthService.IsSuperAdminEmail(normalizedEmail) || string.IsNullOrEmpty(password))
+            !SuperAdminIdentityPolicy.IsEmailAllowed(normalizedEmail) || string.IsNullOrEmpty(password))
             return AuthResult.Fail("wrong-credentials");
 
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
@@ -395,7 +395,7 @@ public sealed class IdentityAccountAuthenticationService
     {
         var normalizedEmail = email?.Trim().ToUpperInvariant();
         if (string.IsNullOrWhiteSpace(normalizedEmail) ||
-            !SqlAuthService.IsSuperAdminEmail(normalizedEmail) ||
+            !SuperAdminIdentityPolicy.IsEmailAllowed(normalizedEmail) ||
             string.IsNullOrWhiteSpace(password) || password.Length < 14)
             return false;
 
@@ -493,10 +493,10 @@ public sealed class IdentityAccountAuthenticationService
 
     /// <returns>Null only when no target admin identity owns the phone; a matching target identity always fails closed.</returns>
     public async Task<AuthResult?> AuthenticateAdminAsync(
-        string identifier, string credential, string buildingId, CancellationToken cancellationToken = default)
+        string identifier, string credential, string? buildingId = null, CancellationToken cancellationToken = default)
     {
         var normalizedPhone = AuthHelpers.NormalizePhone(identifier);
-        if (string.IsNullOrWhiteSpace(normalizedPhone) || string.IsNullOrWhiteSpace(buildingId) || credential is null)
+        if (string.IsNullOrWhiteSpace(normalizedPhone) || credential is null)
             return AuthResult.Fail("wrong-credentials");
 
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
@@ -531,9 +531,10 @@ public sealed class IdentityAccountAuthenticationService
                 && definition.IsActive && assignment.ValidFromUtc <= now
                 && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
                 && assignment.RevokedAtUtc == null && assignment.ScopeType == 1
-            select assignment.ScopeBuildingId).Distinct().ToListAsync(cancellationToken);
+                && assignment.ScopeBuildingId != null
+            select assignment.ScopeBuildingId!).Distinct().ToListAsync(cancellationToken);
         if (adminAssignments.Count == 0) return null;
-        if (!adminAssignments.Contains(buildingId, StringComparer.Ordinal))
+        if (buildingId != null && !adminAssignments.Contains(buildingId, StringComparer.Ordinal))
             return AuthResult.Fail("wrong-credentials");
         if (match.Account.AccountStatus != 1 || match.Person.IsArchived)
             return AuthResult.Fail("wrong-credentials");
@@ -550,11 +551,29 @@ public sealed class IdentityAccountAuthenticationService
             && _hasher.Verify(credential, item.CredentialHash));
         if (!valid) return AuthResult.Fail("wrong-credentials");
 
-        var permissions = await db.RolePermissions.AsNoTracking()
+        var scopedBuildings = buildingId == null ? adminAssignments : new List<string> { buildingId };
+        var basePermissions = await db.RolePermissions.AsNoTracking()
             .Where(item => item.RoleKey == "admin" && item.Effect == 1)
-            .Select(item => item.PermissionKey)
-            .Distinct()
+            .Select(item => item.PermissionKey).Distinct().ToListAsync(cancellationToken);
+        var permissionOverrides = await db.AccountPermissionOverrides.AsNoTracking()
+            .Where(item => item.AccountId == match.Account.AccountId && item.ScopeType == 1
+                && item.ScopeBuildingId != null && scopedBuildings.Contains(item.ScopeBuildingId)
+                && item.ValidFromUtc <= now && (item.ValidToUtc == null || item.ValidToUtc > now)
+                && item.RevokedAtUtc == null)
             .ToListAsync(cancellationToken);
+        var effectivePerBuilding = scopedBuildings.Select(scopeBuildingId =>
+        {
+            var scoped = permissionOverrides.Where(item => item.ScopeBuildingId == scopeBuildingId).ToList();
+            return basePermissions.Where(permission => !scoped.Any(item =>
+                    item.PermissionKey == permission && item.Effect == 0))
+                .Concat(scoped.Where(item => item.Effect == 1).Select(item => item.PermissionKey))
+                .Distinct(StringComparer.Ordinal).ToHashSet(StringComparer.Ordinal);
+        }).ToList();
+        var permissions = effectivePerBuilding.Skip(1).Aggregate(effectivePerBuilding[0], (current, next) =>
+        {
+            current.IntersectWith(next);
+            return current;
+        }).OrderBy(value => value, StringComparer.Ordinal).ToList();
 
         match.Account.LastLoginAtUtc = now;
         await db.SaveChangesAsync(cancellationToken);
@@ -564,7 +583,7 @@ public sealed class IdentityAccountAuthenticationService
             role: "admin",
             email: match.Account.NormalizedEmail ?? match.Person.PrimaryEmail ?? "",
             name: match.Person.DisplayName,
-            buildingIds: new List<string> { buildingId },
+            buildingIds: buildingId == null ? adminAssignments : new List<string> { buildingId },
             permissions: permissions);
         result.UsesTargetIdentity = true;
         result.SecurityStamp = match.Account.SecurityStamp;
@@ -625,6 +644,84 @@ public sealed class IdentityAccountAuthenticationService
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return true;
+    }
+
+    /// <summary>Resets PINs for all active target resident accounts occupying the selected apartment.</summary>
+    public async Task<int> ResetApartmentResidentPinsAsync(
+        string buildingId, string apartmentId, string newPin, string actorReference,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(newPin) || newPin.Length != 4 ||
+            newPin.Any(character => character < '0' || character > '9') ||
+            string.Equals(newPin, "1234", StringComparison.Ordinal))
+            throw new ArgumentException("PIN must be four digits and cannot be the default value.", nameof(newPin));
+
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await db.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable, cancellationToken);
+        var now = DateTime.UtcNow;
+        var accountIds = await (
+            from occupancy in db.ApartmentOccupancies
+            join person in db.Persons on occupancy.PersonId equals person.PersonId
+            join account in db.UserAccounts on person.PersonId equals account.PersonId
+            where occupancy.BuildingId == buildingId && occupancy.ApartmentId == apartmentId
+                && occupancy.ValidFromUtc <= now && (occupancy.ValidToUtc == null || occupancy.ValidToUtc > now)
+                && !person.IsArchived && account.AccountStatus == 1
+                && db.UserRoleAssignments.Any(assignment => assignment.AccountId == account.AccountId
+                    && assignment.RoleKey == "resident" && assignment.RevokedAtUtc == null
+                    && assignment.ValidFromUtc <= now
+                    && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
+                    && ((assignment.ScopeType == 1 && assignment.ScopeBuildingId == buildingId)
+                        || (assignment.ScopeType == 2 && assignment.ScopeBuildingId == buildingId
+                            && assignment.ScopeApartmentId == apartmentId)))
+            select account.AccountId)
+            .Distinct().ToListAsync(cancellationToken);
+        if (accountIds.Count == 0)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return 0;
+        }
+
+        foreach (var accountId in accountIds)
+        {
+            var account = await db.UserAccounts.SingleAsync(item => item.AccountId == accountId, cancellationToken);
+            var oldCredentials = await db.UserCredentials.Where(item => item.AccountId == accountId
+                && item.CredentialType == 0 && item.RevokedAtUtc == null).ToListAsync(cancellationToken);
+            var replacementId = Guid.NewGuid();
+            db.UserCredentials.Add(new UserCredentialEntity
+            {
+                CredentialId = replacementId,
+                AccountId = accountId,
+                CredentialType = 0,
+                CredentialHash = _hasher.HashPin(newPin),
+                HashAlgorithm = "BCrypt.Net-Next",
+                CreatedAtUtc = now
+            });
+            foreach (var old in oldCredentials)
+            {
+                old.RevokedAtUtc = now;
+                old.ReplacedByCredentialId = replacementId;
+            }
+            account.MustChangePin = false;
+            account.SecurityStamp = Guid.NewGuid().ToString("N");
+        }
+
+        db.AuditEvents.Add(new AuditEventEntity
+        {
+            AuditEventId = Guid.NewGuid(),
+            OccurredAtUtc = now,
+            ActorReference = actorReference,
+            BuildingId = buildingId,
+            EventCategory = "ResidentSecurity",
+            EventType = "resident.apartment_pin_reset",
+            ResourceType = "Apartment",
+            ResourceReference = apartmentId,
+            Outcome = 0,
+            SafeDetailsJson = System.Text.Json.JsonSerializer.Serialize(new { affectedAccounts = accountIds.Count })
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return accountIds.Count;
     }
 
     private async Task<bool> ProvisionResidentAccountAsync(

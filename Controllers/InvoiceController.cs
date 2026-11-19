@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Models;
+﻿﻿using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -137,7 +137,7 @@ public class InvoiceController : Controller
         var loginUrl = Url.Action("UnifiedLogin", "Account", values: null, protocol: Request.Scheme)!;
         var message =
             $"مرحباً {data.Apt.Owner}،\n" +
-            $"فاتورة العمارة {data.Building.Name} — الشقة رقم {data.Apt.Number}\n" +
+            $"فاتورة العمارة {data.Building.Name} â€” الشقة رقم {data.Apt.Number}\n" +
             $"الشهر: {data.MonthLabelText}\n" +
             $"رقم الفاتورة: {data.InvoiceNo}\n\n" +
             $"للاطلاع على الفاتورة PDF، سجّل الدخول بحساب الساكن من الرابط التالي:\n{loginUrl}\n\n" +

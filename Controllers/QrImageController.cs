@@ -1,10 +1,10 @@
-using BuildingManagementMvc.Services;
+﻿﻿using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BuildingManagementMvc.Controllers;
 // ============================================================
-//  QrImageController	توليد صور QR
+//  QrImageController	طھظˆظ„ظٹط¯ طµظˆط± QR
 // ============================================================
 /// <summary>
 /// Generates QR code images locally so login and set-PIN URLs (which contain tokens) never leave the server.
@@ -41,7 +41,7 @@ public class QrImageController : Controller
         var pixelsPerModule = Math.Clamp(size / 35, 3, 14);
         var png = _qr.GeneratePng(data, pixelsPerModule);
 
-        // الرابط ممكن يحتوي توكن — مايتخزّنش في كاش مشترك
+        // الرابط ممكن يحتوي توكن â€” مايتخزّنش في كاش مشترك
         Response.Headers["Cache-Control"] = "private, no-store";
         return File(png, "image/png");
     }

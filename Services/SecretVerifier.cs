@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿﻿using System.Security.Cryptography;
 using System.Text;
 
 namespace BuildingManagementMvc.Services;
@@ -12,7 +12,7 @@ namespace BuildingManagementMvc.Services;
 /// <see cref="AllowLegacyPlain"/> = <c>true</c> (مفتاح طوارئ مؤقت).
 /// </para>
 /// <para>
-/// <b>⚠️ تحذير:</b> مفتاح <see cref="AllowLegacyPlain"/> يجب أن يكون <c>false</c>
+/// <b>âڑ ï¸ڈ تحذير:</b> مفتاح <see cref="AllowLegacyPlain"/> يجب أن يكون <c>false</c>
 /// في الإنتاج. تشغيله يفتح ثغرة أمنية (مقارنة نص صريح بدل BCrypt).
 /// </para>
 /// </remarks>
@@ -91,7 +91,7 @@ public static class SecretVerifier
     /// </returns>
     /// <remarks>
     /// <list type="bullet">
-    ///   <item>لو <paramref name="stored"/> بـ BCrypt prefix، بيستخدم BCrypt.Verify.</item>
+    ///   <item>ظ„ظˆ <paramref name="stored"/> ط¨ظ€ BCrypt prefixطŒ ط¨ظٹط³طھط®ط¯ظ… BCrypt.Verify.</item>
     ///   <item>لو <paramref name="stored"/> نص صريح، بيرجع <c>false</c> إلا لو <see cref="AllowLegacyPlain"/> = <c>true</c>.</item>
     ///   <item>لو الـ BCrypt.Verify رمى exception (hash تالف)، بيرجع <c>false</c>.</item>
     /// </list>

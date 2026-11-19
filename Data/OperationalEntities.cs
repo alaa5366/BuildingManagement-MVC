@@ -1,4 +1,4 @@
-namespace BuildingManagementMvc.Data.Entities;
+﻿namespace BuildingManagementMvc.Data.Entities;
 
 /// <summary>Durable online-presence session. Legacy identifiers are retained only as references.</summary>
 public sealed class PresenceSessionEntity

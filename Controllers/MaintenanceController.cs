@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿﻿using System.Security.Claims;
 using BuildingManagementMvc.Attributes;
 using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Models;
@@ -206,8 +206,8 @@ public class MaintenanceController : Controller
                 return RedirectToAction(nameof(Index));
             }
 
-            var note = "🔧 " + record.Title +
-                (string.IsNullOrWhiteSpace(record.Vendor) ? "" : $" — {record.Vendor}");
+            var note = "ًں”§ " + record.Title +
+                (string.IsNullOrWhiteSpace(record.Vendor) ? "" : $" â€” {record.Vendor}");
             await _financeWorkflow.AddExpenseAsync(
                 BuildingId, monthKey, category.Id, note, cost, expenseDate,
                 commandId, actorAccountId.Value, HttpContext.RequestAborted);
@@ -232,8 +232,8 @@ public class MaintenanceController : Controller
                 {
                     await _notifications.CreateResidentDepositNoticeAsync(
                         BuildingId, apartmentId, "مصروف صيانة جديد",
-                        $"{category.Name}: {cost:0.##} — {buildingName}",
-                        HttpContext.RequestAborted, "expense_new", "💸");
+                        $"{category.Name}: {cost:0.##} â€” {buildingName}",
+                        HttpContext.RequestAborted, "expense_new", "ًں’¸");
                 }
                 catch (Exception ex)
                 {

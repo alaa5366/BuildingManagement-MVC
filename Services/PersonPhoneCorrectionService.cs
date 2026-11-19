@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Data;
+﻿using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 

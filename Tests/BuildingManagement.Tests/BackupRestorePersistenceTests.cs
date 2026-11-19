@@ -130,17 +130,17 @@ public class BackupRestorePersistenceTests
     {
         await using (var db = NewDb())
         {
-            db.AuditLog.Add(new AuditLogEntity { Action = "test", Label = "x", Ts = DateTime.UtcNow });
+            db.AuditEvents.Add(new AuditEventEntity { AuditEventId = Guid.NewGuid(), OccurredAtUtc = DateTime.UtcNow, EventCategory = "Test", EventType = "test", ResourceType = "Test", ResourceReference = "x", Outcome = 0 });
             await db.SaveChangesAsync();
         }
 
-        var path = await WriteBackupAsync("auditLog");
+        var path = await WriteBackupAsync("auditEvents");
 
-        var result = await _service.RestoreAsync(path, new() { "auditLog" }, overwrite: false, "admin");
+        var result = await _service.RestoreAsync(path, new() { "auditEvents" }, overwrite: false, "admin");
 
         Assert.True(result.Success, string.Join(", ", result.Errors));
         await using var check = NewDb();
-        Assert.Equal(2, await check.AuditLog.CountAsync());     // الأصلي + المستعاد (append-only)
+        Assert.Single(await check.AuditEvents.ToListAsync()); // immutable event identity is preserved; duplicate restore is skipped
     }
 
     [Fact]

@@ -81,7 +81,7 @@ public sealed class TargetPollsServiceTests
         Assert.True(await service.DeleteAsync("B1", poll.Id));
 
         await using var verify = new AppDbContext(options);
-        Assert.False(await verify.Polls.AnyAsync(x => x.BuildingId == "B1" && x.Id == poll.Id));
+        Assert.False(await verify.PollDefinitions.AnyAsync(x => x.BuildingId == "B1" && x.Id == poll.Id));
         Assert.Empty(await verify.PollEligibility.Where(x => x.PollId == poll.Id).ToListAsync());
         Assert.Empty(await verify.PollVotingPolicies.Where(x => x.PollId == poll.Id).ToListAsync());
         Assert.Contains(await verify.PollLifecycleEvents.ToListAsync(), x => x.PollId == poll.Id && x.EventType == 4);

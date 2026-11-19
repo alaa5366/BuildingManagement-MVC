@@ -1,7 +1,7 @@
 ﻿// =====================================================================
 //  AuthResult — نتيجة عملية تسجيل الدخول
 //  بيستخدم في:
-//    - SqlAuthService
+//    - IdentityAccountAuthenticationService
 //    - AccountController
 //    - ImpersonationController
 // =====================================================================

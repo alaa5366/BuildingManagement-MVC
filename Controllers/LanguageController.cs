@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using BuildingManagementMvc.Data;
@@ -35,7 +35,7 @@ public class LanguageController : Controller
         var cookieValue = CookieRequestCultureProvider.MakeCookieValue(
             new RequestCulture(value));
 
-        // ✅ إعدادات الكوكي بشكل صريح ومضمون
+        // âœ… إعدادات الكوكي بشكل صريح ومضمون
         Response.Cookies.Append(
             CookieRequestCultureProvider.DefaultCookieName,
             cookieValue,
@@ -48,7 +48,7 @@ public class LanguageController : Controller
                 Secure = Request.IsHttps // في localhost بيكون false، فبيشتغل عادي
             });
 
-        // ✅ كوكي إضافية للاحتياط
+        // âœ… كوكي إضافية للاحتياط
         Response.Cookies.Append("bm_lang", value, new CookieOptions
         {
             Expires = DateTimeOffset.UtcNow.AddYears(1),

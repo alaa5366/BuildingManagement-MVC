@@ -1,4 +1,4 @@
-namespace BuildingManagementMvc.Data.Entities;
+﻿namespace BuildingManagementMvc.Data.Entities;
 
 /// <summary>Lifecycle states for a building-local financial period.</summary>
 public enum FinancialPeriodStatus : byte

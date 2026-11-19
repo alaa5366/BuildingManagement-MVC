@@ -1,7 +1,7 @@
 namespace BuildingManagementMvc.Models;
 
 /// <summary>
-/// An admin or super admin account as used by the application layer (mapped to <see cref="BuildingManagementMvc.Data.Entities.UserEntity"/>).
+/// An admin or super admin account backed by canonical identity accounts and role assignments.
 /// </summary>
 public class AppUserDoc
 {

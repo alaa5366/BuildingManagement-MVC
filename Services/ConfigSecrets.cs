@@ -1,4 +1,4 @@
-namespace BuildingManagementMvc.Services;
+﻿﻿namespace BuildingManagementMvc.Services;
 
 // قراءة الأسرار من الـ configuration بس (appsettings / متغيرات البيئة / user-secrets).
 // لو السر مش موجود أو لسه "CHANGE_ME" التطبيق يفشل بوضوح بدل ما يشتغل بمفتاح معروف.

@@ -25,7 +25,6 @@ namespace BuildingManagementMvc.Controllers;
 public class BackupController : Controller
 {
     private readonly BuildingsService _buildings;
-    private readonly UsersService _users;
     private readonly ExcelTemplateService _template;
     private readonly ExcelImportService _import;
     private readonly BackupService _backup;
@@ -38,7 +37,6 @@ public class BackupController : Controller
     /// </summary>
     public BackupController(
         BuildingsService buildings,
-        UsersService users,
         ExcelTemplateService template,
         ExcelImportService import,
         BackupService backup,
@@ -47,7 +45,6 @@ public class BackupController : Controller
         ILogger<BackupController> logger)
     {
         _buildings = buildings;
-        _users = users;
         _template = template;
         _import = import;
         _backup = backup;

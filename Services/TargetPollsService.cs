@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using System.Security.Cryptography;
 using System.Text;
 using BuildingManagementMvc.Data;
@@ -30,7 +30,7 @@ public sealed class TargetPollsService
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
-        var query = db.Polls.AsNoTracking().Where(p => p.BuildingId == buildingId);
+        var query = db.PollDefinitions.AsNoTracking().Where(p => p.BuildingId == buildingId);
         if (activeOnly)
         {
             var today = DateTime.UtcNow.Date;
@@ -63,7 +63,7 @@ public sealed class TargetPollsService
         string? subjectReference = null)
     {
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
-        var entity = await db.Polls.AsNoTracking().Where(p => p.BuildingId == buildingId && p.Id == pollId)
+        var entity = await db.PollDefinitions.AsNoTracking().Where(p => p.BuildingId == buildingId && p.Id == pollId)
             .Include(p => p.Options).FirstOrDefaultAsync(cancellationToken);
         if (entity is null) return null;
         var ballots = await db.PollBallots.AsNoTracking()
@@ -114,7 +114,7 @@ public sealed class TargetPollsService
         };
         var apartments = await db.Apartments.AsNoTracking().Where(x => x.BuildingId == buildingId &&
             !x.IsClosed && !x.IsDisabled).Select(x => x.Id).ToListAsync(cancellationToken);
-        db.Polls.Add(poll);
+        db.PollDefinitions.Add(poll);
         db.PollVotingPolicies.Add(new PollVotingPolicyEntity
         {
             PolicyId = Guid.NewGuid(), BuildingId = buildingId, PollId = id, PolicyVersion = 1,
@@ -135,7 +135,7 @@ public sealed class TargetPollsService
         CancellationToken cancellationToken = default)
     {
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
-        var poll = await db.Polls.FirstOrDefaultAsync(p => p.BuildingId == buildingId && p.Id == pollId, cancellationToken);
+        var poll = await db.PollDefinitions.FirstOrDefaultAsync(p => p.BuildingId == buildingId && p.Id == pollId, cancellationToken);
         if (poll is null) return false;
         if (poll.IsClosed == closed) return true;
         poll.IsClosed = closed;
@@ -151,7 +151,7 @@ public sealed class TargetPollsService
         ValidateScope(buildingId, nameof(buildingId));
         ValidateScope(pollId, nameof(pollId));
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
-        var poll = await db.Polls.FirstOrDefaultAsync(p => p.BuildingId == buildingId && p.Id == pollId, cancellationToken);
+        var poll = await db.PollDefinitions.FirstOrDefaultAsync(p => p.BuildingId == buildingId && p.Id == pollId, cancellationToken);
         if (poll is null) return false;
         if (await db.PollBallots.AsNoTracking().AnyAsync(x => x.BuildingId == buildingId && x.PollId == pollId, cancellationToken))
             return false;
@@ -167,7 +167,7 @@ public sealed class TargetPollsService
         db.PollEligibility.RemoveRange(entitlements);
         db.PollVotingPolicies.RemoveRange(policies);
         db.PollLifecycleEvents.Add(CreateEvent(buildingId, pollId, 4, null, "Poll deleted before voting", DateTime.UtcNow));
-        db.Polls.Remove(poll);
+        db.PollDefinitions.Remove(poll);
         await db.SaveChangesAsync(cancellationToken);
         return true;
     }
@@ -181,7 +181,7 @@ public sealed class TargetPollsService
         ValidateScope(apartmentId, nameof(apartmentId));
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
         var now = DateTime.UtcNow;
-        var valid = await db.Polls.AsNoTracking().AnyAsync(p => p.BuildingId == buildingId && p.Id == pollId &&
+        var valid = await db.PollDefinitions.AsNoTracking().AnyAsync(p => p.BuildingId == buildingId && p.Id == pollId &&
             !p.IsClosed && (p.Deadline == null || p.Deadline.Value.Date >= now.Date) &&
             p.Options.Any(o => o.Id == optionId), cancellationToken);
         if (!valid ||

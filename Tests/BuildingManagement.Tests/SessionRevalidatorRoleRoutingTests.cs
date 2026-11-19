@@ -1,67 +1,70 @@
-using System.Reflection;
-using System.Security.Claims;
+﻿using System.Security.Claims;
+using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Services;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace BuildingManagement.Tests;
 
-public class SessionRevalidatorRoleRoutingTests
+public sealed class SessionRevalidatorRoleRoutingTests
 {
-    private static bool IsSuperAdminPrincipal(ClaimsPrincipal principal)
+    private sealed class UnavailableFactory : IDbContextFactory<AppDbContext>
     {
-        var method = typeof(SessionRevalidator).GetMethod(
-            "IsSuperAdminPrincipal",
-            BindingFlags.Static | BindingFlags.NonPublic);
+        public AppDbContext CreateDbContext() => throw new InvalidOperationException("Legacy lookup must not be reached.");
+        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) =>
+            Task.FromException<AppDbContext>(new InvalidOperationException("Legacy lookup must not be reached."));
+    }
 
-        Assert.NotNull(method);
-        return Assert.IsType<bool>(method!.Invoke(null, new object[] { principal }));
+    private static SessionRevalidator CreateValidator() =>
+        new(new UnavailableFactory(), new MemoryCache(new MemoryCacheOptions()),
+            NullLogger<SessionRevalidator>.Instance);
+
+    private static ClaimsPrincipal Principal(params Claim[] claims) =>
+        new(new ClaimsIdentity(claims, "Cookies"));
+
+    [Fact]
+    public async Task AllowListedEmailWithResidentRole_DoesNotBypassTargetIdentityRequirement()
+    {
+        SuperAdminIdentityPolicy.Configure("allow-listed@example.test");
+        var principal = Principal(
+            new Claim(ClaimTypes.Role, "resident"),
+            new Claim(ClaimTypes.Email, "allow-listed@example.test"),
+            new Claim(ClaimTypes.NameIdentifier, "legacy-resident"));
+        Assert.False((await CreateValidator().ValidateAsync(principal)).Valid);
     }
 
     [Fact]
-    public void AllowListedEmailWithResidentRole_DoesNotRouteToSuperAdminValidation()
+    public async Task LegacySuperAdminRoleWithoutTargetMarker_IsRejected()
     {
-        var identity = new ClaimsIdentity(
-            new[]
-            {
-                new Claim(ClaimTypes.Role, "resident"),
-                new Claim(ClaimTypes.Email, "allow-listed@example.test")
-            },
-            "Cookies");
-
-        Assert.False(IsSuperAdminPrincipal(new ClaimsPrincipal(identity)));
+        var principal = Principal(
+            new Claim(ClaimTypes.Role, "superadmin"),
+            new Claim(ClaimTypes.Email, "root@example.test"),
+            new Claim(ClaimTypes.NameIdentifier, "legacy-superadmin"));
+        Assert.False((await CreateValidator().ValidateAsync(principal)).Valid);
     }
 
     [Fact]
-    public void SuperAdminRole_RoutesToSuperAdminValidation()
+    public async Task OriginalSuperAdminClaimAlone_DoesNotPreserveLegacySession()
     {
-        var identity = new ClaimsIdentity(
-            new[] { new Claim(ClaimTypes.Role, "superadmin") },
-            "Cookies");
-
-        Assert.True(IsSuperAdminPrincipal(new ClaimsPrincipal(identity)));
+        var principal = Principal(
+            new Claim("originalRole", "superadmin"),
+            new Claim(ClaimTypes.Role, "resident"),
+            new Claim(ClaimTypes.NameIdentifier, "legacy-resident"));
+        Assert.False((await CreateValidator().ValidateAsync(principal)).Valid);
     }
-
 
     [Fact]
     public void SuperAdminSecurityStamp_ChangesWhenCredentialOrAccountStateChanges()
     {
         var updatedAt = new DateTime(2026, 11, 19, 8, 0, 0, DateTimeKind.Utc);
-        var original = SqlAuthService.CreateSuperAdminSecurityStamp("bcrypt-hash-a", updatedAt, true, false);
-        var changedPassword = SqlAuthService.CreateSuperAdminSecurityStamp("bcrypt-hash-b", updatedAt, true, false);
-        var changedStatus = SqlAuthService.CreateSuperAdminSecurityStamp("bcrypt-hash-a", updatedAt, false, true);
+        var original = SuperAdminIdentityPolicy.CreateSecurityStamp("bcrypt-hash-a", updatedAt, true, false);
+        var changedPassword = SuperAdminIdentityPolicy.CreateSecurityStamp("bcrypt-hash-b", updatedAt, true, false);
+        var changedStatus = SuperAdminIdentityPolicy.CreateSecurityStamp("bcrypt-hash-a", updatedAt, false, true);
 
         Assert.NotEqual(original, changedPassword);
         Assert.NotEqual(original, changedStatus);
         Assert.DoesNotContain("bcrypt-hash-a", original, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void OriginalSuperAdminClaim_RoutesToSuperAdminValidation()
-    {
-        var identity = new ClaimsIdentity(
-            new[] { new Claim("originalRole", "superadmin") },
-            "Cookies");
-
-        Assert.True(IsSuperAdminPrincipal(new ClaimsPrincipal(identity)));
     }
 }

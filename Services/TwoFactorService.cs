@@ -1,6 +1,5 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -45,13 +44,9 @@ public sealed class TwoFactorService
     public async Task<bool> IsEnabledAsync(string uid, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(uid)) return false;
-        if (Guid.TryParse(uid, out var accountId) && await IsTargetAccountAsync(accountId, cancellationToken))
-            return await IsTargetEnabledAsync(accountId, cancellationToken);
-
-        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
-        return await db.Users.AsNoTracking().AnyAsync(
-            x => x.Uid == uid && (x.Role == "admin" || x.Role == "superadmin") && x.TwoFactorEnabled,
-            cancellationToken);
+        if (!Guid.TryParse(uid, out var accountId) || !await IsTargetAccountAsync(accountId, cancellationToken))
+            return false;
+        return await IsTargetEnabledAsync(accountId, cancellationToken);
     }
 
     /// <summary>Enables two-factor authentication after validating the initial TOTP code and creates one-time recovery codes.</summary>
@@ -64,39 +59,9 @@ public sealed class TwoFactorService
         string uid, string secret, string code, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(uid) || string.IsNullOrWhiteSpace(secret)) return null;
-        if (Guid.TryParse(uid, out var accountId) && await IsTargetAccountAsync(accountId, cancellationToken))
-            return await EnableTargetAsync(accountId, secret, code, cancellationToken);
-
-        using var gate = await KeyedLock.AcquireAsync("2fa:" + uid, cancellationToken);
-        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
-        var user = await db.Users.FirstOrDefaultAsync(x => x.Uid == uid, cancellationToken);
-        if (user == null || user.Role is not ("admin" or "superadmin")
-            || !user.IsActive || user.IsDisabled || user.TwoFactorEnabled)
+        if (!Guid.TryParse(uid, out var accountId) || !await IsTargetAccountAsync(accountId, cancellationToken))
             return null;
-
-        long acceptedStep;
-        try
-        {
-            if (!TotpAuthenticator.TryVerify(secret, code, DateTimeOffset.UtcNow, out acceptedStep))
-                return null;
-        }
-        catch (FormatException)
-        {
-            return null;
-        }
-
-        var recoveryCodes = Enumerable.Range(0, 10)
-            .Select(_ => FormatRecoveryCode(TotpAuthenticator.EncodeBase32(RandomNumberGenerator.GetBytes(10))))
-            .ToArray();
-
-        user.TwoFactorSecretEncrypted = _encryption.Encrypt(secret);
-        user.TwoFactorEnabled = true;
-        user.TwoFactorLastUsedStep = acceptedStep;
-        user.TwoFactorRecoveryCodesJson = JsonSerializer.Serialize(recoveryCodes.Select(HashRecoveryCode));
-        user.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("Two-factor authentication enabled for administrator {Uid}", uid);
-        return recoveryCodes;
+        return await EnableTargetAsync(accountId, secret, code, cancellationToken);
     }
 
     /// <summary>Verifies and consumes a TOTP value or a one-time recovery code.</summary>
@@ -104,16 +69,9 @@ public sealed class TwoFactorService
         string uid, string code, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(uid) || string.IsNullOrWhiteSpace(code)) return false;
-        if (Guid.TryParse(uid, out var accountId) && await IsTargetAccountAsync(accountId, cancellationToken))
-            return await VerifyAndConsumeTargetAsync(accountId, code, cancellationToken);
-
-        using var gate = await KeyedLock.AcquireAsync("2fa:" + uid, cancellationToken);
-        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
-        var user = await db.Users.FirstOrDefaultAsync(x => x.Uid == uid, cancellationToken);
-        if (user == null || !TryConsumeCode(user, code)) return false;
-
-        await db.SaveChangesAsync(cancellationToken);
-        return true;
+        if (!Guid.TryParse(uid, out var accountId) || !await IsTargetAccountAsync(accountId, cancellationToken))
+            return false;
+        return await VerifyAndConsumeTargetAsync(accountId, code, cancellationToken);
     }
 
     /// <summary>Disables two-factor authentication after consuming a valid TOTP or recovery code.</summary>
@@ -125,22 +83,9 @@ public sealed class TwoFactorService
         string uid, string code, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(uid) || string.IsNullOrWhiteSpace(code)) return false;
-        if (Guid.TryParse(uid, out var accountId) && await IsTargetAccountAsync(accountId, cancellationToken))
-            return await DisableTargetAsync(accountId, code, cancellationToken);
-
-        using var gate = await KeyedLock.AcquireAsync("2fa:" + uid, cancellationToken);
-        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
-        var user = await db.Users.FirstOrDefaultAsync(x => x.Uid == uid, cancellationToken);
-        if (user == null || !TryConsumeCode(user, code)) return false;
-
-        user.TwoFactorEnabled = false;
-        user.TwoFactorSecretEncrypted = null;
-        user.TwoFactorRecoveryCodesJson = null;
-        user.TwoFactorLastUsedStep = null;
-        user.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("Two-factor authentication disabled for administrator {Uid}", uid);
-        return true;
+        if (!Guid.TryParse(uid, out var accountId) || !await IsTargetAccountAsync(accountId, cancellationToken))
+            return false;
+        return await DisableTargetAsync(accountId, code, cancellationToken);
     }
 
     private async Task<bool> IsTargetAccountAsync(Guid accountId, CancellationToken cancellationToken)
@@ -161,7 +106,7 @@ public sealed class TwoFactorService
             join person in db.Persons.AsNoTracking() on account.PersonId equals person.PersonId
             where setting.AccountId == accountId && setting.IsEnabled
                 && account.AccountStatus == 1 && !person.IsArchived
-                && (assignment.RoleKey == "building-admin" || assignment.RoleKey == "superadmin")
+                && (assignment.RoleKey == "admin" || assignment.RoleKey == "building-admin" || assignment.RoleKey == "superadmin")
                 && role.IsActive && assignment.RevokedAtUtc == null && assignment.ValidFromUtc <= now
                 && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
             select setting.AccountId).AnyAsync(cancellationToken);
@@ -181,7 +126,7 @@ public sealed class TwoFactorService
             join assignment in db.UserRoleAssignments on account.AccountId equals assignment.AccountId
             join role in db.RoleDefinitions on assignment.RoleKey equals role.RoleKey
             where account.AccountId == accountId && account.AccountStatus == 1 && !person.IsArchived
-                && (assignment.RoleKey == "building-admin" || assignment.RoleKey == "superadmin")
+                && (assignment.RoleKey == "admin" || assignment.RoleKey == "building-admin" || assignment.RoleKey == "superadmin")
                 && role.IsActive && assignment.RevokedAtUtc == null && assignment.ValidFromUtc <= now
                 && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
             select account.AccountId).AnyAsync(cancellationToken);
@@ -338,75 +283,13 @@ public sealed class TwoFactorService
                join assignment in db.UserRoleAssignments on account.AccountId equals assignment.AccountId
                join role in db.RoleDefinitions on assignment.RoleKey equals role.RoleKey
                where account.AccountId == accountId && account.AccountStatus == 1 && !person.IsArchived
-                   && (assignment.RoleKey == "building-admin" || assignment.RoleKey == "superadmin")
+                   && (assignment.RoleKey == "admin" || assignment.RoleKey == "building-admin" || assignment.RoleKey == "superadmin")
                    && role.IsActive && assignment.RevokedAtUtc == null && assignment.ValidFromUtc <= now
                    && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
                select assignment.RoleAssignmentId).AnyAsync(cancellationToken);
 
     private static string NormalizeRecoveryCode(string code) =>
         new((code ?? "").ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
-
-    private bool TryConsumeCode(UserEntity user, string code)
-    {
-        if (!user.IsActive || user.IsDisabled || user.Role is not ("admin" or "superadmin")
-            || !user.TwoFactorEnabled)
-            return false;
-
-        // Recovery codes are independent of the encrypted TOTP secret so they still
-        // provide a recovery path if the encryption key is rotated or ciphertext is damaged.
-        var hashes = DeserializeRecoveryHashes(user.TwoFactorRecoveryCodesJson);
-        var candidate = HashRecoveryCode(code);
-        var matchedIndex = -1;
-        for (var i = 0; i < hashes.Count; i++)
-        {
-            if (FixedEquals(hashes[i], candidate))
-                matchedIndex = i;
-        }
-
-        if (matchedIndex >= 0)
-        {
-            hashes.RemoveAt(matchedIndex);
-            user.TwoFactorRecoveryCodesJson = JsonSerializer.Serialize(hashes);
-            return true;
-        }
-
-        if (string.IsNullOrWhiteSpace(user.TwoFactorSecretEncrypted))
-            return false;
-
-        string secret;
-        try
-        {
-            secret = _encryption.Decrypt(user.TwoFactorSecretEncrypted);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unable to decrypt two-factor secret for user {Uid}", user.Uid);
-            return false;
-        }
-
-        try
-        {
-            if (!TotpAuthenticator.TryVerify(secret, code, DateTimeOffset.UtcNow, out var acceptedStep))
-                return false;
-            if (user.TwoFactorLastUsedStep.HasValue && acceptedStep <= user.TwoFactorLastUsedStep.Value)
-                return false;
-
-            user.TwoFactorLastUsedStep = acceptedStep;
-            return true;
-        }
-        catch (FormatException ex)
-        {
-            _logger.LogError(ex, "Stored two-factor secret is malformed for user {Uid}", user.Uid);
-            return false;
-        }
-    }
-
-    private static List<string> DeserializeRecoveryHashes(string? json)
-    {
-        if (string.IsNullOrWhiteSpace(json)) return new List<string>();
-        try { return JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>(); }
-        catch (JsonException) { return new List<string>(); }
-    }
 
     private static string FormatRecoveryCode(string value)
     {
@@ -415,20 +298,6 @@ public sealed class TwoFactorService
             .Select(i => normalized.Substring(i * 4, Math.Min(4, normalized.Length - i * 4))));
     }
 
-    private static string HashRecoveryCode(string code)
-    {
-        var normalized = new string((code ?? "").ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized)));
-    }
-
-    private static bool FixedEquals(string left, string right)
-    {
-        try
-        {
-            return CryptographicOperations.FixedTimeEquals(Convert.FromHexString(left), Convert.FromHexString(right));
-        }
-        catch (FormatException) { return false; }
-    }
 }
 
 /// <summary>RFC 6238 TOTP primitives using Base32 secrets and six-digit SHA-1 codes.</summary>

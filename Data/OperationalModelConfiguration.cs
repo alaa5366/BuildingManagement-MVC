@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Data.Entities;
+﻿using BuildingManagementMvc.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Data;
@@ -22,6 +22,194 @@ internal static class OperationalModelConfiguration
             e.Property(x => x.UpdatedAtUtc).HasColumnType("datetime2(3)").HasDefaultValueSql("SYSUTCDATETIME()");
             e.HasIndex(x => new { x.BuildingId, x.IsActive, x.Name })
                 .HasDatabaseName("IX_SavedWhatsAppTemplates_Building_Active_Name");
+        });
+
+        mb.Entity<GlobalApplicationSettingsEntity>(e =>
+        {
+            e.ToTable("GlobalApplicationSettings", table =>
+            {
+                table.HasCheckConstraint("CK_GlobalApplicationSettings_SessionTimeout", "[SessionTimeoutDays] BETWEEN 1 AND 365");
+                table.HasCheckConstraint("CK_GlobalApplicationSettings_PinAttempts", "[MaxPinAttempts] BETWEEN 1 AND 100");
+            });
+            e.HasKey(item => item.SettingsId);
+            e.Property(item => item.SettingsId).HasMaxLength(64).ValueGeneratedNever();
+            e.Property(item => item.AppName).HasMaxLength(200).IsRequired();
+            e.Property(item => item.DefaultLanguage).HasMaxLength(16).IsRequired();
+            e.Property(item => item.StorageMode).HasMaxLength(32).IsRequired();
+            e.Property(item => item.SessionTimeoutDays).HasDefaultValue(7);
+            e.Property(item => item.MaxPinAttempts).HasDefaultValue(5);
+            e.Property(item => item.UpdatedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.UpdatedByReference).HasMaxLength(160);
+            e.Property(item => item.ImportedAtUtc).HasColumnType("datetime2(3)")
+                .HasDefaultValueSql("SYSUTCDATETIME()");
+        });
+
+        mb.Entity<ProtectedIntegrationSecretEntity>(e =>
+        {
+            e.ToTable("ProtectedIntegrationSecrets");
+            e.HasKey(item => item.SecretId);
+            e.Property(item => item.SecretId).ValueGeneratedNever();
+            e.Property(item => item.ScopeReference).HasMaxLength(160).IsRequired();
+            e.Property(item => item.Provider).HasMaxLength(100).IsRequired();
+            e.Property(item => item.SecretName).HasMaxLength(160).IsRequired();
+            e.Property(item => item.Ciphertext).IsRequired();
+            e.Property(item => item.KeyVersion).HasMaxLength(100).IsRequired();
+            e.Property(item => item.CreatedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.RotatedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.RevokedAtUtc).HasColumnType("datetime2(3)");
+            e.HasIndex(item => new { item.ScopeType, item.ScopeReference, item.Provider, item.SecretName })
+                .IsUnique().HasDatabaseName("UQ_ProtectedIntegrationSecrets_Scope");
+        });
+
+        mb.Entity<BackupJobEntity>(e =>
+        {
+            e.ToTable("BackupJobs");
+            e.HasKey(item => item.BackupJobId);
+            e.Property(item => item.BackupJobId).ValueGeneratedNever();
+            e.Property(item => item.RequestedByReference).HasMaxLength(160);
+            e.Property(item => item.DatabaseReference).HasMaxLength(200).IsRequired();
+            e.Property(item => item.SafeErrorCode).HasMaxLength(100);
+            e.Property(item => item.MetadataJson).HasColumnType("nvarchar(max)");
+            e.Property(item => item.StartedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.CompletedAtUtc).HasColumnType("datetime2(3)");
+        });
+
+        mb.Entity<BackupArtifactEntity>(e =>
+        {
+            e.ToTable("BackupArtifacts", table => table.HasCheckConstraint("CK_BackupArtifacts_Size", "[SizeBytes] >= 0"));
+            e.HasKey(item => item.BackupArtifactId);
+            e.Property(item => item.BackupArtifactId).ValueGeneratedNever();
+            e.Property(item => item.StorageReference).HasMaxLength(500).IsRequired();
+            e.Property(item => item.Sha256).HasColumnType("varbinary(32)").IsRequired();
+            e.Property(item => item.SizeBytes).IsRequired();
+            e.Property(item => item.CreatedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.RetainUntilUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.EncryptionKeyVersion).HasMaxLength(100);
+        });
+
+        mb.Entity<BackupRetentionEventEntity>(e =>
+        {
+            e.ToTable("BackupRetentionEvents");
+            e.HasKey(item => item.RetentionEventId);
+            e.Property(item => item.RetentionEventId).ValueGeneratedNever();
+            e.Property(item => item.OccurredAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.ActorReference).HasMaxLength(160);
+            e.Property(item => item.Reason).HasMaxLength(1000);
+            e.HasOne<BackupArtifactEntity>().WithMany()
+                .HasForeignKey(item => item.BackupArtifactId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        mb.Entity<RestoreOperationEntity>(e =>
+        {
+            e.ToTable("RestoreOperations");
+            e.HasKey(item => item.RestoreOperationId);
+            e.Property(item => item.RestoreOperationId).ValueGeneratedNever();
+            e.Property(item => item.TargetDatabase).HasMaxLength(200).IsRequired();
+            e.Property(item => item.ApprovedByReference).HasMaxLength(160);
+            e.Property(item => item.SafeErrorCode).HasMaxLength(100);
+            e.Property(item => item.RequestedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.ApprovedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.StartedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.CompletedAtUtc).HasColumnType("datetime2(3)");
+            e.HasOne<BackupArtifactEntity>().WithMany()
+                .HasForeignKey(item => item.BackupArtifactId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        mb.Entity<BackupScheduleConfigurationEntity>(e =>
+        {
+            e.ToTable("BackupScheduleConfigurations", table =>
+            {
+                table.HasCheckConstraint("CK_BackupScheduleConfigurations_Hour", "[ScheduledHour] BETWEEN 0 AND 23");
+                table.HasCheckConstraint("CK_BackupScheduleConfigurations_DayOfWeek", "[DayOfWeek] IS NULL OR [DayOfWeek] BETWEEN 0 AND 6");
+                table.HasCheckConstraint("CK_BackupScheduleConfigurations_DayOfMonth", "[DayOfMonth] IS NULL OR [DayOfMonth] BETWEEN 1 AND 31");
+                table.HasCheckConstraint("CK_BackupScheduleConfigurations_Retention", "[MaxBackupsToKeep] BETWEEN 1 AND 30");
+            });
+            e.HasKey(item => item.ConfigurationId);
+            e.Property(item => item.ConfigurationId).ValueGeneratedNever();
+            e.Property(item => item.LegacySettingId).HasMaxLength(20).IsRequired();
+            e.Property(item => item.Frequency).HasMaxLength(20).IsRequired();
+            e.Property(item => item.CollectionsJson).HasColumnType("nvarchar(max)").IsRequired();
+            e.Property(item => item.LastRunStatus).HasMaxLength(30);
+            e.Property(item => item.UpdatedByReference).HasMaxLength(128);
+            e.Property(item => item.LastRunAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.UpdatedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.ImportedAtUtc).HasColumnType("datetime2(3)");
+            e.HasIndex(item => item.LegacySettingId).IsUnique()
+                .HasDatabaseName("UQ_BackupScheduleConfigurations_Legacy");
+        });
+
+        mb.Entity<MediaCredentialReferenceEntity>(e =>
+        {
+            e.ToTable("MediaCredentialReferences");
+            e.HasKey(item => item.CredentialReferenceId);
+            e.Property(item => item.CredentialReferenceId).ValueGeneratedNever();
+            e.Property(item => item.BuildingId).HasMaxLength(64).IsRequired();
+            e.Property(item => item.DvrLegacyId).HasMaxLength(128);
+            e.Property(item => item.VaultProvider).HasMaxLength(80).IsRequired();
+            e.Property(item => item.VaultSecretReference).HasMaxLength(500).IsRequired();
+            e.Property(item => item.KeyVersion).HasMaxLength(100).IsRequired();
+            e.Property(item => item.CreatedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.RotatedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.RevokedAtUtc).HasColumnType("datetime2(3)");
+            e.HasIndex(item => item.DvrLegacyId).IsUnique()
+                .HasDatabaseName("UQ_MediaCredentialReferences_Legacy");
+        });
+
+        mb.Entity<MediaProvisioningOperationEntity>(e =>
+        {
+            e.ToTable("MediaProvisioningOperations");
+            e.HasKey(item => item.OperationId);
+            e.Property(item => item.OperationId).ValueGeneratedNever();
+            e.Property(item => item.DvrLegacyId).HasMaxLength(128);
+            e.Property(item => item.SafeErrorCode).HasMaxLength(100);
+            e.Property(item => item.RequestedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.CompletedAtUtc).HasColumnType("datetime2(3)");
+            e.HasOne<MediaCredentialReferenceEntity>().WithMany()
+                .HasForeignKey(item => item.CredentialReferenceId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        mb.Entity<MediaAccessSessionEntity>(e =>
+        {
+            e.ToTable("MediaAccessSessions");
+            e.HasKey(item => item.MediaAccessSessionId);
+            e.Property(item => item.MediaAccessSessionId).ValueGeneratedNever();
+            e.Property(item => item.CameraLegacyId).HasMaxLength(128);
+            e.Property(item => item.SessionReference).HasMaxLength(200).IsRequired();
+            e.Property(item => item.IssuedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.ExpiresAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.RevokedAtUtc).HasColumnType("datetime2(3)");
+        });
+
+        mb.Entity<MediaDeviceEntity>(e =>
+        {
+            e.ToTable("MediaDevices");
+            e.HasKey(item => item.MediaDeviceId);
+            e.Property(item => item.MediaDeviceId).ValueGeneratedNever();
+            e.Property(item => item.BuildingId).HasMaxLength(64).IsRequired();
+            e.Property(item => item.Name).HasMaxLength(160).IsRequired();
+            e.Property(item => item.HostAddress).HasMaxLength(255).IsRequired();
+            e.Property(item => item.Brand).HasMaxLength(80).IsRequired();
+            e.Property(item => item.Username).HasMaxLength(160).IsRequired();
+            e.Property(item => item.CreatedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.UpdatedAtUtc).HasColumnType("datetime2(3)");
+            e.HasIndex(item => new { item.BuildingId, item.HostAddress, item.Port })
+                .IsUnique().HasDatabaseName("UQ_MediaDevices_Building_Host_Port");
+        });
+
+        mb.Entity<MediaDeviceChannelEntity>(e =>
+        {
+            e.ToTable("MediaDeviceChannels");
+            e.HasKey(item => item.ChannelId);
+            e.Property(item => item.ChannelId).ValueGeneratedNever();
+            e.Property(item => item.BuildingId).HasMaxLength(64).IsRequired();
+            e.Property(item => item.Name).HasMaxLength(160).IsRequired();
+            e.Property(item => item.RtspPath).HasMaxLength(500).IsRequired();
+            e.Property(item => item.CreatedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.UpdatedAtUtc).HasColumnType("datetime2(3)");
+            e.HasOne<MediaDeviceEntity>().WithMany()
+                .HasForeignKey(item => item.MediaDeviceId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(item => new { item.MediaDeviceId, item.ChannelNumber })
+                .IsUnique().HasDatabaseName("UQ_MediaDeviceChannels_Device_Channel");
         });
 
         mb.Entity<AuditEventEntity>(e =>
@@ -48,6 +236,37 @@ internal static class OperationalModelConfiguration
             e.HasIndex(x => new { x.BuildingId, x.EventCategory, x.ResourceType, x.OccurredAtUtc, x.AuditEventId })
                 .IsDescending(false, false, false, true, true)
                 .HasDatabaseName("IX_AuditEvents_Building_Category_Resource_Time");
+        });
+
+        mb.Entity<QrCapabilityEntity>(e =>
+        {
+            e.ToTable("QrCapabilities");
+            e.HasKey(item => item.CapabilityId);
+            e.Property(item => item.CapabilityId).ValueGeneratedNever();
+            e.Property(item => item.BuildingId).HasMaxLength(64).IsRequired();
+            e.Property(item => item.ApartmentId).HasMaxLength(64);
+            e.Property(item => item.TargetReference).HasMaxLength(160).IsRequired();
+            e.Property(item => item.TokenHash).HasColumnType("varbinary(64)").IsRequired();
+            e.Property(item => item.IssuedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.ExpiresAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.RevokedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.RevokedByReference).HasMaxLength(160);
+            e.HasIndex(item => item.TokenHash).IsUnique().HasDatabaseName("UQ_QrCapabilities_Token");
+            e.HasIndex(item => new { item.BuildingId, item.ApartmentId, item.ExpiresAtUtc })
+                .HasDatabaseName("IX_QrCapabilities_Target_Expiry");
+        });
+
+        mb.Entity<QrCapabilityUseEntity>(e =>
+        {
+            e.ToTable("QrCapabilityUses");
+            e.HasKey(item => item.UseId);
+            e.Property(item => item.UseId).ValueGeneratedNever();
+            e.Property(item => item.UsedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(item => item.UseReference).HasMaxLength(160);
+            e.HasOne<QrCapabilityEntity>().WithMany()
+                .HasForeignKey(item => item.CapabilityId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(item => new { item.CapabilityId, item.UsedAtUtc })
+                .HasDatabaseName("IX_QrCapabilityUses_Capability_UsedAt");
         });
 
         mb.Entity<PresenceSessionEntity>(e =>

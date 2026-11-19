@@ -1,10 +1,13 @@
-using BuildingManagementMvc.Data;
+﻿using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
 
 /// <summary>Target-schema building and apartment lookups for QR issuance and login.</summary>
+public sealed record TargetResidentAccount(Guid AccountId, string Name, string Phone, bool IsPrimary);
+
+    /// <summary> Represents the TargetQrService data or service contract. </summary>
 public sealed class TargetQrService
 {
     private readonly IDbContextFactory<AppDbContext> _factory;
@@ -68,5 +71,34 @@ public sealed class TargetQrService
             FloorLabel = x.Floor == null ? "" : x.Floor.Label,
             FloorOrder = x.Floor == null ? 0 : x.Floor.SortOrder
         }).FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <summary>Lists active target-identity resident accounts for an apartment.</summary>
+    public async Task<List<TargetResidentAccount>> GetResidentAccountsForApartmentAsync(
+        string buildingId, string apartmentId, CancellationToken cancellationToken = default)
+    {
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        var now = DateTime.UtcNow;
+        var rows = await (
+            from occupancy in db.ApartmentOccupancies.AsNoTracking()
+            join person in db.Persons.AsNoTracking() on occupancy.PersonId equals person.PersonId
+            join account in db.UserAccounts.AsNoTracking() on person.PersonId equals account.PersonId
+            where occupancy.BuildingId == buildingId && occupancy.ApartmentId == apartmentId
+                && occupancy.ValidFromUtc <= now && (occupancy.ValidToUtc == null || occupancy.ValidToUtc > now)
+                && !person.IsArchived && account.AccountStatus == 1
+                && db.UserRoleAssignments.Any(assignment => assignment.AccountId == account.AccountId
+                    && assignment.RoleKey == "resident" && assignment.RevokedAtUtc == null
+                    && assignment.ValidFromUtc <= now
+                    && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
+                    && ((assignment.ScopeType == 1 && assignment.ScopeBuildingId == buildingId)
+                        || (assignment.ScopeType == 2 && assignment.ScopeBuildingId == buildingId
+                            && assignment.ScopeApartmentId == apartmentId)))
+            orderby occupancy.IsPrimary descending, person.DisplayName
+            select new { account.AccountId, person.DisplayName, Phone = person.PrimaryPhone ?? "", occupancy.IsPrimary })
+            .ToListAsync(cancellationToken);
+        return rows.GroupBy(item => item.AccountId)
+            .Select(group => group.First())
+            .Select(item => new TargetResidentAccount(item.AccountId, item.DisplayName, item.Phone, item.IsPrimary))
+            .ToList();
     }
 }

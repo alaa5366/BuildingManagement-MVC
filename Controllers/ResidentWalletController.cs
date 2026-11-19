@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿﻿using System.Security.Claims;
 using System.Text.Json;
 using BuildingManagementMvc.Data;
 using Microsoft.AspNetCore.Authorization;
@@ -70,7 +70,7 @@ public class ResidentWalletController : Controller
         var vm = await BuildViewModelAsync(building, apt, mk, allMonths, fromMonth, toMonth,
             typeFilter, statusFilter, page, pageSize);
 
-        // ✅ AJAX — ارجع Partial بس
+        // âœ… AJAX â€” ارجع Partial بس
         if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
         {
             return PartialView("_StatementPartial", vm.Statement);
@@ -93,7 +93,7 @@ public class ResidentWalletController : Controller
     }
 
     // ============================================================
-    // ✅ Helper: بناء ViewModel
+    // âœ… Helper: بناء ViewModel
     // ============================================================
     private async Task<(StatementPartialViewModels Statement, PagedResult<Deposit> PendingDeposits, decimal Balance)> BuildViewModelAsync(
         Building building, Apartment apt, string mk,
@@ -159,7 +159,7 @@ public class ResidentWalletController : Controller
     }
 
     // ============================================================
-    // ✅ CreateDeposit
+    // âœ… CreateDeposit
     // ============================================================
     /// <summary>
     /// Creates the deposit.
@@ -285,7 +285,7 @@ public class ResidentWalletController : Controller
     }
 
     // ============================================================
-    // ✅ ParseReceiptImage (OCR)
+    // âœ… ParseReceiptImage (OCR)
     // ============================================================
     /// <summary>
     /// Parses the receipt image.
@@ -358,10 +358,10 @@ public class ResidentWalletController : Controller
     private static string BuildNote(TransactionData d)
     {
         var parts = new List<string>();
-        if (!string.IsNullOrEmpty(d.Date)) parts.Add($"📅 {d.Date}");
-        if (!string.IsNullOrEmpty(d.Reference)) parts.Add($"🔢 Ref: {d.Reference}");
-        if (!string.IsNullOrEmpty(d.RecipientAccount)) parts.Add($"🏦 Acc: {d.RecipientAccount}");
-        if (!string.IsNullOrEmpty(d.From)) parts.Add($"👤 {d.From}");
+        if (!string.IsNullOrEmpty(d.Date)) parts.Add($"ًں“… {d.Date}");
+        if (!string.IsNullOrEmpty(d.Reference)) parts.Add($"ًں”¢ Ref: {d.Reference}");
+        if (!string.IsNullOrEmpty(d.RecipientAccount)) parts.Add($"ًںڈ¦ Acc: {d.RecipientAccount}");
+        if (!string.IsNullOrEmpty(d.From)) parts.Add($"ًں‘¤ {d.From}");
         return string.Join(" | ", parts);
     }
 }

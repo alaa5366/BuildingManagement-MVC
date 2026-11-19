@@ -1,256 +1,127 @@
-﻿using BuildingManagementMvc.Data;
-using BuildingManagementMvc.Data.Entities;
-using BuildingManagementMvc.Models;
-using BuildingManagementMvc.Services;
+﻿using BuildingManagementMvc.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
 using Xunit;
 
 namespace BuildingManagement.Tests;
 
-public class ResidentsServiceTests
+public sealed class ResidentsServiceTests
 {
-    private readonly AppDbContext _db;
-    private readonly ResidentsService _service;
-    private readonly Mock<IAuditLogger> _mockAudit;
-
-    public ResidentsServiceTests()
-    {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-
-        // ✅ نستخدم نفس الـ context في الـ service والـ assertions
-        _db = new AppDbContext(options);
-
-        var factory = new Mock<IDbContextFactory<AppDbContext>>();
-        // ✅ كل استدعاء بيفتح context جديد لكن على نفس الـ DB
-        factory.Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-               .ReturnsAsync(() => new AppDbContext(options));
-
-        _mockAudit = new Mock<IAuditLogger>();
-
-        _service = new ResidentsService(
-            factory.Object,
-            _mockAudit.Object,
-            NullLogger<ResidentsService>.Instance
-        );
-    }
-
-    // ================================================================
-    // CreateAsync
-    // ================================================================
-
     [Fact]
-    public async Task CreateAsync_ValidData_CreatesResidentWithHashedPin()
+    public async Task CreateAsync_StoresPersonAccountCredentialRoleAndOccupancyInTargetSchema()
     {
-        await _service.CreateAsync("b1", "a1", "Ali", "01001234567", "01001234567", "1234", "ali@test.com", true, true, "admin");
+        await using var context = new ResidentsServiceTestContext();
+        await context.SeedApartmentAsync();
 
-        _db.ChangeTracker.Clear(); // ✅ نتأكد إننا بنقرأ من الـ DB
-        var resident = await _db.Residents.FirstOrDefaultAsync();
+        await context.Service.CreateAsync("b1", "a1", "Ali", "01001234567", "01001234567",
+            "4321", "ali@example.test", true, true, "system");
 
-        Assert.NotNull(resident);
-        Assert.Equal("Ali", resident.Name);
-        // ✅ نتوقع الناتج الفعلي من NormalizePhone
-        Assert.Equal(AuthHelpers.NormalizePhone("01001234567"), resident.Phone);
-        Assert.NotEqual("1234", resident.PinHash);
-        Assert.True(BCrypt.Net.BCrypt.Verify("1234", resident.PinHash));
-        Assert.True(resident.IsPrimary);
-        Assert.True(resident.IsOwner);
+        await using var db = context.CreateDb();
+        var person = await db.Persons.SingleAsync();
+        var account = await db.UserAccounts.SingleAsync();
+        var credential = await db.UserCredentials.SingleAsync();
+        var occupancy = await db.ApartmentOccupancies.SingleAsync();
+        Assert.Equal("Ali", person.DisplayName);
+        Assert.Equal(account.PersonId, person.PersonId);
+        Assert.True(new BcryptPasswordHasher().VerifyPin("4321", credential.CredentialHash));
+        Assert.Equal("resident", (await db.UserRoleAssignments.SingleAsync()).RoleKey);
+        Assert.True(occupancy.IsPrimary);
+        Assert.Equal("a1", occupancy.ApartmentId);
     }
 
     [Fact]
-    public async Task CreateAsync_NormalizesPhoneNumber()
+    public async Task UpdateAsync_ChangesPersonAndOccupancyWithoutLegacyResidentRows()
     {
-        await _service.CreateAsync("b1", "a1", "Ali", "+201001234567", "+201001234567", "1234", null, true, true, "admin");
+        await using var context = new ResidentsServiceTestContext();
+        await context.SeedApartmentAsync();
+        await context.Service.CreateAsync("b1", "a1", "Ali", "01001234567", "01001234567",
+            "4321", null, true, true, "system");
+        var resident = (await context.Service.GetByApartmentAsync("b1", "a1")).Single();
 
-        _db.ChangeTracker.Clear();
-        var resident = await _db.Residents.FirstOrDefaultAsync();
+        await context.Service.UpdateAsync(resident.Id, "Ali Updated", "01111111111",
+            "01111111111", "updated@example.test", false, false, "system");
 
-        Assert.NotNull(resident);
-        // ✅ نتوقع الناتج الفعلي
-        Assert.Equal(AuthHelpers.NormalizePhone("+201001234567"), resident.Phone);
-    }
-
-    // ================================================================
-    // UpdateAsync
-    // ================================================================
-
-    [Fact]
-    public async Task UpdateAsync_ExistingResident_UpdatesFields()
-    {
-        await _service.CreateAsync("b1", "a1", "Ali", "01001234567", "01001234567", "1234", null, true, true, "admin");
-
-        _db.ChangeTracker.Clear();
-        var resident = await _db.Residents.FirstAsync();
-        var residentId = resident.Id;
-
-        await _service.UpdateAsync(residentId, "Ali Updated", "01111111111", "01111111111", "new@test.com", false, false, "admin");
-
-        _db.ChangeTracker.Clear();
-        var updated = await _db.Residents.FindAsync(residentId);
-
-        Assert.NotNull(updated);
-        Assert.Equal("Ali Updated", updated.Name);
-        Assert.Equal(AuthHelpers.NormalizePhone("01111111111"), updated.Phone);
-        Assert.False(updated.IsPrimary);
-        Assert.False(updated.IsOwner);
-        Assert.NotNull(updated.UpdatedAt);
+        await using var db = context.CreateDb();
+        var person = await db.Persons.SingleAsync();
+        var occupancy = await db.ApartmentOccupancies.SingleAsync();
+        Assert.Equal("Ali Updated", person.DisplayName);
+        Assert.Equal(AuthHelpers.NormalizePhone("01111111111"), person.PrimaryPhone);
+        Assert.False(occupancy.IsPrimary);
+        Assert.Equal((byte)2, occupancy.OccupancyType);
     }
 
     [Fact]
-    public async Task UpdateAsync_NonExistingResident_DoesNothing()
+    public async Task ChangePinAsync_ReplacesCredentialAndRotatesSecurityStamp()
     {
-        await _service.UpdateAsync("ghost", "Ali", "0100", "0100", null, true, true, "admin");
+        await using var context = new ResidentsServiceTestContext();
+        await context.SeedApartmentAsync();
+        await context.Service.CreateAsync("b1", "a1", "Ali", "01001234567", "01001234567",
+            "4321", null, true, true, "system");
+        var resident = (await context.Service.GetByApartmentAsync("b1", "a1")).Single();
+        await using var beforeDb = context.CreateDb();
+        var accountBefore = await beforeDb.UserAccounts.SingleAsync();
+        var oldStamp = accountBefore.SecurityStamp;
 
-        _db.ChangeTracker.Clear();
-        Assert.Empty(_db.Residents);
-    }
+        await context.Service.ChangePinAsync(resident.Id, "9876", "system");
 
-    // ================================================================
-    // ChangePinAsync
-    // ================================================================
-
-    [Fact]
-    public async Task ChangePinAsync_UpdatesPinHash()
-    {
-        await _service.CreateAsync("b1", "a1", "Ali", "01001234567", "01001234567", "1234", null, true, true, "admin");
-
-        _db.ChangeTracker.Clear();
-        var resident = await _db.Residents.FirstAsync();
-        var residentId = resident.Id;
-
-        await _service.ChangePinAsync(residentId, "9999", "admin");
-
-        _db.ChangeTracker.Clear();
-        var updated = await _db.Residents.FindAsync(residentId);
-
-        Assert.NotNull(updated);
-        Assert.True(BCrypt.Net.BCrypt.Verify("9999", updated.PinHash));
-        Assert.False(BCrypt.Net.BCrypt.Verify("1234", updated.PinHash));
-    }
-
-    // ================================================================
-    // SetDisabledAsync
-    // ================================================================
-
-    [Fact]
-    public async Task SetDisabledAsync_DisablesResident()
-    {
-        await _service.CreateAsync("b1", "a1", "Ali", "01001234567", "01001234567", "1234", null, true, true, "admin");
-
-        _db.ChangeTracker.Clear();
-        var resident = await _db.Residents.FirstAsync();
-        var residentId = resident.Id;
-
-        await _service.SetDisabledAsync(residentId, true, "unpaid", "admin");
-
-        _db.ChangeTracker.Clear();
-        var updated = await _db.Residents.FindAsync(residentId);
-
-        Assert.NotNull(updated);
-        Assert.True(updated.IsDisabled);
-        Assert.Equal("unpaid", updated.DisabledReason);
+        await using var db = context.CreateDb();
+        var account = await db.UserAccounts.SingleAsync();
+        var credentials = await db.UserCredentials.OrderBy(item => item.CreatedAtUtc).ToListAsync();
+        Assert.NotEqual(oldStamp, account.SecurityStamp);
+        Assert.True(credentials[0].RevokedAtUtc.HasValue);
+        Assert.True(new BcryptPasswordHasher().VerifyPin("9876", credentials[1].CredentialHash));
     }
 
     [Fact]
-    public async Task SetDisabledAsync_EnablesResident_ClearsReason()
+    public async Task SetDisabledAsync_RevokesAndRestoresOnlyTheApartmentRoleAssignment()
     {
-        await _service.CreateAsync("b1", "a1", "Ali", "01001234567", "01001234567", "1234", null, true, true, "admin");
+        await using var context = new ResidentsServiceTestContext();
+        await context.SeedApartmentAsync();
+        await context.Service.CreateAsync("b1", "a1", "Ali", "01001234567", "01001234567",
+            "4321", null, true, true, "system");
+        var resident = (await context.Service.GetByApartmentAsync("b1", "a1")).Single();
 
-        _db.ChangeTracker.Clear();
-        var resident = await _db.Residents.FirstAsync();
-        var residentId = resident.Id;
+        await context.Service.SetDisabledAsync(resident.Id, true, "unpaid", "system");
+        Assert.True((await context.Service.GetByIdAsync(resident.Id))!.IsDisabled);
+        await context.Service.SetDisabledAsync(resident.Id, false, null, "system");
+        Assert.False((await context.Service.GetByIdAsync(resident.Id))!.IsDisabled);
 
-        await _service.SetDisabledAsync(residentId, true, "unpaid", "admin");
-        await _service.SetDisabledAsync(residentId, false, null, "admin");
-
-        _db.ChangeTracker.Clear();
-        var updated = await _db.Residents.FindAsync(residentId);
-
-        Assert.NotNull(updated);
-        Assert.False(updated.IsDisabled);
-        Assert.Equal("", updated.DisabledReason);
+        await using var db = context.CreateDb();
+        Assert.Equal(2, await db.UserRoleAssignments.CountAsync());
     }
 
-    // ================================================================
-    // DeleteAsync
-    // ================================================================
-
     [Fact]
-    public async Task DeleteAsync_RemovesResident()
+    public async Task DeleteAsync_ClosesOccupancyAndRevokesRoleInsteadOfDeletingIdentity()
     {
-        await _service.CreateAsync("b1", "a1", "Ali", "01001234567", "01001234567", "1234", null, true, true, "admin");
+        await using var context = new ResidentsServiceTestContext();
+        await context.SeedApartmentAsync();
+        await context.Service.CreateAsync("b1", "a1", "Ali", "01001234567", "01001234567",
+            "4321", null, true, true, "system");
+        var resident = (await context.Service.GetByApartmentAsync("b1", "a1")).Single();
 
-        _db.ChangeTracker.Clear();
-        var resident = await _db.Residents.FirstAsync();
-        var residentId = resident.Id;
+        await context.Service.DeleteAsync(resident.Id, "system");
 
-        await _service.DeleteAsync(residentId, "admin");
-
-        _db.ChangeTracker.Clear();
-        Assert.Empty(_db.Residents);
+        await using var db = context.CreateDb();
+        Assert.Equal(0, await context.Service.CountAsync());
+        Assert.Single(await db.Persons.ToListAsync());
+        Assert.Single(await db.UserAccounts.ToListAsync());
+        Assert.NotNull((await db.ApartmentOccupancies.SingleAsync()).ValidToUtc);
+        Assert.NotNull((await db.UserRoleAssignments.SingleAsync()).RevokedAtUtc);
     }
 
-    // ================================================================
-    // GetByBuildingAsync
-    // ================================================================
-
     [Fact]
-    public async Task GetByBuildingAsync_ReturnsResidentsForBuilding()
+    public async Task GetByBuildingAsync_ReturnsOnlyResidentsInRequestedBuilding()
     {
-        await _service.CreateAsync("b1", "a1", "Ali", "0100", "0100", "1234", null, true, true, "admin");
-        await _service.CreateAsync("b1", "a2", "Sara", "0101", "0101", "1234", null, true, true, "admin");
-        await _service.CreateAsync("b2", "a3", "Omar", "0102", "0102", "1234", null, true, true, "admin");
+        await using var context = new ResidentsServiceTestContext();
+        await context.SeedApartmentAsync("b1", "a1");
+        await context.SeedApartmentAsync("b1", "a2");
+        await context.SeedApartmentAsync("b2", "a3");
+        await context.Service.CreateAsync("b1", "a1", "Ali", "01000000001", "01000000001", "4321", null, true, true, "system");
+        await context.Service.CreateAsync("b1", "a2", "Sara", "01000000002", "01000000002", "4321", null, true, true, "system");
+        await context.Service.CreateAsync("b2", "a3", "Omar", "01000000003", "01000000003", "4321", null, true, true, "system");
 
-        var residents = await _service.GetByBuildingAsync("b1");
+        var residents = await context.Service.GetByBuildingAsync("b1");
 
         Assert.Equal(2, residents.Count);
-        Assert.All(residents, r => Assert.Equal("b1", r.BuildingId));
-    }
-
-    // ================================================================
-    // SetApartmentPinAsync
-    // ================================================================
-
-    [Fact]
-    public async Task SetApartmentPinAsync_NoExistingResident_CreatesPrimaryResident()
-    {
-        // Arrange
-        var building = new BuildingEntity { Id = "b1", Name = "Test", BuildingNumber = "BLD-001" };
-        var floor = new FloorEntity { BuildingId = "b1", Id = "f1", Label = "F1" };
-        var apt = new ApartmentEntity { BuildingId = "b1", Id = "a1", FloorId = "f1", Number = 1, Owner = "Owner", Phone = "0100" };
-
-        _db.Buildings.Add(building);
-        _db.Floors.Add(floor);
-        _db.Apartments.Add(apt);
-        await _db.SaveChangesAsync();
-
-        // Act
-        await _service.SetApartmentPinAsync("b1", "a1", "1234", "admin");
-
-        // Assert
-        _db.ChangeTracker.Clear();
-        var resident = await _db.Residents.FirstOrDefaultAsync();
-        Assert.NotNull(resident);
-        Assert.Equal("a1", resident.ApartmentId);
-        Assert.True(resident.IsPrimary);
-        Assert.True(BCrypt.Net.BCrypt.Verify("1234", resident.PinHash));
-    }
-
-    [Fact]
-    public async Task SetApartmentPinAsync_ExistingResident_UpdatesPin()
-    {
-        // Arrange
-        await _service.CreateAsync("b1", "a1", "Ali", "0100", "0100", "1234", null, true, true, "admin");
-
-        // Act
-        await _service.SetApartmentPinAsync("b1", "a1", "9999", "admin");
-
-        // Assert
-        _db.ChangeTracker.Clear();
-        var resident = await _db.Residents.FirstAsync();
-        Assert.True(BCrypt.Net.BCrypt.Verify("9999", resident.PinHash));
+        Assert.All(residents, resident => Assert.Equal("b1", resident.BuildingId));
     }
 }

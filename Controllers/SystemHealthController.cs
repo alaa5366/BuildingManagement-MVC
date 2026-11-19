@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using BuildingManagementMvc.Attributes;
 using BuildingManagementMvc.Models;
 using Microsoft.AspNetCore.Authorization;

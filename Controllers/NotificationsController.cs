@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Models;
+﻿﻿using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Attributes;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -88,7 +88,7 @@ public class NotificationsController : Controller
             if (result is null) return NotFound();
 
             await _notifications.CreateResidentNotificationAsync(
-                BuildingId, aptId, title.Trim(), body.Trim(), "whatsapp-draft", "📲", HttpContext.RequestAborted);
+                BuildingId, aptId, title.Trim(), body.Trim(), "whatsapp-draft", "ًں“²", HttpContext.RequestAborted);
 
             // wa.me only prepares a user-confirmed draft; record that exact outcome
             // without ever claiming that WhatsApp sent or delivered the message.

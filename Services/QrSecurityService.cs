@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿﻿using System.Data;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -9,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace BuildingManagementMvc.Services;
 
 /// <summary>
-/// خدمة توليد والتحقق من Quick QR Tokens (v2 — AES-GCM).
+/// خدمة توليد والتحقق من Quick QR Tokens (v2 â€” AES-GCM).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -20,13 +21,15 @@ namespace BuildingManagementMvc.Services;
 ///   <item><b>Quick QR (v2):</b> AES-GCM (تشفير + توثيق) لتوكنات الدخول السريع.</item>
 /// </list>
 /// <para>
-/// <b>⚠️ الأمان:</b> التوكنات القديمة (v1) بطلت. لازم تولّد توكنات جديدة بعد الترقية.
+/// <b>âڑ ï¸ڈ الأمان:</b> التوكنات القديمة (v1) بطلت. لازم تولّد توكنات جديدة بعد الترقية.
 /// </para>
 /// </remarks>
 /// <seealso cref="QuickQrOptions"/>
 /// <seealso cref="QuickTokenPayload"/>
 public class QrSecurityService
 {
+    private const byte RecoveryCapabilityType = 2;
+    private const byte QuickCapabilityType = 3;
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly string _secretKey;
     private readonly byte[] _quickKey;
@@ -85,7 +88,7 @@ public class QrSecurityService
     }
 
     /// <summary>
-    /// يولد Quick QR Token (v2).
+    /// ظٹظˆظ„ط¯ Quick QR Token (v2).
     /// </summary>
     /// <param name="options">خيارات التوكن (الصلاحية، الاستخدام، إلخ).</param>
     /// <returns>التوكن جاهز للاستخدام (يبدأ بـ <c>v2.</c>).</returns>
@@ -116,7 +119,7 @@ public class QrSecurityService
     /// <returns>نتيجة التحقق مع الـ payload لو صحيح.</returns>
     /// <remarks>
     /// <para>
-    /// <b>⚠️ ملاحظة:</b> الدالة دي ما بتستهلكش التوكن. استخدم
+    /// <b>âڑ ï¸ڈ ملاحظة:</b> الدالة دي ما بتستهلكش التوكن. استخدم
     /// <see cref="TryConsumeQuickTokenAsync"/> عشان تستهلكه atomic.
     /// </para>
     /// </remarks>
@@ -147,26 +150,42 @@ public class QrSecurityService
         if (DateTime.UtcNow > expiresAt.ToUniversalTime())
             return QuickTokenValidation.Fail(Loc.T("The_QR_Has_Expired"));
 
-        await using var db = await _sqlFactory.CreateDbContextAsync();
-        var usage = await db.QrUsages.AsNoTracking()
-            .FirstOrDefaultAsync(x => x.TokenId == payload.TokenId);
-
-        if (string.Equals(payload.Purpose, "recovery", StringComparison.OrdinalIgnoreCase) && usage == null)
+        if (!string.IsNullOrWhiteSpace(deviceFingerprint) && deviceFingerprint.Length > 160)
             return QuickTokenValidation.Fail(Loc.T("Invalid_Token"));
 
-        if (usage != null)
-        {
-            if (payload.OneTime && usage.UseCount >= 1)
-                return QuickTokenValidation.Fail(Loc.T("This_QR_Has_Already_Been_Used"));
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        var isRecovery = string.Equals(payload.Purpose, "recovery", StringComparison.OrdinalIgnoreCase);
+        var capability = await db.QrCapabilities.AsNoTracking().SingleOrDefaultAsync(item =>
+            item.CapabilityId == CapabilityIdForToken(payload.TokenId,
+                isRecovery ? RecoveryCapabilityType : QuickCapabilityType)
+            && item.TargetType == (isRecovery ? RecoveryCapabilityType : QuickCapabilityType));
+        if (capability is null)
+            return isRecovery
+                ? QuickTokenValidation.Fail(Loc.T("Invalid_Token"))
+                : QuickTokenValidation.Ok(payload);
 
-            if (payload.MaxUses > 0 && usage.UseCount >= payload.MaxUses)
-                return QuickTokenValidation.Fail(Loc.T("This_QR_Has_Reached_Its_Maximum"));
+        if (!CryptographicOperations.FixedTimeEquals(
+                capability.TokenHash, SHA256.HashData(Encoding.UTF8.GetBytes(payload.TokenId))) ||
+            !string.Equals(capability.BuildingId, payload.BuildingId, StringComparison.Ordinal) ||
+            !string.Equals(capability.ApartmentId, payload.AptId, StringComparison.Ordinal) ||
+            (isRecovery && !string.Equals(capability.TargetReference,
+                RecoveryRegistryId(payload.BuildingId, payload.AptId), StringComparison.Ordinal)))
+            return QuickTokenValidation.Fail(Loc.T("Invalid_Token"));
+        if (capability.RevokedAtUtc.HasValue)
+            return QuickTokenValidation.Fail(Loc.T("Invalid_Token"));
+        if (DateTime.UtcNow > capability.ExpiresAtUtc)
+            return QuickTokenValidation.Fail(Loc.T("The_QR_Has_Expired"));
 
-            if (!string.IsNullOrEmpty(deviceFingerprint) &&
-                !string.IsNullOrEmpty(usage.DeviceFingerprint) &&
-                usage.DeviceFingerprint != deviceFingerprint)
-                return QuickTokenValidation.Fail(Loc.T("This_QR_Is_Linked_To_Another"));
-        }
+        var uses = await db.QrCapabilityUses.AsNoTracking()
+            .Where(item => item.CapabilityId == capability.CapabilityId && item.Outcome == 1)
+            .ToListAsync();
+        if (uses.Count >= capability.MaxUses)
+            return QuickTokenValidation.Fail(payload.OneTime
+                ? Loc.T("This_QR_Has_Already_Been_Used")
+                : Loc.T("This_QR_Has_Reached_Its_Maximum"));
+        if (!string.IsNullOrEmpty(deviceFingerprint) && uses.Any(item =>
+                !string.IsNullOrEmpty(item.UseReference) && item.UseReference != deviceFingerprint))
+            return QuickTokenValidation.Fail(Loc.T("This_QR_Is_Linked_To_Another"));
 
         return QuickTokenValidation.Ok(payload);
     }
@@ -177,118 +196,75 @@ public class QrSecurityService
         return "recovery:" + Convert.ToHexString(SHA256.HashData(key)).ToLowerInvariant();
     }
 
-    /// <summary>Registers the current recovery token and atomically replaces any earlier token for the same apartment.</summary>
+    private static Guid CapabilityIdForToken(string tokenId, byte targetType)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(targetType + ":" + tokenId));
+        return new Guid(hash.AsSpan(0, 16));
+    }
+
+    /// <summary>Registers a recovery QR as a revocable target capability and revokes prior apartment capabilities.</summary>
     public async Task RegisterRecoveryTokenAsync(string token, string buildingId, string apartmentId,
         CancellationToken cancellationToken = default)
     {
-        var payload = JsonSerializer.Deserialize<QuickTokenPayload>(OpenQuick(token.StartsWith("v2.", StringComparison.Ordinal) ? token[3..] : token))
+        if (string.IsNullOrWhiteSpace(token) || !token.StartsWith("v2.", StringComparison.Ordinal))
+            throw new InvalidOperationException("Invalid recovery QR payload.");
+        var payload = JsonSerializer.Deserialize<QuickTokenPayload>(OpenQuick(token[3..]))
             ?? throw new InvalidOperationException("Invalid recovery QR payload.");
         if (!string.Equals(payload.Purpose, "recovery", StringComparison.Ordinal) ||
             !string.Equals(payload.BuildingId, buildingId, StringComparison.Ordinal) ||
             !string.Equals(payload.AptId, apartmentId, StringComparison.Ordinal) ||
-            string.IsNullOrWhiteSpace(payload.TokenId))
-            throw new InvalidOperationException("Recovery QR scope validation failed.");
+            string.IsNullOrWhiteSpace(payload.TokenId) ||
+            !DateTime.TryParse(payload.ExpiresAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var expiresAt) ||
+            expiresAt.ToUniversalTime() <= DateTime.UtcNow)
+            throw new InvalidOperationException("Recovery QR scope or expiry validation failed.");
 
         await using var db = await _sqlFactory.CreateDbContextAsync(cancellationToken);
-        var registryId = RecoveryRegistryId(buildingId, apartmentId);
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken)
+            : null;
         var now = DateTime.UtcNow;
-
-        if (!db.Database.IsRelational())
+        var registryId = RecoveryRegistryId(buildingId, apartmentId);
+        var previous = await db.QrCapabilities.Where(item => item.TargetType == RecoveryCapabilityType
+            && item.TargetReference == registryId && item.RevokedAtUtc == null).ToListAsync(cancellationToken);
+        foreach (var capability in previous)
         {
-            var existing = await db.QrUsages.SingleOrDefaultAsync(x => x.Id == registryId, cancellationToken);
-            if (existing is null)
-            {
-                db.QrUsages.Add(new QrUsageEntity
-                {
-                    Id = registryId,
-                    TokenId = payload.TokenId,
-                    UseCount = 0,
-                    FirstUsedAt = string.Empty,
-                    LastUsedAt = string.Empty,
-                    DeviceFingerprint = null,
-                    CreatedAt = now
-                });
-            }
-            else
-            {
-                existing.TokenId = payload.TokenId;
-                existing.UseCount = 0;
-                existing.FirstUsedAt = string.Empty;
-                existing.LastUsedAt = string.Empty;
-                existing.DeviceFingerprint = null;
-            }
-            await db.SaveChangesAsync(cancellationToken);
-            return;
+            capability.RevokedAtUtc = now;
+            capability.RevokedByReference = "recovery-token-replaced";
         }
 
-        // Replace an existing apartment registry entry with one atomic update.
-        // Any previously issued token immediately stops matching TokenId.
-        var updated = await db.QrUsages
-            .Where(x => x.Id == registryId)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(x => x.TokenId, payload.TokenId)
-                .SetProperty(x => x.UseCount, 0)
-                .SetProperty(x => x.FirstUsedAt, string.Empty)
-                .SetProperty(x => x.LastUsedAt, string.Empty)
-                .SetProperty(x => x.DeviceFingerprint, (string?)null), cancellationToken);
-        if (updated == 1) return;
-
-        // First issuance: insert the apartment registry row. If another admin
-        // issued concurrently, its unique-key insert wins; replace that row.
-        db.QrUsages.Add(new QrUsageEntity
+        db.QrCapabilities.Add(new QrCapabilityEntity
         {
-            Id = registryId,
-            TokenId = payload.TokenId,
-            UseCount = 0,
-            FirstUsedAt = string.Empty,
-            LastUsedAt = string.Empty,
-            DeviceFingerprint = null,
-            CreatedAt = now
+            CapabilityId = CapabilityIdForToken(payload.TokenId, RecoveryCapabilityType),
+            BuildingId = buildingId,
+            ApartmentId = apartmentId,
+            TargetType = RecoveryCapabilityType,
+            TargetReference = registryId,
+            TokenHash = SHA256.HashData(Encoding.UTF8.GetBytes(payload.TokenId)),
+            IssuedAtUtc = now,
+            ExpiresAtUtc = expiresAt.ToUniversalTime(),
+            MaxUses = payload.OneTime ? 1 : Math.Max(1, payload.MaxUses)
         });
-        try
-        {
-            await db.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateException)
-        {
-            db.ChangeTracker.Clear();
-            var replaced = await db.QrUsages
-                .Where(x => x.Id == registryId)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(x => x.TokenId, payload.TokenId)
-                    .SetProperty(x => x.UseCount, 0)
-                    .SetProperty(x => x.FirstUsedAt, string.Empty)
-                    .SetProperty(x => x.LastUsedAt, string.Empty)
-                    .SetProperty(x => x.DeviceFingerprint, (string?)null), cancellationToken);
-            if (replaced != 1) throw;
-        }
+        await db.SaveChangesAsync(cancellationToken);
+        if (transaction is not null) await transaction.CommitAsync(cancellationToken);
     }
-
-    /// <summary>Revokes the currently registered recovery token. Reissuing replaces its token id.</summary>
+    /// <summary>Revokes the active target capability for an apartment recovery QR.</summary>
     public async Task<bool> RevokeRecoveryTokenAsync(string buildingId, string apartmentId,
         CancellationToken cancellationToken = default)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync(cancellationToken);
         var registryId = RecoveryRegistryId(buildingId, apartmentId);
-        var now = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
-        if (!db.Database.IsRelational())
+        var active = await db.QrCapabilities.Where(item => item.TargetType == RecoveryCapabilityType
+            && item.TargetReference == registryId && item.RevokedAtUtc == null).ToListAsync(cancellationToken);
+        if (active.Count == 0) return false;
+        var now = DateTime.UtcNow;
+        foreach (var capability in active)
         {
-            var existing = await db.QrUsages.SingleOrDefaultAsync(
-                x => x.Id == registryId && x.UseCount == 0, cancellationToken);
-            if (existing is null) return false;
-            existing.UseCount = 1;
-            existing.LastUsedAt = now;
-            await db.SaveChangesAsync(cancellationToken);
-            return true;
+            capability.RevokedAtUtc = now;
+            capability.RevokedByReference = "recovery-token-revoked";
         }
-
-        var changed = await db.QrUsages.Where(x => x.Id == registryId && x.UseCount == 0)
-            .ExecuteUpdateAsync(s => s
-                .SetProperty(x => x.UseCount, 1)
-                .SetProperty(x => x.LastUsedAt, now), cancellationToken);
-        return changed == 1;
+        await db.SaveChangesAsync(cancellationToken);
+        return true;
     }
-
     /// <summary>
     /// يستهلك Quick QR Token بطريقة atomic (يمنع double-use).
     /// </summary>
@@ -299,117 +275,79 @@ public class QrSecurityService
     /// </returns>
     /// <remarks>
     /// <para>
-    /// <b>⚠️ الأمان:</b> الدالة دي بتستخدم <c>UPDATE ... WHERE UseCount &lt; limit</c>
+    /// <b>âڑ ï¸ڈ الأمان:</b> الدالة دي بتستخدم <c>UPDATE ... WHERE UseCount &lt; limit</c>
     /// عشان تمنع race condition لما طلبين يوصلوا في نفس اللحظة.
     /// </para>
     /// </remarks>
     public async Task<bool> TryConsumeQuickTokenAsync(QuickTokenPayload p, string? deviceFingerprint = null)
     {
-        var limit = p.OneTime ? 1 : (p.MaxUses > 0 ? p.MaxUses : int.MaxValue);
-        var now = DateTime.UtcNow.ToString("o");
-
-        await using var db = await _sqlFactory.CreateDbContextAsync();
-
-        if (!db.Database.IsRelational())
-        {
-            var usage = await db.QrUsages.SingleOrDefaultAsync(x => x.TokenId == p.TokenId);
-            if (usage is null)
-            {
-                if (string.Equals(p.Purpose, "recovery", StringComparison.OrdinalIgnoreCase))
-                    return false;
-                usage = new QrUsageEntity
-                {
-                    Id = p.TokenId,
-                    TokenId = p.TokenId,
-                    UseCount = 0,
-                    FirstUsedAt = string.Empty,
-                    LastUsedAt = string.Empty,
-                    DeviceFingerprint = null,
-                    CreatedAt = DateTime.UtcNow
-                };
-                db.QrUsages.Add(usage);
-            }
-
-            if (usage.UseCount >= limit ||
-                !string.IsNullOrEmpty(deviceFingerprint) &&
-                !string.IsNullOrEmpty(usage.DeviceFingerprint) &&
-                usage.DeviceFingerprint != deviceFingerprint)
-                return false;
-
-            usage.UseCount++;
-            usage.FirstUsedAt = string.IsNullOrEmpty(usage.FirstUsedAt) ? now : usage.FirstUsedAt;
-            usage.LastUsedAt = now;
-            usage.DeviceFingerprint ??= deviceFingerprint;
-            await db.SaveChangesAsync();
-            return true;
-        }
-
-        var updated = await db.QrUsages
-            .Where(x => x.TokenId == p.TokenId && x.UseCount < limit &&
-                (string.IsNullOrEmpty(deviceFingerprint) ||
-                 string.IsNullOrEmpty(x.DeviceFingerprint) ||
-                 x.DeviceFingerprint == deviceFingerprint))
-            .ExecuteUpdateAsync(s => s
-                .SetProperty(x => x.UseCount, x => x.UseCount + 1)
-                .SetProperty(x => x.FirstUsedAt,
-                    x => string.IsNullOrEmpty(x.FirstUsedAt) ? now : x.FirstUsedAt)
-                .SetProperty(x => x.LastUsedAt, now)
-                .SetProperty(x => x.DeviceFingerprint,
-                    x => string.IsNullOrEmpty(x.DeviceFingerprint)
-                        ? deviceFingerprint
-                        : x.DeviceFingerprint));
-        if (updated == 1) return true;
-
-        // Recovery tokens must already exist in the apartment-scoped registry.
-        // Never create a fallback usage row for them: a token can be validated,
-        // then revoked/reissued before this consume call. Creating a new row here
-        // would resurrect that stale token after its registry entry was replaced.
-        if (string.Equals(p.Purpose, "recovery", StringComparison.OrdinalIgnoreCase))
+        if (p is null || string.IsNullOrWhiteSpace(p.TokenId) || p.TokenId.Length > 128 ||
+            string.IsNullOrWhiteSpace(p.BuildingId) || string.IsNullOrWhiteSpace(p.AptId) ||
+            !DateTime.TryParse(p.ExpiresAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var expiresAt) ||
+            expiresAt.ToUniversalTime() <= DateTime.UtcNow ||
+            (!string.IsNullOrWhiteSpace(deviceFingerprint) && deviceFingerprint.Length > 160))
             return false;
 
-        if (await db.QrUsages.AnyAsync(x => x.TokenId == p.TokenId)) return false;
+        var isRecovery = string.Equals(p.Purpose, "recovery", StringComparison.OrdinalIgnoreCase);
+        var targetType = isRecovery ? RecoveryCapabilityType : QuickCapabilityType;
+        var capabilityId = CapabilityIdForToken(p.TokenId, targetType);
+        var now = DateTime.UtcNow;
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable)
+            : null;
 
-        try
+        var capability = await db.QrCapabilities.SingleOrDefaultAsync(item =>
+            item.CapabilityId == capabilityId && item.TargetType == targetType);
+        if (capability is null)
         {
-            db.QrUsages.Add(new QrUsageEntity
+            // Recovery tokens must be registered by the recovery workflow before they can be consumed.
+            if (isRecovery) return false;
+            capability = new QrCapabilityEntity
             {
-                Id = p.TokenId,
-                TokenId = p.TokenId,
-                UseCount = 1,
-                FirstUsedAt = now,
-                LastUsedAt = now,
-                DeviceFingerprint = deviceFingerprint,
-                CreatedAt = DateTime.UtcNow
-            });
-            await db.SaveChangesAsync();
-            return true;
+                CapabilityId = capabilityId,
+                BuildingId = p.BuildingId,
+                ApartmentId = p.AptId,
+                TargetType = QuickCapabilityType,
+                TargetReference = p.TokenId,
+                TokenHash = SHA256.HashData(Encoding.UTF8.GetBytes(p.TokenId)),
+                IssuedAtUtc = now,
+                ExpiresAtUtc = expiresAt.ToUniversalTime(),
+                MaxUses = p.OneTime ? 1 : (p.MaxUses > 0 ? p.MaxUses : int.MaxValue)
+            };
+            db.QrCapabilities.Add(capability);
         }
-        catch (DbUpdateException)
+        else
         {
-            db.ChangeTracker.Clear();
-            updated = await db.QrUsages
-                .Where(x => x.TokenId == p.TokenId && x.UseCount < limit &&
-                    (string.IsNullOrEmpty(deviceFingerprint) ||
-                     string.IsNullOrEmpty(x.DeviceFingerprint) ||
-                     x.DeviceFingerprint == deviceFingerprint))
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(x => x.UseCount, x => x.UseCount + 1)
-                    .SetProperty(x => x.FirstUsedAt,
-                        x => string.IsNullOrEmpty(x.FirstUsedAt) ? now : x.FirstUsedAt)
-                    .SetProperty(x => x.LastUsedAt, now)
-                    .SetProperty(x => x.DeviceFingerprint,
-                        x => string.IsNullOrEmpty(x.DeviceFingerprint)
-                            ? deviceFingerprint
-                            : x.DeviceFingerprint));
-            return updated == 1;
+            if (!CryptographicOperations.FixedTimeEquals(
+                    capability.TokenHash, SHA256.HashData(Encoding.UTF8.GetBytes(p.TokenId))) ||
+                !string.Equals(capability.BuildingId, p.BuildingId, StringComparison.Ordinal) ||
+                !string.Equals(capability.ApartmentId, p.AptId, StringComparison.Ordinal) ||
+                (isRecovery && !string.Equals(capability.TargetReference,
+                    RecoveryRegistryId(p.BuildingId, p.AptId), StringComparison.Ordinal)))
+                return false;
         }
-    }
 
-    /// <summary>
-    /// يشفّر النص بـ AES-GCM (nonce عشوائي لكل مرة).
-    /// </summary>
-    /// <param name="plainText">النص العادي.</param>
-    /// <returns>نص مشفّر بصيغة base64url.</returns>
+        if (capability.RevokedAtUtc.HasValue || now > capability.ExpiresAtUtc)
+            return false;
+        var priorUses = await db.QrCapabilityUses.AsNoTracking()
+            .Where(item => item.CapabilityId == capabilityId && item.Outcome == 1)
+            .ToListAsync();
+        if (priorUses.Count >= capability.MaxUses) return false;
+        if (!string.IsNullOrWhiteSpace(deviceFingerprint) && priorUses.Any(item =>
+                !string.IsNullOrWhiteSpace(item.UseReference) && item.UseReference != deviceFingerprint))
+            return false;
+
+        db.QrCapabilityUses.Add(new QrCapabilityUseEntity
+        {
+            UseId = Guid.NewGuid(), CapabilityId = capabilityId, UsedAtUtc = now,
+            UseReference = string.IsNullOrWhiteSpace(deviceFingerprint) ? null : deviceFingerprint,
+            Outcome = 1
+        });
+        await db.SaveChangesAsync();
+        if (transaction is not null) await transaction.CommitAsync();
+        return true;
+    }
     private string SealQuick(string plainText)
     {
         var plain = Encoding.UTF8.GetBytes(plainText);

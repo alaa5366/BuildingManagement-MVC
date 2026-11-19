@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Attributes;
+﻿﻿using BuildingManagementMvc.Attributes;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -100,7 +100,7 @@ public class WhatsAppController : Controller
                     : result.Message[..997] + "...";
             await _notifications.CreateResidentNotificationAsync(
                 BuildingId, aptId, templateName, notificationBody,
-                "whatsapp-draft", "📲", HttpContext.RequestAborted);
+                "whatsapp-draft", "ًں“²", HttpContext.RequestAborted);
 
             await _auditLogger.LogAsync(
                 action: "notification.whatsapp_draft_created",

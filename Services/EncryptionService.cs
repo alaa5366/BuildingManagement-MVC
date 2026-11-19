@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿﻿using System.Security.Cryptography;
 using System.Text;
 
 namespace BuildingManagementMvc.Services;
@@ -18,7 +18,7 @@ public interface IEncryptionService
     string Decrypt(string cipher);
 }
 
-// التشفير الجديد: AES-GCM (تشفير + توثيق) — الصيغة: "gcm1:" + base64(nonce[12] | tag[16] | ciphertext)
+// التشفير الجديد: AES-GCM (تشفير + توثيق) â€” الصيغة: "gcm1:" + base64(nonce[12] | tag[16] | ciphertext)
 // القيم القديمة (AES-CBC من غير MAC) لسه بتتفك عشان البيانات المخزنة (زي بيانات الـ DVR) تفضل شغالة،
 // وأي قيمة بتتحفظ من هنا ورايح بتتشفّر GCM.
 /// <summary>

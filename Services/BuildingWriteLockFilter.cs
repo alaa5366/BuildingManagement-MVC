@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Data;
+﻿﻿using BuildingManagementMvc.Data;
 using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace BuildingManagementMvc.Services;
@@ -25,7 +25,7 @@ public sealed class BuildingWriteLockFilter : IAsyncActionFilter
 
         var buildingId = http.User.FindFirst("buildingId")?.Value;
 
-        // السوبر أدمن (من غير claim) — ناخد العمارة من باراميتر الأكشن لو موجود
+        // السوبر أدمن (من غير claim) â€” ناخد العمارة من باراميتر الأكشن لو موجود
         if (string.IsNullOrEmpty(buildingId) &&
             context.ActionArguments.TryGetValue("buildingId", out var arg))
             buildingId = arg as string;

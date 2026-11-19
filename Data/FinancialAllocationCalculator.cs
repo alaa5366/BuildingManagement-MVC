@@ -1,4 +1,4 @@
-namespace BuildingManagementMvc.Data;
+﻿namespace BuildingManagementMvc.Data;
 
 /// <summary>
 /// Deterministic equal-weight allocation using the largest-remainder method.

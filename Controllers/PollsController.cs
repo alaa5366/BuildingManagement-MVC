@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Attributes;
+﻿using BuildingManagementMvc.Attributes;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

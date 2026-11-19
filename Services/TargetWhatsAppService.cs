@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Data.Entities;
+﻿using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Models;
 using Microsoft.EntityFrameworkCore;
@@ -130,8 +130,8 @@ public sealed class TargetWhatsAppService
         {
             throw new ArgumentException("قالب رسالة WhatsApp غير صالح.", nameof(templateId));
         }
-        var enabled = await db.GlobalSettings.AsNoTracking()
-            .Where(x => x.Id == "global").Select(x => (bool?)x.EnableWhatsApp)
+        var enabled = await db.GlobalApplicationSettings.AsNoTracking()
+            .Where(x => x.SettingsId == "global").Select(x => (bool?)x.EnableWhatsApp)
             .FirstOrDefaultAsync(cancellationToken);
         if (enabled == false)
             throw new InvalidOperationException("خدمة WhatsApp معطلة من إعدادات النظام.");

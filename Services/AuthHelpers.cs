@@ -1,4 +1,4 @@
-namespace BuildingManagementMvc.Services;
+﻿﻿namespace BuildingManagementMvc.Services;
 
 // ترجمة حرفية لدوال js/utils/auth-helpers.js و js/utils/phone-utils.js
 // عشان الحسابات المُشفَّرة (internal email/password) تطلع متطابقة 100%

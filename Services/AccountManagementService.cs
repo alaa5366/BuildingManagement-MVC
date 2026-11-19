@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Data;
+﻿﻿using BuildingManagementMvc.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
@@ -52,7 +52,7 @@ public sealed class AccountManagementService
             {
                 row.Roles = string.Join(", ", assignments.Select(x => x.RoleKey).Distinct().OrderBy(x => x));
                 row.RoleContexts = string.Join(" | ", assignments.Select(x =>
-                    $"{x.RoleKey}: {(x.ScopeType switch { 0 => "النظام", 1 => $"عمارة {x.ScopeBuildingId ?? "—"}", 2 => $"عمارة {x.ScopeBuildingId ?? "—"} / شقة {x.ScopeApartmentId ?? "—"}", 3 => "شخصي", _ => "نطاق غير معروف" })}").Distinct());
+                    $"{x.RoleKey}: {(x.ScopeType switch { 0 => "النظام", 1 => $"عمارة {x.ScopeBuildingId ?? "â€”"}", 2 => $"عمارة {x.ScopeBuildingId ?? "â€”"} / شقة {x.ScopeApartmentId ?? "â€”"}", 3 => "شخصي", _ => "نطاق غير معروف" })}").Distinct());
                 row.ActiveRoleCount = assignments.Count;
                 if (assignments.Any(x => x.RoleKey == "superadmin"))
                 {

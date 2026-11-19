@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using System.Text.Json;
 using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
@@ -217,7 +217,7 @@ public sealed class InvoiceService
         foreach (var row in expenseLedgerRows)
         {
             var sourceKey = NormalizeSourceKey(row.SourceKey);
-            // Keep unclassified source rows in an explicit "—" bucket so the
+            // Keep unclassified source rows in an explicit "â€”" bucket so the
             // category breakdown still reconciles to the posted ledger total.
             var categoryId = expenseCategoryBySource.GetValueOrDefault(sourceKey) ?? "";
 
@@ -250,7 +250,7 @@ public sealed class InvoiceService
             categoryById.TryGetValue(categoryTotal.Key, out var category);
             categoryShares.Add(new CategoryShare
             {
-                Name = category?.Name ?? "—",
+                Name = category?.Name ?? "â€”",
                 ColorHex = category?.Color ?? "#888888",
                 Total = categoryTotal.Value,
                 AptCount = categoryApartmentIds.GetValueOrDefault(categoryTotal.Key)?.Count ?? 0,

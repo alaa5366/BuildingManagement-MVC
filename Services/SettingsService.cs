@@ -1,4 +1,5 @@
 ﻿using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,9 +13,13 @@ public class SettingsService
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly IAuditLogger _audit;
     private readonly BuildingsService _buildings;
-    private readonly UsersService _users;
+    private readonly IEncryptionService _encryption;
+    private readonly IPasswordHasher _hasher;
+    private readonly SessionRevalidator? _sessionRevalidator;
     private readonly ILogger<SettingsService> _logger;
     private const string GlobalId = "global";
+    private const string GlobalSecretScope = "global";
+    private const string GlobalSecretKeyVersion = "application-secret-v1";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SettingsService"/> class.
@@ -23,43 +28,59 @@ public class SettingsService
         IDbContextFactory<AppDbContext> sqlFactory,
         IAuditLogger audit,
         BuildingsService buildings,
-        UsersService users,
-        ILogger<SettingsService> logger)
+        IEncryptionService encryption,
+        IPasswordHasher hasher,
+        ILogger<SettingsService> logger,
+        SessionRevalidator? sessionRevalidator = null)
     {
         _sqlFactory = sqlFactory;
         _audit = audit;
         _buildings = buildings;
-        _users = users;
+        _encryption = encryption;
+        _hasher = hasher;
         _logger = logger;
+        _sessionRevalidator = sessionRevalidator;
     }
 
     // ============================================================
     // Global Settings (الدوال الأصلية)
     // ============================================================
-    /// <summary>
-    /// Gets the global.
-    /// </summary>
+    /// <summary>Reads application settings from the canonical settings and protected-secret tables.</summary>
     public async Task<GlobalSettings> GetGlobalAsync()
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
-        var entity = await db.GlobalSettings.AsNoTracking().FirstOrDefaultAsync(x => x.Id == GlobalId);
-
-        if (entity == null)
+        var entity = await db.GlobalApplicationSettings.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.SettingsId == GlobalId);
+        if (entity is null)
         {
-            entity = new Data.Entities.GlobalSettingsEntity { Id = GlobalId };
-            db.GlobalSettings.Add(entity);
+            entity = new GlobalApplicationSettingsEntity
+            {
+                SettingsId = GlobalId,
+                AppName = "نظام إدارة العمارات",
+                DefaultLanguage = "ar",
+                EnablePolls = true,
+                EnableMaintenance = true,
+                EnableOcr = true,
+                EnableQrAccess = true,
+                EnableWhatsApp = true,
+                SessionTimeoutDays = 7,
+                MaxPinAttempts = 5,
+                StorageMode = "local",
+                ImportedAtUtc = DateTime.UtcNow
+            };
+            db.GlobalApplicationSettings.Add(entity);
             await db.SaveChangesAsync();
         }
 
         return new GlobalSettings
         {
-            Id = entity.Id,
+            Id = entity.SettingsId,
             AppName = entity.AppName,
             DefaultLanguage = entity.DefaultLanguage,
-            WhatsappApiToken = entity.WhatsappApiToken,
-            WhatsappPhoneId = entity.WhatsappPhoneId,
-            CloudinaryCloudName = entity.CloudinaryCloudName,
-            CloudinaryApiKey = entity.CloudinaryApiKey,
+            WhatsappApiToken = await ReadGlobalSecretAsync(db, "whatsapp", "ApiToken"),
+            WhatsappPhoneId = await ReadGlobalSecretAsync(db, "whatsapp", "PhoneId"),
+            CloudinaryCloudName = await ReadGlobalSecretAsync(db, "cloudinary", "CloudName"),
+            CloudinaryApiKey = await ReadGlobalSecretAsync(db, "cloudinary", "ApiKey"),
             FeatureFlags = new FeatureFlags
             {
                 EnablePolls = entity.EnablePolls,
@@ -73,40 +94,45 @@ public class SettingsService
                 SessionTimeoutDays = entity.SessionTimeoutDays,
                 MaxPinAttempts = entity.MaxPinAttempts
             },
-            UpdatedAt = entity.UpdatedAt?.ToString("o"),
-            UpdatedBy = entity.UpdatedBy
+            UpdatedAt = entity.UpdatedAtUtc?.ToString("o"),
+            UpdatedBy = entity.UpdatedByReference
         };
     }
 
-    /// <summary>
-    /// Saves the global.
-    /// </summary>
+    /// <summary>Saves non-secret settings and encrypts integration credentials in their dedicated store.</summary>
     public async Task SaveGlobalAsync(GlobalSettings settings, string userId)
     {
+        ArgumentNullException.ThrowIfNull(settings);
         await using var db = await _sqlFactory.CreateDbContextAsync();
-        var entity = await db.GlobalSettings.FirstOrDefaultAsync(x => x.Id == GlobalId);
-        if (entity == null)
+        var entity = await db.GlobalApplicationSettings
+            .SingleOrDefaultAsync(item => item.SettingsId == GlobalId);
+        if (entity is null)
         {
-            entity = new Data.Entities.GlobalSettingsEntity { Id = GlobalId };
-            db.GlobalSettings.Add(entity);
+            entity = new GlobalApplicationSettingsEntity
+            {
+                SettingsId = GlobalId,
+                ImportedAtUtc = DateTime.UtcNow
+            };
+            db.GlobalApplicationSettings.Add(entity);
         }
 
-        entity.AppName = settings.AppName ?? "نظام إدارة العمارات";
-        entity.DefaultLanguage = settings.DefaultLanguage ?? "ar";
-        entity.WhatsappApiToken = settings.WhatsappApiToken ?? "";
-        entity.WhatsappPhoneId = settings.WhatsappPhoneId ?? "";
-        entity.CloudinaryCloudName = settings.CloudinaryCloudName ?? "";
-        entity.CloudinaryApiKey = settings.CloudinaryApiKey ?? "";
+        var now = DateTime.UtcNow;
+        entity.AppName = string.IsNullOrWhiteSpace(settings.AppName) ? "نظام إدارة العمارات" : settings.AppName.Trim();
+        entity.DefaultLanguage = string.IsNullOrWhiteSpace(settings.DefaultLanguage) ? "ar" : settings.DefaultLanguage.Trim();
         entity.EnablePolls = settings.FeatureFlags?.EnablePolls ?? true;
         entity.EnableMaintenance = settings.FeatureFlags?.EnableMaintenance ?? true;
         entity.EnableOcr = settings.FeatureFlags?.EnableOcr ?? true;
         entity.EnableQrAccess = settings.FeatureFlags?.EnableQrAccess ?? true;
         entity.EnableWhatsApp = settings.FeatureFlags?.EnableWhatsApp ?? true;
-        entity.SessionTimeoutDays = settings.Security?.SessionTimeoutDays ?? 7;
-        entity.MaxPinAttempts = settings.Security?.MaxPinAttempts ?? 5;
-        entity.UpdatedAt = DateTime.UtcNow;
-        entity.UpdatedBy = userId;
+        entity.SessionTimeoutDays = Math.Clamp(settings.Security?.SessionTimeoutDays ?? 7, 1, 365);
+        entity.MaxPinAttempts = Math.Clamp(settings.Security?.MaxPinAttempts ?? 5, 1, 100);
+        entity.UpdatedAtUtc = now;
+        entity.UpdatedByReference = userId;
 
+        await SaveGlobalSecretAsync(db, "whatsapp", "ApiToken", settings.WhatsappApiToken, now);
+        await SaveGlobalSecretAsync(db, "whatsapp", "PhoneId", settings.WhatsappPhoneId, now);
+        await SaveGlobalSecretAsync(db, "cloudinary", "CloudName", settings.CloudinaryCloudName, now);
+        await SaveGlobalSecretAsync(db, "cloudinary", "ApiKey", settings.CloudinaryApiKey, now);
         await db.SaveChangesAsync();
 
         await _audit.LogAsync(
@@ -115,6 +141,53 @@ public class SettingsService
             userRole: "superadmin",
             metadata: new { appName = entity.AppName, defaultLanguage = entity.DefaultLanguage },
             severity: "warning");
+    }
+
+    private async Task<string> ReadGlobalSecretAsync(AppDbContext db, string provider, string secretName)
+    {
+        var secret = await db.ProtectedIntegrationSecrets.AsNoTracking().SingleOrDefaultAsync(item =>
+            item.ScopeType == 0 && item.ScopeReference == GlobalSecretScope
+            && item.Provider == provider && item.SecretName == secretName && item.RevokedAtUtc == null);
+        if (secret is null || secret.Ciphertext.Length == 0) return "";
+        try
+        {
+            return _encryption.Decrypt(System.Text.Encoding.UTF8.GetString(secret.Ciphertext));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unable to decrypt global integration secret {Provider}/{SecretName}", provider, secretName);
+            return "";
+        }
+    }
+
+    private async Task SaveGlobalSecretAsync(AppDbContext db, string provider, string secretName, string? value, DateTime now)
+    {
+        var secret = await db.ProtectedIntegrationSecrets.SingleOrDefaultAsync(item =>
+            item.ScopeType == 0 && item.ScopeReference == GlobalSecretScope
+            && item.Provider == provider && item.SecretName == secretName);
+        var normalized = value?.Trim() ?? "";
+        if (secret is null && normalized.Length == 0) return;
+        if (secret is null)
+        {
+            secret = new ProtectedIntegrationSecretEntity
+            {
+                SecretId = Guid.NewGuid(),
+                ScopeType = 0,
+                ScopeReference = GlobalSecretScope,
+                Provider = provider,
+                SecretName = secretName,
+                CreatedAtUtc = now
+            };
+            db.ProtectedIntegrationSecrets.Add(secret);
+        }
+        else if (secret.RevokedAtUtc is not null || normalized.Length > 0)
+        {
+            secret.RotatedAtUtc = now;
+        }
+
+        secret.Ciphertext = System.Text.Encoding.UTF8.GetBytes(_encryption.Encrypt(normalized));
+        secret.KeyVersion = GlobalSecretKeyVersion;
+        secret.RevokedAtUtc = normalized.Length == 0 ? now : null;
     }
 
     // ============================================================
@@ -223,8 +296,9 @@ public class SettingsService
             };
         }
 
-        var user = await _users.GetByUidAsync(uid);
-        if (user == null) return new OwnSettings();
+        if (!Guid.TryParse(uid, out var accountId) ||
+            !await db.UserAccounts.AsNoTracking().AnyAsync(item => item.AccountId == accountId && item.AccountStatus == 1))
+            return new OwnSettings();
 
         return new OwnSettings
         {
@@ -281,65 +355,111 @@ public class SettingsService
         string newPhone, string? newPin, string currentPin,
         string currentUid, string userRole)
     {
+        if (!Guid.TryParse(currentUid, out var accountId))
+            throw new InvalidOperationException("resident-account-not-found");
+        if (!string.IsNullOrWhiteSpace(newPin) &&
+            (newPin.Length != 4 || !newPin.All(char.IsDigit)))
+            throw new InvalidOperationException(Loc.T("PIN_Must_Be_Exactly_4_Digits"));
+
         await using var db = await _sqlFactory.CreateDbContextAsync();
-
-        var apt = await db.Apartments
-            .FirstOrDefaultAsync(a => a.BuildingId == buildingId && a.Id == apartmentId)
+        await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        var now = DateTime.UtcNow;
+        var apartment = await db.Apartments.SingleOrDefaultAsync(item =>
+            item.BuildingId == buildingId && item.Id == apartmentId)
             ?? throw new InvalidOperationException("apartment-not-found");
+        var account = await db.UserAccounts.SingleOrDefaultAsync(item =>
+            item.AccountId == accountId && item.AccountStatus == 1)
+            ?? throw new InvalidOperationException("resident-account-not-found");
+        var person = await db.Persons.SingleOrDefaultAsync(item =>
+            item.PersonId == account.PersonId && !item.IsArchived)
+            ?? throw new InvalidOperationException("resident-account-not-found");
 
-        var residents = await db.Residents
-            .Where(r => r.BuildingId == buildingId && r.ApartmentId == apartmentId)
-            .ToListAsync();
+        var activeOccupancy = await db.ApartmentOccupancies.AnyAsync(item =>
+            item.PersonId == person.PersonId && item.BuildingId == buildingId && item.ApartmentId == apartmentId
+            && item.ValidFromUtc <= now && (item.ValidToUtc == null || item.ValidToUtc > now));
+        if (!activeOccupancy) throw new InvalidOperationException("apartment-access-denied");
 
-        var primaryResident = residents.FirstOrDefault(r => r.IsPrimary) ?? residents.FirstOrDefault();
-
-        // Validate the new PIN and current credential before changing any tracked data.
-        if (!string.IsNullOrWhiteSpace(newPin))
+        var pinChanged = !string.IsNullOrWhiteSpace(newPin);
+        if (pinChanged)
         {
-            if (newPin.Length != 4 || !newPin.All(char.IsDigit))
-                throw new InvalidOperationException(Loc.T("PIN_Must_Be_Exactly_4_Digits"));
-            var isCurrentPinValid = primaryResident != null &&
-                                    SecretVerifier.Verify(currentPin, primaryResident.PinHash);
-            if (!isCurrentPinValid)
+            var credential = await db.UserCredentials.AsNoTracking()
+                .Where(item => item.AccountId == accountId && item.CredentialType == 0
+                    && item.RevokedAtUtc == null && (item.ExpiresAtUtc == null || item.ExpiresAtUtc > now))
+                .OrderByDescending(item => item.CreatedAtUtc)
+                .FirstOrDefaultAsync();
+            if (credential is null || !_hasher.VerifyPin(currentPin, credential.CredentialHash))
                 throw new InvalidOperationException(Loc.T("The_Current_PIN_Is_Incorrect"));
         }
 
-        var oldPhone = apt.Phone;
-        var phoneChanged = false;
-        var pinChanged = false;
-
-        // تحديث الاسم والموبايل في جدول الشقق
-        if (!string.IsNullOrWhiteSpace(ownerName)) apt.Owner = ownerName.Trim();
-        if (!string.IsNullOrWhiteSpace(aptLabel)) apt.Label = aptLabel.Trim();
-
-        if (!string.IsNullOrWhiteSpace(newPhone))
+        var normalizedPhone = string.IsNullOrWhiteSpace(newPhone)
+            ? person.PrimaryPhone
+            : AuthHelpers.NormalizePhone(newPhone);
+        var phoneChanged = !string.IsNullOrWhiteSpace(normalizedPhone)
+            && !string.Equals(normalizedPhone, person.PrimaryPhone, StringComparison.Ordinal);
+        if (phoneChanged)
         {
-            var normPhone = AuthHelpers.NormalizePhone(newPhone);
-            if (normPhone != oldPhone)
+            var duplicatePhone = await db.Persons.AsNoTracking().AnyAsync(item =>
+                item.PersonId != person.PersonId && item.PrimaryPhone == normalizedPhone);
+            if (duplicatePhone) throw new InvalidOperationException("phone-already-in-use");
+        }
+
+        if (!string.IsNullOrWhiteSpace(ownerName))
+        {
+            person.DisplayName = ownerName.Trim();
+            apartment.Owner = ownerName.Trim();
+        }
+        if (!string.IsNullOrWhiteSpace(aptLabel)) apartment.Label = aptLabel.Trim();
+        if (phoneChanged)
+        {
+            person.PrimaryPhone = normalizedPhone!;
+            apartment.Phone = normalizedPhone!;
+        }
+
+        if (pinChanged)
+        {
+            var oldCredentials = await db.UserCredentials.Where(item => item.AccountId == accountId
+                && item.CredentialType == 0 && item.RevokedAtUtc == null).ToListAsync();
+            foreach (var old in oldCredentials) old.RevokedAtUtc = now;
+            db.UserCredentials.Add(new UserCredentialEntity
             {
-                apt.Phone = normPhone;
-                phoneChanged = true;
-            }
+                CredentialId = Guid.NewGuid(),
+                AccountId = accountId,
+                CredentialType = 0,
+                CredentialHash = _hasher.HashPin(newPin!),
+                HashAlgorithm = "BCrypt.Net-Next",
+                CreatedAtUtc = now
+            });
+            account.MustChangePin = false;
         }
 
-        // تحديث الاسم والموبايل في جدول السكان
-        if (residents.Any())
+        if (phoneChanged || pinChanged || !string.IsNullOrWhiteSpace(ownerName))
         {
-            foreach (var res in residents)
+            person.UpdatedAtUtc = now;
+            account.SecurityStamp = Guid.NewGuid().ToString("N");
+        }
+        db.AuditEvents.Add(new AuditEventEntity
+        {
+            AuditEventId = Guid.NewGuid(),
+            OccurredAtUtc = now,
+            ActorAccountId = accountId,
+            ActorReference = currentUid,
+            BuildingId = buildingId,
+            EventCategory = "ResidentProfile",
+            EventType = "resident.profile_update",
+            ResourceType = "Apartment",
+            ResourceReference = apartmentId,
+            Outcome = 0,
+            SafeDetailsJson = System.Text.Json.JsonSerializer.Serialize(new
             {
-                if (!string.IsNullOrWhiteSpace(ownerName)) res.Name = ownerName.Trim();
-                if (!string.IsNullOrWhiteSpace(newPhone)) res.Phone = AuthHelpers.NormalizePhone(newPhone);
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(newPin))
-        {
-            var hashedPin = SecretVerifier.Hash(newPin);
-            foreach (var resident in residents) resident.PinHash = hashedPin;
-            pinChanged = true;
-        }
-
+                nameChanged = !string.IsNullOrWhiteSpace(ownerName),
+                phoneChanged,
+                pinChanged,
+                userRole
+            })
+        });
         await db.SaveChangesAsync();
+        await transaction.CommitAsync();
+        if (pinChanged || phoneChanged) _sessionRevalidator?.InvalidateAdmin(currentUid);
 
         await _audit.LogAsync(
             action: "resident.profile_update",
@@ -347,8 +467,22 @@ public class SettingsService
             apartmentId: apartmentId,
             userId: currentUid,
             userRole: userRole,
-            metadata: new { ownerName, phoneChanged, pinChanged },
+            metadata: new { nameChanged = !string.IsNullOrWhiteSpace(ownerName), phoneChanged, pinChanged },
             severity: "warning");
+    }
+
+    /// <summary>Returns the canonical person profile for an authenticated target account.</summary>
+    public async Task<(string Name, string Phone, string Whatsapp)?> GetAccountProfileAsync(string uid)
+    {
+        if (!Guid.TryParse(uid, out var accountId)) return null;
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        var profile = await (
+            from account in db.UserAccounts.AsNoTracking()
+            join person in db.Persons.AsNoTracking() on account.PersonId equals person.PersonId
+            where account.AccountId == accountId && account.AccountStatus == 1 && !person.IsArchived
+            select new { person.DisplayName, Phone = person.PrimaryPhone ?? "", Whatsapp = person.Whatsapp ?? "" })
+            .SingleOrDefaultAsync();
+        return profile is null ? null : (profile.DisplayName, profile.Phone, profile.Whatsapp);
     }
 
     // ============================================================
@@ -361,71 +495,116 @@ public class SettingsService
         string uid, string name, string newPhone, string newWhatsapp,
         string? newPin, string currentPin, string userRole)
     {
-        var user = await _users.GetByUidAsync(uid)
-            ?? throw new InvalidOperationException("admin-not-found");
-
-        var buildingId = user.BuildingIds.FirstOrDefault() ?? "";
-
-        var phoneChangedByUser = !string.IsNullOrWhiteSpace(newPhone) &&
-                                 AuthHelpers.NormalizePhone(newPhone) != user.Phone;
+        if (!Guid.TryParse(uid, out var accountId))
+            throw new InvalidOperationException("admin-not-found");
+        var now = DateTime.UtcNow;
         var pinChanged = !string.IsNullOrWhiteSpace(newPin);
+        if (pinChanged && (newPin!.Length != 4 || !newPin.All(char.IsDigit)))
+            throw new InvalidOperationException(Loc.T("PIN_Must_Be_Exactly_4_Digits"));
 
-        if ((phoneChangedByUser || pinChanged) && !SecretVerifier.Verify(currentPin, user.Pin))
-            throw new InvalidOperationException(Loc.T("The_Current_PIN_Is_Incorrect"));
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        var account = await db.UserAccounts.SingleOrDefaultAsync(item =>
+            item.AccountId == accountId && item.AccountStatus == 1)
+            ?? throw new InvalidOperationException("admin-not-found");
+        var person = await db.Persons.SingleOrDefaultAsync(item =>
+            item.PersonId == account.PersonId && !item.IsArchived)
+            ?? throw new InvalidOperationException("admin-not-found");
+        var buildingId = await db.UserRoleAssignments.AsNoTracking()
+            .Where(item => item.AccountId == accountId && item.RoleKey == "admin"
+                && item.ScopeType == 1 && item.RevokedAtUtc == null)
+            .Select(item => item.ScopeBuildingId).FirstOrDefaultAsync() ?? "";
 
-        var updates = new Dictionary<string, object>();
-        if (!string.IsNullOrWhiteSpace(name) && name != user.Name) updates["name"] = name.Trim();
-        if (phoneChangedByUser) updates["phone"] = AuthHelpers.NormalizePhone(newPhone);
-        if (!string.IsNullOrWhiteSpace(newWhatsapp))
+        var normalizedPhone = string.IsNullOrWhiteSpace(newPhone)
+            ? person.PrimaryPhone
+            : AuthHelpers.NormalizePhone(newPhone);
+        var phoneChanged = !string.IsNullOrWhiteSpace(normalizedPhone)
+            && !string.Equals(normalizedPhone, person.PrimaryPhone, StringComparison.Ordinal);
+        var normalizedWhatsapp = string.IsNullOrWhiteSpace(newWhatsapp)
+            ? person.Whatsapp
+            : AuthHelpers.NormalizePhone(newWhatsapp);
+        var whatsappChanged = !string.IsNullOrWhiteSpace(normalizedWhatsapp)
+            && !string.Equals(normalizedWhatsapp, person.Whatsapp, StringComparison.Ordinal);
+        var nameChanged = !string.IsNullOrWhiteSpace(name)
+            && !string.Equals(name.Trim(), person.DisplayName, StringComparison.Ordinal);
+
+        if (phoneChanged || pinChanged)
         {
-            var normWa = AuthHelpers.NormalizePhone(newWhatsapp);
-            if (normWa != user.Whatsapp) updates["whatsapp"] = normWa;
+            var credential = await db.UserCredentials.AsNoTracking()
+                .Where(item => item.AccountId == accountId && item.CredentialType == 0
+                    && item.RevokedAtUtc == null && (item.ExpiresAtUtc == null || item.ExpiresAtUtc > now))
+                .OrderByDescending(item => item.CreatedAtUtc).FirstOrDefaultAsync();
+            if (credential is null || !_hasher.VerifyPin(currentPin, credential.CredentialHash))
+                throw new InvalidOperationException(Loc.T("The_Current_PIN_Is_Incorrect"));
         }
+        if (phoneChanged)
+        {
+            var duplicate = await db.Persons.AsNoTracking().AnyAsync(item =>
+                item.PersonId != person.PersonId && item.PrimaryPhone == normalizedPhone);
+            if (duplicate) throw new InvalidOperationException("phone-already-in-use");
+            person.PrimaryPhone = normalizedPhone;
+        }
+        if (whatsappChanged) person.Whatsapp = normalizedWhatsapp;
+        if (nameChanged) person.DisplayName = name.Trim();
         if (pinChanged)
         {
-            if (newPin!.Length != 4 || !newPin.All(char.IsDigit))
-                throw new InvalidOperationException(Loc.T("PIN_Must_Be_Exactly_4_Digits"));
-            updates["pin"] = newPin;
+            var oldCredentials = await db.UserCredentials.Where(item => item.AccountId == accountId
+                && item.CredentialType == 0 && item.RevokedAtUtc == null).ToListAsync();
+            foreach (var old in oldCredentials) old.RevokedAtUtc = now;
+            db.UserCredentials.Add(new UserCredentialEntity
+            {
+                CredentialId = Guid.NewGuid(), AccountId = accountId, CredentialType = 0,
+                CredentialHash = _hasher.HashPin(newPin!), HashAlgorithm = "BCrypt.Net-Next", CreatedAtUtc = now
+            });
+            account.MustChangePin = false;
         }
-
-        if (updates.Count > 0)
+        if (phoneChanged || whatsappChanged || nameChanged || pinChanged)
         {
-            updates["updatedAt"] = DateTime.UtcNow.ToString("o");
-            updates["updatedBy"] = uid;
-            await _users.SetAsync(uid, updates);
+            person.UpdatedAtUtc = now;
+            account.SecurityStamp = Guid.NewGuid().ToString("N");
         }
+        await db.SaveChangesAsync();
+        await transaction.CommitAsync();
+        if (phoneChanged || pinChanged) _sessionRevalidator?.InvalidateAdmin(uid);
 
         await _audit.LogAsync(
             action: "admin.profile_update",
             buildingId: buildingId,
             userId: uid,
             userRole: userRole,
-            metadata: new { nameChanged = updates.ContainsKey("name"), phoneChanged = phoneChangedByUser, pinChanged },
+            metadata: new { nameChanged, phoneChanged, whatsappChanged, pinChanged },
             severity: "warning");
     }
 
-    // ============================================================
-    // Update SuperAdmin Name (الدالة الأصلية)
-    // ============================================================
-    /// <summary>
-    /// Updates the super admin name.
-    /// </summary>
+    /// <summary>Updates the display name of a target-schema SuperAdmin account.</summary>
     public async Task UpdateSuperAdminNameAsync(string uid, string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return;
+        if (!Guid.TryParse(uid, out var accountId))
+            throw new InvalidOperationException("superadmin-not-found");
 
-        await _users.SetAsync(uid, new Dictionary<string, object>
-        {
-            ["name"] = name.Trim(),
-            ["updatedAt"] = DateTime.UtcNow.ToString("o"),
-            ["updatedBy"] = uid
-        });
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        var account = await db.UserAccounts.SingleOrDefaultAsync(item =>
+            item.AccountId == accountId && item.AccountStatus == 1)
+            ?? throw new InvalidOperationException("superadmin-not-found");
+        var hasSuperAdminRole = await db.UserRoleAssignments.AnyAsync(item =>
+            item.AccountId == accountId && item.RoleKey == "superadmin" && item.ScopeType == 0
+            && item.RevokedAtUtc == null && item.ValidFromUtc <= DateTime.UtcNow
+            && (item.ValidToUtc == null || item.ValidToUtc > DateTime.UtcNow));
+        if (!hasSuperAdminRole) throw new InvalidOperationException("superadmin-not-found");
+        var person = await db.Persons.SingleOrDefaultAsync(item => item.PersonId == account.PersonId && !item.IsArchived)
+            ?? throw new InvalidOperationException("superadmin-not-found");
+        person.DisplayName = name.Trim();
+        person.UpdatedAtUtc = DateTime.UtcNow;
+        account.SecurityStamp = Guid.NewGuid().ToString("N");
+        await db.SaveChangesAsync();
+        _sessionRevalidator?.InvalidateAdmin(uid);
 
         await _audit.LogAsync(
             action: "superadmin.name_update",
             userId: uid,
             userRole: "superadmin",
-            metadata: new { name },
+            metadata: new { name = person.DisplayName },
             severity: "info");
     }
 }

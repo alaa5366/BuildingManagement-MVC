@@ -1,8 +1,8 @@
-using BuildingManagementMvc.Models;
+﻿﻿using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Services;
 
-// ترجمة حرفية لـ js/features/polls.js
+// طھط±ط¬ظ…ط© ط­ط±ظپظٹط© ظ„ظ€ js/features/polls.js
 /// <summary>
 /// Business logic for polls and votes.
 /// </summary>

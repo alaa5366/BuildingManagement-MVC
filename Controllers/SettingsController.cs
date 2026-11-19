@@ -23,7 +23,6 @@ public class SettingsController : Controller
 {
     private readonly SettingsService _settings;
     private readonly BuildingsService _buildings;
-    private readonly UsersService _users;
     private readonly TwoFactorService _twoFactor;
     private readonly ILogger<SettingsController> _logger;
 
@@ -33,13 +32,11 @@ public class SettingsController : Controller
     public SettingsController(
         SettingsService settings,
         BuildingsService buildings,
-        UsersService users,
         TwoFactorService twoFactor,
         ILogger<SettingsController> logger)
     {
         _settings = settings;
         _buildings = buildings;
-        _users = users;
         _twoFactor = twoFactor;
         _logger = logger;
     }
@@ -226,24 +223,24 @@ public class SettingsController : Controller
             }
             else if (CurrentRole == "admin")
             {
-                var user = await _users.GetByUidAsync(CurrentUserId);
+                var user = await _settings.GetAccountProfileAsync(CurrentUserId);
                 if (user != null)
                 {
-                    ViewBag.OwnerName = user.Name;
-                    ViewBag.CurrentPhone = user.Phone;
-                    ViewBag.CurrentWhatsapp = string.IsNullOrEmpty(user.Whatsapp)
-                        ? user.Phone
-                        : user.Whatsapp;
+                    ViewBag.OwnerName = user.Value.Name;
+                    ViewBag.CurrentPhone = user.Value.Phone;
+                    ViewBag.CurrentWhatsapp = string.IsNullOrEmpty(user.Value.Whatsapp)
+                        ? user.Value.Phone
+                        : user.Value.Whatsapp;
                 }
                 ViewBag.IsResident = false;
             }
             else if (CurrentRole == "superadmin")
             {
-                var user = await _users.GetByUidAsync(CurrentUserId);
+                var user = await _settings.GetAccountProfileAsync(CurrentUserId);
                 if (user != null)
                 {
-                    ViewBag.OwnerName = user.Name;
-                    ViewBag.CurrentPhone = user.Phone;
+                    ViewBag.OwnerName = user.Value.Name;
+                    ViewBag.CurrentPhone = user.Value.Phone;
                 }
                 ViewBag.IsResident = false;
             }

@@ -1,4 +1,4 @@
-namespace BuildingManagementMvc.Data.Entities;
+﻿namespace BuildingManagementMvc.Data.Entities;
 
 /// <summary>Represents a maintenance request in the normalized operational schema.</summary>
 public sealed class MaintenanceRequestEntity

@@ -1,8 +1,8 @@
-using BuildingManagementMvc.Models;
+﻿using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Services;
 
-// ترجمة حرفية لـ js/core/revenues.js
+// طھط±ط¬ظ…ط© ط­ط±ظپظٹط© ظ„ظ€ js/core/revenues.js
 /// <summary>
 /// Business logic for monthly revenues.
 /// </summary>

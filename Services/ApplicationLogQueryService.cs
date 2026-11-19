@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -359,7 +359,7 @@ public sealed class ApplicationLogQueryService
     }
 
     private static string Limit(string? value, int length) =>
-        string.IsNullOrEmpty(value) ? "" : value.Length <= length ? value : value[..length] + "…";
+        string.IsNullOrEmpty(value) ? "" : value.Length <= length ? value : value[..length] + "â€¦";
 
     private static DateTime SafeLastWriteTime(string path)
     {

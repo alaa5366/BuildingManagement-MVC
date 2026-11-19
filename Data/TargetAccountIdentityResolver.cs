@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using BuildingManagementMvc.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 

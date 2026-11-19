@@ -21,6 +21,7 @@ namespace BuildingManagementMvc.Controllers;
 public class CamerasController : Controller
 {
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
+    private readonly DvrService _dvrService;
     private readonly IConfiguration _config;
     private readonly ILogger<CamerasController> _log;
     private readonly IWebHostEnvironment _env;
@@ -30,11 +31,13 @@ public class CamerasController : Controller
     /// </summary>
     public CamerasController(
         IDbContextFactory<AppDbContext> sqlFactory,
+        DvrService dvrService,
         IConfiguration config,
         ILogger<CamerasController> log,
         IWebHostEnvironment env)
     {
         _sqlFactory = sqlFactory;
+        _dvrService = dvrService;
         _config = config;
         _log = log;
         _env = env;
@@ -78,12 +81,10 @@ public class CamerasController : Controller
             .FirstOrDefaultAsync();
         if (buildingName is null) return NotFound();
 
-        var cameras = await db.Cameras
-            .Include(c => c.Dvr)
-            .Where(c => c.BuildingId == buildingId && c.IsActive && c.Dvr!.IsActive)
-            .OrderBy(c => c.Name)
-            .AsNoTracking()
-            .ToListAsync();
+        var devices = await _dvrService.GetByBuildingAsync(buildingId);
+        var cameras = devices.Where(device => device.IsActive)
+            .SelectMany(device => device.Cameras.Where(camera => camera.IsActive))
+            .OrderBy(camera => camera.Name).ToList();
 
         ViewBag.BuildingName = buildingName;
         ViewBag.BuildingId = buildingId;
@@ -102,13 +103,10 @@ public class CamerasController : Controller
     [HttpGet]
     public async Task<IActionResult> GetHlsUrl(string cameraId)
     {
-        await using var db = await _sqlFactory.CreateDbContextAsync();
-        var cam = await db.Cameras
-            .Include(c => c.Dvr)
-            .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Id == cameraId);
-
-        if (cam == null || !cam.IsActive || cam.Dvr == null || !cam.Dvr.IsActive)
+        var cameraRecord = await _dvrService.GetCameraAsync(cameraId);
+        var cam = cameraRecord?.Camera;
+        var dvr = cameraRecord?.Device;
+        if (cam is null || dvr is null || !cam.IsActive || !dvr.IsActive)
             return NotFound();
 
         // التحقق من الصلاحية

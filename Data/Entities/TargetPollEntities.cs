@@ -1,4 +1,4 @@
-namespace BuildingManagementMvc.Data.Entities;
+﻿namespace BuildingManagementMvc.Data.Entities;
 
 /// <summary>Defines the voting and eligibility policy version for a poll.</summary>
 public sealed class PollVotingPolicyEntity

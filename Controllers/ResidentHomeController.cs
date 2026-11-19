@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Models;
+﻿﻿using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -79,7 +79,7 @@ public class ResidentHomeController : Controller
         var currentMonthTx = monthWalletSnapshot.Transactions.ToList();
 
         // ============================================================
-        // 3. الإحصائيات — مدفوع الشهر ده فقط
+        // 3. الإحصائيات â€” مدفوع الشهر ده فقط
         // ============================================================
         var paidThisMonth = currentMonthTx
             .Where(t => t.Type == "deposit" && t.Status == "confirmed")
@@ -155,7 +155,7 @@ public class ResidentHomeController : Controller
             .ToList();
 
         // ============================================================
-        // 9. آخر دفعة (للـ Hero) — الشهر الحالي فقط
+        // 9. آخر دفعة (للـ Hero) â€” الشهر الحالي فقط
         // ============================================================
         var lastConfirmedDeposit = currentMonthTx
             .Where(t => t.Type == "deposit" && t.Status == "confirmed")

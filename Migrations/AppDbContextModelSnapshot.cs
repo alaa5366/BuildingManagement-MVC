@@ -487,132 +487,252 @@ namespace BuildingManagementMvc.Migrations
                     b.ToView("vw_ApartmentWalletMovements", (string)null);
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.AuditLogEntity", b =>
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.AuditEventEntity", b =>
                 {
-                    b.Property<long>("AuditId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                    b.Property<Guid>("AuditEventId")
+                        .HasColumnType("uniqueidentifier");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("AuditId"));
+                    b.Property<Guid?>("ActorAccountId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Actor")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ActorRole")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ApartmentId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<int?>("AptNumber")
-                        .HasColumnType("int");
+                    b.Property<string>("ActorReference")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
 
                     b.Property<string>("BuildingId")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
-                    b.Property<string>("BuildingNumber")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Details")
+                    b.Property<string>("EventCategory")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
 
-                    b.Property<string>("Label")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<byte[]>("EventHash")
+                        .HasColumnType("varbinary(max)");
 
-                    b.Property<string>("MonthKey")
+                    b.Property<string>("EventType")
                         .IsRequired()
-                        .HasMaxLength(7)
-                        .HasColumnType("nvarchar(7)");
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
 
-                    b.Property<string>("Severity")
-                        .IsRequired()
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<byte>("Outcome")
                         .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("info");
+                        .HasColumnType("tinyint")
+                        .HasDefaultValue((byte)0);
 
-                    b.Property<string>("SourceId")
+                    b.Property<byte[]>("PreviousHash")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("ResourceReference")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ResourceType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("SafeDetailsJson")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("Ts")
-                        .HasColumnType("datetime2(0)");
+                    b.HasKey("AuditEventId");
 
-                    b.HasKey("AuditId");
+                    b.HasIndex("OccurredAtUtc", "AuditEventId")
+                        .HasDatabaseName("IX_AuditEvents_OccurredAt");
 
-                    b.HasIndex("ApartmentId", "Ts");
+                    b.HasIndex("CorrelationId", "OccurredAtUtc", "AuditEventId")
+                        .IsDescending(false, true, true)
+                        .HasDatabaseName("IX_AuditEvents_Correlation_Time");
 
-                    b.HasIndex("BuildingId", "Ts");
+                    b.HasIndex("ResourceType", "ResourceReference", "OccurredAtUtc")
+                        .HasDatabaseName("IX_AuditEvents_Resource");
 
-                    b.ToTable("AuditLog", (string)null);
+                    b.HasIndex("BuildingId", "EventCategory", "ResourceType", "OccurredAtUtc", "AuditEventId")
+                        .IsDescending(false, false, false, true, true)
+                        .HasDatabaseName("IX_AuditEvents_Building_Category_Resource_Time");
+
+                    b.ToTable("AuditEvents", (string)null);
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.BackupHistoryEntity", b =>
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.BackupArtifactEntity", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                    b.Property<Guid>("BackupArtifactId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("EncryptionKeyVersion")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("RetainUntilUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<byte[]>("Sha256")
+                        .IsRequired()
+                        .HasColumnType("varbinary(32)");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StorageReference")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("BackupArtifactId");
+
+                    b.ToTable("BackupArtifacts", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_BackupArtifacts_Size", "[SizeBytes] >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.BackupJobEntity", b =>
+                {
+                    b.Property<Guid>("BackupJobId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("BackupArtifactId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("DatabaseReference")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<byte>("JobType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RequestedByReference")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<string>("SafeErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("StartedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("BackupJobId");
+
+                    b.ToTable("BackupJobs", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.BackupRetentionEventEntity", b =>
+                {
+                    b.Property<Guid>("RetentionEventId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ActorReference")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<Guid>("BackupArtifactId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("EventType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.HasKey("RetentionEventId");
+
+                    b.HasIndex("BackupArtifactId");
+
+                    b.ToTable("BackupRetentionEvents", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.BackupScheduleConfigurationEntity", b =>
+                {
+                    b.Property<Guid>("ConfigurationId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CollectionsJson")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.Property<double>("DurationSeconds")
-                        .HasColumnType("float");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<long>("FileSize")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("TotalDocuments")
+                    b.Property<int?>("DayOfMonth")
                         .HasColumnType("int");
 
-                    b.HasKey("Id");
+                    b.Property<int?>("DayOfWeek")
+                        .HasColumnType("int");
 
-                    b.ToTable("BackupHistory", (string)null);
-                });
+                    b.Property<string>("Frequency")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.BuildingAdminEntity", b =>
-                {
-                    b.Property<string>("BuildingId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                    b.Property<DateTime>("ImportedAtUtc")
+                        .HasColumnType("datetime2(3)");
 
-                    b.Property<string>("AdminUid")
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastRunAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("LastRunStatus")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("LegacySettingId")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("MaxBackupsToKeep")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ScheduledHour")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("UpdatedByReference")
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
-                    b.HasKey("BuildingId", "AdminUid");
+                    b.HasKey("ConfigurationId");
 
-                    b.HasIndex("AdminUid");
+                    b.HasIndex("LegacySettingId")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_BackupScheduleConfigurations_Legacy");
 
-                    b.ToTable("BuildingAdmins", (string)null);
+                    b.ToTable("BackupScheduleConfigurations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_BackupScheduleConfigurations_DayOfMonth", "[DayOfMonth] IS NULL OR [DayOfMonth] BETWEEN 1 AND 31");
+
+                            t.HasCheckConstraint("CK_BackupScheduleConfigurations_DayOfWeek", "[DayOfWeek] IS NULL OR [DayOfWeek] BETWEEN 0 AND 6");
+
+                            t.HasCheckConstraint("CK_BackupScheduleConfigurations_Hour", "[ScheduledHour] BETWEEN 0 AND 23");
+
+                            t.HasCheckConstraint("CK_BackupScheduleConfigurations_Retention", "[MaxBackupsToKeep] BETWEEN 1 AND 30");
+                        });
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.BuildingEntity", b =>
@@ -719,292 +839,6 @@ namespace BuildingManagementMvc.Migrations
                     b.HasKey("BuildingId");
 
                     b.ToTable("BuildingSettings", (string)null);
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.CameraEntity", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("BuildingId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<int>("Channel")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.Property<string>("DvrId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("HlsUrl")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RtspPath")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BuildingId");
-
-                    b.HasIndex("DvrId", "Channel")
-                        .IsUnique();
-
-                    b.ToTable("Cameras", (string)null);
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.DepositEditEntity", b =>
-                {
-                    b.Property<long>("EditId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("EditId"));
-
-                    b.Property<string>("BuildingId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("ByUser")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("DepositId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<decimal>("NewAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("NewNote")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("OldAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("OldNote")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("Ts")
-                        .HasColumnType("datetime2(0)");
-
-                    b.HasKey("EditId");
-
-                    b.HasIndex("BuildingId", "DepositId");
-
-                    b.ToTable("DepositEditHistory", (string)null);
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.DepositEntity", b =>
-                {
-                    b.Property<string>("BuildingId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("ApartmentId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<DateTime?>("CancelledAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.Property<string>("CancelledBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("CancelledReason")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("ConfirmedAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.Property<string>("ConfirmedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("MonthKey")
-                        .IsRequired()
-                        .HasMaxLength(7)
-                        .HasColumnType("char(7)");
-
-                    b.Property<string>("Note")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Number")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ReceiptFileName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<long?>("ReceiptFileSize")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("ReceiptFileType")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ReceiptPath")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool?>("ReceiptSuccess")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("ReceiptUrl")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UpdateReason")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("BuildingId", "Id");
-
-                    b.HasIndex("BuildingId", "ApartmentId");
-
-                    b.ToTable("Deposits", (string)null);
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.DvrEntity", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("Brand")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("BuildingId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.Property<string>("IpAddress")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PasswordEncrypted")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Port")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.Property<string>("Username")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BuildingId");
-
-                    b.ToTable("Dvrs", (string)null);
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.ExpenseEntity", b =>
-                {
-                    b.Property<string>("BuildingId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("CategoryId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("CategoryKind")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<DateOnly>("ExpenseDate")
-                        .HasColumnType("date");
-
-                    b.Property<string>("MonthKey")
-                        .IsRequired()
-                        .HasMaxLength(7)
-                        .HasColumnType("char(7)");
-
-                    b.Property<string>("Note")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ReceiptUrl")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("BuildingId", "Id");
-
-                    b.HasIndex("BuildingId", "CategoryKind", "CategoryId");
-
-                    b.ToTable("Expenses", (string)null);
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialAllocationBatchEntity", b =>
@@ -1177,58 +1011,7 @@ namespace BuildingManagementMvc.Migrations
                     b.ToTable("FinancialCategories", (string)null);
                 });
 
-                        modelBuilder.Entity("BuildingManagementMvc.Data.Entities.InvoiceIssueEntity", b =>
-                {
-                    b.Property<long>("InvoiceSerial")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .UseIdentityColumn();
-
-                    b.Property<string>("ApartmentId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("BuildingId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("InvoiceNo")
-                        .HasMaxLength(160)
-                        .HasColumnType("nvarchar(160)");
-
-                    b.Property<string>("MonthKey")
-                        .IsRequired()
-                        .HasMaxLength(7)
-                        .HasColumnType("char(7)");
-
-                    b.Property<string>("SnapshotJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("IssuedAtUtc")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2(3)")
-                        .HasDefaultValueSql("SYSUTCDATETIME()");
-
-                    b.HasKey("InvoiceSerial");
-
-                    b.HasIndex("BuildingId", "ApartmentId", "MonthKey")
-                        .IsUnique()
-                        .HasDatabaseName("UX_InvoiceIssues_Apartment_Month");
-
-                    b.HasIndex("InvoiceNo")
-                        .IsUnique()
-                        .HasDatabaseName("UX_InvoiceIssues_Number")
-                        .HasFilter("[InvoiceNo] IS NOT NULL");
-
-                    b.ToTable("InvoiceIssues", t =>
-                        {
-                            t.HasCheckConstraint("CK_InvoiceIssues_MonthKey", "[MonthKey] LIKE '[0-9][0-9][0-9][0-9]-[01][0-9]' AND SUBSTRING([MonthKey],6,2) BETWEEN '01' AND '12'");
-                        });
-                });
-
-modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity", b =>
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity", b =>
                 {
                     b.Property<Guid>("PeriodId")
                         .HasColumnType("uniqueidentifier");
@@ -1368,6 +1151,7 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
 
                     b.HasKey("ReconciliationDifferenceId");
 
+                    b.HasIndex("ReviewedByAccountId");
 
                     b.HasIndex("BuildingId", "ApartmentId");
 
@@ -1495,27 +1279,21 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                     b.ToTable("Floors", (string)null);
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.GlobalSettingsEntity", b =>
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.GlobalApplicationSettingsEntity", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                    b.Property<string>("SettingsId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("AppName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("CloudinaryApiKey")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("CloudinaryCloudName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("DefaultLanguage")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
 
                     b.Property<bool>("EnableMaintenance")
                         .HasColumnType("bit");
@@ -1532,33 +1310,143 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                     b.Property<bool>("EnableWhatsApp")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime>("ImportedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
                     b.Property<int>("MaxPinAttempts")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(5);
 
                     b.Property<int>("SessionTimeoutDays")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(7);
 
                     b.Property<string>("StorageMode")
                         .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("UpdatedByReference")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.HasKey("SettingsId");
+
+                    b.ToTable("GlobalApplicationSettings", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_GlobalApplicationSettings_PinAttempts", "[MaxPinAttempts] BETWEEN 1 AND 100");
+
+                            t.HasCheckConstraint("CK_GlobalApplicationSettings_SessionTimeout", "[SessionTimeoutDays] BETWEEN 1 AND 365");
+                        });
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.InvoiceIssueEntity", b =>
+                {
+                    b.Property<long>("InvoiceSerial")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("InvoiceSerial"));
+
+                    b.Property<string>("ApartmentId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("BuildingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("InvoiceNo")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<DateTime>("IssuedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("MonthKey")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("char(7)");
+
+                    b.Property<string>("SnapshotJson")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("UpdatedAt")
+                    b.HasKey("InvoiceSerial");
+
+                    b.HasIndex("InvoiceNo")
+                        .IsUnique()
+                        .HasDatabaseName("UX_InvoiceIssues_Number")
+                        .HasFilter("[InvoiceNo] IS NOT NULL");
+
+                    b.HasIndex("BuildingId", "ApartmentId", "MonthKey")
+                        .IsUnique()
+                        .HasDatabaseName("UX_InvoiceIssues_Apartment_Month");
+
+                    b.ToTable("InvoiceIssues", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_InvoiceIssues_MonthKey", "[MonthKey] LIKE '[0-9][0-9][0-9][0-9]-[01][0-9]' AND SUBSTRING([MonthKey],6,2) BETWEEN '01' AND '12'");
+                        });
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.LanguageEntity", b =>
+                {
+                    b.Property<string>("CultureCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("nvarchar(12)");
+
+                    b.Property<string>("EnglishName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FallbackCulture")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Flag")
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("NativeName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
                         .HasColumnType("datetime2(0)");
 
                     b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
-                    b.Property<string>("WhatsappApiToken")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.HasKey("CultureCode");
 
-                    b.Property<string>("WhatsappPhoneId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("GlobalSettings", (string)null);
+                    b.ToTable("Languages", (string)null);
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.LedgerEntryEntity", b =>
@@ -1802,7 +1690,8 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                         .HasDatabaseName("IX_LegacyIdentityMap_Person")
                         .HasFilter("[PersonId] IS NOT NULL");
 
-                    
+                    b.HasIndex("ReviewedByAccountId");
+
                     b.HasIndex("MappingStatus", "SourceTable", "SourceSystem")
                         .HasDatabaseName("IX_LegacyIdentityMap_Status_Source");
 
@@ -1822,138 +1711,625 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                         });
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MaintenanceRecordEntity", b =>
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MaintenanceAssignmentEntity", b =>
                 {
-                    b.Property<string>("BuildingId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                    b.Property<Guid>("AssignmentId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                    b.Property<DateTime>("AssignedAtUtc")
+                        .HasColumnType("datetime2(3)");
 
-                    b.Property<bool>("AddedToExpense")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("AddedToExpenseAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.Property<decimal>("Cost")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.Property<string>("CreatedBy")
+                    b.Property<string>("AssigneeReference")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
 
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2(3)");
 
-                    b.Property<DateOnly>("MaintenanceDate")
-                        .HasColumnType("date");
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("VendorName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
-                    b.Property<string>("Vendor")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.HasKey("AssignmentId");
 
-                    b.HasKey("BuildingId", "Id");
+                    b.HasIndex("RequestId", "AssignedAtUtc");
 
-                    b.ToTable("MaintenanceRecords", (string)null);
+                    b.ToTable("MaintenanceAssignments", (string)null);
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MonthlyApartmentShareEntity", b =>
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MaintenanceAttachmentEntity", b =>
                 {
-                    b.Property<string>("BuildingId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                    b.Property<Guid>("AttachmentId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("MonthKey")
-                        .HasMaxLength(7)
-                        .HasColumnType("char(7)");
+                    b.Property<string>("ContentType")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("Sha256")
+                        .HasColumnType("varbinary(32)");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("UploadedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("UploadedByReference")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.HasKey("AttachmentId");
+
+                    b.HasIndex("RequestId", "UploadedAtUtc");
+
+                    b.ToTable("MaintenanceAttachments", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MaintenanceCommentEntity", b =>
+                {
+                    b.Property<Guid>("CommentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AuthorReference")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Visibility")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("CommentId");
+
+                    b.HasIndex("RequestId", "CreatedAtUtc");
+
+                    b.ToTable("MaintenanceComments", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MaintenanceLedgerLinkEntity", b =>
+                {
+                    b.Property<Guid>("LinkId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid>("LedgerTransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("LinkType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("LinkId");
+
+                    b.HasIndex("RequestId", "LedgerTransactionId")
+                        .IsUnique();
+
+                    b.ToTable("MaintenanceLedgerLinks", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MaintenanceRequestEntity", b =>
+                {
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ApartmentId")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
-                    b.Property<decimal>("CarryOver")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<string>("BuildingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
-                    b.Property<decimal>("ExpenseShare")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<string>("Category")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
 
-                    b.Property<decimal>("RevenueShare")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<DateTime?>("ClosedAtUtc")
+                        .HasColumnType("datetime2(3)");
 
-                    b.HasKey("BuildingId", "MonthKey", "ApartmentId");
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2(3)");
 
-                    b.HasIndex("BuildingId", "ApartmentId");
+                    b.Property<string>("Description")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
 
-                    b.ToTable("MonthlyApartmentShares", (string)null);
+                    b.Property<string>("LegacyMaintenanceId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<byte>("Priority")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid?>("RequestedByPersonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RequestedByReference")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.HasKey("RequestId");
+
+                    b.HasIndex("BuildingId", "CreatedAtUtc")
+                        .HasDatabaseName("IX_MaintenanceRequests_Building_Created");
+
+                    b.HasIndex("BuildingId", "LegacyMaintenanceId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_MaintenanceRequests_Legacy")
+                        .HasFilter("[LegacyMaintenanceId] IS NOT NULL");
+
+                    b.ToTable("MaintenanceRequests", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_MaintenanceRequests_Priority", "[Priority] BETWEEN 0 AND 4");
+
+                            t.HasCheckConstraint("CK_MaintenanceRequests_Status", "[Status] BETWEEN 0 AND 8");
+                        });
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.NotificationEntity", b =>
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MaintenanceStatusEventEntity", b =>
                 {
+                    b.Property<Guid>("StatusEventId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ActorReference")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<byte?>("FromStatus")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("ToStatus")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("StatusEventId");
+
+                    b.HasIndex("RequestId", "OccurredAtUtc");
+
+                    b.ToTable("MaintenanceStatusEvents", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MediaAccessSessionEntity", b =>
+                {
+                    b.Property<Guid>("MediaAccessSessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CameraLegacyId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("IssuedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("SessionReference")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("MediaAccessSessionId");
+
+                    b.ToTable("MediaAccessSessions", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MediaCredentialReferenceEntity", b =>
+                {
+                    b.Property<Guid>("CredentialReferenceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BuildingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("DvrLegacyId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("KeyVersion")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime?>("RotatedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("VaultProvider")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("VaultSecretReference")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("CredentialReferenceId");
+
+                    b.HasIndex("DvrLegacyId")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_MediaCredentialReferences_Legacy")
+                        .HasFilter("[DvrLegacyId] IS NOT NULL");
+
+                    b.ToTable("MediaCredentialReferences", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MediaDeviceChannelEntity", b =>
+                {
+                    b.Property<Guid>("ChannelId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BuildingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("ChannelNumber")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("MediaDeviceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<string>("RtspPath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.HasKey("ChannelId");
+
+                    b.HasIndex("MediaDeviceId", "ChannelNumber")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_MediaDeviceChannels_Device_Channel");
+
+                    b.ToTable("MediaDeviceChannels", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MediaDeviceEntity", b =>
+                {
+                    b.Property<Guid>("MediaDeviceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Brand")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("BuildingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("HostAddress")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<int>("Port")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.HasKey("MediaDeviceId");
+
+                    b.HasIndex("BuildingId", "HostAddress", "Port")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_MediaDevices_Building_Host_Port");
+
+                    b.ToTable("MediaDevices", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MediaProvisioningOperationEntity", b =>
+                {
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid?>("CredentialReferenceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DvrLegacyId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<byte>("OperationType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("RequestedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("SafeErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("OperationId");
+
+                    b.HasIndex("CredentialReferenceId");
+
+                    b.ToTable("MediaProvisioningOperations", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.NotificationDeliveryEntity", b =>
+                {
+                    b.Property<Guid>("DeliveryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AttemptNumber")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("AttemptedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("ProviderReference")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("RecipientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("SafeErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("DeliveryId");
+
+                    b.HasIndex("RecipientId", "AttemptNumber")
+                        .IsUnique();
+
+                    b.ToTable("NotificationDeliveries", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.NotificationMessageEntity", b =>
+                {
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
                     b.Property<string>("BuildingId")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                    b.Property<byte>("Channel")
+                        .HasColumnType("tinyint");
 
-                    b.Property<string>("Body")
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime?>("ExpiresAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("LegacyNotificationId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Origin")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Icon")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("ReadAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.Property<string>("RecipientApartmentId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("RecipientType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
 
                     b.Property<string>("Title")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.HasKey("MessageId");
+
+                    b.HasIndex("LegacyNotificationId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_NotificationMessages_Legacy")
+                        .HasFilter("[LegacyNotificationId] IS NOT NULL");
+
+                    b.HasIndex("BuildingId", "CreatedAtUtc", "MessageId")
+                        .IsDescending(false, true, true)
+                        .HasDatabaseName("IX_NotificationMessages_Building_Created");
+
+                    b.ToTable("NotificationMessages", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.NotificationPreferenceEntity", b =>
+                {
+                    b.Property<Guid>("PreferenceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Channel")
+                        .HasColumnType("tinyint");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("SubjectReference")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
 
-                    b.Property<DateTime>("Ts")
-                        .HasColumnType("datetime2(0)");
+                    b.Property<byte>("SubjectType")
+                        .HasColumnType("tinyint");
 
-                    b.Property<string>("Type")
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.HasKey("PreferenceId");
+
+                    b.HasIndex("SubjectType", "SubjectReference", "Channel")
+                        .IsUnique();
+
+                    b.ToTable("NotificationPreferences", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.NotificationReadStateEntity", b =>
+                {
+                    b.Property<Guid>("ReadStateId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DismissedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime?>("ReadAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid>("RecipientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ReadStateId");
+
+                    b.HasIndex("RecipientId")
+                        .IsUnique();
+
+                    b.ToTable("NotificationReadStates", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.NotificationRecipientEntity", b =>
+                {
+                    b.Property<Guid>("RecipientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ApartmentId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RecipientReference")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
 
-                    b.HasKey("BuildingId", "Id");
+                    b.Property<byte>("RecipientType")
+                        .HasColumnType("tinyint");
 
-                    b.HasIndex("BuildingId", "RecipientApartmentId");
+                    b.HasKey("RecipientId");
 
-                    b.ToTable("Notifications", (string)null);
+                    b.HasIndex("MessageId");
+
+                    b.HasIndex("RecipientReference", "CreatedAtUtc");
+
+                    b.ToTable("NotificationRecipients", (string)null);
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PaymentDepositEntity", b =>
@@ -1992,22 +2368,22 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                         .HasMaxLength(3)
                         .HasColumnType("char(3)");
 
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<Guid>("PeriodId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("PostedTransactionId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("ReceiptMetadataJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ResolutionReason")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("ReceiptMetadataJson")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid?>("ReversalTransactionId")
                         .HasColumnType("uniqueidentifier");
@@ -2072,31 +2448,6 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
 
                             t.HasCheckConstraint("CK_PaymentDeposits_Status", "[Status] IN (0,1,2,3)");
                         });
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PersonPhoneChangeRequestEntity", b =>
-                {
-                    b.Property<Guid>("RequestId").HasColumnType("uniqueidentifier");
-                    b.Property<string>("ApartmentId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
-                    b.Property<string>("BuildingId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
-                    b.Property<byte>("Status").ValueGeneratedOnAdd().HasColumnType("tinyint").HasDefaultValue((byte)0);
-                    b.Property<Guid>("PersonId").HasColumnType("uniqueidentifier");
-                    b.Property<string>("PreviousPhone").IsRequired().HasMaxLength(32).HasColumnType("nvarchar(32)");
-                    b.Property<string>("RequestedPhone").IsRequired().HasMaxLength(32).HasColumnType("nvarchar(32)");
-                    b.Property<DateTime>("RequestedAtUtc").ValueGeneratedOnAdd().HasColumnType("datetime2(3)").HasDefaultValueSql("SYSUTCDATETIME()");
-                    b.Property<string>("ReviewedByUserId").HasMaxLength(128).HasColumnType("nvarchar(128)");
-                    b.Property<DateTime?>("ReviewedAtUtc").HasColumnType("datetime2(3)");
-                    b.Property<string>("ReviewReason").HasMaxLength(500).HasColumnType("nvarchar(500)");
-                    b.Property<byte[]>("RowVersion").IsConcurrencyToken().IsRequired().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
-                    b.HasKey("RequestId");
-                    b.HasIndex("PersonId", "Status").HasDatabaseName("IX_PersonPhoneChangeRequests_Person_Status");
-                    b.HasIndex("Status", "BuildingId", "RequestedAtUtc").HasDatabaseName("IX_PersonPhoneChangeRequests_Queue");
-                    b.HasOne("BuildingManagementMvc.Data.Entities.PersonEntity", null).WithMany().HasForeignKey("PersonId").OnDelete(DeleteBehavior.NoAction).IsRequired();
-                    b.ToTable("PersonPhoneChangeRequests", null, t =>
-                    {
-                        t.HasCheckConstraint("CK_PersonPhoneChangeRequests_Review", "(([Status] = 0 AND [ReviewedAtUtc] IS NULL AND [ReviewedByUserId] IS NULL AND [ReviewReason] IS NULL) OR ([Status] IN (1,2) AND [ReviewedAtUtc] IS NOT NULL AND [ReviewedByUserId] IS NOT NULL AND [ReviewReason] IS NOT NULL AND LEN(LTRIM(RTRIM([ReviewReason]))) > 0))");
-                        t.HasCheckConstraint("CK_PersonPhoneChangeRequests_Status", "[Status] IN (0,1,2)");
-                    });
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PersonEntity", b =>
@@ -2165,6 +2516,162 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                         });
                 });
 
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PersonPhoneChangeRequestEntity", b =>
+                {
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ApartmentId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("BuildingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PreviousPhone")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTime>("RequestedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("RequestedPhone")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("ReviewReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ReviewedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("ReviewedByUserId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("RequestId");
+
+                    b.HasIndex("PersonId", "Status")
+                        .HasDatabaseName("IX_PersonPhoneChangeRequests_Person_Status");
+
+                    b.HasIndex("Status", "BuildingId", "RequestedAtUtc")
+                        .HasDatabaseName("IX_PersonPhoneChangeRequests_Queue");
+
+                    b.ToTable("PersonPhoneChangeRequests", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PersonPhoneChangeRequests_Review", "(([Status] = 0 AND [ReviewedAtUtc] IS NULL AND [ReviewedByUserId] IS NULL AND [ReviewReason] IS NULL) OR ([Status] IN (1,2) AND [ReviewedAtUtc] IS NOT NULL AND [ReviewedByUserId] IS NOT NULL AND [ReviewReason] IS NOT NULL AND LEN(LTRIM(RTRIM([ReviewReason]))) > 0))");
+
+                            t.HasCheckConstraint("CK_PersonPhoneChangeRequests_Status", "[Status] IN (0,1,2)");
+                        });
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollBallotEntity", b =>
+                {
+                    b.Property<Guid>("BallotId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("BallotTokenHash")
+                        .IsRequired()
+                        .HasColumnType("varbinary(64)");
+
+                    b.Property<int>("BallotVersion")
+                        .HasColumnType("int");
+
+                    b.Property<string>("BuildingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("CastAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<byte[]>("ChoicePayload")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("PollId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("BallotId");
+
+                    b.HasAlternateKey("BallotTokenHash")
+                        .HasName("UQ_PollBallots_Token");
+
+                    b.HasIndex("BuildingId", "PollId", "CastAtUtc")
+                        .HasDatabaseName("IX_PollBallots_Building_Poll_CastAt");
+
+                    b.ToTable("PollBallots", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollEligibilityEntity", b =>
+                {
+                    b.Property<Guid>("EligibilityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BuildingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("ConsumedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<byte[]>("CredentialHash")
+                        .HasColumnType("varbinary(64)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("IssuedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("PollId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("SubjectReference")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.HasKey("EligibilityId");
+
+                    b.HasIndex("BuildingId", "PollId", "SubjectReference")
+                        .IsUnique()
+                        .HasDatabaseName("UX_PollEligibility_Subject");
+
+                    b.ToTable("PollEligibility", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PollEligibility_Expiry", "[ExpiresAtUtc] > [IssuedAtUtc]");
+                        });
+                });
+
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollEntity", b =>
                 {
                     b.Property<string>("BuildingId")
@@ -2172,33 +2679,76 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("datetime2(3)");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
 
                     b.Property<DateTime?>("Deadline")
-                        .HasColumnType("datetime2(0)");
+                        .HasColumnType("datetime2(3)");
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<bool>("IsClosed")
                         .HasColumnType("bit");
 
                     b.Property<string>("Question")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
                     b.HasKey("BuildingId", "Id");
 
-                    b.ToTable("Polls", (string)null);
+                    b.ToTable("PollDefinitions", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollLifecycleEventEntity", b =>
+                {
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ActorReference")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<string>("BuildingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<byte>("EventType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("PollId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.HasKey("EventId");
+
+                    b.HasIndex("BuildingId", "PollId", "OccurredAtUtc")
+                        .HasDatabaseName("IX_PollLifecycleEvents_LegacyPoll");
+
+                    b.ToTable("PollLifecycleEvents", (string)null);
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollOptionEntity", b =>
@@ -2208,297 +2758,319 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("PollId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
 
                     b.Property<string>("Text")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.HasKey("BuildingId", "PollId", "Id");
 
-                    b.ToTable("PollOptions", (string)null);
+                    b.ToTable("PollChoiceOptions", (string)null);
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollVoteEntity", b =>
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollVotingPolicyEntity", b =>
                 {
-                    b.Property<string>("BuildingId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("PollId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("ApartmentId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("OptionId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<DateTime>("VotedAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.HasKey("BuildingId", "PollId", "ApartmentId");
-
-                    b.HasIndex("BuildingId", "ApartmentId");
-
-                    b.HasIndex("BuildingId", "PollId", "OptionId");
-
-                    b.ToTable("PollVotes", (string)null);
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PresenceEntity", b =>
-                {
-                    b.Property<string>("Uid")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<string>("ApartmentId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("BuildingId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<DateTime>("LastSeen")
-                        .HasColumnType("datetime2(3)");
-
-                    b.HasKey("Uid");
-
-                    b.ToTable("Presence", (string)null);
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.QrTokenEntity", b =>
-                {
-                    b.Property<string>("Uid")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<string>("ApartmentId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                    b.Property<Guid>("PolicyId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("BuildingId")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2(0)");
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
 
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("datetime2(3)");
-
-                    b.Property<bool>("IsUsed")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("IssuedAt")
-                        .HasColumnType("datetime2(3)");
-
-                    b.Property<string>("UseType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UsedAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.Property<string>("UsedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Uid");
-
-                    b.HasIndex("BuildingId", "ApartmentId");
-
-                    b.ToTable("QrTokens", (string)null);
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.QrUsageEntity", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.Property<string>("DeviceFingerprint")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FirstUsedAt")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("LastUsedAt")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("TokenId")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<int>("UseCount")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt");
-
-                    b.HasIndex("TokenId");
-
-                    b.ToTable("QrUsages", (string)null);
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.ResidentEntity", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("ApartmentId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("BuildingId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("DisabledReason")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<byte>("EligibilityMode")
+                        .HasColumnType("tinyint");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
-                    b.Property<bool>("IsDisabled")
-                        .HasColumnType("bit");
+                    b.Property<int>("PolicyVersion")
+                        .HasColumnType("int");
 
-                    b.Property<bool>("IsOwner")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsPrimary")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("LastLoginAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.Property<string>("Name")
+                    b.Property<string>("PollId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
-                    b.Property<string>("PasswordHash")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<byte>("VotingMode")
+                        .HasColumnType("tinyint");
 
-                    b.Property<string>("Phone")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.HasKey("PolicyId");
 
-                    b.Property<string>("PhotoUrl")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.HasAlternateKey("BuildingId", "PollId", "PolicyVersion")
+                        .HasName("UQ_PollVotingPolicies_PollVersion");
 
-                    b.Property<string>("PinHash")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Uid")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Whatsapp")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Phone");
-
-                    b.HasIndex("Uid")
-                        .IsUnique();
-
-                    b.HasIndex("BuildingId", "ApartmentId");
-
-                    b.HasIndex("BuildingId", "Phone");
-
-                    b.ToTable("Residents", (string)null);
+                    b.ToTable("PollVotingPolicies", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PollVotingPolicies_Mode", "[VotingMode] IN (0,1,2) AND [EligibilityMode] IN (0,1,2)");
+                        });
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.RevenueEntity", b =>
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PresenceHeartbeatEntity", b =>
                 {
+                    b.Property<long>("HeartbeatId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("HeartbeatId"));
+
+                    b.Property<DateTime>("ObservedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid>("PresenceSessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Signal")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("HeartbeatId");
+
+                    b.HasIndex("PresenceSessionId", "ObservedAtUtc")
+                        .HasDatabaseName("IX_PresenceHeartbeats_Session_Observed");
+
+                    b.ToTable("PresenceHeartbeats", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PresenceSessionEntity", b =>
+                {
+                    b.Property<Guid>("PresenceSessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ApartmentId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("BuildingId")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
-                    b.Property<string>("Id")
+                    b.Property<string>("DeviceReference")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("EndedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("LastSeenAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("LegacyUid")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime>("StartedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<byte>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint")
+                        .HasDefaultValue((byte)0);
+
+                    b.HasKey("PresenceSessionId");
+
+                    b.HasIndex("BuildingId", "ApartmentId", "LastSeenAtUtc")
+                        .HasDatabaseName("IX_PresenceSessions_Building_Apartment_LastSeen");
+
+                    b.HasIndex("LegacyUid", "Status", "LastSeenAtUtc")
+                        .HasDatabaseName("IX_PresenceSessions_LegacyUid_Status_LastSeen");
+
+                    b.ToTable("PresenceSessions", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.ProtectedIntegrationSecretEntity", b =>
+                {
+                    b.Property<Guid>("SecretId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("Ciphertext")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("KeyVersion")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime?>("RotatedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("ScopeReference")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<byte>("ScopeType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("SecretName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.HasKey("SecretId");
+
+                    b.HasIndex("ScopeType", "ScopeReference", "Provider", "SecretName")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_ProtectedIntegrationSecrets_Scope");
+
+                    b.ToTable("ProtectedIntegrationSecrets", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.QrCapabilityEntity", b =>
+                {
+                    b.Property<Guid>("CapabilityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ApartmentId")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("CategoryId")
+                    b.Property<string>("BuildingId")
+                        .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
-                    b.Property<string>("CategoryKind")
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("IssuedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int>("MaxUses")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("RevokedByReference")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<string>("TargetReference")
                         .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
 
-                    b.Property<string>("MonthKey")
+                    b.Property<byte>("TargetType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte[]>("TokenHash")
                         .IsRequired()
-                        .HasMaxLength(7)
-                        .HasColumnType("char(7)");
+                        .HasColumnType("varbinary(64)");
 
-                    b.Property<string>("Note")
+                    b.HasKey("CapabilityId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_QrCapabilities_Token");
+
+                    b.HasIndex("BuildingId", "ApartmentId", "ExpiresAtUtc")
+                        .HasDatabaseName("IX_QrCapabilities_Target_Expiry");
+
+                    b.ToTable("QrCapabilities", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.QrCapabilityUseEntity", b =>
+                {
+                    b.Property<Guid>("UseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CapabilityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Outcome")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("UseReference")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<DateTime>("UsedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.HasKey("UseId");
+
+                    b.HasIndex("CapabilityId", "UsedAtUtc")
+                        .HasDatabaseName("IX_QrCapabilityUses_Capability_UsedAt");
+
+                    b.ToTable("QrCapabilityUses", (string)null);
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.RestoreOperationEntity", b =>
+                {
+                    b.Property<Guid>("RestoreOperationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ApprovedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("ApprovedByReference")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<Guid>("BackupArtifactId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("RequestedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("SafeErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("StartedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("TargetDatabase")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
-                    b.Property<DateOnly>("RevenueDate")
-                        .HasColumnType("date");
+                    b.HasKey("RestoreOperationId");
 
-                    b.HasKey("BuildingId", "Id");
+                    b.HasIndex("BackupArtifactId");
 
-                    b.HasIndex("BuildingId", "CategoryKind", "CategoryId");
-
-                    b.ToTable("Revenues", (string)null);
+                    b.ToTable("RestoreOperations", (string)null);
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.RoleDefinitionEntity", b =>
@@ -2548,97 +3120,124 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                         });
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.ScheduledBackupSettingsEntity", b =>
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.SavedWhatsAppTemplateEntity", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("CollectionsJson")
+                    b.Property<string>("BuildingId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
-                    b.Property<int?>("DayOfMonth")
-                        .HasColumnType("int");
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
 
-                    b.Property<int?>("DayOfWeek")
-                        .HasColumnType("int");
+                    b.Property<string>("CreatedByUid")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
-                    b.Property<bool>("Enabled")
+                    b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Frequency")
+                    b.Property<string>("Message")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
 
-                    b.Property<int>("Hour")
-                        .HasColumnType("int");
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<DateTime?>("LastRunAt")
-                        .HasColumnType("datetime2(0)");
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
 
-                    b.Property<string>("LastRunStatus")
-                        .HasColumnType("nvarchar(max)");
+                    b.HasKey("Id");
 
-                    b.Property<int>("MaxBackupsToKeep")
-                        .HasColumnType("int");
+                    b.HasIndex("BuildingId", "IsActive", "Name")
+                        .HasDatabaseName("IX_SavedWhatsAppTemplates_Building_Active_Name");
 
-                    b.Property<DateTime?>("UpdatedAt")
+                    b.ToTable("SavedWhatsAppTemplates", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_SavedWhatsAppTemplates_Name", "LEN(LTRIM(RTRIM([Name]))) > 0");
+                        });
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.TranslationEntryEntity", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SourceGroup")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
                         .HasColumnType("datetime2(0)");
 
                     b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
-                    b.HasKey("Id");
+                    b.HasKey("Key");
 
-                    b.ToTable("ScheduledBackupSettings", (string)null);
+                    b.HasIndex("Category", "SourceGroup");
+
+                    b.ToTable("TranslationEntries", (string)null);
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.SyncPendingChangeEntity", b =>
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.TranslationValueEntity", b =>
                 {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                    b.Property<string>("Key")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    b.Property<string>("CultureCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
-                    b.Property<bool>("Applied")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("AppliedAt")
+                    b.Property<DateTime>("UpdatedAtUtc")
                         .HasColumnType("datetime2(0)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2(0)");
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
-                    b.Property<string>("EntityId")
+                    b.Property<string>("Value")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
 
-                    b.Property<string>("EntityType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.HasKey("Key", "CultureCode");
 
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("nvarchar(max)");
+                    b.HasIndex("CultureCode");
 
-                    b.Property<string>("Operation")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Payload")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("RetryCount")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Applied", "CreatedAt");
-
-                    b.HasIndex("EntityType", "EntityId");
-
-                    b.ToTable("SyncPendingChanges", (string)null);
+                    b.ToTable("TranslationValues", (string)null);
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.UserAccountEntity", b =>
@@ -2648,11 +3247,6 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
 
                     b.Property<byte>("AccountStatus")
                         .HasColumnType("tinyint");
-
-                    b.Property<bool>("MustChangePin")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .ValueGeneratedOnAdd()
@@ -2669,6 +3263,11 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
 
                     b.Property<DateTime?>("LastLoginAtUtc")
                         .HasColumnType("datetime2(3)");
+
+                    b.Property<bool>("MustChangePin")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(254)
@@ -2767,119 +3366,6 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
 
                             t.HasCheckConstraint("CK_UserCredentials_Type", "[CredentialType] IN (0,1)");
                         });
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.SavedWhatsAppTemplateEntity", b =>
-                {
-                    b.Property<Guid>("Id").ValueGeneratedNever().HasColumnType("uniqueidentifier");
-                    b.Property<string>("BuildingId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
-                    b.Property<string>("Name").IsRequired().HasMaxLength(100).HasColumnType("nvarchar(100)");
-                    b.Property<string>("Message").IsRequired().HasMaxLength(4000).HasColumnType("nvarchar(4000)");
-                    b.Property<bool>("IsActive").HasColumnType("bit");
-                    b.Property<DateTime>("CreatedAtUtc").ValueGeneratedOnAdd().HasColumnType("datetime2(3)").HasDefaultValueSql("SYSUTCDATETIME()");
-                    b.Property<DateTime>("UpdatedAtUtc").ValueGeneratedOnAdd().HasColumnType("datetime2(3)").HasDefaultValueSql("SYSUTCDATETIME()");
-                    b.Property<string>("CreatedByUid").HasMaxLength(128).HasColumnType("nvarchar(128)");
-                    b.HasKey("Id");
-                    b.HasIndex("BuildingId", "IsActive", "Name").HasDatabaseName("IX_SavedWhatsAppTemplates_Building_Active_Name");
-                    b.ToTable("SavedWhatsAppTemplates", t =>
-                    {
-                        t.HasCheckConstraint("CK_SavedWhatsAppTemplates_Name", "LEN(LTRIM(RTRIM([Name]))) > 0");
-                    });
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.UserEntity", b =>
-                {
-                    b.Property<string>("Uid")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("DisabledReason")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDisabled")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("LastLoginAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Phone")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PhotoUrl")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Pin")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("TwoFactorEnabled")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.Property<long?>("TwoFactorLastUsedStep")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("TwoFactorRecoveryCodesJson")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
-
-                    b.Property<string>("TwoFactorSecretEncrypted")
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Whatsapp")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Uid");
-
-                    b.ToTable("Users", (string)null);
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.UserPermissionEntity", b =>
-                {
-                    b.Property<string>("Uid")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<string>("Permission")
-                        .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
-
-                    b.HasKey("Uid", "Permission");
-
-                    b.ToTable("UserPermissions", (string)null);
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.UserRecoveryCodeEntity", b =>
@@ -3037,48 +3523,6 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                         });
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.WalletAdjustmentEntity", b =>
-                {
-                    b.Property<string>("BuildingId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("ApartmentId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2(0)");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("MonthKey")
-                        .IsRequired()
-                        .HasMaxLength(7)
-                        .HasColumnType("char(7)");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("BuildingId", "Id");
-
-                    b.HasIndex("BuildingId", "ApartmentId");
-
-                    b.ToTable("WalletAdjustments", (string)null);
-                });
-
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.AccountPermissionOverrideEntity", b =>
                 {
                     b.HasOne("BuildingManagementMvc.Data.Entities.UserAccountEntity", null)
@@ -3198,31 +3642,13 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.AuditLogEntity", b =>
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.BackupRetentionEventEntity", b =>
                 {
-                    b.HasOne("BuildingManagementMvc.Data.Entities.BuildingEntity", null)
+                    b.HasOne("BuildingManagementMvc.Data.Entities.BackupArtifactEntity", null)
                         .WithMany()
-                        .HasForeignKey("BuildingId")
-                        .OnDelete(DeleteBehavior.SetNull);
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.BuildingAdminEntity", b =>
-                {
-                    b.HasOne("BuildingManagementMvc.Data.Entities.UserEntity", "User")
-                        .WithMany("BuildingAdmins")
-                        .HasForeignKey("AdminUid")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("BackupArtifactId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("BuildingManagementMvc.Data.Entities.BuildingEntity", "Building")
-                        .WithMany("Admins")
-                        .HasForeignKey("BuildingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Building");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.BuildingSettingsEntity", b =>
@@ -3234,70 +3660,6 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                         .IsRequired();
 
                     b.Navigation("Building");
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.CameraEntity", b =>
-                {
-                    b.HasOne("BuildingManagementMvc.Data.Entities.DvrEntity", "Dvr")
-                        .WithMany("Cameras")
-                        .HasForeignKey("DvrId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Dvr");
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.DepositEditEntity", b =>
-                {
-                    b.HasOne("BuildingManagementMvc.Data.Entities.DepositEntity", "Deposit")
-                        .WithMany("EditHistory")
-                        .HasForeignKey("BuildingId", "DepositId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Deposit");
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.DepositEntity", b =>
-                {
-                    b.HasOne("BuildingManagementMvc.Data.Entities.BuildingEntity", null)
-                        .WithMany()
-                        .HasForeignKey("BuildingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BuildingManagementMvc.Data.Entities.ApartmentEntity", "Apartment")
-                        .WithMany()
-                        .HasForeignKey("BuildingId", "ApartmentId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Apartment");
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.DvrEntity", b =>
-                {
-                    b.HasOne("BuildingManagementMvc.Data.Entities.BuildingEntity", null)
-                        .WithMany()
-                        .HasForeignKey("BuildingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.ExpenseEntity", b =>
-                {
-                    b.HasOne("BuildingManagementMvc.Data.Entities.BuildingEntity", null)
-                        .WithMany()
-                        .HasForeignKey("BuildingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BuildingManagementMvc.Data.Entities.FinancialCategoryEntity", "Category")
-                        .WithMany()
-                        .HasForeignKey("BuildingId", "CategoryKind", "CategoryId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.Navigation("Category");
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialAllocationBatchEntity", b =>
@@ -3356,16 +3718,7 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                     b.Navigation("Building");
                 });
 
-                        modelBuilder.Entity("BuildingManagementMvc.Data.Entities.InvoiceIssueEntity", b =>
-                {
-                    b.HasOne("BuildingManagementMvc.Data.Entities.ApartmentEntity", null)
-                        .WithMany()
-                        .HasForeignKey("BuildingId", "ApartmentId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-                });
-
-modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity", b =>
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity", b =>
                 {
                     b.HasOne("BuildingManagementMvc.Data.Entities.BuildingEntity", null)
                         .WithMany()
@@ -3431,6 +3784,15 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                     b.Navigation("Building");
                 });
 
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.InvoiceIssueEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.ApartmentEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BuildingId", "ApartmentId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.LedgerEntryEntity", b =>
                 {
                     b.HasOne("BuildingManagementMvc.Data.Entities.ApartmentEntity", null)
@@ -3493,46 +3855,98 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                         .OnDelete(DeleteBehavior.NoAction);
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MaintenanceRecordEntity", b =>
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MaintenanceAssignmentEntity", b =>
                 {
-                    b.HasOne("BuildingManagementMvc.Data.Entities.BuildingEntity", null)
+                    b.HasOne("BuildingManagementMvc.Data.Entities.MaintenanceRequestEntity", "Request")
+                        .WithMany("Assignments")
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Request");
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MaintenanceAttachmentEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.MaintenanceRequestEntity", "Request")
+                        .WithMany("Attachments")
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Request");
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MaintenanceCommentEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.MaintenanceRequestEntity", "Request")
+                        .WithMany("Comments")
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Request");
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MaintenanceLedgerLinkEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.MaintenanceRequestEntity", "Request")
+                        .WithMany("LedgerLinks")
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Request");
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MaintenanceStatusEventEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.MaintenanceRequestEntity", "Request")
+                        .WithMany("StatusEvents")
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Request");
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MediaDeviceChannelEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.MediaDeviceEntity", null)
                         .WithMany()
-                        .HasForeignKey("BuildingId")
+                        .HasForeignKey("MediaDeviceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MonthlyApartmentShareEntity", b =>
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MediaProvisioningOperationEntity", b =>
                 {
-                    b.HasOne("BuildingManagementMvc.Data.Entities.BuildingEntity", null)
+                    b.HasOne("BuildingManagementMvc.Data.Entities.MediaCredentialReferenceEntity", null)
                         .WithMany()
-                        .HasForeignKey("BuildingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BuildingManagementMvc.Data.Entities.ApartmentEntity", "Apartment")
-                        .WithMany()
-                        .HasForeignKey("BuildingId", "ApartmentId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Apartment");
+                        .HasForeignKey("CredentialReferenceId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.NotificationEntity", b =>
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.NotificationReadStateEntity", b =>
                 {
-                    b.HasOne("BuildingManagementMvc.Data.Entities.BuildingEntity", null)
-                        .WithMany()
-                        .HasForeignKey("BuildingId")
+                    b.HasOne("BuildingManagementMvc.Data.Entities.NotificationRecipientEntity", "Recipient")
+                        .WithOne("ReadState")
+                        .HasForeignKey("BuildingManagementMvc.Data.Entities.NotificationReadStateEntity", "RecipientId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("BuildingManagementMvc.Data.Entities.ApartmentEntity", "RecipientApartment")
-                        .WithMany()
-                        .HasForeignKey("BuildingId", "RecipientApartmentId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                    b.Navigation("Recipient");
+                });
 
-                    b.Navigation("RecipientApartment");
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.NotificationRecipientEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.NotificationMessageEntity", "Message")
+                        .WithMany("Recipients")
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Message");
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PaymentDepositEntity", b =>
@@ -3578,6 +3992,15 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                         .OnDelete(DeleteBehavior.NoAction);
                 });
 
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PersonPhoneChangeRequestEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.PersonEntity", null)
+                        .WithMany()
+                        .HasForeignKey("PersonId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollEntity", b =>
                 {
                     b.HasOne("BuildingManagementMvc.Data.Entities.BuildingEntity", null)
@@ -3598,67 +4021,33 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                     b.Navigation("Poll");
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollVoteEntity", b =>
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PresenceHeartbeatEntity", b =>
                 {
-                    b.HasOne("BuildingManagementMvc.Data.Entities.ApartmentEntity", "Apartment")
-                        .WithMany()
-                        .HasForeignKey("BuildingId", "ApartmentId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("BuildingManagementMvc.Data.Entities.PollOptionEntity", "Option")
-                        .WithMany("Votes")
-                        .HasForeignKey("BuildingId", "PollId", "OptionId")
+                    b.HasOne("BuildingManagementMvc.Data.Entities.PresenceSessionEntity", "Session")
+                        .WithMany("Heartbeats")
+                        .HasForeignKey("PresenceSessionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Apartment");
-
-                    b.Navigation("Option");
+                    b.Navigation("Session");
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.QrTokenEntity", b =>
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.QrCapabilityUseEntity", b =>
                 {
-                    b.HasOne("BuildingManagementMvc.Data.Entities.BuildingEntity", null)
+                    b.HasOne("BuildingManagementMvc.Data.Entities.QrCapabilityEntity", null)
                         .WithMany()
-                        .HasForeignKey("BuildingId")
+                        .HasForeignKey("CapabilityId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("BuildingManagementMvc.Data.Entities.ApartmentEntity", "Apartment")
-                        .WithMany()
-                        .HasForeignKey("BuildingId", "ApartmentId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Apartment");
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.ResidentEntity", b =>
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.RestoreOperationEntity", b =>
                 {
-                    b.HasOne("BuildingManagementMvc.Data.Entities.ApartmentEntity", "Apartment")
+                    b.HasOne("BuildingManagementMvc.Data.Entities.BackupArtifactEntity", null)
                         .WithMany()
-                        .HasForeignKey("BuildingId", "ApartmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("BackupArtifactId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.Navigation("Apartment");
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.RevenueEntity", b =>
-                {
-                    b.HasOne("BuildingManagementMvc.Data.Entities.BuildingEntity", null)
-                        .WithMany()
-                        .HasForeignKey("BuildingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BuildingManagementMvc.Data.Entities.FinancialCategoryEntity", "Category")
-                        .WithMany()
-                        .HasForeignKey("BuildingId", "CategoryKind", "CategoryId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.Navigation("Category");
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.RolePermissionEntity", b =>
@@ -3667,6 +4056,21 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                         .WithMany()
                         .HasForeignKey("RoleKey")
                         .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.TranslationValueEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.LanguageEntity", null)
+                        .WithMany()
+                        .HasForeignKey("CultureCode")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BuildingManagementMvc.Data.Entities.TranslationEntryEntity", null)
+                        .WithMany()
+                        .HasForeignKey("Key")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -3692,17 +4096,6 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                         .HasForeignKey("ReplacedByCredentialId", "AccountId")
                         .HasPrincipalKey("CredentialId", "AccountId")
                         .OnDelete(DeleteBehavior.NoAction);
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.UserPermissionEntity", b =>
-                {
-                    b.HasOne("BuildingManagementMvc.Data.Entities.UserEntity", "User")
-                        .WithMany("Permissions")
-                        .HasForeignKey("Uid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.UserRecoveryCodeEntity", b =>
@@ -3758,27 +4151,8 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.WalletAdjustmentEntity", b =>
-                {
-                    b.HasOne("BuildingManagementMvc.Data.Entities.BuildingEntity", null)
-                        .WithMany()
-                        .HasForeignKey("BuildingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BuildingManagementMvc.Data.Entities.ApartmentEntity", "Apartment")
-                        .WithMany()
-                        .HasForeignKey("BuildingId", "ApartmentId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Apartment");
-                });
-
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.BuildingEntity", b =>
                 {
-                    b.Navigation("Admins");
-
                     b.Navigation("Apartments");
 
                     b.Navigation("Categories");
@@ -3788,19 +4162,32 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                     b.Navigation("Settings");
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.DepositEntity", b =>
-                {
-                    b.Navigation("EditHistory");
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.DvrEntity", b =>
-                {
-                    b.Navigation("Cameras");
-                });
-
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FloorEntity", b =>
                 {
                     b.Navigation("Apartments");
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.MaintenanceRequestEntity", b =>
+                {
+                    b.Navigation("Assignments");
+
+                    b.Navigation("Attachments");
+
+                    b.Navigation("Comments");
+
+                    b.Navigation("LedgerLinks");
+
+                    b.Navigation("StatusEvents");
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.NotificationMessageEntity", b =>
+                {
+                    b.Navigation("Recipients");
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.NotificationRecipientEntity", b =>
+                {
+                    b.Navigation("ReadState");
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollEntity", b =>
@@ -3808,137 +4195,10 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                     b.Navigation("Options");
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollOptionEntity", b =>
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PresenceSessionEntity", b =>
                 {
-                    b.Navigation("Votes");
+                    b.Navigation("Heartbeats");
                 });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.UserEntity", b =>
-                {
-                    b.Navigation("BuildingAdmins");
-
-                    b.Navigation("Permissions");
-                });
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.LanguageEntity", b =>
-                {
-                    b.Property<string>("CultureCode").HasMaxLength(20).HasColumnType("nvarchar(20)");
-                    b.Property<string>("Direction").IsRequired().HasMaxLength(12).HasColumnType("nvarchar(12)");
-                    b.Property<string>("EnglishName").IsRequired().HasMaxLength(100).HasColumnType("nvarchar(100)");
-                    b.Property<string>("FallbackCulture").HasMaxLength(20).HasColumnType("nvarchar(20)");
-                    b.Property<string>("Flag").HasMaxLength(8).HasColumnType("nvarchar(8)");
-                    b.Property<bool>("IsDefault").HasColumnType("bit");
-                    b.Property<bool>("IsEnabled").HasColumnType("bit");
-                    b.Property<string>("NativeName").IsRequired().HasMaxLength(100).HasColumnType("nvarchar(100)");
-                    b.Property<int>("SortOrder").HasColumnType("int");
-                    b.Property<DateTime>("UpdatedAtUtc").HasColumnType("datetime2");
-                    b.Property<string>("UpdatedBy").HasMaxLength(128).HasColumnType("nvarchar(128)");
-                    b.HasKey("CultureCode");
-                    b.ToTable("Languages");
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.TranslationEntryEntity", b =>
-                {
-                    b.Property<string>("Key").HasMaxLength(200).HasColumnType("nvarchar(200)");
-                    b.Property<string>("Category").IsRequired().HasMaxLength(40).HasColumnType("nvarchar(40)");
-                    b.Property<string>("Description").HasMaxLength(500).HasColumnType("nvarchar(500)");
-                    b.Property<bool>("IsArchived").HasColumnType("bit");
-                    b.Property<byte[]>("RowVersion").IsConcurrencyToken().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
-                    b.Property<string>("SourceGroup").IsRequired().HasMaxLength(160).HasColumnType("nvarchar(160)");
-                    b.Property<DateTime>("UpdatedAtUtc").HasColumnType("datetime2");
-                    b.Property<string>("UpdatedBy").HasMaxLength(128).HasColumnType("nvarchar(128)");
-                    b.HasKey("Key");
-                    b.HasIndex("Category", "SourceGroup");
-                    b.ToTable("TranslationEntries");
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.TranslationValueEntity", b =>
-                {
-                    b.Property<string>("Key").HasMaxLength(200).HasColumnType("nvarchar(200)");
-                    b.Property<string>("CultureCode").HasMaxLength(20).HasColumnType("nvarchar(20)");
-                    b.Property<string>("UpdatedBy").HasMaxLength(128).HasColumnType("nvarchar(128)");
-                    b.Property<DateTime>("UpdatedAtUtc").HasColumnType("datetime2");
-                    b.Property<string>("Value").IsRequired().HasMaxLength(4000).HasColumnType("nvarchar(4000)");
-                    b.HasKey("Key", "CultureCode");
-                    b.HasIndex("CultureCode");
-                    b.ToTable("TranslationValues");
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.TranslationValueEntity", b =>
-                {
-                    b.HasOne("BuildingManagementMvc.Data.Entities.LanguageEntity", null)
-                        .WithMany()
-                        .HasForeignKey("CultureCode")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("BuildingManagementMvc.Data.Entities.TranslationEntryEntity", null)
-                        .WithMany()
-                        .HasForeignKey("Key")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollVotingPolicyEntity", b =>
-                {
-                    b.Property<Guid>("PolicyId").HasColumnType("uniqueidentifier");
-                    b.Property<string>("BuildingId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
-                    b.Property<DateTime>("CreatedAtUtc").HasColumnType("datetime2(3)").HasDefaultValueSql("SYSUTCDATETIME()");
-                    b.Property<bool>("IsActive").HasDefaultValue(true).HasColumnType("bit");
-                    b.Property<string>("PollId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
-                    b.Property<int>("PolicyVersion").HasColumnType("int");
-                    b.Property<byte>("EligibilityMode").HasColumnType("tinyint");
-                    b.Property<byte>("VotingMode").HasColumnType("tinyint");
-                    b.HasKey("PolicyId");
-                    b.HasAlternateKey("BuildingId", "PollId", "PolicyVersion").HasName("UQ_PollVotingPolicies_PollVersion");
-                    b.ToTable("PollVotingPolicies", t => t.HasCheckConstraint("CK_PollVotingPolicies_Mode", "[VotingMode] IN (0,1,2) AND [EligibilityMode] IN (0,1,2)"));
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollEligibilityEntity", b =>
-                {
-                    b.Property<Guid>("EligibilityId").HasColumnType("uniqueidentifier");
-                    b.Property<string>("BuildingId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
-                    b.Property<DateTime?>("ConsumedAtUtc").HasColumnType("datetime2(3)");
-                    b.Property<byte[]>("CredentialHash").HasColumnType("varbinary(64)");
-                    b.Property<DateTime>("ExpiresAtUtc").HasColumnType("datetime2(3)");
-                    b.Property<string>("PollId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
-                    b.Property<DateTime?>("RevokedAtUtc").HasColumnType("datetime2(3)");
-                    b.Property<string>("SubjectReference").IsRequired().HasMaxLength(160).HasColumnType("nvarchar(160)");
-                    b.Property<DateTime>("IssuedAtUtc").HasColumnType("datetime2(3)");
-                    b.HasKey("EligibilityId");
-                    b.HasIndex("BuildingId", "PollId", "SubjectReference").IsUnique().HasDatabaseName("UX_PollEligibility_Subject");
-                    b.ToTable("PollEligibility", t => t.HasCheckConstraint("CK_PollEligibility_Expiry", "[ExpiresAtUtc] > [IssuedAtUtc]"));
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollBallotEntity", b =>
-                {
-                    b.Property<Guid>("BallotId").HasColumnType("uniqueidentifier");
-                    b.Property<int>("BallotVersion").HasColumnType("int");
-                    b.Property<byte[]>("BallotTokenHash").IsRequired().HasColumnType("varbinary(64)");
-                    b.Property<string>("BuildingId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
-                    b.Property<DateTime>("CastAtUtc").HasColumnType("datetime2(3)");
-                    b.Property<byte[]>("ChoicePayload").IsRequired().HasColumnType("varbinary(max)");
-                    b.Property<string>("PollId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
-                    b.HasKey("BallotId");
-                    b.HasAlternateKey("BallotTokenHash").HasName("UQ_PollBallots_Token");
-                    b.HasIndex("BuildingId", "PollId", "CastAtUtc").HasDatabaseName("IX_PollBallots_Building_Poll_CastAt");
-                    b.ToTable("PollBallots");
-                });
-
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollLifecycleEventEntity", b =>
-                {
-                    b.Property<Guid>("EventId").HasColumnType("uniqueidentifier");
-                    b.Property<string>("ActorReference").HasMaxLength(160).HasColumnType("nvarchar(160)");
-                    b.Property<string>("BuildingId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
-                    b.Property<byte>("EventType").HasColumnType("tinyint");
-                    b.Property<string>("MetadataJson").HasColumnType("nvarchar(max)");
-                    b.Property<DateTime>("OccurredAtUtc").HasColumnType("datetime2(3)");
-                    b.Property<string>("PollId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
-                    b.Property<string>("Reason").HasMaxLength(1000).HasColumnType("nvarchar(1000)");
-                    b.HasKey("EventId");
-                    b.HasIndex("BuildingId", "PollId", "OccurredAtUtc").HasDatabaseName("IX_PollLifecycleEvents_LegacyPoll");
-                    b.ToTable("PollLifecycleEvents");
-                });
-
 #pragma warning restore 612, 618
         }
     }

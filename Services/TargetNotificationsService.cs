@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Data;
+﻿using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
 using Microsoft.EntityFrameworkCore;
@@ -92,13 +92,13 @@ public sealed class TargetNotificationsService
     /// <summary>Creates an in-app deposit notice for a resident apartment.</summary>
     public Task CreateResidentDepositNoticeAsync(
         string buildingId, string apartmentId, string title, string body,
-        CancellationToken cancellationToken = default, string type = "deposit", string icon = "💳") =>
+        CancellationToken cancellationToken = default, string type = "deposit", string icon = "ًں’³") =>
         CreateResidentNotificationAsync(buildingId, apartmentId, title, body, type, icon, cancellationToken);
 
     /// <summary>Creates a normalized in-app notification for a resident apartment.</summary>
     public async Task CreateResidentNotificationAsync(
         string buildingId, string apartmentId, string title, string body,
-        string type = "info", string icon = "🔔",
+        string type = "info", string icon = "ًں””",
         CancellationToken cancellationToken = default)
     {
         ValidateScope(buildingId, apartmentId);
@@ -242,7 +242,7 @@ public sealed class TargetNotificationsService
         RecipientType = row.RecipientType == AdminRecipient ? "admin" : "resident",
         RecipientId = row.ApartmentId,
         Type = row.Message.Origin,
-        Icon = "🔔",
+        Icon = "ًں””",
         Title = row.Message.Title ?? "",
         Body = row.Message.Body,
         Read = row.ReadState?.ReadAtUtc is not null,

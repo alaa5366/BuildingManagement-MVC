@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using System.Security.Claims;
 using System.Text.Json;
 using BuildingManagementMvc.Data;
@@ -97,13 +97,19 @@ public sealed class ApartmentAccessGrantService
         };
 
         db.ApartmentAccessGrants.Add(grant);
-        db.AuditLog.Add(CreateAudit(
-            request.BuildingId,
-            request.ApartmentId,
-            nowUtc,
-            request.GrantedByAccountId,
-            "apartment.access.granted",
-            new
+        db.AuditEvents.Add(new AuditEventEntity
+        {
+            AuditEventId = Guid.NewGuid(),
+            OccurredAtUtc = nowUtc,
+            ActorAccountId = request.GrantedByAccountId,
+            ActorReference = request.GrantedByAccountId.ToString("D"),
+            BuildingId = request.BuildingId,
+            EventCategory = "ApartmentAccess",
+            EventType = "apartment.access.granted",
+            ResourceType = "ApartmentAccessGrant",
+            ResourceReference = grant.GrantId.ToString("D"),
+            Outcome = 0,
+            SafeDetailsJson = JsonSerializer.Serialize(new
             {
                 grantId = grant.GrantId,
                 request.PersonId,
@@ -112,7 +118,8 @@ public sealed class ApartmentAccessGrantService
                 request.ValidFromUtc,
                 request.ValidToUtc,
                 reason = grant.Reason
-            }));
+            })
+        });
 
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -155,13 +162,25 @@ public sealed class ApartmentAccessGrantService
 
         grant.RevokedAtUtc = nowUtc;
         grant.RevokedByAccountId = actorAccountId;
-        db.AuditLog.Add(CreateAudit(
-            grant.BuildingId,
-            grant.ApartmentId,
-            nowUtc,
-            request.RevokedByAccountId,
-            "apartment.access.revoked",
-            new { grantId = grant.GrantId, grant.PersonId, reason = request.Reason.Trim() }));
+        db.AuditEvents.Add(new AuditEventEntity
+        {
+            AuditEventId = Guid.NewGuid(),
+            OccurredAtUtc = nowUtc,
+            ActorAccountId = request.RevokedByAccountId,
+            ActorReference = request.RevokedByAccountId.ToString("D"),
+            BuildingId = grant.BuildingId,
+            EventCategory = "ApartmentAccess",
+            EventType = "apartment.access.revoked",
+            ResourceType = "ApartmentAccessGrant",
+            ResourceReference = grant.GrantId.ToString("D"),
+            Outcome = 0,
+            SafeDetailsJson = JsonSerializer.Serialize(new
+            {
+                grantId = grant.GrantId,
+                grant.PersonId,
+                reason = request.Reason.Trim()
+            })
+        });
 
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -218,25 +237,6 @@ public sealed class ApartmentAccessGrantService
         return actorAccountId;
     }
 
-    private static AuditLogEntity CreateAudit(
-        string buildingId,
-        string apartmentId,
-        DateTime nowUtc,
-        Guid actorAccountId,
-        string action,
-        object details) => new()
-        {
-            BuildingId = buildingId,
-            ApartmentId = apartmentId,
-            Ts = nowUtc,
-            Action = action,
-            Label = action,
-            Actor = actorAccountId.ToString("D"),
-            ActorRole = "apartment.access.grant.manager",
-            Details = JsonSerializer.Serialize(details),
-            MonthKey = nowUtc.ToString("yyyy-MM"),
-            Severity = "info"
-        };
 }
 
 /// <summary>Validates apartment access grant inputs before database operations.</summary>

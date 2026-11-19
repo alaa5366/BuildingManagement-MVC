@@ -1,9 +1,9 @@
-using BuildingManagementMvc.Models;
+﻿using BuildingManagementMvc.Models;
 using System.Globalization;
 
 namespace BuildingManagementMvc.Services;
 
-// ترجمة حرفية لـ js/core/expenses.js
+// طھط±ط¬ظ…ط© ط­ط±ظپظٹط© ظ„ظ€ js/core/expenses.js
 /// <summary>
 /// Business logic for monthly expenses.
 /// </summary>

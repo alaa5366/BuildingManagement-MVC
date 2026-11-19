@@ -1,4 +1,4 @@
-namespace BuildingManagementMvc.Data.Entities;
+﻿namespace BuildingManagementMvc.Data.Entities;
 
 /// <summary>Represents a normalized notification message shared with one or more recipients.</summary>
 public sealed class NotificationMessageEntity

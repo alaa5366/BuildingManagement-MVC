@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Data;
+﻿using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Services;
 using Microsoft.EntityFrameworkCore;
@@ -32,7 +32,6 @@ public sealed class TargetMaintenanceServiceTests
         Assert.StartsWith("mnt-", first.Id);
         await using var verify = new AppDbContext(options);
         Assert.Equal(2, await verify.MaintenanceRequests.CountAsync());
-        Assert.Empty(await verify.MaintenanceRecords.ToListAsync());
         var request = await verify.MaintenanceRequests.Include(x => x.StatusEvents)
             .Include(x => x.Assignments).SingleAsync(x => x.BuildingId == "B1");
         Assert.Single(request.StatusEvents);
@@ -135,7 +134,6 @@ public sealed class TargetMaintenanceServiceTests
         Assert.Equal(50m, record.Cost);
         await using var verify = new AppDbContext(options);
         Assert.Single(await verify.MaintenanceLedgerLinks.ToListAsync());
-        Assert.Empty(await verify.MaintenanceRecords.ToListAsync());
     }
 
     [Fact]

@@ -1,11 +1,11 @@
-using BuildingManagementMvc.Services;
+﻿﻿using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
 // ============================================================
-//  AdminHomeController — لوحة تحكم الأدمن الرئيسية (Building Map)
+//  AdminHomeController â€” لوحة تحكم الأدمن الرئيسية (Building Map)
 // ============================================================
 /// <summary>
 /// Admin dashboard: building map, apartment details modal and key statistics.
@@ -45,7 +45,7 @@ public class AdminHomeController : Controller
         return View(vm);
     }
     // ============================================================
-    // ✅ Phase 24.3 — Apartment Details (AJAX)
+    // âœ… Phase 24.3 â€” Apartment Details (AJAX)
     // ============================================================
     /// <summary>
     /// Returns the apartment details modal (partial view) shown from the building map.

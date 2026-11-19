@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿﻿using System.Globalization;
 using BuildingManagementMvc.Models;
 using QRCoder;
 using QuestPDF.Fluent;
@@ -30,7 +30,7 @@ public class InvoicePdfService
             {
                 page.Size(PageSizes.A4);
                 page.Margin(28);
-                // ✅ السطر الأهم
+                // âœ… السطر الأهم
                 page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Cairo"));
 
                 page.Content().Column(col =>
@@ -63,9 +63,9 @@ public class InvoicePdfService
                     col.Item().Border(1).BorderColor("#DDDDDD").Padding(10).Row(row =>
                     {
                         row.RelativeItem().Column(c => { c.Item().Text(Loc.T("Apartment_Number")).FontSize(8).FontColor("#666666"); c.Item().Text(Loc.T("Apartment_N", d.Apt.Number)).Bold(); });
-                        row.RelativeItem().Column(c => { c.Item().Text(Loc.T("Role")).FontSize(8).FontColor("#666666"); c.Item().Text(d.Floor?.Label ?? "—").Bold(); });
-                        row.RelativeItem().Column(c => { c.Item().Text(Loc.T("Resident_Name")).FontSize(8).FontColor("#666666"); c.Item().Text(string.IsNullOrWhiteSpace(d.Apt.Owner) ? "—" : d.Apt.Owner).Bold(); });
-                        row.RelativeItem().Column(c => { c.Item().Text(Loc.T("WhatsApp_Number")).FontSize(8).FontColor("#666666"); c.Item().Text(string.IsNullOrWhiteSpace(d.Apt.Phone) ? "—" : d.Apt.Phone).Bold(); });
+                        row.RelativeItem().Column(c => { c.Item().Text(Loc.T("Role")).FontSize(8).FontColor("#666666"); c.Item().Text(d.Floor?.Label ?? "â€”").Bold(); });
+                        row.RelativeItem().Column(c => { c.Item().Text(Loc.T("Resident_Name")).FontSize(8).FontColor("#666666"); c.Item().Text(string.IsNullOrWhiteSpace(d.Apt.Owner) ? "â€”" : d.Apt.Owner).Bold(); });
+                        row.RelativeItem().Column(c => { c.Item().Text(Loc.T("WhatsApp_Number")).FontSize(8).FontColor("#666666"); c.Item().Text(string.IsNullOrWhiteSpace(d.Apt.Phone) ? "â€”" : d.Apt.Phone).Bold(); });
                     });
 
                     // -------- Wallet summary --------

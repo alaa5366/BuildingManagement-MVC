@@ -7,113 +7,6 @@
 namespace BuildingManagementMvc.Data.Entities;
 
 // ----------------------------- المستخدمين -----------------------------
-/// <summary>
-/// Database entity for an admin or super admin account.
-/// </summary>
-public class UserEntity
-{
-    /// <summary>
-    /// Gets or sets the user ID.
-    /// </summary>
-    public string Uid { get; set; } = "";
-    /// <summary>
-    /// Gets or sets the email.
-    /// </summary>
-    public string Email { get; set; } = "";
-    /// <summary>
-    /// Gets or sets the display name.
-    /// </summary>
-    public string Name { get; set; } = "";
-    /// <summary>
-    /// Gets or sets the phone.
-    /// </summary>
-    public string Phone { get; set; } = "";
-    /// <summary>
-    /// Gets or sets the WhatsApp.
-    /// </summary>
-    public string Whatsapp { get; set; } = "";
-    /// <summary>
-    /// Gets or sets the PIN.
-    /// </summary>
-    public string Pin { get; set; } = "";
-    /// <summary>
-    /// Gets or sets the photo URL.
-    /// </summary>
-    public string PhotoUrl { get; set; } = "";
-    /// <summary>
-    /// Gets or sets the role.
-    /// </summary>
-    public string Role { get; set; } = "";               // superadmin | admin | resident
-    /// <summary>
-    /// Gets or sets a value indicating whether it is disabled.
-    /// </summary>
-    public bool IsDisabled { get; set; }
-    /// <summary>
-    /// Gets or sets the disabled reason.
-    /// </summary>
-    public string DisabledReason { get; set; } = "";
-    /// <summary>
-    /// Gets or sets a value indicating whether it is active.
-    /// </summary>
-    public bool IsActive { get; set; } = true;
-    /// <summary>Whether time-based two-factor authentication is enabled.</summary>
-    public bool TwoFactorEnabled { get; set; }
-    /// <summary>Encrypted TOTP authenticator secret.</summary>
-    public string? TwoFactorSecretEncrypted { get; set; }
-    /// <summary>JSON array of SHA-256 hashes for one-time recovery codes.</summary>
-    public string? TwoFactorRecoveryCodesJson { get; set; }
-    /// <summary>Last accepted TOTP time step, used to prevent code replay.</summary>
-    public long? TwoFactorLastUsedStep { get; set; }
-    /// <summary>
-    /// Gets or sets the last login date and time.
-    /// </summary>
-    public DateTime? LastLoginAt { get; set; }
-    /// <summary>
-    /// Gets or sets the created date and time.
-    /// </summary>
-    public DateTime? CreatedAt { get; set; }
-    /// <summary>
-    /// Gets or sets the created by.
-    /// </summary>
-    public string? CreatedBy { get; set; }
-    /// <summary>
-    /// Gets or sets the updated date and time.
-    /// </summary>
-    public DateTime? UpdatedAt { get; set; }
-    /// <summary>
-    /// Gets or sets the updated by.
-    /// </summary>
-    public string? UpdatedBy { get; set; }
-
-    /// <summary>
-    /// Gets or sets the permissions.
-    /// </summary>
-    public List<UserPermissionEntity> Permissions { get; set; } = new();
-    /// <summary>
-    /// Gets or sets the building admins.
-    /// </summary>
-    public List<BuildingAdminEntity> BuildingAdmins { get; set; } = new();
-}
-
-/// <summary>
-/// Database entity for a permission granted to an admin account.
-/// </summary>
-public class UserPermissionEntity
-{
-    /// <summary>
-    /// Gets or sets the user ID.
-    /// </summary>
-    public string Uid { get; set; } = "";
-    /// <summary>
-    /// Gets or sets the permission.
-    /// </summary>
-    public string Permission { get; set; } = "";
-    /// <summary>
-    /// Gets or sets the user.
-    /// </summary>
-    public UserEntity? User { get; set; }
-}
-
 // ----------------------------- العمارات -----------------------------
 /// <summary>
 /// Database entity for a building.
@@ -175,11 +68,7 @@ public class BuildingEntity
     /// Gets or sets the settings.
     /// </summary>
     public BuildingSettingsEntity? Settings { get; set; }
-    /// <summary>
-    /// Gets or sets the admins.
-    /// </summary>
-    public List<BuildingAdminEntity> Admins { get; set; } = new();
-    /// <summary>
+/// <summary>
     /// Gets or sets the floors.
     /// </summary>
     public List<FloorEntity> Floors { get; set; } = new();
@@ -243,29 +132,6 @@ public class BuildingSettingsEntity
     /// Gets or sets the building.
     /// </summary>
     public BuildingEntity? Building { get; set; }
-}
-
-/// <summary>
-/// Link between an admin account and a building it administers.
-/// </summary>
-public class BuildingAdminEntity
-{
-    /// <summary>
-    /// Gets or sets the identifier of the building.
-    /// </summary>
-    public string BuildingId { get; set; } = "";
-    /// <summary>
-    /// Gets or sets the admin user ID.
-    /// </summary>
-    public string AdminUid { get; set; } = "";
-    /// <summary>
-    /// Gets or sets the building.
-    /// </summary>
-    public BuildingEntity? Building { get; set; }
-    /// <summary>
-    /// Gets or sets the user.
-    /// </summary>
-    public UserEntity? User { get; set; }
 }
 
 /// <summary>
@@ -982,10 +848,7 @@ public class PollOptionEntity
     /// Gets or sets the poll.
     /// </summary>
     public PollEntity? Poll { get; set; }
-    /// <summary>
-    /// Gets or sets the votes.
-    /// </summary>
-    public List<PollVoteEntity> Votes { get; set; } = new();
+
 }
 
 /// <summary>

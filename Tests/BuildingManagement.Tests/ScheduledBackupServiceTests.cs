@@ -109,9 +109,9 @@ public class ScheduledBackupServiceTests
         await _service.SaveSettingsAsync(settings, "admin");
 
         await using var db = new AppDbContext(_options);
-        var saved = await db.ScheduledBackupSettings.SingleAsync();
+        var saved = await db.BackupScheduleConfigurations.SingleAsync();
         Assert.Equal("weekly", saved.Frequency);
-        Assert.Equal(3, saved.Hour);
+        Assert.Equal(3, saved.ScheduledHour);
         Assert.Equal(5, saved.MaxBackupsToKeep);
         Assert.Equal(new[] { "buildings" },
             System.Text.Json.JsonSerializer.Deserialize<List<string>>(saved.CollectionsJson));

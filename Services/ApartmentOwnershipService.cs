@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using System.Text.Json;
 using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
@@ -119,16 +119,19 @@ public sealed class ApartmentOwnershipService
         }).ToList();
 
         db.ApartmentOwnerships.AddRange(created);
-        db.AuditLog.Add(new AuditLogEntity
+        db.AuditEvents.Add(new AuditEventEntity
         {
+            AuditEventId = Guid.NewGuid(),
+            OccurredAtUtc = nowUtc,
+            ActorAccountId = request.RecordedByAccountId,
+            ActorReference = request.RecordedByAccountId?.ToString("D") ?? "system",
             BuildingId = request.BuildingId,
-            ApartmentId = request.ApartmentId,
-            Ts = nowUtc,
-            Action = "ownership.period.recorded",
-            Label = "Ownership period recorded",
-            Actor = request.RecordedByAccountId?.ToString("D") ?? "system",
-            ActorRole = "ownership.record.source." + request.RecordSource.ToString().ToLowerInvariant(),
-            Details = JsonSerializer.Serialize(new
+            EventCategory = "ApartmentOwnership",
+            EventType = "ownership.period.recorded",
+            ResourceType = "ApartmentOwnershipPeriod",
+            ResourceReference = request.ApartmentId,
+            Outcome = 0,
+            SafeDetailsJson = JsonSerializer.Serialize(new
             {
                 ownershipIds = created.Select(item => item.OwnershipId),
                 closedOwnershipIds = rowsToClose.Select(item => item.OwnershipId),
@@ -138,9 +141,7 @@ public sealed class ApartmentOwnershipService
                 request.CompletenessStatus,
                 ownerCount = created.Count,
                 totalSharePercent = created.Sum(item => item.OwnershipSharePercent)
-            }),
-            MonthKey = nowUtc.ToString("yyyy-MM"),
-            Severity = "info"
+            })
         });
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);

@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿﻿using System.Security.Cryptography;
 using System.Text;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.DataProtection.XmlEncryption;
@@ -8,7 +8,7 @@ namespace BuildingManagementMvc.Services;
 // تشفير مفاتيح ASP.NET DataProtection (اللي بتوقّع/تشفّر الكوكيز) على القرص بـ AES-GCM
 // بمفتاح مشتق من Encryption:SecretKey. المفاتيح القديمة غير المشفرة لسه بتشتغل،
 // وأي مفتاح جديد بيتكتب مشفّر. مهم: لو Encryption:SecretKey اتغيّر المفاتيح المشفرة مش هتتفك
-// (المستخدمين هيتعملهم تسجيل خروج) — فما تغيّرهوش من غير سبب.
+// (المستخدمين هيتعملهم تسجيل خروج) â€” فما تغيّرهوش من غير سبب.
 /// <summary>
 /// Holds the symmetric key (derived from <c>Encryption:SecretKey</c>) used to encrypt the ASP.NET data-protection key ring on disk.
 /// </summary>

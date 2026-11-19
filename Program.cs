@@ -159,12 +159,8 @@ builder.Services.AddScoped<TargetQrService>();
     Log.Information("Storage provider configured: {StorageProvider}", "Sql");
 
     builder.Services.AddSingleton<BuildingSqlStore>();
-    builder.Services.AddSingleton<UserSqlStore>();
-    builder.Services.AddSingleton<ResidentSqlStore>();
 
     builder.Services.AddSingleton<BuildingsService>();
-    builder.Services.AddSingleton<UsersService>();
-    builder.Services.AddScoped<SqlAuthService>();
     builder.Services.AddSingleton<WalletService>();
     builder.Services.AddSingleton<ExpensesService>();
     builder.Services.AddSingleton<RevenuesService>();
@@ -422,7 +418,7 @@ builder.Services.AddScoped<TargetQrService>();
     }
 
     var superAdminEmails = ConfigSecrets.Require(app.Configuration, "Auth:SuperAdminEmails");
-    SqlAuthService.ConfigureSuperAdmins(superAdminEmails);
+    SuperAdminIdentityPolicy.Configure(superAdminEmails);
 
     // Explicit one-time command: bootstrap only the two pre-existing allow-listed
     // target identity accounts. Passwords are supplied through process environment
@@ -599,6 +595,11 @@ builder.Services.AddScoped<TargetQrService>();
         pattern: "{controller=Home}/{action=Index}/{id?}");
 
     app.Run();
+}
+catch (Microsoft.Extensions.Hosting.HostAbortedException)
+{
+    // EF Core design-time tooling intentionally aborts the host after resolving
+    // the application service provider. This is not an application startup failure.
 }
 catch (Exception ex)
 {

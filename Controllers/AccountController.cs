@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Data.Entities;
+﻿﻿using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authentication;
@@ -21,11 +21,8 @@ namespace BuildingManagementMvc.Controllers;
 [AllowAnonymous]
 public class AccountController : Controller
 {
-    private readonly SqlAuthService _sqlAuth;
     private readonly IdentityAccountAuthenticationService _identityAuth;
     private readonly BuildingsService _buildings;
-    private readonly ResidentsService _residents;
-    private readonly UsersService _users;
     private readonly LoginThrottle _throttle;
     private readonly TwoFactorService _twoFactor;
     private readonly QrGeneratorService _qrGenerator;
@@ -47,22 +44,16 @@ public class AccountController : Controller
     /// Initializes a new instance of the <see cref="AccountController"/> class.
     /// </summary>
     public AccountController(
-        SqlAuthService sqlAuth,
         IdentityAccountAuthenticationService identityAuth,
         BuildingsService buildings,
-        UsersService users,
-        ResidentsService residents,
         LoginThrottle throttle,
         TwoFactorService twoFactor,
         QrGeneratorService qrGenerator,
         TargetQrService targetQr,
         ILogger<AccountController> logger)
     {
-        _sqlAuth = sqlAuth;
         _identityAuth = identityAuth;
         _buildings = buildings;
-        _users = users;
-        _residents = residents;
         _throttle = throttle;
         _twoFactor = twoFactor;
         _qrGenerator = qrGenerator;
@@ -186,8 +177,8 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        var res = await _identityAuth.AuthenticateAdminAsync(vm.Phone, vm.Pin, vm.BuildingId);
-        res ??= await _sqlAuth.SignInAdminAsync(vm.BuildingId, vm.Phone, vm.Pin);
+        var res = await _identityAuth.AuthenticateAdminAsync(vm.Phone, vm.Pin, vm.BuildingId)
+            ?? AuthResult.Fail("wrong-credentials");
 
         if (!res.Success)
         {
@@ -295,7 +286,7 @@ public class AccountController : Controller
         }
 
         // Allow-listed SuperAdmin accounts authenticate exclusively against the target identity schema.
-        if (SqlAuthService.IsSuperAdminEmail(identifier))
+        if (SuperAdminIdentityPolicy.IsEmailAllowed(identifier))
         {
             var superAdminResult = await _identityAuth.AuthenticateSuperAdminAsync(identifier, credential);
             if (!superAdminResult.Success)
@@ -325,35 +316,22 @@ public class AccountController : Controller
             return RedirectBasedOnRole(identityResult.Role!);
         }
 
-        var contexts = await _sqlAuth.FindAllContextsAsync(identifier, credential);
-
-        if (contexts.Count == 0)
+        var adminResult = await _identityAuth.AuthenticateAdminAsync(identifier, credential);
+        if (adminResult is not null)
         {
-            _throttle.RegisterFailure(throttleKey, ClientIp);
-            ViewBag.Error = Loc.T("Invalid_Login_Details");
-            return View(vm);
-        }
-
-        if (contexts.Count == 1)
-        {
-            var res = await _sqlAuth.SignInFromContextAsync(contexts[0]);
-            if (!res.Success)
+            if (!adminResult.Success)
             {
-                ViewBag.Error = MapError(res.Error, res.Reason);
+                _throttle.RegisterFailure(throttleKey, ClientIp);
+                ViewBag.Error = Loc.T("Invalid_Login_Details");
                 return View(vm);
             }
 
-            return await CompleteSignInAsync(res, throttleKey);
+            return await CompleteSignInAsync(adminResult, throttleKey);
         }
 
-        // ✅ تحسين رسالة الترحيب
-        var fullName = contexts.Count > 1
-            ? Loc.T("Accounts_Linked_To_Number", identifier)
-            : (contexts.FirstOrDefault()?.Name ?? identifier);
-
-        var token = StoreContextsInSession(contexts, fullName, throttleKey);
-
-        return RedirectToAction("ChooseContext", new { token });
+        _throttle.RegisterFailure(throttleKey, ClientIp);
+        ViewBag.Error = Loc.T("Invalid_Login_Details");
+        return View(vm);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -412,15 +390,11 @@ public class AccountController : Controller
             return RedirectToAction("ChooseContext", new { token = sessionToken });
         }
 
-        var res = await _sqlAuth.SignInFromContextAsync(selected);
-        if (!res.Success)
-        {
-            TempData["Error"] = MapError(res.Error, res.Reason);
-            return RedirectToAction("ChooseContext", new { token = sessionToken });
-        }
-
+        // Contexts issued by the retired legacy SQL identity flow are no longer accepted.
+        // A fresh sign-in must resolve the account and its active role assignments in target identity tables.
         HttpContext.Session.Remove("ctx_" + sessionToken);
-        return await CompleteSignInAsync(res, throttleKey);
+        TempData["Error"] = Loc.T("Invalid_Login_Details");
+        return RedirectToAction("UnifiedLogin");
     }
 
     private IActionResult? EnsureAdministratorTwoFactorAccess()
@@ -978,7 +952,7 @@ public class AccountController : Controller
             {
                 id = a.Id,
                 number = a.Number,
-                label = Loc.T("Apartment_N", a.Number) + (string.IsNullOrWhiteSpace(a.Label) ? "" : $" — {a.Label}")
+                label = Loc.T("Apartment_N", a.Number) + (string.IsNullOrWhiteSpace(a.Label) ? "" : $" â€” {a.Label}")
             })
             .ToList();
 
@@ -1006,7 +980,7 @@ public class AccountController : Controller
         if (string.IsNullOrEmpty(token))
             return RedirectToAction("LoginChoice");
 
-        // ✅ GET مابيستهلكش التوكن — بيعرض صفحة تأكيد بس (معاينة الرابط في واتساب/الأنتي فايروس ماتحرقوش)
+        // âœ… GET مابيستهلكش التوكن â€” بيعرض صفحة تأكيد بس (معاينة الرابط في واتساب/الأنتي فايروس ماتحرقوش)
         var ctx = await ResolveQuickLoginAsync(token, qrSecurity);
         if (ctx.Error != null)
         {
@@ -1159,7 +1133,10 @@ public class AccountController : Controller
 
         try
         {
-            await _residents.SetApartmentPinAsync(ctx.Payload!.BuildingId, ctx.Payload.AptId, newPin, "setpin-link");
+            var affectedAccounts = await _identityAuth.ResetApartmentResidentPinsAsync(
+                ctx.Payload!.BuildingId, ctx.Payload.AptId, newPin, "setpin-link", HttpContext.RequestAborted);
+            if (affectedAccounts == 0)
+                throw new InvalidOperationException("No active target resident accounts are linked to this apartment.");
             _log.LogInformation("[SetPin] PIN set via link for apartment {Apt} in building {B}",
                 ctx.Apartment.ApartmentNumber, ctx.Payload.BuildingId);
         }
@@ -1200,7 +1177,7 @@ public class AccountController : Controller
         public string? Error { get; init; }
         public QuickTokenPayload? Payload { get; init; }
         public QrApartmentInfo? Apartment { get; init; }
-        public ResidentEntity? Resident { get; init; }
+        public TargetResidentAccount? Resident { get; init; }
     }
 
     private async Task<QuickLoginContext> ResolveQuickLoginAsync(string token, QrSecurityService qrSecurity)
@@ -1221,13 +1198,13 @@ public class AccountController : Controller
         if (apartment is null)
             return new QuickLoginContext { Error = Loc.T("The_Apartment_Does_Not_Exist") };
 
-        var residents = await _residents.GetByApartmentAsync(payload.BuildingId, payload.AptId);
-        // Recovery must resolve to the explicitly designated primary resident;
+        var residents = await _targetQr.GetResidentAccountsForApartmentAsync(
+            payload.BuildingId, payload.AptId, HttpContext.RequestAborted);
+        // Recovery must resolve to the explicitly designated primary target account;
         // it must never fall back to another occupant's identity.
         var resident = string.Equals(payload.Purpose, "recovery", StringComparison.OrdinalIgnoreCase)
-            ? residents.FirstOrDefault(r => r.IsPrimary && !r.IsDisabled && r.IsActive)
-            : residents.FirstOrDefault(r => r.IsPrimary && !r.IsDisabled && r.IsActive)
-                ?? residents.FirstOrDefault(r => !r.IsDisabled && r.IsActive);
+            ? residents.FirstOrDefault(item => item.IsPrimary)
+            : residents.FirstOrDefault(item => item.IsPrimary) ?? residents.FirstOrDefault();
         if (resident == null)
             return new QuickLoginContext { Error = Loc.T("The_Apartment_Does_Not_Exist") };
 

@@ -1,4 +1,4 @@
-using System.Text;
+﻿﻿using System.Text;
 
 namespace BuildingManagementMvc.Services;
 
@@ -7,7 +7,7 @@ namespace BuildingManagementMvc.Services;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>⚠️ ليه ده مهم؟</b> لأن المستخدم ممكن يبعت ملف اسمه <c>image.jpg</c>
+/// <b>âڑ ï¸ڈ ليه ده مهم؟</b> لأن المستخدم ممكن يبعت ملف اسمه <c>image.jpg</c>
 /// ويكون فعليًا HTML أو SVG أو PDF. الدالة دي بتقرأ أول بايتات عشان تتأكد
 /// إن الملف صورة حقيقية.
 /// </para>

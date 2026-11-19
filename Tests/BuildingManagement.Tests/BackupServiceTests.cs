@@ -44,7 +44,7 @@ public class BackupServiceTests
         Assert.NotEmpty(stats);
         // لازم يكون فيه stats لكل جدول في KnownTables
         Assert.Contains(stats, s => s.Collection == "buildings");
-        Assert.Contains(stats, s => s.Collection == "users");
+        Assert.Contains(stats, s => s.Collection == "userAccounts");
         Assert.All(stats, s => Assert.Equal(0, s.DocCount));
     }
 
@@ -53,7 +53,9 @@ public class BackupServiceTests
     {
         // Arrange: نضيف بيانات
         _db.Buildings.Add(new BuildingEntity { Id = "b1", Name = "Test", BuildingNumber = "BLD-001" });
-        _db.Users.Add(new UserEntity { Uid = "u1", Email = "a@test.com", Role = "admin" });
+        var personId = Guid.NewGuid();
+        _db.Persons.Add(new PersonEntity { PersonId = personId, DisplayName = "Test User", PrimaryEmail = "a@test.com", CreatedAtUtc = DateTime.UtcNow });
+        _db.UserAccounts.Add(new UserAccountEntity { AccountId = Guid.NewGuid(), PersonId = personId, NormalizedEmail = "A@TEST.COM", AccountStatus = 1, CreatedAtUtc = DateTime.UtcNow });
         await _db.SaveChangesAsync();
 
         // Act
@@ -64,9 +66,9 @@ public class BackupServiceTests
         Assert.NotNull(buildingsStat);
         Assert.Equal(1, buildingsStat.DocCount);
 
-        var usersStat = stats.FirstOrDefault(s => s.Collection == "users");
-        Assert.NotNull(usersStat);
-        Assert.Equal(1, usersStat.DocCount);
+        var accountsStat = stats.FirstOrDefault(s => s.Collection == "userAccounts");
+        Assert.NotNull(accountsStat);
+        Assert.Equal(1, accountsStat.DocCount);
     }
 
     // ================================================================
@@ -122,10 +124,12 @@ public class BackupServiceTests
     public async Task CreateBackupAsync_MultipleTables_BacksUpAll()
     {
         _db.Buildings.Add(new BuildingEntity { Id = "b1", Name = "T", BuildingNumber = "BLD-001" });
-        _db.Users.Add(new UserEntity { Uid = "u1", Email = "a@test.com", Role = "admin" });
+        var personId = Guid.NewGuid();
+        _db.Persons.Add(new PersonEntity { PersonId = personId, DisplayName = "Test User", PrimaryEmail = "a@test.com", CreatedAtUtc = DateTime.UtcNow });
+        _db.UserAccounts.Add(new UserAccountEntity { AccountId = Guid.NewGuid(), PersonId = personId, NormalizedEmail = "A@TEST.COM", AccountStatus = 1, CreatedAtUtc = DateTime.UtcNow });
         await _db.SaveChangesAsync();
 
-        var (bytes, result) = await _service.CreateBackupAsync(new() { "buildings", "users" }, "admin");
+        var (bytes, result) = await _service.CreateBackupAsync(new() { "buildings", "userAccounts" }, "admin");
 
         Assert.True(result.Success);
         Assert.Equal(2, result.TotalCollections);
@@ -134,7 +138,7 @@ public class BackupServiceTests
         using var ms = new MemoryStream(bytes);
         using var zip = new System.IO.Compression.ZipArchive(ms);
         Assert.Contains(zip.Entries, e => e.Name == "buildings.json");
-        Assert.Contains(zip.Entries, e => e.Name == "users.json");
+        Assert.Contains(zip.Entries, e => e.Name == "userAccounts.json");
     }
 
     [Fact]
@@ -569,9 +573,9 @@ public class BackupServiceTests
         var collections = BackupService.GetKnownCollections();
 
         Assert.Contains("buildings", collections.Keys);
-        Assert.Contains("users", collections.Keys);
-        Assert.Contains("residents", collections.Keys);
-        Assert.Contains("auditLog", collections.Keys);
+        Assert.Contains("userAccounts", collections.Keys);
+        Assert.Contains("apartmentOccupancies", collections.Keys);
+        Assert.Contains("auditEvents", collections.Keys);
         Assert.Contains("savedWhatsAppTemplates", collections.Keys);
         Assert.Contains("notificationMessages", collections.Keys);
         Assert.Contains("notificationRecipients", collections.Keys);

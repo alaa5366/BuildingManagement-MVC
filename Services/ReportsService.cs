@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Models;
+﻿using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Services;
 
@@ -96,7 +96,7 @@ public sealed class ReportsService
             categoryById.TryGetValue(item.Key, out var category);
             return new CategoryPoint
             {
-                Name = category?.Name ?? "—",
+                Name = category?.Name ?? "â€”",
                 Color = category?.Color ?? "#888888",
                 Total = item.Value
             };
