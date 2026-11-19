@@ -112,13 +112,24 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        var res = await _sqlAuth.SignInResidentAsync(
-            vm.BuildingId, vm.FloorId, vm.AptId, vm.Whatsapp, vm.Pin);
+        // Authenticate against Persons/UserAccounts/UserCredentials and constrain the
+        // resulting occupancy to the exact building/apartment selected by the resident.
+        var building = await _buildings.GetByIdAsync(vm.BuildingId);
+        var floor = building?.Floors.FirstOrDefault(item => item.Id == vm.FloorId);
+        var apartment = building?.Apartments.FirstOrDefault(item =>
+            item.Id == vm.AptId && item.FloorId == vm.FloorId);
+        var res = building == null || floor == null || apartment == null
+            ? AuthResult.Fail("wrong-credentials")
+            : await _identityAuth.AuthenticateResidentAsync(
+                vm.Whatsapp, vm.Pin, vm.BuildingId, vm.AptId);
 
-        if (!res.Success)
+        if (res == null || !res.Success ||
+            !string.Equals(res.Role, "resident", StringComparison.Ordinal) ||
+            !res.BuildingIds.Contains(vm.BuildingId, StringComparer.Ordinal) ||
+            !string.Equals(res.ApartmentId, vm.AptId, StringComparison.Ordinal))
         {
             _throttle.RegisterFailure(throttleKey, ClientIp);
-            ViewBag.Error = MapError(res.Error, res.Reason);
+            ViewBag.Error = Loc.T("Invalid_Login_Details");
             ViewBag.Buildings = await _buildings.GetSummariesAsync();
             return View(vm);
         }
