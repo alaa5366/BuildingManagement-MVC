@@ -17,23 +17,38 @@ public sealed class AccountManagementServiceTests
         var now = DateTime.UtcNow;
         var personId = Guid.NewGuid();
         var accountId = Guid.NewGuid();
+        var targetSuperAdminPersonId = Guid.NewGuid();
+        var targetSuperAdminAccountId = Guid.NewGuid();
 
         await using (var db = await factory.CreateDbContextAsync())
         {
             db.Persons.AddRange(
                 new PersonEntity { PersonId = personId, DisplayName = "Target Admin", PrimaryPhone = "+201000000111", CreatedAtUtc = now },
-                new PersonEntity { PersonId = Guid.NewGuid(), DisplayName = "Archived matching person", PrimaryPhone = "+201000000111", IsArchived = true, ArchivedAtUtc = now, CreatedAtUtc = now });
+                new PersonEntity { PersonId = Guid.NewGuid(), DisplayName = "Archived matching person", PrimaryPhone = "+201000000111", IsArchived = true, ArchivedAtUtc = now, CreatedAtUtc = now },
+                new PersonEntity { PersonId = targetSuperAdminPersonId, DisplayName = "Target SuperAdmin", PrimaryPhone = "+201000000111", CreatedAtUtc = now });
             db.UserAccounts.Add(new UserAccountEntity
             {
                 AccountId = accountId, PersonId = personId, AccountStatus = 1,
                 SecurityStamp = "test-stamp", CreatedAtUtc = now
             });
-            db.RoleDefinitions.Add(new RoleDefinitionEntity { RoleKey = "admin", DisplayName = "Admin", IsActive = true });
+            db.UserAccounts.Add(new UserAccountEntity
+            {
+                AccountId = targetSuperAdminAccountId, PersonId = targetSuperAdminPersonId, AccountStatus = 1,
+                SecurityStamp = "superadmin-stamp", CreatedAtUtc = now
+            });
+            db.RoleDefinitions.AddRange(
+                new RoleDefinitionEntity { RoleKey = "admin", DisplayName = "Admin", IsActive = true },
+                new RoleDefinitionEntity { RoleKey = "superadmin", DisplayName = "SuperAdmin", IsActive = true });
             db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
             {
                 RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "admin",
                 ScopeType = 1, ScopeBuildingId = "building-1",
                 ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1)
+            });
+            db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            {
+                RoleAssignmentId = Guid.NewGuid(), AccountId = targetSuperAdminAccountId, RoleKey = "superadmin",
+                ScopeType = 0, ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1)
             });
             db.Users.Add(new UserEntity
             {
@@ -48,7 +63,7 @@ public sealed class AccountManagementServiceTests
         var audit = CreateAuditMock();
         var page = await new AccountManagementService(factory, audit.Object).GetPageAsync(null, null, null, 1, 25);
 
-        Assert.Equal(2, page.TotalAccounts);
+        Assert.Equal(3, page.TotalAccounts);
         Assert.Equal(1, page.LegacySuperAdminAccounts);
         Assert.Equal(1, page.DuplicatePhoneAccounts);
         Assert.Equal(0, page.AccountsWithoutActiveRole);
@@ -57,6 +72,11 @@ public sealed class AccountManagementServiceTests
         Assert.Equal("admin", target.Roles);
         Assert.Contains("building-1", target.RoleContexts);
         Assert.True(target.IsDuplicatePhone);
+
+        var targetSuperAdmin = Assert.Single(page.Rows.Where(x => x.AccountId == targetSuperAdminAccountId));
+        Assert.Equal("superadmin", targetSuperAdmin.Roles);
+        Assert.Null(targetSuperAdmin.Phone);
+        Assert.False(targetSuperAdmin.IsDuplicatePhone);
 
         var legacy = Assert.Single(page.Rows.Where(x => x.IsLegacyAccount));
         Assert.Equal("superadmin", legacy.Roles);
