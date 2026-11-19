@@ -180,6 +180,7 @@ builder.Services.AddScoped<TargetExpenseRevenueWorkflowService>();
     builder.Services.AddSingleton<PollsService>();
     builder.Services.AddSingleton<MaintenanceService>();
     builder.Services.AddSingleton<NotificationsService>();
+    builder.Services.AddScoped<TargetNotificationsService>();
     builder.Services.AddSingleton<WhatsAppTemplateService>();
     builder.Services.AddScoped<ImpersonationService>();
 
