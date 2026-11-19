@@ -25,6 +25,7 @@ public sealed class ApplicationLogsController : Controller
     public async Task<IActionResult> Index(
         string? from, string? to, string? level, string? search,
         string? correlationId, string? source, string? componentType, bool? hasException,
+        int? httpStatusCode, double? minDurationMs, double? maxDurationMs,
         int page = 1, int pageSize = 25)
     {
         var query = new ApplicationLogQuery
@@ -37,6 +38,9 @@ public sealed class ApplicationLogsController : Controller
             Source = source,
             ComponentType = componentType,
             HasException = hasException,
+            HttpStatusCode = httpStatusCode,
+            MinDurationMs = minDurationMs,
+            MaxDurationMs = maxDurationMs,
             Page = Math.Clamp(page, 1, 100),
             PageSize = Math.Clamp(pageSize, 10, 100)
         };
