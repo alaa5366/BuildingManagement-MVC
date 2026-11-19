@@ -49,6 +49,10 @@ public sealed class LedgerPostingService
             throw new ArgumentException("Ledger lines require an apartment, non-zero amount and ISO currency code.", nameof(lines));
         if (lines.Select(x => x.CurrencyCode).Distinct(StringComparer.OrdinalIgnoreCase).Count() != 1)
             throw new ArgumentException("A transaction cannot mix currencies.", nameof(lines));
+        if (lines.Any(x => x.EffectiveAtUtc.HasValue && x.EffectiveAtUtc.Value.Kind != DateTimeKind.Utc))
+            throw new ArgumentException("Explicit ledger effective timestamps must be UTC.", nameof(lines));
+        if (lines.Any(x => x.EffectiveAtUtc.HasValue) && lines.Any(x => !x.EffectiveAtUtc.HasValue))
+            throw new ArgumentException("Either provide effective timestamps for every line or omit them for every line.", nameof(lines));
         var hasSource = sourceSystem is not null || sourceType is not null || sourceKey is not null;
         if (hasSource && (string.IsNullOrWhiteSpace(sourceSystem) ||
                           string.IsNullOrWhiteSpace(sourceType) ||
@@ -88,17 +92,20 @@ public sealed class LedgerPostingService
                         x.EntryKind,
                         x.SignedAmount,
                         x.CurrencyCode,
-                        x.Description
+                        x.Description,
+                        x.EffectiveAtUtc
                     })
                     .ToListAsync(cancellationToken);
 
+                var compareEffectiveAt = lines.All(x => x.EffectiveAtUtc.HasValue);
                 var requestedPayload = lines
                     .Select(x => (
                         ApartmentId: x.ApartmentId,
                         EntryKind: x.EntryKind,
                         SignedAmount: x.SignedAmount,
                         CurrencyCode: x.CurrencyCode.ToUpperInvariant(),
-                        Description: string.IsNullOrWhiteSpace(x.Description) ? null : x.Description.Trim()))
+                        Description: string.IsNullOrWhiteSpace(x.Description) ? null : x.Description.Trim(),
+                        EffectiveAtUtc: compareEffectiveAt ? x.EffectiveAtUtc : null))
                     .OrderBy(x => x.ApartmentId, StringComparer.Ordinal)
                     .ThenBy(x => x.EntryKind)
                     .ThenBy(x => x.SignedAmount)
@@ -112,7 +119,8 @@ public sealed class LedgerPostingService
                         EntryKind: x.EntryKind,
                         SignedAmount: x.SignedAmount,
                         CurrencyCode: x.CurrencyCode,
-                        Description: x.Description))
+                        Description: x.Description,
+                        EffectiveAtUtc: compareEffectiveAt ? (DateTime?)x.EffectiveAtUtc : null))
                     .OrderBy(x => x.ApartmentId, StringComparer.Ordinal)
                     .ThenBy(x => x.EntryKind)
                     .ThenBy(x => x.SignedAmount)
@@ -140,6 +148,13 @@ public sealed class LedgerPostingService
             throw new InvalidOperationException("Every ledger line must reference an apartment in the target building.");
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
+        foreach (var line in lines)
+        {
+            var effectiveAt = line.EffectiveAtUtc ?? now;
+            if (effectiveAt < period.StartsAtUtc || effectiveAt >= period.EndsAtUtc)
+                throw new InvalidOperationException("Every ledger entry must fall within its financial period.");
+        }
+
         var transactionId = Guid.NewGuid();
         var ledgerTransaction = new LedgerTransactionEntity
         {
