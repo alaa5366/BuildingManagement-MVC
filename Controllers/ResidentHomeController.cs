@@ -70,22 +70,23 @@ public class ResidentHomeController : Controller
         // ============================================================
         // 1. المالية
         // ============================================================
-        var walletSnapshot = await _targetWallet.GetApartmentAsync(building.Id, apt.Id, null, currentMonth, cancellationToken: HttpContext.RequestAborted);
+        var walletSnapshot = await _targetWallet.GetApartmentAsync(
+            building.Id, apt.Id, null, currentMonth, cancellationToken: HttpContext.RequestAborted);
+        var monthWalletSnapshot = await _targetWallet.GetApartmentAsync(
+            building.Id, apt.Id, currentMonth, currentMonth, cancellationToken: HttpContext.RequestAborted);
         var balance = walletSnapshot.Balance;
 
         // ============================================================
         // 2. كل الحركات (لحساب الإحصائيات)
         // ============================================================
         var allTx = walletSnapshot.Transactions.ToList();
+        var currentMonthTx = monthWalletSnapshot.Transactions.ToList();
 
         // ============================================================
         // 3. الإحصائيات — مدفوع الشهر ده فقط
         // ============================================================
-        var paidThisMonth = allTx
-            .Where(t => t.Type == "deposit"
-                     && t.Status == "confirmed"
-                     && !string.IsNullOrEmpty(t.CreatedAt)
-                     && t.CreatedAt.StartsWith(currentMonth, StringComparison.Ordinal))
+        var paidThisMonth = currentMonthTx
+            .Where(t => t.Type == "deposit" && t.Status == "confirmed")
             .Sum(t => t.Amount);
 
         var totalPaidAllTime = allTx
@@ -164,11 +165,8 @@ public class ResidentHomeController : Controller
         // ============================================================
         // 9. آخر دفعة (للـ Hero) — الشهر الحالي فقط
         // ============================================================
-        var lastConfirmedDeposit = allTx
-            .Where(t => t.Type == "deposit"
-                     && t.Status == "confirmed"
-                     && !string.IsNullOrEmpty(t.CreatedAt)
-                     && t.CreatedAt.StartsWith(currentMonth, StringComparison.Ordinal))
+        var lastConfirmedDeposit = currentMonthTx
+            .Where(t => t.Type == "deposit" && t.Status == "confirmed")
             .OrderByDescending(t => t.CreatedAt)
             .FirstOrDefault();
 
