@@ -14,6 +14,7 @@ public class RevenuesController : Controller
 {
     private readonly TargetWalletReadService _targetWallet;
     private readonly TargetFinanceReadService _financeRead;
+    private readonly TargetWalletReadService _targetWallet;
     private readonly TargetExpenseRevenueWorkflowService _financeWorkflow;
     private readonly TargetAccountIdentityResolver _identityResolver;
     private readonly ILogger<RevenuesController> _logger;
@@ -21,12 +22,14 @@ public class RevenuesController : Controller
     public RevenuesController(
         TargetWalletReadService targetWallet,
         TargetFinanceReadService financeRead,
+        TargetWalletReadService targetWallet,
         TargetExpenseRevenueWorkflowService financeWorkflow,
         TargetAccountIdentityResolver identityResolver,
         ILogger<RevenuesController> logger)
     {
         _targetWallet = targetWallet;
         _financeRead = financeRead;
+        _targetWallet = targetWallet;
         _financeWorkflow = financeWorkflow;
         _identityResolver = identityResolver;
         _logger = logger;
