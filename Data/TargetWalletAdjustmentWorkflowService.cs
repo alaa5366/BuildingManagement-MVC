@@ -21,6 +21,7 @@ public sealed class TargetWalletAdjustmentWorkflowService
         _timeProvider = timeProvider;
     }
 
+    /// <summary>Creates a wallet adjustment after validating the requested amount and scope.</summary>
     public async Task<Guid> AddAsync(
         string buildingId,
         string apartmentId,
