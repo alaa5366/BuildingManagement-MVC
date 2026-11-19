@@ -21,8 +21,10 @@ SELECT N'Residents.PinHash' SourceColumn,
  SUM(CASE WHEN PinHash IS NOT NULL AND NOT (LEN(CONVERT(nvarchar(max),PinHash))=60 AND LEFT(CONVERT(nvarchar(max),PinHash),4) IN (N'\$2a\$',N'\$2b\$',N'\$2y\$')) THEN 1 ELSE 0 END) OtherShapeRows
 FROM dbo.Residents
 UNION ALL
-SELECT N'Residents.PasswordHash',COUNT(*),0,
- SUM(CASE WHEN PasswordHash IS NOT NULL THEN 1 ELSE 0 END)
+SELECT N'Residents.PasswordHash',
+ SUM(CASE WHEN PasswordHash IS NOT NULL AND LEN(CONVERT(nvarchar(max),PasswordHash))>0 THEN 1 ELSE 0 END),
+ 0,
+ SUM(CASE WHEN PasswordHash IS NOT NULL AND LEN(CONVERT(nvarchar(max),PasswordHash))>0 THEN 1 ELSE 0 END)
 FROM dbo.Residents
 "@
  $dt=Query $c $sql
