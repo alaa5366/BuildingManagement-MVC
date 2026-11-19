@@ -251,7 +251,7 @@ public sealed class TargetWalletReadService
             join period in db.FinancialPeriods.AsNoTracking() on deposit.PeriodId equals period.PeriodId
             where deposit.BuildingId == buildingId && deposit.Status == PaymentDepositStatus.Pending
                 && deposit.CurrencyCode == currencyCode
-            orderby deposit.SubmittedAtUtc
+            orderby deposit.SubmittedAtUtc descending, deposit.PaymentDepositId descending
             select new
             {
                 deposit.PaymentDepositId, deposit.ApartmentId, deposit.Amount, deposit.Note,
