@@ -183,11 +183,8 @@ builder.Services.AddScoped<TargetWhatsAppService>();
     builder.Services.AddSingleton<QrCodePdfService>();
     builder.Services.AddSingleton<QrGeneratorService>();
     builder.Services.AddSingleton<QrTokenStoreService>();
-    builder.Services.AddSingleton<PollsService>();
-    builder.Services.AddSingleton<MaintenanceService>();
     builder.Services.AddSingleton<NotificationsService>();
     builder.Services.AddScoped<TargetNotificationsService>();
-    builder.Services.AddSingleton<WhatsAppTemplateService>();
     builder.Services.AddScoped<ImpersonationService>();
 
     builder.Services.AddScoped<SettingsService>();
