@@ -101,7 +101,9 @@ public sealed class TargetMaintenanceService
         var row = await db.MaintenanceRecords.FirstOrDefaultAsync(
             x => x.BuildingId == buildingId && x.Id == id, cancellationToken);
         if (row is null) return null;
-        if (row.AddedToExpense &&
+        var expensePosted = row.AddedToExpense ||
+            await HasPostedExpenseAsync(db, buildingId, id, cancellationToken);
+        if (expensePosted &&
             (row.Cost != cost ||
              row.MaintenanceDate != maintenanceDate ||
              !string.Equals(row.Title, title.Trim(), StringComparison.Ordinal) ||
@@ -125,7 +127,8 @@ public sealed class TargetMaintenanceService
         var row = await db.MaintenanceRecords.FirstOrDefaultAsync(
             x => x.BuildingId == buildingId && x.Id == id, cancellationToken);
         if (row is null) return false;
-        if (row.AddedToExpense)
+        if (row.AddedToExpense ||
+            await HasPostedExpenseAsync(db, buildingId, id, cancellationToken))
             throw new InvalidOperationException("A maintenance record posted to expenses cannot be deleted.");
         db.MaintenanceRecords.Remove(row);
         await db.SaveChangesAsync(cancellationToken);
@@ -162,6 +165,28 @@ public sealed class TargetMaintenanceService
         return await db.Apartments.AsNoTracking()
             .Where(x => x.BuildingId == buildingId && !x.IsClosed && !x.IsDisabled)
             .OrderBy(x => x.Number).Select(x => x.Id).ToListAsync(cancellationToken);
+    }
+
+    private static Task<bool> HasPostedExpenseAsync(
+        AppDbContext db,
+        string buildingId,
+        string maintenanceId,
+        CancellationToken cancellationToken)
+    {
+        var source = maintenanceId.StartsWith("mnt-", StringComparison.OrdinalIgnoreCase)
+            ? maintenanceId[4..]
+            : maintenanceId;
+        if (!Guid.TryParse(source, out var commandId) || commandId == Guid.Empty)
+            return Task.FromResult(false);
+
+        var sourceKey = commandId.ToString("D");
+        return db.LedgerTransactions.AsNoTracking().AnyAsync(transaction =>
+            transaction.BuildingId == buildingId &&
+            transaction.SourceType == "Expense" &&
+            transaction.SourceKey == sourceKey &&
+            transaction.Kind == LedgerTransactionKind.Expense &&
+            transaction.Status == LedgerTransactionStatus.Posted,
+            cancellationToken);
     }
 
     private static string NormalizeStatus(string? status, bool allowEmpty)
