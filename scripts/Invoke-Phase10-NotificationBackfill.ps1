@@ -62,4 +62,4 @@ Set-Content -LiteralPath $report -Value ($lines -join [Environment]::NewLine) -E
 Write-Host "Report: $report"
 }
 Push-Location $root
-try{git add -- scripts/Invoke-Phase10-NotificationBackfill.ps1 $report;if((git diff --cached --name-only).Count -gt 0){git commit -m "feat: backfill legacy notifications";git push origin development/database-redesign-enterprise}}finally{Pop-Location}
+try{git add -- scripts/Invoke-Phase10-NotificationBackfill.ps1 $report;if((git status --short -- scripts/Invoke-Phase10-NotificationBackfill.ps1 $report).Count -gt 0){git commit --only -m "feat: backfill legacy notifications" -- scripts/Invoke-Phase10-NotificationBackfill.ps1 $report;git push origin development/database-redesign-enterprise}}finally{Pop-Location}
