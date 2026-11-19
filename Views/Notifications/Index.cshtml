@@ -54,6 +54,10 @@ else
             <div style="font-size:22px;">@n.Icon</div>
             <div class="flex-grow-1">
                 <div class="fw-bold">@n.Title</div>
+                @if (n.Type == "whatsapp-draft")
+                {
+                    <span class="badge bg-warning text-dark">داخل النظام منشور — WhatsApp مسودة غير مرسلة</span>
+                }
                 <div class="text-muted small">@n.Body</div>
                 @if (string.Equals(n.Type, "whatsapp-draft", StringComparison.OrdinalIgnoreCase))
                 {
