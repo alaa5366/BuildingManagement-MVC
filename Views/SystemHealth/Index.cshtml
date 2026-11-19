@@ -1,0 +1,71 @@
+@model BuildingManagementMvc.Models.SystemHealthViewModel
+@{
+    ViewData["Title"] = "System Health";
+    var isHealthy = Model.OverallStatus == "Healthy";
+    var isDegraded = Model.OverallStatus == "Degraded";
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/observability.css" asp-append-version="true" />
+}
+<div class="container-fluid log-center system-health-page">
+    <header class="log-hero">
+        <div class="log-hero-copy">
+            <div class="log-eyebrow"><i class="bi bi-heart-pulse"></i> OBSERVABILITY / HEALTH</div>
+            <h1>System Health</h1>
+            <p>Live readiness checks and application process status.</p>
+            <div class="log-hero-note"><i class="bi bi-shield-lock"></i><span>Administrative view · sanitized health data</span></div>
+        </div>
+        <div class="log-hero-total">
+            <span>Overall status</span>
+            <strong class="health-status-text @(isHealthy ? "health-healthy" : isDegraded ? "health-degraded" : "health-unhealthy")">@Model.OverallStatus</strong>
+            <small>Checked @Model.CheckedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</small>
+        </div>
+    </header>
+
+    <nav class="observability-nav" aria-label="Observability sections">
+        <a asp-controller="ApplicationLogs" asp-action="Index"><i class="bi bi-terminal"></i><span>Application Logs</span><small>Runtime events</small></a>
+        <a asp-controller="AuditLog" asp-action="Index"><i class="bi bi-shield-check"></i><span>Audit Trail</span><small>Business activity</small></a>
+        <a class="active" asp-controller="SystemHealth" asp-action="Index"><i class="bi bi-heart-pulse"></i><span>System Health</span><small>Readiness checks</small></a>
+    </nav>
+
+    <section class="log-metrics health-metrics">
+        <article class="log-metric-card metric-blue"><div class="log-metric-top"><span class="log-metric-icon"><i class="bi bi-stopwatch"></i></span><span class="log-metric-caption">Health check duration</span></div><strong>@Model.TotalDuration.TotalMilliseconds.ToString("N0") ms</strong><small>Latest check execution</small></article>
+        <article class="log-metric-card metric-teal"><div class="log-metric-top"><span class="log-metric-icon"><i class="bi bi-check2-circle"></i></span><span class="log-metric-caption">Healthy checks</span></div><strong>@Model.Checks.Count(x => x.Status == "Healthy")</strong><small>Registered checks passing</small></article>
+        <article class="log-metric-card metric-amber"><div class="log-metric-top"><span class="log-metric-icon"><i class="bi bi-exclamation-triangle"></i></span><span class="log-metric-caption">Degraded checks</span></div><strong>@Model.Checks.Count(x => x.Status == "Degraded")</strong><small>Checks reporting degradation</small></article>
+        <article class="log-metric-card metric-red"><div class="log-metric-top"><span class="log-metric-icon"><i class="bi bi-x-octagon"></i></span><span class="log-metric-caption">Unhealthy checks</span></div><strong>@Model.Checks.Count(x => x.Status == "Unhealthy")</strong><small>Checks requiring attention</small></article>
+    </section>
+
+    <section class="log-results-panel">
+        <div class="log-results-heading"><div><span class="log-section-kicker">READINESS</span><h2><i class="bi bi-activity"></i> Registered health checks</h2><p>Only check names, status, duration and tags are shown. Exception details are never exposed.</p></div>
+            <a asp-action="Index" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-clockwise"></i> Refresh</a>
+        </div>
+        <div class="table-responsive log-table-wrap">
+            <table class="table log-table align-middle mb-0">
+                <thead><tr><th>CHECK</th><th>STATUS</th><th>DURATION</th><th>TAGS</th></tr></thead>
+                <tbody>
+                @if (Model.Checks.Count == 0)
+                {
+                    <tr><td colspan="4"><div class="log-empty-state"><strong>No health checks are registered.</strong></div></td></tr>
+                }
+                else
+                {
+                    @foreach (var check in Model.Checks)
+                    {
+                        var statusClass = check.Status == "Healthy" ? "health-healthy" : check.Status == "Degraded" ? "health-degraded" : "health-unhealthy";
+                        <tr><td><strong>@check.Name</strong></td><td><span class="health-state @statusClass"><i class="bi bi-circle-fill"></i>@check.Status</span></td><td class="font-monospace">@check.Duration.TotalMilliseconds.ToString("N1") ms</td><td>@(check.Tags.Count == 0 ? "—" : string.Join(", ", check.Tags))</td></tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="log-filter-panel health-process-panel">
+        <div class="log-section-heading"><div><span class="log-section-kicker">PROCESS</span><h2><i class="bi bi-cpu"></i> Application process</h2></div></div>
+        <div class="health-process-grid">
+            <div><small>Process started (UTC)</small><strong>@Model.ProcessStartedAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</strong></div>
+            <div><small>Process uptime</small><strong>@((DateTimeOffset.UtcNow - Model.ProcessStartedAtUtc).ToString(@"d.hh:mm:ss"))</strong></div>
+            <div><small>Last health check (UTC)</small><strong>@Model.CheckedAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</strong></div>
+        </div>
+    </section>
+</div>
