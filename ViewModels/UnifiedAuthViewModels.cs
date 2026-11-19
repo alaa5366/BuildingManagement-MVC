@@ -27,6 +27,20 @@ public class UnifiedLoginVm
     public string TwoFactorCode { get; set; } = "";
 }
 
+/// <summary>First-login resident PIN replacement form.</summary>
+public sealed class ResidentPinChangeVm
+{
+    [Required]
+    [DataType(DataType.Password)]
+    [StringLength(12, MinimumLength = 4)]
+    public string NewPin { get; set; } = "";
+
+    [Required]
+    [DataType(DataType.Password)]
+    [Compare(nameof(NewPin))]
+    public string ConfirmNewPin { get; set; } = "";
+}
+
 // ============================================================
 // صفحة اختيار الدور (لو المستخدم عنده أكتر من دور)
 // ============================================================
