@@ -2,6 +2,7 @@ using System.Data;
 using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace BuildingManagementMvc.Services;
 
@@ -10,13 +11,16 @@ public sealed class IdentityAccountAuthenticationService
 {
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
     private readonly IPasswordHasher _hasher;
+    private readonly ILogger<IdentityAccountAuthenticationService>? _logger;
 
     public IdentityAccountAuthenticationService(
         IDbContextFactory<AppDbContext> dbFactory,
-        IPasswordHasher hasher)
+        IPasswordHasher hasher,
+        ILogger<IdentityAccountAuthenticationService>? logger = null)
     {
         _dbFactory = dbFactory;
         _hasher = hasher;
+        _logger = logger;
     }
 
     /// <summary>
@@ -50,7 +54,13 @@ public sealed class IdentityAccountAuthenticationService
                 string.Equals(AuthHelpers.NormalizePhone(person.PrimaryPhone), phone, StringComparison.Ordinal));
             targetPersonMatchesPhone = phonePersonMatches == 1;
             if (phonePersonMatches > 1)
+            {
+                // Never disclose the duplicated number or matching people in the login response/log.
+                _logger?.LogWarning(
+                    "Resident sign-in blocked: normalized primary phone matches {MatchCount} person records.",
+                    phonePersonMatches);
                 return AuthResult.Fail("wrong-credentials");
+            }
         }
 
         var matches = await (
