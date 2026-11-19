@@ -252,21 +252,24 @@ public sealed class TargetMaintenanceService
         AppDbContext db, MaintenanceRequestEntity row, CancellationToken cancellationToken)
     {
         var linkedIds = row.LedgerLinks.Select(x => x.LedgerTransactionId).ToArray();
-        if (linkedIds.Length == 0) return false;
+        var sourceKey = row.RequestId.ToString("D");
         return await db.LedgerTransactions.AsNoTracking().AnyAsync(x =>
-            linkedIds.Contains(x.LedgerTransactionId) && x.BuildingId == row.BuildingId &&
-            x.Status == LedgerTransactionStatus.Posted, cancellationToken);
+            x.BuildingId == row.BuildingId && x.Status == LedgerTransactionStatus.Posted &&
+            (linkedIds.Contains(x.LedgerTransactionId) ||
+             (x.Kind == LedgerTransactionKind.Expense && x.SourceType == "Expense" && x.SourceKey == sourceKey)),
+            cancellationToken);
     }
 
     private static async Task<MaintenanceRecord> MapAsync(
         AppDbContext db, MaintenanceRequestEntity row, CancellationToken cancellationToken)
     {
         var links = row.LedgerLinks.Select(x => x.LedgerTransactionId).ToArray();
-        var postedIds = links.Length == 0 ? Array.Empty<Guid>() :
-            await db.LedgerTransactions.AsNoTracking()
-                .Where(x => links.Contains(x.LedgerTransactionId) &&
-                    x.BuildingId == row.BuildingId && x.Status == LedgerTransactionStatus.Posted)
-                .Select(x => x.LedgerTransactionId).ToArrayAsync(cancellationToken);
+        var sourceKey = row.RequestId.ToString("D");
+        var postedIds = await db.LedgerTransactions.AsNoTracking()
+            .Where(x => x.BuildingId == row.BuildingId && x.Status == LedgerTransactionStatus.Posted &&
+                (links.Contains(x.LedgerTransactionId) ||
+                 (x.Kind == LedgerTransactionKind.Expense && x.SourceType == "Expense" && x.SourceKey == sourceKey)))
+            .Select(x => x.LedgerTransactionId).Distinct().ToArrayAsync(cancellationToken);
         var cost = postedIds.Length == 0 ? 0m :
             await db.LedgerEntries.AsNoTracking()
                 .Where(x => postedIds.Contains(x.LedgerTransactionId) && x.BuildingId == row.BuildingId)
