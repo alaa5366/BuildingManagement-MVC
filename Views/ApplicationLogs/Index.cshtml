@@ -104,6 +104,13 @@
             </a>
         </div>
 
+        <div class="observability-time-presets" aria-label="Quick time ranges">
+            <span><i class="bi bi-clock-history"></i> Time range</span>
+            <a asp-action="Index" asp-route-from="@DateTime.UtcNow.AddDays(-1).ToString("yyyy-MM-dd")" asp-route-to="@DateTime.UtcNow.ToString("yyyy-MM-dd")" asp-route-level="@query.Level" asp-route-search="@query.Search" asp-route-pageSize="@result.PageSize">Last 24 hours</a>
+            <a asp-action="Index" asp-route-from="@DateTime.UtcNow.AddDays(-7).ToString("yyyy-MM-dd")" asp-route-to="@DateTime.UtcNow.ToString("yyyy-MM-dd")" asp-route-level="@query.Level" asp-route-search="@query.Search" asp-route-pageSize="@result.PageSize">Last 7 days</a>
+            <a asp-action="Index" asp-route-from="@DateTime.UtcNow.AddDays(-30).ToString("yyyy-MM-dd")" asp-route-to="@DateTime.UtcNow.ToString("yyyy-MM-dd")" asp-route-level="@query.Level" asp-route-search="@query.Search" asp-route-pageSize="@result.PageSize">Last 30 days</a>
+        </div>
+
         <form method="get" asp-controller="ApplicationLogs" asp-action="Index" class="log-filter-form">
             <div class="log-filter-main">
                 <div class="log-field log-search-field">
