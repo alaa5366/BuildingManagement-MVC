@@ -31,19 +31,19 @@ public sealed class ApplicationLogsAuthorizationTests
     }
 
     [Fact]
-    public void AdminWithoutPermission_IsForbidden()
+    public async Task AdminWithoutPermission_IsForbidden()
     {
         var context = CreateContext(new Claim(ClaimTypes.Role, "admin"));
         var filterContext = CreateFilterContext(context);
 
-        new AdminPermissionAttribute(AdminPermissions.ViewApplicationLogs).OnAuthorization(filterContext);
+        await new AdminPermissionAttribute(AdminPermissions.ViewApplicationLogs).OnAuthorizationAsync(filterContext);
 
         var result = Assert.IsType<ContentResult>(filterContext.Result);
         Assert.Equal(StatusCodes.Status403Forbidden, result.StatusCode);
     }
 
     [Fact]
-    public void AdminWithPermission_IsAllowed()
+    public async Task AdminWithPermission_IsAllowed()
     {
         var context = CreateContext(
             new Claim(ClaimTypes.Role, "admin"),
@@ -56,7 +56,7 @@ public sealed class ApplicationLogsAuthorizationTests
     }
 
     [Fact]
-    public void SuperAdminWithoutPermission_IsForbidden()
+    public async Task SuperAdminWithoutPermission_IsForbidden()
     {
         var context = CreateContext(new Claim(ClaimTypes.Role, "superadmin"));
         var filterContext = CreateFilterContext(context);
