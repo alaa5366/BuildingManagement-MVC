@@ -20,6 +20,9 @@ internal static class OperationalModelConfiguration
             e.Property(x => x.ResourceType).HasMaxLength(100);
             e.Property(x => x.ResourceReference).HasMaxLength(200);
             e.Property(x => x.CorrelationId).HasMaxLength(100);
+            e.HasIndex(x => new { x.CorrelationId, x.OccurredAtUtc, x.AuditEventId })
+                .IsDescending(false, true, true)
+                .HasDatabaseName("IX_AuditEvents_Correlation_Time");
             e.Property(x => x.OccurredAtUtc).HasColumnType("datetime2(3)");
             e.Property(x => x.Outcome).HasDefaultValue((byte)0);
             e.HasIndex(x => new { x.OccurredAtUtc, x.AuditEventId })
