@@ -225,3 +225,20 @@ public sealed class FinancialReconciliationDifferenceEntity
     public Guid? ReviewedByAccountId { get; set; }
     public DateTime? ReviewedAtUtc { get; set; }
 }
+
+
+/// <summary>
+/// Immutable monthly invoice issue. One row per apartment and financial month;
+/// the identity value is the stable sequential invoice serial.
+/// </summary>
+public sealed class InvoiceIssueEntity
+{
+    public long InvoiceSerial { get; set; }
+    public Guid InvoiceIssueId { get; set; }
+    public string BuildingId { get; set; } = "";
+    public string ApartmentId { get; set; } = "";
+    public string MonthKey { get; set; } = "";
+    public string? InvoiceNo { get; set; }
+    public DateTime IssuedAtUtc { get; set; }
+    public string? SnapshotJson { get; set; }
+}
