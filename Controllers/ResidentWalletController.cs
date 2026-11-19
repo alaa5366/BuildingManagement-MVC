@@ -182,6 +182,16 @@ public class ResidentWalletController : Controller
         if (apt == null) return NotFound();
 
         var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
+        if (commandId == Guid.Empty)
+        {
+            TempData["Error"] = "انتهت صلاحية نموذج الإيداع. حدّث الصفحة وحاول مرة أخرى.";
+            return RedirectToAction("Index", new { month = mk });
+        }
+        if (string.IsNullOrWhiteSpace(note) == false && note.Length > 1000)
+        {
+            TempData["Error"] = "الملاحظة يجب ألا تتجاوز 1000 حرف.";
+            return RedirectToAction("Index", new { month = mk });
+        }
         if (amount <= 0)
         {
             TempData["Error"] = "يجب إدخال مبلغ أكبر من صفر.";
@@ -226,11 +236,16 @@ public class ResidentWalletController : Controller
 
             receipt = await cloudinary.UploadReceiptAsync(
                 stream, receiptImage.FileName, building.Id, apt.Id);
+            if (receipt is null || !receipt.Success || string.IsNullOrWhiteSpace(receipt.Url) ||
+                string.IsNullOrWhiteSpace(receipt.Path))
+            {
+                TempData["Error"] = "تعذر رفع صورة الإيصال. لم يتم تسجيل الدفعة.";
+                return RedirectToAction("Index", new { month = mk });
+            }
         }
 
         try
         {
-            if (commandId == Guid.Empty) commandId = Guid.NewGuid();
             await _depositWorkflow.CreatePendingAsync(
                 BuildingId,
                 ApartmentId,
