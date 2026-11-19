@@ -31,6 +31,9 @@ public sealed class SystemHealthController : Controller
     {
         var report = await _healthChecks.CheckHealthAsync(cancellationToken: cancellationToken);
         using var process = Process.GetCurrentProcess();
+        var handleCount = 0;
+        try { handleCount = process.HandleCount; }
+        catch (Exception ex) when (ex is PlatformNotSupportedException or InvalidOperationException) { }
         var model = new SystemHealthViewModel
         {
             CheckedAtUtc = _timeProvider.GetUtcNow(),
@@ -41,7 +44,7 @@ public sealed class SystemHealthController : Controller
             PrivateMemoryBytes = process.PrivateMemorySize64,
             ManagedMemoryBytes = GC.GetTotalMemory(forceFullCollection: false),
             ThreadCount = process.Threads.Count,
-            HandleCount = process.HandleCount,
+            HandleCount = handleCount,
             Checks = report.Entries.OrderBy(x => x.Key, StringComparer.Ordinal)
                 .Select(x => new SystemHealthCheckViewModel
                 {
