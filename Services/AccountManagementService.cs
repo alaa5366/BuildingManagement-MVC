@@ -178,8 +178,6 @@ public sealed class AccountManagementService
     }
 }
 
-}
-
 public sealed class AccountManagementPage
 {
     public string? Search { get; init; }
