@@ -58,7 +58,9 @@ public sealed class TargetWalletAdjustmentWorkflowService
             var existingEntry = await db.LedgerEntries.AsNoTracking().SingleOrDefaultAsync(
                 item => item.LedgerTransactionId == existing.LedgerTransactionId, cancellationToken);
             if (existing.Kind != LedgerTransactionKind.WalletAdjustment ||
-                existingEntry is null || existingEntry.ApartmentId != apartmentId ||
+                existing.ActorAccountId != actorAccountId ||
+                existingEntry is null || existingEntry.BuildingId != buildingId ||
+                existingEntry.ApartmentId != apartmentId ||
                 existingEntry.SignedAmount != amount || existing.Reason != reason.Trim())
                 throw new InvalidOperationException("The adjustment command id is already used by a different request.");
             await tx.CommitAsync(cancellationToken);
@@ -82,6 +84,9 @@ public sealed class TargetWalletAdjustmentWorkflowService
         if (!actorIsActive) throw new InvalidOperationException("An active target account is required.");
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
+        if (now < period.StartsAtUtc || now >= period.EndsAtUtc)
+            throw new InvalidOperationException("The adjustment must be posted inside the selected financial period.");
+
         var hasRole = await (
             from assignment in db.UserRoleAssignments.AsNoTracking()
             join role in db.RoleDefinitions.AsNoTracking() on assignment.RoleKey equals role.RoleKey
