@@ -24,6 +24,8 @@ public sealed class InvoiceServiceTests
         var expenseTransactionId = Guid.NewGuid();
         var expenseReversalId = Guid.NewGuid();
         var expenseSourceId = Guid.NewGuid();
+        var activeExpenseTransactionId = Guid.NewGuid();
+        var activeExpenseSourceId = Guid.NewGuid();
         var depositId = Guid.NewGuid();
 
         await using (var seed = new AppDbContext(options))
@@ -146,6 +148,14 @@ public sealed class InvoiceServiceTests
                     ReversesTransactionId = expenseTransactionId,
                     CreatedAtUtc = now, PostedAtUtc = now
                 });
+            seed.LedgerTransactions.Add(new LedgerTransactionEntity
+            {
+                LedgerTransactionId = activeExpenseTransactionId, PeriodId = periodId, BuildingId = "B1",
+                Kind = LedgerTransactionKind.Expense, Status = LedgerTransactionStatus.Posted,
+                IdempotencyKey = "invoice-active-expense", SourceSystem = "application",
+                SourceType = "Expense", SourceKey = activeExpenseSourceId.ToString("D"),
+                CreatedAtUtc = now, PostedAtUtc = now
+            });
             seed.LedgerEntries.AddRange(
                 new LedgerEntryEntity
                 {
@@ -160,17 +170,36 @@ public sealed class InvoiceServiceTests
                     PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
                     EntryKind = LedgerEntryKind.Reversal, SignedAmount = 40m,
                     CurrencyCode = "EGP", EffectiveAtUtc = now, CreatedAtUtc = now
+                },
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = activeExpenseTransactionId,
+                    PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.ExpenseAllocation, SignedAmount = -25m,
+                    CurrencyCode = "EGP", EffectiveAtUtc = now, CreatedAtUtc = now
                 });
-            seed.FinancialCategories.Add(new FinancialCategoryEntity
-            {
-                BuildingId = "B1", Id = "CAT1", Kind = "expense", Name = "Maintenance",
-                Color = "#123456", IsActive = true
-            });
+            seed.FinancialCategories.AddRange(
+                new FinancialCategoryEntity
+                {
+                    BuildingId = "B1", Id = "CAT1", Kind = "expense", Name = "Maintenance",
+                    Color = "#123456", IsActive = true
+                },
+                new FinancialCategoryEntity
+                {
+                    BuildingId = "B1", Id = "CAT2", Kind = "expense", Name = "Cleaning",
+                    Color = "#654321", IsActive = true
+                });
             seed.Expenses.Add(new ExpenseEntity
             {
                 BuildingId = "B1", Id = expenseSourceId.ToString("N"), MonthKey = "2026-11",
                 CategoryId = "CAT1", CategoryKind = "expense", Note = "Reversed maintenance",
                 Amount = 40m, ExpenseDate = new DateOnly(2026, 11, 10)
+            });
+            seed.Expenses.Add(new ExpenseEntity
+            {
+                BuildingId = "B1", Id = activeExpenseSourceId.ToString("N"), MonthKey = "2026-11",
+                CategoryId = "CAT2", CategoryKind = "expense", Note = "Cleaning",
+                Amount = 25m, ExpenseDate = new DateOnly(2026, 11, 12)
             });
             seed.PaymentDeposits.Add(new PaymentDepositEntity
             {
@@ -190,12 +219,15 @@ public sealed class InvoiceServiceTests
         Assert.NotNull(invoice);
         Assert.Equal("Target Building", invoice!.Building.Name);
         Assert.Equal(101, invoice.Apt.Number);
-        Assert.Equal(75m, invoice.Balance);
+        Assert.Equal(50m, invoice.Balance);
         Assert.Equal(50m, invoice.PreviousBalance);
         Assert.Equal(150m, invoice.MonthDeposits);
         Assert.Equal(125m, invoice.MonthFee);
-        Assert.Equal(0m, invoice.MonthExpensesShare);
-        Assert.Empty(invoice.CategoryShares);
+        Assert.Equal(25m, invoice.MonthExpensesShare);
+        var categoryShare = Assert.Single(invoice.CategoryShares);
+        Assert.Equal("Cleaning", categoryShare.Name);
+        Assert.Equal(25m, categoryShare.Total);
+        Assert.Equal(25m, categoryShare.Share);
         Assert.Equal("12345", invoice.Payment.AccountNumber);
     }
 
