@@ -11,20 +11,6 @@
     var warningCount = Model.Items.Count(x => x.Severity == "warning");
     var errorCount = Model.Items.Count(x => x.Severity == "error");
     var criticalCount = Model.Items.Count(x => x.Severity == "critical");
-    var routeValues = new Dictionary<string, string?>
-    {
-        ["buildingId"] = ViewBag.SelectedBuildingId as string,
-        ["apartmentId"] = ViewBag.SelectedApartmentId as string,
-        ["userId"] = ViewBag.SelectedUserId as string,
-        ["actionFilter"] = ViewBag.SelectedAction as string,
-        ["severity"] = ViewBag.SelectedSeverity as string,
-        ["correlationId"] = ViewBag.SelectedCorrelationId as string,
-        ["from"] = ViewBag.From as string,
-        ["to"] = ViewBag.To as string,
-        ["pageSize"] = Model.PageSize.ToString()
-    };
-    var queryString = string.Join("&", routeValues.Where(x => !string.IsNullOrWhiteSpace(x.Value))
-        .Select(x => $"{Uri.EscapeDataString(x.Key)}={Uri.EscapeDataString(x.Value!)}"));
     string PageUrl(int page) => Url.Action("Index", "AuditLog", new
     {
         buildingId = ViewBag.SelectedBuildingId,
@@ -40,9 +26,9 @@
     }) ?? "#";
 }
 @section Styles {
+    <link rel="stylesheet" href="~/css/observability.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/application-logs.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/audit-log.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/observability.css" asp-append-version="true" />
 }
 <div class="container-fluid log-center audit-log-page kibana-audit">
     <header class="log-hero">
