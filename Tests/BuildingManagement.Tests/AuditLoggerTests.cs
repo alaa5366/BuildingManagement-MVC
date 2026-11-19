@@ -38,6 +38,29 @@ public class AuditLoggerTests
     }
 
     [Fact]
+    public async Task QueryPage_FiltersByCorrelationIdWithoutCrossingOtherEvents()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        var factory = new Mock<IDbContextFactory<AppDbContext>>();
+        factory.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new AppDbContext(options));
+        await using (var db = new AppDbContext(options))
+        {
+            db.AuditEvents.AddRange(
+                Event("b1", null, 0, "matched", "trace-123"),
+                Event("b1", null, 0, "not-matched", "trace-456"));
+            await db.SaveChangesAsync();
+        }
+
+        var logger = new AuditLogger(factory.Object, NullLogger<AuditLogger>.Instance);
+        var page = await logger.QueryPageAsync("b1", null, null, null, null, null, null, 1, 10, "trace-123");
+
+        var entry = Assert.Single(page.Items);
+        Assert.Equal("matched", entry.Action);
+    }
+
+    [Fact]
     public async Task QueryPage_PreservesDistinctErrorAndCriticalSeverities()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -122,7 +145,7 @@ public class AuditLoggerTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => db.SaveChangesAsync());
     }
 
-    private static AuditEventEntity Event(string? buildingId, string? apartmentId, byte outcome, string action) => new()
+    private static AuditEventEntity Event(string? buildingId, string? apartmentId, byte outcome, string action, string? correlationId = null) => new()
     {
         AuditEventId = Guid.NewGuid(),
         BuildingId = buildingId,
@@ -130,6 +153,7 @@ public class AuditLoggerTests
         ResourceReference = apartmentId,
         Outcome = outcome,
         EventType = action,
+        CorrelationId = correlationId,
         EventCategory = "Business",
         OccurredAtUtc = DateTime.UtcNow
     };
