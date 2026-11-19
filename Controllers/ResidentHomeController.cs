@@ -18,26 +18,26 @@ namespace BuildingManagementMvc.Controllers;
 public class ResidentHomeController : Controller
 {
     private readonly BuildingsService _buildings;
-    private readonly WalletService _wallet;
+    private readonly TargetWalletReadService _targetWallet;
     private readonly PollsService _polls;
     private readonly MaintenanceService _maint;
-    private readonly NotificationsService _notify;
+    private readonly TargetNotificationsService _targetNotifications;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ResidentHomeController"/> class.
     /// </summary>
     public ResidentHomeController(
         BuildingsService buildings,
-        WalletService wallet,
+        TargetWalletReadService targetWallet,
         PollsService polls,
         MaintenanceService maint,
-        NotificationsService notify)
+        TargetNotificationsService targetNotifications)
     {
         _buildings = buildings;
-        _wallet = wallet;
+        _targetWallet = targetWallet;
         _polls = polls;
         _maint = maint;
-        _notify = notify;
+        _targetNotifications = targetNotifications;
     }
 
     /// <summary>
@@ -76,12 +76,13 @@ public class ResidentHomeController : Controller
         // ============================================================
         // 1. المالية
         // ============================================================
-        var balance = _wallet.ComputeWalletBalance(building, apt.Id, currentMonth);
+        var walletSnapshot = await _targetWallet.GetApartmentAsync(building.Id, apt.Id);
+        var balance = walletSnapshot.Balance;
 
         // ============================================================
         // 2. كل الحركات (لحساب الإحصائيات)
         // ============================================================
-        var allTx = _wallet.GetUnifiedTransactions(building, apt.Id, currentMonth);
+        var allTx = walletSnapshot.Transactions.ToList();
 
         // ============================================================
         // 3. الإحصائيات — مدفوع الشهر ده فقط
@@ -119,8 +120,8 @@ public class ResidentHomeController : Controller
         // ============================================================
         // 5. الدفعات المعلقة (آخر 3)
         // ============================================================
-        var pendingDeposits = _wallet.GetApartmentDeposits(building, apt.Id, currentMonth)
-            .Where(d => d.Status == "pending")
+        var pendingDeposits = walletSnapshot.PendingDeposits
+            .Where(d => d.CreatedAt.StartsWith(currentMonth, StringComparison.Ordinal))
             .OrderByDescending(d => d.CreatedAt)
             .Take(3)
             .ToList();
@@ -136,12 +137,10 @@ public class ResidentHomeController : Controller
         // ============================================================
         // 7. آخر 3 إشعارات + unread
         // ============================================================
-        var notifications = _notify.GetForResident(building, apt.Id, 3)
-            .OrderByDescending(n => n.Ts)
-            .Take(3)
-            .ToList();
-
-        var unreadCount = _notify.UnreadCountForResident(building, apt.Id);
+        var allNotifications = await _targetNotifications.GetForResidentAsync(
+            building.Id, apt.Id, 100, HttpContext.RequestAborted);
+        var notifications = allNotifications.Take(3).ToList();
+        var unreadCount = allNotifications.Count(notification => !notification.Read);
 
         // ============================================================
         // 8. آخر 3 صيانة
@@ -174,9 +173,9 @@ public class ResidentHomeController : Controller
         // ============================================================
         // 11. أقدم إشعار غير مقروء
         // ============================================================
-        var oldestUnread = _notify.GetForResident(building, apt.Id, 100)
-            .Where(n => !n.Read)
-            .OrderBy(n => n.Ts)
+        var oldestUnread = allNotifications
+            .Where(notification => !notification.Read)
+            .OrderBy(notification => notification.Ts, StringComparer.Ordinal)
             .FirstOrDefault();
 
         var unreadDays = 0;
