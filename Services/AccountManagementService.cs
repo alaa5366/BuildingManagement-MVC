@@ -57,9 +57,9 @@ public sealed class AccountManagementService
                             select new { grant.AccountId, grant.RoleKey, grant.ScopeType, grant.ScopeBuildingId, grant.ScopeApartmentId })
                            .ToListAsync(ct);
         var byAccount = grants.GroupBy(x => x.AccountId).ToDictionary(g => g.Key, g => g.ToList());
-        var protectedSuperAdminAccountIds = await db.UserRoleAssignments.AsNoTracking()
+        var protectedSuperAdminAccountIds = (await db.UserRoleAssignments.AsNoTracking()
             .Where(x => x.RoleKey == "superadmin" && x.RevokedAtUtc == null)
-            .Select(x => x.AccountId).Distinct().ToHashSetAsync(ct);
+            .Select(x => x.AccountId).Distinct().ToListAsync(ct)).ToHashSet();
 
         // Include archived persons in duplicate detection to avoid implying a retained number is unique.
         var people = await db.Persons.AsNoTracking().Select(x => new { x.PersonId, x.PrimaryPhone }).ToListAsync(ct);
