@@ -71,7 +71,9 @@ public sealed class TargetWalletAdjustmentWorkflowServiceTests
         var sourceLink = await verify.FinancialSourceLinks.SingleAsync();
         Assert.Equal("WalletAdjustment", sourceLink.SourceType);
         Assert.Equal(transaction.LedgerTransactionId, sourceLink.LedgerTransactionId);
-        Assert.Single(await verify.AuditEvents.Where(item => item.EventType == "WalletAdjustmentPosted").ToListAsync());
+        var audit = await verify.AuditEvents.SingleAsync(item => item.EventType == "WalletAdjustmentPosted");
+        Assert.Equal("Apartment", audit.ResourceType);
+        Assert.Equal("A1", audit.ResourceReference);
     }
 
     private sealed class TestContextFactory(DbContextOptions<AppDbContext> options)
