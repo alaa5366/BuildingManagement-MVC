@@ -2576,6 +2576,11 @@ namespace BuildingManagementMvc.Migrations
                     b.Property<byte>("AccountStatus")
                         .HasColumnType("tinyint");
 
+                    b.Property<bool>("MustChangePin")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2(3)")
