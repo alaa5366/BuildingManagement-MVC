@@ -1953,6 +1953,14 @@ namespace BuildingManagementMvc.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("ReceiptMetadataJson")
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(8000)");
+
                     b.Property<Guid?>("ReversalTransactionId")
                         .HasColumnType("uniqueidentifier");
 
