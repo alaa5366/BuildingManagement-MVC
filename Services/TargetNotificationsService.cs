@@ -17,12 +17,12 @@ public sealed class TargetNotificationsService
     {
         ValidateScope(buildingId, null);
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
-        return await db.Notifications.AsNoTracking()
+        var items = await db.Notifications.AsNoTracking()
             .Where(item => item.BuildingId == buildingId && item.RecipientType == "admin")
             .OrderByDescending(item => item.Ts)
             .Take(Math.Clamp(max, 1, 500))
-            .Select(item => ToModel(item))
             .ToListAsync(cancellationToken);
+        return items.Select(ToModel).ToList();
     }
 
     public async Task<List<Notification>> GetForResidentAsync(
@@ -31,13 +31,13 @@ public sealed class TargetNotificationsService
     {
         ValidateScope(buildingId, apartmentId);
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
-        return await db.Notifications.AsNoTracking()
+        var items = await db.Notifications.AsNoTracking()
             .Where(item => item.BuildingId == buildingId &&
                 item.RecipientType == "resident" && item.RecipientApartmentId == apartmentId)
             .OrderByDescending(item => item.Ts)
             .Take(Math.Clamp(max, 1, 500))
-            .Select(item => ToModel(item))
             .ToListAsync(cancellationToken);
+        return items.Select(ToModel).ToList();
     }
 
     public async Task<bool> MarkReadAsync(
@@ -80,10 +80,9 @@ public sealed class TargetNotificationsService
             query = query.Where(item => item.RecipientApartmentId == apartmentId);
 
         var now = DateTime.UtcNow;
-        await query.ExecuteUpdateAsync(setters => setters
+        return await query.ExecuteUpdateAsync(setters => setters
             .SetProperty(item => item.IsRead, true)
             .SetProperty(item => item.ReadAt, now), cancellationToken);
-        return 0;
     }
 
     private static Notification ToModel(NotificationEntity item) => new()
