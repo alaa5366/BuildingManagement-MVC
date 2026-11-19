@@ -265,6 +265,20 @@ public sealed class TargetWalletReadService
         return result;
     }
 
+    public async Task<int> GetFinancialPeriodCountAsync(
+        string buildingId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(buildingId))
+            throw new ArgumentException("Building is required.", nameof(buildingId));
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        return await db.FinancialPeriods.AsNoTracking()
+            .Where(period => period.BuildingId == buildingId)
+            .Select(period => period.PeriodKey)
+            .Distinct()
+            .CountAsync(cancellationToken);
+    }
+
     public async Task<TargetWalletAdminSnapshot> GetAdminSnapshotAsync(
         string buildingId,
         string month,
