@@ -92,6 +92,10 @@ public sealed class DefaultAuthorizationPermissionCatalog : IAuthorizationPermis
             ["impersonation.start"] = Define("impersonation.start", AuthorizationScopeType.System, mfa: true)
         };
 
+    /// <summary>All code-owned permissions that support a global system-scope grant.</summary>
+    public static IReadOnlyCollection<AuthorizationPermissionDefinition> SystemGrantablePermissions =>
+        Definitions.Values.Where(item => item.AllowedGrantScopes.Contains(AuthorizationScopeType.System)).ToArray();
+
     /// <inheritdoc />
     public bool TryGet(string key, out AuthorizationPermissionDefinition definition)
     {
