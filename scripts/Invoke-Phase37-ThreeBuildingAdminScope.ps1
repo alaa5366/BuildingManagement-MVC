@@ -219,6 +219,18 @@ IF EXISTS(SELECT 1 FROM dbo.RolePermissions rp
  WHERE rp.RoleKey=N'building-admin' AND rp.Effect<>1)
  THROW 51038,'Building admin role contains a non-Allow permission effect.',1;
 
+IF EXISTS(SELECT 1 FROM dbo.RolePermissions rp
+ WHERE rp.RoleKey=N'building-admin'
+ AND rp.PermissionKey NOT IN
+ (N'residents.manage',N'apartment.disable',N'dvrs.manage',N'cameras.view',N'cameras.manage',
+  N'reports.view',N'polls.manage',N'maintenance.manage',N'audit.view.building',
+  N'settings.manage.building',N'wallet.read',N'deposit.read',N'deposit.confirm',N'deposit.cancel',
+  N'wallet.adjust',N'expense.read',N'expense.post',N'expense.reverse',N'revenue.read',
+  N'revenue.post',N'revenue.reverse',N'finance.export',N'finance.period.close',
+  N'finance.period.reopen',N'notification.dispatch',N'integration.whatsapp.send',
+  N'integration.whatsapp.configure',N'apartment.access.grant.manage))
+ THROW 51038,'Building admin role contains permissions outside the approved building-only set.',1;
+
 INSERT dbo.UserRoleAssignments
 (RoleAssignmentId,AccountId,RoleKey,ScopeType,ScopeBuildingId,ScopeApartmentId,ValidFromUtc,ValidToUtc,GrantedAtUtc,GrantedByAccountId,GrantReason,RevokedAtUtc,RevokedByAccountId,RevocationReason)
 SELECT NEWID(),a.AccountId,N'building-admin',1,a.BuildingId,NULL,@now,NULL,@now,NULL,
