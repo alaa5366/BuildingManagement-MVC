@@ -20,14 +20,14 @@ public class QrAccessController : Controller
 {
     private readonly QrAuthService _qrAuth;
     private readonly QrTokenStoreService _qrStore;
-    private readonly BuildingsService _buildings;
+    private readonly TargetQrService _targetQr;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="QrAccessController"/> class.
     /// </summary>
-    public QrAccessController(QrAuthService qrAuth, QrTokenStoreService qrStore, BuildingsService buildings)
+    public QrAccessController(QrAuthService qrAuth, QrTokenStoreService qrStore, TargetQrService targetQr)
     {
-        _qrAuth = qrAuth; _qrStore = qrStore; _buildings = buildings;
+        _qrAuth = qrAuth; _qrStore = qrStore; _targetQr = targetQr;
     }
 
     /// <summary>
@@ -73,9 +73,9 @@ public class QrAccessController : Controller
             return View("AccessDenied");
         }
 
-        var building = await _buildings.GetByIdAsync(bld!);
-        var apartment = building?.Apartments.FirstOrDefault(a => a.Id == apt);
-        if (building == null || apartment == null)
+        var apartment = await _targetQr.GetApartmentAsync(
+            bld!, apt!, requireActive: true, HttpContext.RequestAborted);
+        if (apartment is null)
         {
             ViewBag.Error = Loc.T("Could_Not_Determine_The_Apartment");
             return View("AccessDenied");
@@ -83,12 +83,12 @@ public class QrAccessController : Controller
 
         var claims = new List<Claim>
         {
-            new(ClaimTypes.NameIdentifier, "qr-" + apartment.Id),
-            new(ClaimTypes.Name, string.IsNullOrWhiteSpace(apartment.Owner) ? Loc.T("Apartment_N", apartment.Number) : apartment.Owner),
+            new(ClaimTypes.NameIdentifier, "qr-" + apartment.ApartmentId),
+            new(ClaimTypes.Name, string.IsNullOrWhiteSpace(apartment.Owner) ? Loc.T("Apartment_N", apartment.ApartmentNumber) : apartment.Owner),
             new(ClaimTypes.Role, "resident"),
-            new("buildingId", building.Id),
-            new("apartmentId", apartment.Id),
-            new("apartmentNumber", apartment.Number.ToString())
+            new("buildingId", apartment.BuildingId),
+            new("apartmentId", apartment.ApartmentId),
+            new("apartmentNumber", apartment.ApartmentNumber.ToString())
         };
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
