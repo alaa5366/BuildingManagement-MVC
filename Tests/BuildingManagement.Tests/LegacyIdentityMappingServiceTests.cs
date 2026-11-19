@@ -130,6 +130,13 @@ public sealed class LegacyIdentityMappingServiceTests
             SecurityStamp = stamp,
             CreatedAtUtc = now
         });
+        db.UserTwoFactorSettings.Add(new UserTwoFactorSettingEntity
+        {
+            AccountId = accountId,
+            IsEnabled = true,
+            EnrolledAtUtc = now,
+            LastVerifiedAtUtc = now
+        });
         db.RoleDefinitions.Add(new RoleDefinitionEntity
         {
             RoleKey = "identity-reviewer",
