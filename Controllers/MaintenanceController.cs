@@ -10,7 +10,6 @@ namespace BuildingManagementMvc.Controllers;
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageMaintenance)]
 public class MaintenanceController : Controller
 {
-    private readonly BuildingsService _buildings;
     private readonly TargetMaintenanceService _maintenance;
     private readonly TargetNotificationsService _notifications;
     private readonly ILogger<MaintenanceController> _logger;
@@ -19,7 +18,6 @@ public class MaintenanceController : Controller
     private readonly TargetAccountIdentityResolver _identityResolver;
 
     public MaintenanceController(
-        BuildingsService buildings,
         TargetMaintenanceService maintenance,
         TargetNotificationsService notifications,
         ILogger<MaintenanceController> logger,
@@ -27,7 +25,6 @@ public class MaintenanceController : Controller
         TargetFinanceReadService targetFinance,
         TargetAccountIdentityResolver identityResolver)
     {
-        _buildings = buildings;
         _maintenance = maintenance;
         _notifications = notifications;
         _logger = logger;
@@ -41,10 +38,10 @@ public class MaintenanceController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(int page = 1, int pageSize = 50)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
+        var buildingName = await _maintenance.GetBuildingNameAsync(BuildingId, HttpContext.RequestAborted);
+        if (buildingName is null) return NotFound();
         var paged = await _maintenance.GetPageAsync(BuildingId, page, pageSize, HttpContext.RequestAborted);
-        ViewBag.Building = building;
+        ViewBag.BuildingName = buildingName;
         ViewBag.RouteValues = new Dictionary<string, string?> { ["pageSize"] = paged.PageSize.ToString() };
         return View(paged);
     }
@@ -140,25 +137,22 @@ public class MaintenanceController : Controller
 
             await _maintenance.MarkAddedToExpenseAsync(BuildingId, id, HttpContext.RequestAborted);
 
-            // Building is used only for display and resident-recipient metadata.
-            var building = await _buildings.GetByIdAsync(BuildingId);
-            if (building != null)
+            var buildingName = await _maintenance.GetBuildingNameAsync(BuildingId, HttpContext.RequestAborted) ?? "";
+            var apartmentIds = await _maintenance.GetActiveApartmentIdsAsync(BuildingId, HttpContext.RequestAborted);
+            foreach (var apartmentId in apartmentIds)
             {
-                foreach (var apartment in building.Apartments.Where(item => !item.Closed))
+                try
                 {
-                    try
-                    {
-                        await _notifications.CreateResidentDepositNoticeAsync(
-                            BuildingId, apartment.Id, "مصروف صيانة جديد",
-                            $"{category.Name}: {record.Cost:0.##} — {building.Name}",
-                            HttpContext.RequestAborted, "expense_new", "💸");
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex,
-                            "Maintenance expense notification failed for building {BuildingId}, apartment {ApartmentId}.",
-                            BuildingId, apartment.Id);
-                    }
+                    await _notifications.CreateResidentDepositNoticeAsync(
+                        BuildingId, apartmentId, "مصروف صيانة جديد",
+                        $"{category.Name}: {record.Cost:0.##} — {buildingName}",
+                        HttpContext.RequestAborted, "expense_new", "💸");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Maintenance expense notification failed for building {BuildingId}, apartment {ApartmentId}.",
+                        BuildingId, apartmentId);
                 }
             }
             TempData["Message"] = Loc.T("Cost_Added_To_Expenses");
