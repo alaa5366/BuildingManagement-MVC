@@ -6,6 +6,7 @@ using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
 
+/// <summary>PollsController coordinates the corresponding application controller actions.</summary>
 [Authorize(Roles = "admin")]
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManagePolls)]
 public class PollsController : Controller
