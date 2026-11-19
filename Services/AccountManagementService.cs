@@ -188,7 +188,7 @@ public sealed class AccountManagementService
         await tx.CommitAsync(ct);
         await _audit.LogAsync("identity.superadmin.password.reset", userId: actorId, userRole: "superadmin",
             metadata: new { TargetUserId = legacyUserId, account.Email, PasswordReset = true });
-        return AccountManagementMutationResult.Ok("تم إصدار كلمة مرور مؤقتة. اعرضها للمستخدم مرة واحدة واطلب منه تغييرها من قناة آمنة.", password: temporaryPassword);
+        return AccountManagementMutationResult.Ok("تم تغيير كلمة المرور. اعرضها للمستخدم مرة واحدة واطلب منه تحديثها فور تسجيل الدخول.", password: temporaryPassword);
     }
 
     public async Task<AccountManagementMutationResult> SetResidentStatusAsync(Guid accountId, bool activate, string actorId, CancellationToken ct = default)
