@@ -77,6 +77,8 @@ public sealed class TargetDepositWorkflowServiceTests
         await using var verify = new AppDbContext(options);
         var deposit = await verify.PaymentDeposits.SingleAsync();
         Assert.Equal(PaymentDepositStatus.Confirmed, deposit.Status);
+        Assert.Equal("Bank transfer", deposit.Note);
+        Assert.Equal(receiptMetadata, deposit.ReceiptMetadataJson);
         Assert.Equal(postedId, deposit.PostedTransactionId);
         var ledger = await verify.LedgerTransactions.SingleAsync();
         Assert.Equal(LedgerTransactionStatus.Posted, ledger.Status);
@@ -154,6 +156,24 @@ public sealed class TargetDepositWorkflowServiceTests
         Assert.Empty(await verify.LedgerTransactions.ToListAsync());
         Assert.Empty(await verify.LedgerEntries.ToListAsync());
         Assert.Contains(await verify.AuditEvents.ToListAsync(), item => item.EventType == "PaymentDepositCancelled");
+    }
+
+
+    [Fact]
+    public async Task CreatePending_RejectsInvalidOrOversizedReceiptMetadata()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+        var service = new TargetDepositWorkflowService(new TestContextFactory(options), TimeProvider.System);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreatePendingAsync(
+            "B1", "A1", Guid.NewGuid(), Guid.NewGuid(), 10m, receiptMetadataJson: "{invalid"));
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreatePendingAsync(
+            "B1", "A1", Guid.NewGuid(), Guid.NewGuid(), 10m, receiptMetadataJson: new string('x', 8001)));
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreatePendingAsync(
+            "B1", "A1", Guid.NewGuid(), Guid.NewGuid(), 10m, note: new string('n', 1001)));
     }
 
     private sealed class TestContextFactory(DbContextOptions<AppDbContext> options)
