@@ -64,7 +64,10 @@ public sealed class IdentityAccountAuthenticationService
                   && assignment.RevokedAtUtc == null
             select assignment.RoleAssignmentId)
             .AnyAsync(cancellationToken);
-        if (!roleExists) return AuthResult.Fail("wrong-credentials");
+        // This service owns only the resident sign-in path for now. Let the caller
+        // continue its explicitly retained legacy admin/super-admin path when the
+        // matched target account has no active resident assignment.
+        if (!roleExists) return null;
 
         // Do not let a newer expired/revoked credential shadow an older still-valid
         // credential. Credential material is opaque: the submitted value is never trimmed.
