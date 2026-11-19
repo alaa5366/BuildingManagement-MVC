@@ -110,6 +110,14 @@ public class CategoryPoint
 public class WalletPoint
 {
     /// <summary>
+    /// Gets or sets the apartment id.
+    /// </summary>
+    public string ApartmentId { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the owner.
+    /// </summary>
+    public string Owner { get; set; } = "";
+    /// <summary>
     /// Gets or sets the number.
     /// </summary>
     public int Number { get; set; }
