@@ -89,8 +89,8 @@ GROUP BY SourceTable;
             $status='RETAIN_EF_METADATA'
         } elseif([long]$s.TotalRows -gt 0) {
             $status='BLOCKED_NONEMPTY_REQUIRES_TARGET_PAYLOAD_PROOF'
-            $blockers.Add("$name contains $($s.RowCount) non-empty source rows. Migration-map counts alone cannot prove the mapped target payloads are complete and identical; table-specific target fingerprint reconciliation is required before DROP.")
-        } elseif([long]$s.RowCount -gt 0 -and $mapRows -lt [long]$s.RowCount) {
+            $blockers.Add("$name contains $($s.TotalRows) non-empty source rows. Migration-map counts alone cannot prove the mapped target payloads are complete and identical; table-specific target fingerprint reconciliation is required before DROP.")
+        } elseif([long]$s.TotalRows -gt 0 -and $mapRows -lt [long]$s.RowCount) {
             $status='BLOCKED_INCOMPLETE_ROW_PROVENANCE'
             $blockers.Add("$name has $($s.RowCount) source rows but only $mapRows migration-map rows.")
         } elseif($null -ne $map -and ([long]$map.MissingTargetKeys -gt 0 -or [long]$map.MissingTargetTables -gt 0)) {
@@ -98,7 +98,7 @@ GROUP BY SourceTable;
             $blockers.Add("$name has migration-map entries with missing target keys or target tables.")
         }
         if($status -eq 'READY_FOR_REVIEW'){$legacyToDrop.Add($name)}
-        $tableResults.Add([pscustomobject]@{Table=$name;SourceRows=[long]$s.RowCount;TargetRows=[long]$t.TotalRows;MapRows=$mapRows;Status=$status})
+        $tableResults.Add([pscustomobject]@{Table=$name;SourceRows=[long]$s.TotalRows;TargetRows=[long]$t.TotalRows;MapRows=$mapRows;Status=$status})
     }
     # Build FK check using a temporary table populated from the exact source-table inventory.
     $legacyValues=($sourceTables.Rows | Where-Object { $_.TableName -ne '__EFMigrationsHistory' } | ForEach-Object { "(N'$($_.SchemaName.Replace("'","''"))',N'$($_.TableName.Replace("'","''"))')" }) -join ','
@@ -120,25 +120,11 @@ WHERE EXISTS(SELECT 1 FROM @Legacy l WHERE l.TableName=pt.name AND l.SchemaName=
     foreach($r in $tableResults){Log ("{0}: source={1}; target={2}; map={3}; {4}" -f $r.Table,$r.SourceRows,$r.TargetRows,$r.MapRows,$r.Status)}
     foreach($b in $blockers){Log "BLOCKER: $b"}
     if($blockers.Count -gt 0){throw "Retirement stopped safely: $($blockers.Count) blocker(s). No table was dropped."}
-    if(-not $Apply){Log 'DRY RUN: all structural gates passed; rerun with -Apply to create backup and retire legacy tables.'}
-    else {
-        New-Item -ItemType Directory -Force -Path $BackupDirectory | Out-Null
-        $backupPath=Join-Path $BackupDirectory ("BuildingManagement_RestoreTest_PrePhase49_"+(Get-Date -Format 'yyyyMMdd_HHmmss')+".bak")
-        $backupCmd=$target.CreateCommand()
-        $backupCmd.CommandTimeout=0
-        $backupCmd.CommandText="BACKUP DATABASE [BuildingManagement_RestoreTest] TO DISK = N'$($backupPath.Replace("'","''"))' WITH COPY_ONLY, CHECKSUM, INIT, STATS=10;"
-        [void]$backupCmd.ExecuteNonQuery()
-        $verify=Query $target "RESTORE VERIFYONLY FROM DISK=N'$($backupPath.Replace("'","''"))' WITH CHECKSUM;"
-        if($null -eq $verify){throw 'Backup verification did not return successfully; no tables were dropped.'}
-        # Final guard: drop only source-named tables, never target-only operational tables or EF migration history.
-        $dropSql=($legacyToDrop | ForEach-Object { $parts=$_.Split('.',2); "DROP TABLE $(Quote $parts[0]).$(Quote $parts[1]);" }) -join [Environment]::NewLine
-        if(-not [string]::IsNullOrWhiteSpace($dropSql)){
-            $tx=$target.BeginTransaction()
-            try{$cmd=$target.CreateCommand();$cmd.Transaction=$tx;$cmd.CommandTimeout=900;$cmd.CommandText=$dropSql;[void]$cmd.ExecuteNonQuery();$tx.Commit();$dropped=@($legacyToDrop)}
-            catch{$tx.Rollback();throw}
-        }
-        Log "Backup verified: $backupPath"
-        Log "Tables dropped: $($dropped.Count)"
+    if($Apply){
+        Log 'APPLY requested, but destructive table retirement is disabled pending complete payload and relationship reconciliation.'
+        throw 'Phase49 is a read-only migration readiness audit. No tables were dropped.'
+    } else {
+        Log 'READ-ONLY PREFLIGHT: no backup or table retirement is performed by this phase.'
     }
 }
 catch { $failure=$_.Exception.Message; Log "ERROR: $failure" }
@@ -151,10 +137,10 @@ finally {
     $lines+=@('','## Execution log','')
     $lines+=($log|ForEach-Object{"- $_"})
     $lines+=@('','## Backup','',"- Backup file: $(if($backupPath){$backupPath}else{'Not created'})","- Tables dropped: $($dropped.Count)",'','## Safety notes','',
-      '- The script fails closed. Any missing target table, incomplete migration-map coverage, invalid target mapping, or foreign-key dependency prevents all drops.',
+      '- This phase is strictly read-only. It never backs up, drops, truncates, or modifies any table.',
       '- __EFMigrationsHistory is deliberately retained as Entity Framework deployment metadata.',
       '- Target-only operational tables are never selected for deletion.',
-      '- A migration-map count is a conservative gate, not a cryptographic proof of payload equality; the Phase 47 fingerprints and table-specific migration reports remain required evidence.',
+      '- A migration-map count is not proof of payload equality. Exact row fingerprints, table-specific target mappings, and FK relationship reconciliation are required before any retirement plan.',
       '- If any blocker is reported, resolve it before retrying. No source table or source row is ever changed.')
     Set-Content -LiteralPath $report -Value ($lines -join [Environment]::NewLine) -Encoding UTF8
     Write-Host "Report: $report"
