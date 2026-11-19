@@ -3,6 +3,7 @@ using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Moq;
 using Xunit;
 
 namespace BuildingManagement.Tests;
@@ -44,7 +45,8 @@ public sealed class AccountManagementServiceTests
             await db.SaveChangesAsync();
         }
 
-        var page = await new AccountManagementService(factory).GetPageAsync(null, null, null, 1, 25);
+        var audit = CreateAuditMock();
+        var page = await new AccountManagementService(factory, audit.Object).GetPageAsync(null, null, null, 1, 25);
 
         Assert.Equal(2, page.TotalAccounts);
         Assert.Equal(1, page.LegacySuperAdminAccounts);
@@ -61,6 +63,99 @@ public sealed class AccountManagementServiceTests
         Assert.Null(legacy.Phone);
         Assert.Equal("root@example.invalid", legacy.Email);
         Assert.Equal("legacy-superadmin-1", legacy.LegacyUserId);
+    }
+
+
+    [Fact]
+    public async Task ResetResidentPinAsync_RotatesCredentialAndRequiresChangeWithoutLoggingPin()
+    {
+        var factory = new TestContextFactory();
+        var hasher = new BcryptPasswordHasher();
+        var now = DateTime.UtcNow;
+        var personId = Guid.NewGuid();
+        var accountId = Guid.NewGuid();
+        var oldCredentialId = Guid.NewGuid();
+        var oldHash = hasher.HashPin("2468");
+        await using (var db = await factory.CreateDbContextAsync())
+        {
+            db.Persons.Add(new PersonEntity { PersonId = personId, DisplayName = "Resident", PrimaryPhone = "+201000000222", CreatedAtUtc = now });
+            db.UserAccounts.Add(new UserAccountEntity { AccountId = accountId, PersonId = personId, AccountStatus = 1, SecurityStamp = "before", CreatedAtUtc = now });
+            db.RoleDefinitions.Add(new RoleDefinitionEntity { RoleKey = "resident", DisplayName = "Resident", IsActive = true });
+            db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            {
+                RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "resident",
+                ScopeType = 2, ScopeBuildingId = "building-1", ScopeApartmentId = "apt-1",
+                ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1)
+            });
+            db.UserCredentials.Add(new UserCredentialEntity
+            {
+                CredentialId = oldCredentialId, AccountId = accountId, CredentialType = 0,
+                CredentialHash = oldHash, HashAlgorithm = "BCrypt.Net-Next", CreatedAtUtc = now.AddDays(-1)
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var audit = CreateAuditMock();
+        var service = new AccountManagementService(factory, audit.Object);
+        var result = await service.ResetResidentPinAsync(accountId, "superadmin-actor", hasher);
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.TemporaryPin);
+        Assert.Equal(6, result.TemporaryPin!.Length);
+        Assert.All(result.TemporaryPin, char.IsDigit);
+
+        await using var verify = await factory.CreateDbContextAsync();
+        var account = await verify.UserAccounts.SingleAsync(x => x.AccountId == accountId);
+        Assert.True(account.MustChangePin);
+        Assert.NotEqual("before", account.SecurityStamp);
+        Assert.NotNull((await verify.UserCredentials.SingleAsync(x => x.CredentialId == oldCredentialId)).RevokedAtUtc);
+        var activeCredential = await verify.UserCredentials.SingleAsync(x => x.AccountId == accountId && x.RevokedAtUtc == null);
+        Assert.True(hasher.VerifyPin(result.TemporaryPin, activeCredential.CredentialHash));
+        audit.Verify(x => x.LogAsync("identity.resident.pin.reset", null, null, "superadmin-actor", "superadmin",
+            It.IsAny<object?>(), "info"), Times.Once);
+    }
+
+    [Fact]
+    public async Task SetResidentStatusAsync_ChangesOnlyStandaloneResidentAccountAndRotatesSecurityStamp()
+    {
+        var factory = new TestContextFactory();
+        var now = DateTime.UtcNow;
+        var personId = Guid.NewGuid();
+        var accountId = Guid.NewGuid();
+        await using (var db = await factory.CreateDbContextAsync())
+        {
+            db.Persons.Add(new PersonEntity { PersonId = personId, DisplayName = "Resident", PrimaryPhone = "+201000000333", CreatedAtUtc = now });
+            db.UserAccounts.Add(new UserAccountEntity { AccountId = accountId, PersonId = personId, AccountStatus = 1, SecurityStamp = "before", CreatedAtUtc = now });
+            db.RoleDefinitions.Add(new RoleDefinitionEntity { RoleKey = "resident", DisplayName = "Resident", IsActive = true });
+            db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            {
+                RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "resident",
+                ScopeType = 2, ScopeBuildingId = "building-1", ScopeApartmentId = "apt-1",
+                ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1)
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var audit = CreateAuditMock();
+        var service = new AccountManagementService(factory, audit.Object);
+        var result = await service.SetResidentStatusAsync(accountId, false, "superadmin-actor");
+
+        Assert.True(result.Success);
+        await using var verify = await factory.CreateDbContextAsync();
+        var account = await verify.UserAccounts.SingleAsync(x => x.AccountId == accountId);
+        Assert.Equal((byte)0, account.AccountStatus);
+        Assert.NotEqual("before", account.SecurityStamp);
+        audit.Verify(x => x.LogAsync("identity.resident.account.deactivated", null, null, "superadmin-actor", "superadmin",
+            It.IsAny<object?>(), "info"), Times.Once);
+    }
+
+    private static Mock<IAuditLogger> CreateAuditMock()
+    {
+        var audit = new Mock<IAuditLogger>();
+        audit.Setup(x => x.LogAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(),
+                It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<object?>(), It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
+        return audit;
     }
 
     private sealed class TestContextFactory : IDbContextFactory<AppDbContext>
