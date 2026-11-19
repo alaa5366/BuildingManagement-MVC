@@ -14,20 +14,24 @@ public sealed class TargetNotificationsService
 
     public TargetNotificationsService(IDbContextFactory<AppDbContext> factory) => _factory = factory;
 
+    /// <summary>Gets recent notifications addressed to administrators in one building.</summary>
     public Task<List<Notification>> GetForAdminAsync(
         string buildingId, int max = 500, CancellationToken cancellationToken = default) =>
         GetListAsync(buildingId, AdminRecipient, null, max, cancellationToken);
 
+    /// <summary>Gets recent notifications addressed to one apartment in a building.</summary>
     public Task<List<Notification>> GetForResidentAsync(
         string buildingId, string apartmentId, int max = 500,
         CancellationToken cancellationToken = default) =>
         GetListAsync(buildingId, ResidentRecipient, apartmentId, max, cancellationToken);
 
+    /// <summary>Gets a paged list of administrator notifications for one building.</summary>
     public Task<PagedResult<Notification>> GetPageForAdminAsync(
         string buildingId, int page = 1, int pageSize = 50,
         CancellationToken cancellationToken = default) =>
         GetPageAsync(buildingId, AdminRecipient, null, page, pageSize, cancellationToken);
 
+    /// <summary>Gets a paged list of notifications for one resident apartment.</summary>
     public Task<PagedResult<Notification>> GetPageForResidentAsync(
         string buildingId, string apartmentId, int page = 1, int pageSize = 50,
         CancellationToken cancellationToken = default) =>
@@ -85,11 +89,13 @@ public sealed class TargetNotificationsService
         return query;
     }
 
+    /// <summary>Creates an in-app deposit notice for a resident apartment.</summary>
     public Task CreateResidentDepositNoticeAsync(
         string buildingId, string apartmentId, string title, string body,
         CancellationToken cancellationToken = default, string type = "deposit", string icon = "💳") =>
         CreateResidentNotificationAsync(buildingId, apartmentId, title, body, type, icon, cancellationToken);
 
+    /// <summary>Creates a normalized in-app notification for a resident apartment.</summary>
     public async Task CreateResidentNotificationAsync(
         string buildingId, string apartmentId, string title, string body,
         string type = "info", string icon = "🔔",
@@ -136,6 +142,7 @@ public sealed class TargetNotificationsService
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    /// <summary>Marks a notification as read after validating its building and recipient scope.</summary>
     public async Task<bool> MarkReadAsync(
         string buildingId, string id, string recipientType, string? apartmentId = null,
         CancellationToken cancellationToken = default)
@@ -172,10 +179,12 @@ public sealed class TargetNotificationsService
         return true;
     }
 
+    /// <summary>Counts unread administrator notifications for one building.</summary>
     public Task<int> GetUnreadCountForAdminAsync(
         string buildingId, CancellationToken cancellationToken = default) =>
         GetUnreadCountAsync(buildingId, AdminRecipient, null, cancellationToken);
 
+    /// <summary>Counts unread notifications for one resident apartment.</summary>
     public Task<int> GetUnreadCountForResidentAsync(
         string buildingId, string apartmentId, CancellationToken cancellationToken = default) =>
         GetUnreadCountAsync(buildingId, ResidentRecipient, apartmentId, cancellationToken);
@@ -189,6 +198,7 @@ public sealed class TargetNotificationsService
             .CountAsync(x => x.ReadState == null || x.ReadState.ReadAtUtc == null, cancellationToken);
     }
 
+    /// <summary>Marks all notifications in the specified recipient scope as read.</summary>
     public async Task<int> MarkAllReadAsync(
         string buildingId, string recipientType, string? apartmentId = null,
         CancellationToken cancellationToken = default)
