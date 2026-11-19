@@ -46,7 +46,8 @@ SELECT
  if([int]$r.NonPendingUserMappings -gt 0 -or [int]$r.NonPendingResidentMappings -gt 0){throw 'Existing identity mappings are not all pending; refusing partial or conflicting backfill.'}
  if([int]$r.UserMaps -ne 5 -or [int]$r.ResidentMaps -ne 79){throw 'Expected exact identity mapping candidate counts Users=5 and Residents=79.'}
  if([int]$r.UnmatchedOrAmbiguousResidentMapKeys -gt 0 -or [int]$r.UnmatchedOrAmbiguousUserMapKeys -gt 0){throw 'Identity map source keys do not resolve one-to-one to exact legacy rows; refusing backfill.'}
- if(-not $Apply){Log 'DRY RUN - no data changed';return}
+ if(-not $Apply){Log 'DRY RUN - no data changed'}
+ else{
  $tx=$c.BeginTransaction()
  try{
   $sql=@"
@@ -126,6 +127,7 @@ CLOSE user_cursor; DEALLOCATE user_cursor;
  Log ("Credentials created: "+(Scalar $c "SELECT COUNT(*) FROM dbo.UserCredentials"))
  Log ("Role assignments created: "+(Scalar $c "SELECT COUNT(*) FROM dbo.UserRoleAssignments"))
  Log 'IDENTITY PERSON/ACCOUNT BACKFILL COMPLETE - no credentials or roles were created.'
+ }
 }catch{Log "ERROR: $($_.Exception.Message)";throw}
 finally{
  if($c.State -ne 'Closed'){$c.Close()}
