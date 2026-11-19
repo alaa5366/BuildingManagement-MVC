@@ -38,7 +38,7 @@ IF COL_LENGTH(N'dbo.Users',N'Uid') IS NULL OR COL_LENGTH(N'dbo.Users',N'Role') I
  OR COL_LENGTH(N'dbo.BuildingAdmins',N'AdminUid') IS NULL OR COL_LENGTH(N'dbo.BuildingAdmins',N'BuildingId') IS NULL
  THROW 51037, 'Required source columns are missing.', 1;
 
-DECLARE @admins TABLE(AdminUid nvarchar(256) PRIMARY KEY, AccountId uniqueidentifier NOT NULL, BuildingId nvarchar(64) NOT NULL, MappingSource nvarchar(40) NOT NULL);
+DECLARE @admins TABLE(AdminUid nvarchar(256) PRIMARY KEY, AccountId uniqueidentifier NOT NULL, BuildingId nvarchar(64) NOT NULL, MappingSource nvarchar(120) NOT NULL);
 DECLARE @sourceAdminCount int, @buildingCount int, @explicitLinkCount int, @unmappedAccountCount int;
 
 SELECT @sourceAdminCount=COUNT(*) FROM dbo.Users
