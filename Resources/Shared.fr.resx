@@ -5183,4 +5183,8 @@ Cette opération peut prendre quelques secondes.</value>
   <data name="Backup_Collection_maintenanceAssignments" xml:space="preserve"><value>Affectations de maintenance</value></data>
   <data name="Backup_Collection_maintenanceComments" xml:space="preserve"><value>Commentaires de maintenance</value></data>
   <data name="Backup_Collection_maintenanceStatusEvents" xml:space="preserve"><value>Historique des statuts de maintenance</value></data>
+  <data name="Backup_Collection_pollVotingPolicies" xml:space="preserve"><value>Politiques de vote</value></data>
+  <data name="Backup_Collection_pollEligibility" xml:space="preserve"><value>Éligibilité au vote</value></data>
+  <data name="Backup_Collection_pollBallots" xml:space="preserve"><value>Bulletins anonymes</value></data>
+  <data name="Backup_Collection_pollLifecycleEvents" xml:space="preserve"><value>Événements du cycle de vie du sondage</value></data>
 </root>
