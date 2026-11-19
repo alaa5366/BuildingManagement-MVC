@@ -377,7 +377,7 @@ public sealed class IdentityAccountAuthenticationServiceTests
                 new PersonEntity
                 {
                     PersonId = Guid.NewGuid(), DisplayName = "Duplicate Phone B",
-                    PrimaryPhone = "01000000088", CreatedAtUtc = now
+                    PrimaryPhone = "01000000088", IsArchived = true, ArchivedAtUtc = now, CreatedAtUtc = now
                 });
             await db.SaveChangesAsync();
         }
