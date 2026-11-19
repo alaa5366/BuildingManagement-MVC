@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Services;
@@ -27,8 +26,8 @@ public sealed class TargetPollsServiceTests
         var entitlement = await verify.PollEligibility.SingleAsync(x =>
             x.BuildingId == "B1" && x.PollId == poll.Id && x.SubjectReference == "A1");
         Assert.NotNull(entitlement.ConsumedAtUtc);
-        Assert.DoesNotContain(System.Text.Encoding.UTF8.GetBytes("A1"), ballot.ChoicePayload);
-        Assert.DoesNotContain(System.Text.Encoding.UTF8.GetBytes(poll.Options[0].Id), ballot.ChoicePayload);
+        Assert.DoesNotContain("A1", System.Text.Encoding.UTF8.GetString(ballot.ChoicePayload), StringComparison.Ordinal);
+        Assert.DoesNotContain(poll.Options[0].Id, System.Text.Encoding.UTF8.GetString(ballot.ChoicePayload), StringComparison.Ordinal);
         Assert.Equal(32, ballot.BallotTokenHash.Length);
         Assert.Empty(await verify.PollVotes.Where(x => x.BuildingId == "B1" && x.PollId == poll.Id).ToListAsync());
 
