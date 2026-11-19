@@ -179,6 +179,7 @@ public class MaintenanceController : Controller
             _audit.Push(building, "maint_add_expense", $"{expense.Note} — {expense.Amount:0.##}", "admin", User.Identity?.Name ?? "admin");
             var catName = building.ExpenseCategories.FirstOrDefault(c => c.Id == expense.CategoryId)?.Name ?? expense.CategoryId;
             _notify.NotifyResidentsNewExpense(building, catName, expense.Amount);
+            await _buildings.SaveFullAsync(building);
             foreach (var apartment in building.Apartments.Where(item => !item.Closed))
             {
                 try
@@ -194,7 +195,6 @@ public class MaintenanceController : Controller
                         building.Id, apartment.Id);
                 }
             }
-            await _buildings.SaveFullAsync(building);
             TempData["Message"] = Loc.T("Cost_Added_To_Expenses");
         }
 
