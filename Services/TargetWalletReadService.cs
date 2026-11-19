@@ -27,7 +27,8 @@ public sealed class TargetWalletReadService
 
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
         var periodId = await db.FinancialPeriods.AsNoTracking()
-            .Where(p => p.BuildingId == buildingId && p.PeriodKey == periodKey)
+            .Where(p => p.BuildingId == buildingId && p.PeriodKey == periodKey &&
+                p.Status != FinancialPeriodStatus.Closed)
             .Select(p => (Guid?)p.PeriodId)
             .SingleOrDefaultAsync(cancellationToken);
         if (periodId is null) return null;
