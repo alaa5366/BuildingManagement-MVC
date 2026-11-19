@@ -40,4 +40,4 @@ dotnet test
 dotnet build --no-restore
 ```
 
-The tests in this report have been authored but have not been executed by the assistant. Do not mark Phase39 verification complete until the local test output confirms execution and success.
+The tests in this report have been authored but have not been executed by the assistant. The root solution originally omitted the test project, so `dotnet test` from the repository root built only the web application. Phase39 now adds the test project to `BuildingManagementMvc.slnx`; after pulling, run `dotnet test` again and confirm a `Passed` / `Failed` / `Total` summary before marking verification complete.
