@@ -16,15 +16,15 @@ namespace BuildingManagementMvc.Controllers;
 [Authorize(Roles = "admin")]
 public class AdminHomeController : Controller
 {
-    private readonly BuildingsService _buildings;
+    private readonly TargetWalletReadService _targetWallet;
     private readonly BuildingMapService _map;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AdminHomeController"/> class.
     /// </summary>
-    public AdminHomeController(BuildingsService buildings, BuildingMapService map)
+    public AdminHomeController(TargetWalletReadService targetWallet, BuildingMapService map)
     {
-        _buildings = buildings;
+        _targetWallet = targetWallet;
         _map = map;
     }
 
@@ -36,7 +36,7 @@ public class AdminHomeController : Controller
         var buildingId = User.FindFirstValue("buildingId");
         if (string.IsNullOrEmpty(buildingId)) return NotFound();
 
-        var building = await _buildings.GetByIdAsync(buildingId);
+        var building = await _targetWallet.GetBuildingShellAsync(buildingId, null, HttpContext.RequestAborted);
         if (building == null) return NotFound();
 
         var currentMonth = WalletService.CurrentMonthKey();
