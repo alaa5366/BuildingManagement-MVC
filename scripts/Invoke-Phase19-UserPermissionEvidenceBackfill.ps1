@@ -22,7 +22,7 @@ try{
  }
  $m=[int](Query $c "SELECT COUNT(*) N FROM dbo.__EFMigrationsHistory WHERE MigrationId='20261119190000_Phase19_UserPermissionEvidence'").Rows[0].N
  if($m -ne 1){throw 'Phase19 schema migration is not applied'}
- $bad=[int](Query $c "SELECT COUNT(*) N FROM dbo.UserPermissions WHERE Uid IS NULL OR LEN(Uid)=0 OR LEN(Uid)>128 OR Permission IS NULL OR LEN(Permission)=0 OR LEN(Permission)>256").Rows[0].N
+ $bad=[int](Query $c "SELECT COUNT(*) N FROM dbo.UserPermissions WHERE Uid IS NULL OR LEN(Uid)=0 OR LEN(Uid)>128 OR Permission IS NULL OR LEN(Permission)=0 OR LEN(Permission)>256 OR LEN(Uid)+1+LEN(Permission)>256").Rows[0].N
  if($bad){throw "Preflight blocked: $bad permission rows have invalid key/value."}
  $source=[int](Query $c "SELECT COUNT(*) N FROM dbo.UserPermissions").Rows[0].N
  $pending=[int](Query $c "SELECT COUNT(*) N FROM dbo.UserPermissions s WHERE NOT EXISTS(SELECT 1 FROM dbo.LegacyOperationalRecords t WHERE t.SourceSystem=N'BuildingManagement.Legacy' AND t.SourceTable=N'UserPermissions' AND t.SourceKey=s.Uid+N'|'+s.Permission)").Rows[0].N
