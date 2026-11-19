@@ -69,25 +69,13 @@ public sealed class PersonPhoneCorrectionService
         return await query.Take(200).ToListAsync();
     }
 
-    public async Task<bool> ReviewAsync(Guid requestId, Guid reviewerAccountId, bool approve, string reason, bool superAdmin, string? buildingId)
+    public async Task<bool> ReviewAsync(Guid requestId, string reviewerUserId, bool approve, string reason, bool superAdmin, string? buildingId)
     {
-        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500) return false;
+        if (string.IsNullOrWhiteSpace(reviewerUserId) || reviewerUserId.Length > 128 || string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500) return false;
         await using var db = await _factory.CreateDbContextAsync();
         await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
         var request = await db.PersonPhoneChangeRequests.SingleOrDefaultAsync(r => r.RequestId == requestId && r.Status == 0);
         if (request == null || (!superAdmin && request.BuildingId != buildingId)) return false;
-
-        var reviewerAllowed = await (
-            from assignment in db.UserRoleAssignments
-            join role in db.RoleDefinitions on assignment.RoleKey equals role.RoleKey
-            where assignment.AccountId == reviewerAccountId && role.IsActive &&
-                assignment.RevokedAtUtc == null && assignment.ValidFromUtc <= DateTime.UtcNow &&
-                (assignment.ValidToUtc == null || assignment.ValidToUtc > DateTime.UtcNow) &&
-                ((superAdmin && assignment.RoleKey == "superadmin") ||
-                 (!superAdmin && assignment.RoleKey == "admin" && assignment.ScopeType == 1 &&
-                  assignment.ScopeBuildingId == request.BuildingId))
-            select assignment.RoleAssignmentId).AnyAsync();
-        if (!reviewerAllowed) return false;
 
         var now = DateTime.UtcNow;
         if (approve)
@@ -110,7 +98,7 @@ public sealed class PersonPhoneCorrectionService
         }
 
         request.Status = approve ? (byte)1 : (byte)2;
-        request.ReviewedByAccountId = reviewerAccountId;
+        request.ReviewedByUserId = reviewerUserId;
         request.ReviewedAtUtc = now;
         request.ReviewReason = reason.Trim();
         await db.SaveChangesAsync();
@@ -119,7 +107,7 @@ public sealed class PersonPhoneCorrectionService
         await _audit.LogAsync(
             action: approve ? "resident.phone_change.approved" : "resident.phone_change.rejected",
             buildingId: request.BuildingId, apartmentId: request.ApartmentId,
-            userId: reviewerAccountId.ToString("D"), userRole: superAdmin ? "superadmin" : "admin",
+            userId: reviewerUserId, userRole: superAdmin ? "superadmin" : "admin",
             metadata: new { requestId, personId = request.PersonId, oldPhone = request.PreviousPhone, newPhone = approve ? request.RequestedPhone : null },
             severity: "critical");
         return true;
