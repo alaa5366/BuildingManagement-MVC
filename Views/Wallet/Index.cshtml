@@ -162,7 +162,17 @@
                 @foreach (var (apt, balance) in floorGroup.OrderBy(b => b.Apt.Number))
                 {
                     <tr>
-                        <td>@Loc.T("Apartment_N_N_2", apt.Number, string.IsNullOrEmpty(apt.Label) ? "" : "— " + apt.Label)</td>
+                        <td>
+                            <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                                <span>@Loc.T("Apartment_N_N_2", apt.Number, string.IsNullOrEmpty(apt.Label) ? "" : "— " + apt.Label)</span>
+                                <a asp-controller="Invoice" asp-action="Download"
+                                   asp-route-aptId="@apt.Id" asp-route-month="@month"
+                                   class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">
+                                    <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+                                    @Loc.T("Download_PDF_Invoice")
+                                </a>
+                            </div>
+                        </td>
                         <td class="@(balance < 0 ? "text-danger" : "text-success") fw-bold">@balance.ToString("0.##")</td>
                         <td>
                             <form method="post" asp-action="AddAdjustment" class="d-flex gap-1">
