@@ -11,6 +11,7 @@ public sealed class TargetQrService
 
     public TargetQrService(IDbContextFactory<AppDbContext> factory) => _factory = factory;
 
+    /// <summary>Gets QR access records for the specified building page.</summary>
     public async Task<QrBuildingPageModel?> GetBuildingPageAsync(
         string buildingId, CancellationToken cancellationToken = default)
     {
@@ -46,6 +47,7 @@ public sealed class TargetQrService
         };
     }
 
+    /// <summary>Gets apartment details required for QR access processing.</summary>
     public async Task<QrApartmentInfo?> GetApartmentAsync(
         string buildingId, string apartmentId, bool requireActive = true,
         CancellationToken cancellationToken = default)
