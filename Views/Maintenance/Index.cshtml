@@ -106,7 +106,6 @@ else
                     {
                         <form method="post" asp-action="AddToExpenses">
                             <input type="hidden" name="id" value="@m.Id" />
-                            <input type="hidden" name="month" value="@WalletService.CurrentMonthKey()" />
                             <button class="btn btn-sm btn-outline-success">@Loc.T("Add_To_Expenses")</button>
                         </form>
                     }
