@@ -60,6 +60,56 @@ public sealed class TargetNotificationsServiceTests
             .Select(item => item.IsRead).SingleAsync());
     }
 
+
+    [Fact]
+    public async Task CreateResidentDepositNoticeAsync_PersistsOnlyWithinExistingApartmentScope()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N")).Options;
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.Buildings.Add(new BuildingEntity { Id = "B1", BuildingNumber = "1", Name = "One" });
+            seed.Apartments.Add(new ApartmentEntity
+            {
+                BuildingId = "B1", Id = "A1", FloorId = "F1", Number = 1
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetNotificationsService(new TestContextFactory(options));
+        await service.CreateResidentDepositNoticeAsync(
+            "B1", "A1", "Deposit confirmed", "Your payment was confirmed.");
+
+        await using var verify = new AppDbContext(options);
+        var notice = await verify.Notifications.SingleAsync();
+        Assert.Equal("B1", notice.BuildingId);
+        Assert.Equal("A1", notice.RecipientApartmentId);
+        Assert.Equal("resident", notice.RecipientType);
+        Assert.Equal("deposit", notice.Type);
+        Assert.Equal("Your payment was confirmed.", notice.Body);
+        Assert.False(notice.IsRead);
+    }
+
+    [Fact]
+    public async Task CreateResidentDepositNoticeAsync_RejectsApartmentOutsideBuilding()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N")).Options;
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.Buildings.Add(new BuildingEntity { Id = "B1", BuildingNumber = "1", Name = "One" });
+            seed.Apartments.Add(new ApartmentEntity
+            {
+                BuildingId = "B1", Id = "A1", FloorId = "F1", Number = 1
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetNotificationsService(new TestContextFactory(options));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.CreateResidentDepositNoticeAsync("B2", "A1", "Deposit", "Notice"));
+    }
+
     private static NotificationEntity Create(string buildingId, string id, string recipientType, string? apartmentId) => new()
     {
         BuildingId = buildingId,
