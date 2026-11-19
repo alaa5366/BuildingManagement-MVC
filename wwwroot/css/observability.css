@@ -48,3 +48,10 @@
 .health-process-grid small { color:#74879a; font-size:.72rem; }
 .health-process-grid strong { color:#29445f; font-size:.85rem; overflow-wrap:anywhere; }
 @media(max-width:767px) { .health-process-grid { grid-template-columns:1fr; } }
+
+.log-http-cell { min-width:145px; }
+.http-status { display:inline-flex; padding:.2rem .45rem; border-radius:5px; font:800 .72rem/1.3 ui-monospace,monospace; }
+.http-status-ok { color:#14734e; background:#e6f5ee; }
+.http-status-warning { color:#986008; background:#fff3d9; }
+.http-status-error { color:#b52e3b; background:#fdebed; }
+.http-duration { display:block; margin-top:.2rem; color:#526c83; font:700 .7rem ui-monospace,monospace; }
