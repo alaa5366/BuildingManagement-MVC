@@ -40,6 +40,7 @@ public class MaintenanceController : Controller
 
     private string BuildingId => User.FindFirstValue("buildingId") ?? "";
 
+    /// <summary>Displays the administration page and its current records.</summary>
     [HttpGet]
     public async Task<IActionResult> Index(int page = 1, int pageSize = 50)
     {
@@ -54,6 +55,7 @@ public class MaintenanceController : Controller
         return View(records);
     }
 
+    /// <summary>Creates a maintenance record from the submitted values.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Add(
@@ -87,6 +89,7 @@ public class MaintenanceController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>Updates the specified maintenance record.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Update(
@@ -127,6 +130,7 @@ public class MaintenanceController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>Deletes the specified maintenance record.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string id)
@@ -159,6 +163,7 @@ public class MaintenanceController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>Records the maintenance cost as an expense.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddToExpenses(string id)
