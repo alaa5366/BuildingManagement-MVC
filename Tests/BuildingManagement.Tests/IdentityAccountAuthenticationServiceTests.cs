@@ -476,7 +476,7 @@ public sealed class IdentityAccountAuthenticationServiceTests
             });
             db.RolePermissions.Add(new RolePermissionEntity
             {
-                RoleKey = "superadmin", PermissionKey = "system.manage", Effect = 1
+                RoleKey = "superadmin", PermissionKey = "buildings.manage", Effect = 1
             });
 
             var accounts = new[]
@@ -528,7 +528,7 @@ public sealed class IdentityAccountAuthenticationServiceTests
         Assert.True(gmail.UsesTargetIdentity);
         Assert.Equal(hotmailAccountId.ToString("D"), hotmail.Uid);
         Assert.Equal(gmailAccountId.ToString("D"), gmail.Uid);
-        Assert.Contains("system.manage", hotmail.Permissions);
+        Assert.Contains("buildings.manage", hotmail.Permissions);
         Assert.False(crossed.Success);
     }
 
