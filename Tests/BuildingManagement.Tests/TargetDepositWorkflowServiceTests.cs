@@ -227,6 +227,78 @@ public sealed class TargetDepositWorkflowServiceTests
         Assert.Contains("Original note", audit.SafeDetailsJson);
     }
 
+
+    [Fact]
+    public async Task ConfirmAsync_AllowsPriorMonthPendingDepositWhileSourcePeriodRemainsOpen()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+        var now = DateTime.UtcNow;
+        var periodId = Guid.NewGuid();
+        var actorId = Guid.NewGuid();
+        var personId = Guid.NewGuid();
+        var depositId = Guid.NewGuid();
+
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.Buildings.Add(new BuildingEntity { Id = "B1", BuildingNumber = "1", Name = "One" });
+            seed.FinancialPeriods.Add(new FinancialPeriodEntity
+            {
+                PeriodId = periodId,
+                BuildingId = "B1",
+                PeriodKey = now.AddMonths(-1).ToString("yyyy-MM"),
+                TimeZoneId = "Africa/Cairo",
+                Status = FinancialPeriodStatus.Open,
+                StartsAtUtc = now.AddMonths(-1).AddDays(-5),
+                EndsAtUtc = now.AddDays(-5),
+                CreatedAtUtc = now.AddMonths(-1)
+            });
+            seed.Apartments.Add(new ApartmentEntity
+            {
+                BuildingId = "B1", Id = "A1", FloorId = "F1", Number = 1
+            });
+            seed.Persons.Add(new PersonEntity
+            {
+                PersonId = personId, DisplayName = "Building Admin", CreatedAtUtc = now.AddMonths(-1)
+            });
+            seed.UserAccounts.Add(new UserAccountEntity
+            {
+                AccountId = actorId, PersonId = personId, AccountStatus = 1,
+                SecurityStamp = "test", CreatedAtUtc = now.AddMonths(-1)
+            });
+            seed.RoleDefinitions.Add(new RoleDefinitionEntity
+            {
+                RoleKey = "building-admin", DisplayName = "Building Admin", IsActive = true
+            });
+            seed.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            {
+                RoleAssignmentId = Guid.NewGuid(), AccountId = actorId, RoleKey = "building-admin",
+                ScopeType = 1, ScopeBuildingId = "B1", ValidFromUtc = now.AddMonths(-1),
+                GrantedAtUtc = now.AddMonths(-1)
+            });
+            seed.PaymentDeposits.Add(new PaymentDepositEntity
+            {
+                PaymentDepositId = depositId, PeriodId = periodId, BuildingId = "B1",
+                ApartmentId = "A1", Amount = 95m, CurrencyCode = "EGP",
+                Status = PaymentDepositStatus.Pending, SubmittedAtUtc = now.AddMonths(-1),
+                SourceSystem = "application", SourceKey = "prior-month-pending"
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetDepositWorkflowService(new TestContextFactory(options), TimeProvider.System);
+        var postedId = await service.ConfirmAsync(depositId, actorId, "admin");
+
+        Assert.NotNull(postedId);
+        await using var verify = new AppDbContext(options);
+        var deposit = await verify.PaymentDeposits.SingleAsync();
+        Assert.Equal(PaymentDepositStatus.Confirmed, deposit.Status);
+        Assert.Equal(periodId, (await verify.LedgerTransactions.SingleAsync()).PeriodId);
+        Assert.Equal(95m, (await verify.LedgerEntries.SingleAsync()).SignedAmount);
+    }
+
     [Fact]
     public async Task CreatePending_RejectsInvalidOrOversizedReceiptMetadata()
     {
