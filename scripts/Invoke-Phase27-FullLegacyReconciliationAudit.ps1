@@ -18,13 +18,13 @@ try{
  $results=@()
  foreach($name in $tables){
   $exists=(Query $c "SELECT OBJECT_ID(N'dbo.$name',N'U') N").Rows[0].N
-  if($null -eq $exists -or $exists -is [DBNull]){Log "$name: source/target table missing";continue}
+  if($null -eq $exists -or $exists -is [DBNull]){Log "${name}: source/target table missing";continue}
   $count=[int](Query $c "SELECT COUNT_BIG(*) N FROM dbo.[$name]").Rows[0].N
   $mapSql="SELECT COUNT_BIG(*) N FROM dbo.LegacyDataMigrationMap WHERE SourceTable=@t"
   $cmd=$c.CreateCommand();$cmd.CommandText=$mapSql;$p=$cmd.Parameters.Add("@t",[System.Data.SqlDbType]::NVarChar,128);$p.Value=$name
   $mapped=[int]$cmd.ExecuteScalar()
   $results+= [pscustomobject]@{Table=$name;Rows=$count;Provenance=$mapped}
-  Log "$name: rows=$count; provenance=$mapped"
+  Log "${name}: rows=$count; provenance=$mapped"
  }
  $totalRows=($results|Measure-Object Rows -Sum).Sum
  $totalMap=($results|Measure-Object Provenance -Sum).Sum
