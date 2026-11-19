@@ -28,9 +28,10 @@ public class AuditLogQueryService
         string? severity = null,
         DateTime? from = null,
         DateTime? to = null,
-        int limit = 500)
+        int limit = 500,
+        string? correlationId = null)
     {
-        return _audit.QueryAsync(buildingId, apartmentId, userId, from, to, action, severity, limit);
+        return _audit.QueryAsync(buildingId, apartmentId, userId, from, to, action, severity, limit, correlationId);
     }
     /// <summary>
     /// يستعلم عن صفحة من سجلات التدقيق من مصدر البيانات.
@@ -47,8 +48,8 @@ public class AuditLogQueryService
     /// <returns>صفحة من سجلات التدقيق.</returns>
     public Task<BuildingManagementMvc.Models.PagedResult<AuditEntryDoc>> QueryPageAsync(
         string? buildingId, string? apartmentId, string? userId, string? action, string? severity,
-        DateTime? from, DateTime? to, int page, int pageSize)
-        => _audit.QueryPageAsync(buildingId, apartmentId, userId, from, to, action, severity, page, pageSize);
+        DateTime? from, DateTime? to, int page, int pageSize, string? correlationId = null)
+        => _audit.QueryPageAsync(buildingId, apartmentId, userId, from, to, action, severity, page, pageSize, correlationId);
 
     // ============================================================
     // Known Actions
