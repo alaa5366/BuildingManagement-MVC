@@ -89,19 +89,19 @@ FROM dbo.BuildingAdmins ba
 JOIN dbo.Users u ON u.Uid=ba.AdminUid
 JOIN dbo.LegacyIdentityMap m ON m.SourceSystem=N'legacy-sql' AND m.SourceTable=N'Users'
  AND m.SourceKey=CONVERT(nvarchar(256),u.Uid) AND m.MappingStatus=1
-WHERE LOWER(LTRIM(RTRIM(u.Role))) IN(N'admin',N'buildingadmin);
+WHERE LOWER(LTRIM(RTRIM(u.Role))) IN(N'admin',N'buildingadmin');
 
 IF EXISTS(
  SELECT 1 FROM dbo.Users u
  JOIN dbo.LegacyIdentityMap m ON m.SourceSystem=N'legacy-sql' AND m.SourceTable=N'Users'
   AND m.SourceKey=CONVERT(nvarchar(256),u.Uid) AND m.MappingStatus=1
- WHERE LOWER(LTRIM(RTRIM(u.Role))) IN(N'admin',N'buildingadmin)
+ WHERE LOWER(LTRIM(RTRIM(u.Role))) IN(N'admin',N'buildingadmin')
  AND NOT EXISTS(SELECT 1 FROM dbo.BuildingAdmins ba WHERE ba.AdminUid=u.Uid)
 )
 BEGIN
     -- Owner-confirmed rule: the sole Admin without a legacy BuildingAdmins row is Building 3.
     IF (SELECT COUNT(*) FROM dbo.Users u
-        WHERE LOWER(LTRIM(RTRIM(u.Role))) IN(N'admin',N'buildingadmin)
+        WHERE LOWER(LTRIM(RTRIM(u.Role))) IN(N'admin',N'buildingadmin')
           AND NOT EXISTS(SELECT 1 FROM dbo.BuildingAdmins ba WHERE ba.AdminUid=u.Uid))<>1
       THROW 51037, 'Expected exactly one unlinked Admin.', 1;
     IF (SELECT COUNT(*) FROM dbo.Buildings b
@@ -117,7 +117,7 @@ BEGIN
     CROSS APPLY (SELECT CONVERT(nvarchar(64),b.Id) BuildingId FROM dbo.Buildings b
       WHERE NOT EXISTS(SELECT 1 FROM dbo.BuildingAdmins ba
        WHERE CONVERT(nvarchar(64),ba.BuildingId)=CONVERT(nvarchar(64),b.Id))) remaining
-    WHERE LOWER(LTRIM(RTRIM(u.Role))) IN(N'admin',N'buildingadmin)
+    WHERE LOWER(LTRIM(RTRIM(u.Role))) IN(N'admin',N'buildingadmin')
       AND NOT EXISTS(SELECT 1 FROM dbo.BuildingAdmins ba WHERE ba.AdminUid=u.Uid);
 END;
 
@@ -178,7 +178,7 @@ JOIN dbo.LegacyIdentityMap m ON m.SourceSystem=N'legacy-sql' AND m.SourceTable=N
  AND m.SourceKey=CONVERT(nvarchar(256),u.Uid) AND m.MappingStatus=1
 JOIN dbo.BuildingAdmins ba ON ba.AdminUid=u.Uid
 JOIN dbo.Buildings b ON CONVERT(nvarchar(64),b.Id)=CONVERT(nvarchar(64),ba.BuildingId)
-WHERE LOWER(LTRIM(RTRIM(u.Role))) IN(N'admin',N'buildingadmin);
+WHERE LOWER(LTRIM(RTRIM(u.Role))) IN(N'admin',N'buildingadmin');
 
 INSERT @admins(AccountId,BuildingId)
 SELECT m.AccountId,CONVERT(nvarchar(64),remaining.Id)
@@ -188,7 +188,7 @@ JOIN dbo.LegacyIdentityMap m ON m.SourceSystem=N'legacy-sql' AND m.SourceTable=N
 CROSS APPLY (SELECT b.Id FROM dbo.Buildings b
  WHERE NOT EXISTS(SELECT 1 FROM dbo.BuildingAdmins ba
   WHERE CONVERT(nvarchar(64),ba.BuildingId)=CONVERT(nvarchar(64),b.Id))) remaining
-WHERE LOWER(LTRIM(RTRIM(u.Role))) IN(N'admin',N'buildingadmin)
+WHERE LOWER(LTRIM(RTRIM(u.Role))) IN(N'admin',N'buildingadmin')
  AND NOT EXISTS(SELECT 1 FROM dbo.BuildingAdmins ba WHERE ba.AdminUid=u.Uid);
 
 IF (SELECT COUNT(*) FROM @admins)<>3 OR (SELECT COUNT(DISTINCT BuildingId) FROM @admins)<>3
@@ -210,19 +210,6 @@ INSERT @permissions(PermissionKey) VALUES
 (N'revenue.post'),(N'revenue.reverse'),(N'finance.export'),(N'finance.period.close'),
 (N'finance.period.reopen'),(N'notification.dispatch'),(N'integration.whatsapp.send'),
 (N'integration.whatsapp.configure'),(N'apartment.access.grant.manage);
-
-IF EXISTS(SELECT 1 FROM @permissions p WHERE NOT EXISTS(
- SELECT 1 FROM dbo.RolePermissions rp WHERE rp.PermissionKey=p.PermissionKey
- UNION ALL SELECT 1 FROM (VALUES
- (N'residents.manage'),(N'apartment.disable'),(N'dvrs.manage'),(N'cameras.view'),(N'cameras.manage'),
- (N'reports.view'),(N'polls.manage'),(N'maintenance.manage'),(N'audit.view.building'),
- (N'settings.manage.building'),(N'wallet.read'),(N'deposit.read'),(N'deposit.confirm'),(N'deposit.cancel'),
- (N'wallet.adjust'),(N'expense.read'),(N'expense.post'),(N'expense.reverse'),(N'revenue.read'),
- (N'revenue.post'),(N'revenue.reverse'),(N'finance.export'),(N'finance.period.close'),
- (N'finance.period.reopen'),(N'notification.dispatch'),(N'integration.whatsapp.send'),
- (N'integration.whatsapp.configure'),(N'apartment.access.grant.manage)) catalog(PermissionKey)
- WHERE catalog.PermissionKey=p.PermissionKey
-)) THROW 51038,'Permission set is not recognized by the approved code catalog.',1;
 
 INSERT dbo.RolePermissions(RoleKey,PermissionKey,Effect)
 SELECT N'building-admin',p.PermissionKey,1 FROM @permissions p
