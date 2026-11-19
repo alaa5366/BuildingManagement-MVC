@@ -27,6 +27,11 @@ public class InvoiceData
     /// </summary>
     public Floor? Floor { get; set; }
     /// <summary>
+    /// <summary>
+    /// Gets or sets the ISO currency code used by the building.
+    /// </summary>
+    public string CurrencyCode { get; set; } = "EGP";
+    /// <summary>
     /// Gets or sets the balance.
     /// </summary>
     public decimal Balance { get; set; }
