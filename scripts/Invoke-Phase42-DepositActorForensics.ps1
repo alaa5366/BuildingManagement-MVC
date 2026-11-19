@@ -49,7 +49,7 @@ try {
     SELECT d.BuildingId,d.Id,N'UpdatedBy',NULLIF(LTRIM(RTRIM(d.UpdatedBy)),N'')
     FROM dbo.Deposits d WHERE NULLIF(LTRIM(RTRIM(d.UpdatedBy)),N'') IS NOT NULL
     UNION ALL
-    SELECT h.BuildingId,h.DepositId,N'EditHistory.By',NULLIF(LTRIM(RTRIM(h.Actor)),N'')
+    SELECT h.BuildingId,h.DepositId,N'EditHistory.By',NULLIF(LTRIM(RTRIM(h.ByUser)),N'')
     FROM dbo.DepositEditHistory h WHERE NULLIF(LTRIM(RTRIM(h.Actor)),N'') IS NOT NULL
 ),
 DistinctActors AS (
