@@ -98,10 +98,10 @@
                         <td>@e.Note</td>
                         <td>@e.Amount.ToString("0.##")</td>
                         <td>
-                            <form method="post" asp-action="Delete" onsubmit="return confirm('@Loc.Js("Delete_The_Expense")');">
+                            <form method="post" asp-action="Delete" onsubmit="return confirm('@Loc.Js("Reverse_The_Expense")');">
                                 <input type="hidden" name="month" value="@month" />
                                 <input type="hidden" name="id" value="@e.Id" />
-                                <button class="btn btn-sm btn-outline-danger">@Loc.T("Delete_2")</button>
+                                <button class="btn btn-sm btn-outline-danger">@عكس القيد</button>
                             </form>
                         </td>
                     </tr>
