@@ -146,6 +146,29 @@ public sealed class TargetNotificationsService
         return true;
     }
 
+    public async Task<int> GetUnreadCountForAdminAsync(
+        string buildingId,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateScope(buildingId, null);
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        return await db.Notifications.CountAsync(item =>
+            item.BuildingId == buildingId && item.RecipientType == "admin" &&
+            item.RecipientApartmentId == null && !item.IsRead, cancellationToken);
+    }
+
+    public async Task<int> GetUnreadCountForResidentAsync(
+        string buildingId,
+        string apartmentId,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateScope(buildingId, apartmentId);
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        return await db.Notifications.CountAsync(item =>
+            item.BuildingId == buildingId && item.RecipientType == "resident" &&
+            item.RecipientApartmentId == apartmentId && !item.IsRead, cancellationToken);
+    }
+
     public async Task<int> MarkAllReadAsync(
         string buildingId, string recipientType, string? apartmentId = null,
         CancellationToken cancellationToken = default)
