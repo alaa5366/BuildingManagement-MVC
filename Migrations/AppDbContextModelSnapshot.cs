@@ -3878,6 +3878,67 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollVotingPolicyEntity", b =>
+                {
+                    b.Property<Guid>("PolicyId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("BuildingId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
+                    b.Property<DateTime>("CreatedAtUtc").HasColumnType("datetime2(3)");
+                    b.Property<bool>("IsActive").HasColumnType("bit");
+                    b.Property<string>("PollId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
+                    b.Property<int>("PolicyVersion").HasColumnType("int");
+                    b.Property<byte>("EligibilityMode").HasColumnType("tinyint");
+                    b.Property<byte>("VotingMode").HasColumnType("tinyint");
+                    b.HasKey("PolicyId");
+                    b.HasIndex("BuildingId", "PollId", "PolicyVersion").IsUnique();
+                    b.ToTable("PollVotingPolicies");
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollEligibilityEntity", b =>
+                {
+                    b.Property<Guid>("EligibilityId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("BuildingId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
+                    b.Property<DateTime?>("ConsumedAtUtc").HasColumnType("datetime2(3)");
+                    b.Property<byte[]>("CredentialHash").HasColumnType("varbinary(64)");
+                    b.Property<DateTime>("ExpiresAtUtc").HasColumnType("datetime2(3)");
+                    b.Property<string>("PollId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
+                    b.Property<DateTime?>("RevokedAtUtc").HasColumnType("datetime2(3)");
+                    b.Property<string>("SubjectReference").IsRequired().HasMaxLength(160).HasColumnType("nvarchar(160)");
+                    b.Property<DateTime>("IssuedAtUtc").HasColumnType("datetime2(3)");
+                    b.HasKey("EligibilityId");
+                    b.HasIndex("BuildingId", "PollId", "SubjectReference").IsUnique();
+                    b.ToTable("PollEligibility");
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollBallotEntity", b =>
+                {
+                    b.Property<Guid>("BallotId").HasColumnType("uniqueidentifier");
+                    b.Property<int>("BallotVersion").HasColumnType("int");
+                    b.Property<byte[]>("BallotTokenHash").IsRequired().HasColumnType("varbinary(64)");
+                    b.Property<string>("BuildingId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
+                    b.Property<DateTime>("CastAtUtc").HasColumnType("datetime2(3)");
+                    b.Property<byte[]>("ChoicePayload").IsRequired().HasColumnType("varbinary(max)");
+                    b.Property<string>("PollId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
+                    b.HasKey("BallotId");
+                    b.HasIndex("BallotTokenHash").IsUnique();
+                    b.HasIndex("BuildingId", "PollId", "CastAtUtc");
+                    b.ToTable("PollBallots");
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PollLifecycleEventEntity", b =>
+                {
+                    b.Property<Guid>("EventId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("ActorReference").HasMaxLength(160).HasColumnType("nvarchar(160)");
+                    b.Property<string>("BuildingId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
+                    b.Property<byte>("EventType").HasColumnType("tinyint");
+                    b.Property<string>("MetadataJson").HasColumnType("nvarchar(max)");
+                    b.Property<DateTime>("OccurredAtUtc").HasColumnType("datetime2(3)");
+                    b.Property<string>("PollId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
+                    b.Property<string>("Reason").HasMaxLength(1000).HasColumnType("nvarchar(1000)");
+                    b.HasKey("EventId");
+                    b.HasIndex("BuildingId", "PollId", "OccurredAtUtc");
+                    b.ToTable("PollLifecycleEvents");
+                });
+
 #pragma warning restore 612, 618
         }
     }
