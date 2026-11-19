@@ -496,6 +496,59 @@ public static class BuildingSqlMapper
         return warnings;
     }
 
+    internal static AuditLogEntry MapAggregateAuditEvent(AuditEventEntity auditEvent)
+    {
+        ArgumentNullException.ThrowIfNull(auditEvent);
+        using var payload = JsonDocument.Parse(
+            string.IsNullOrWhiteSpace(auditEvent.SafeDetailsJson) ? "{}" : auditEvent.SafeDetailsJson);
+        var root = payload.RootElement;
+        return new AuditLogEntry
+        {
+            Id = auditEvent.ResourceReference ?? auditEvent.AuditEventId.ToString("N"),
+            Ts = FormatTs(auditEvent.OccurredAtUtc) ?? "",
+            Action = auditEvent.EventType,
+            Label = JsonString(root, "label") ?? "",
+            Actor = auditEvent.ActorReference ?? "",
+            ActorRole = JsonString(root, "actorRole") ?? "",
+            Details = JsonString(root, "details") ?? "",
+            Month = JsonString(root, "month") ?? "",
+            BuildingNumber = JsonNullableString(root, "buildingNumber"),
+            AptNumber = JsonNullableInt(root, "aptNumber"),
+            Severity = AuditSeverity(auditEvent.Outcome)
+        };
+    }
+
+    internal static string RedactAuditDetails(string? details)
+    {
+        if (string.IsNullOrEmpty(details)) return "";
+        return Regex.Replace(
+            details,
+            @"(?i)(password|secret|token|credential|pin|recovery(?:code|codes)?)(\\s*[:=]\\s*)(?:""[^""]*""|'[^']*'|[^,\\s;]+)",
+            "$1$2[REDACTED]");
+    }
+
+    private static string? JsonString(JsonElement root, string name)
+    {
+        if (!root.TryGetProperty(name, out var value) || value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+            return null;
+        return value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString();
+    }
+
+    private static string? JsonNullableString(JsonElement root, string name) => JsonString(root, name);
+
+    private static int? JsonNullableInt(JsonElement root, string name) =>
+        root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var parsed)
+            ? parsed
+            : null;
+
+    private static string AuditSeverity(byte outcome) => outcome switch
+    {
+        1 => "warning",
+        2 => "error",
+        3 => "critical",
+        _ => "info"
+    };
+
     internal static void MarkAggregateWrite(AppDbContext db, BuildingEntity building)
     {
         db.Entry(building).Property(x => x.DataVersion).IsModified = true;
