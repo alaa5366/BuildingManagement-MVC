@@ -68,7 +68,7 @@
             const image = document.getElementById('recoveryQrImage');
             const link = document.createElement('a');
             link.href = image.src;
-            link.download = 'Resident-Recovery-QR-Apt-@apartmentNumber.png';
+            link.download = 'Resident-Recovery-QR-Apt-@(apartmentNumber).png';
             document.body.appendChild(link);
             link.click();
             link.remove();
