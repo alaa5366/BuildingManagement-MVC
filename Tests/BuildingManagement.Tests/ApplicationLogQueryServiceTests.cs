@@ -234,6 +234,33 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
         Assert.Equal("request-42", item.CorrelationId);
     }
 
+
+    [Fact]
+    public async Task QueryPageAsync_FiltersHttpEventsByStatusAndLatency()
+    {
+        WriteLog(
+            "2026-11-17 10:00:00.000 +00:00 [INF] HTTP GET /fast responded 200 in 8.5 ms {}",
+            "2026-11-17 10:00:01.000 +00:00 [WRN] HTTP GET /slow responded 200 in 850.0 ms {}",
+            "2026-11-17 10:00:02.000 +00:00 [ERR] HTTP POST /failed responded 500 in 120.0 ms {}");
+
+        var slowSuccess = await CreateService().QueryPageAsync(new ApplicationLogQuery
+        {
+            HttpStatusCode = 200,
+            MinDurationMs = 100
+        });
+        var serverErrors = await CreateService().QueryPageAsync(new ApplicationLogQuery
+        {
+            HttpStatusCode = 500,
+            MinDurationMs = 100,
+            MaxDurationMs = 200
+        });
+
+        Assert.Equal("/slow", Assert.Single(slowSuccess.Items).RequestPath);
+        Assert.Equal("/failed", Assert.Single(serverErrors.Items).RequestPath);
+        Assert.Equal(2, slowSuccess.TotalItems);
+        Assert.Equal(1, serverErrors.TotalItems);
+    }
+
     private ApplicationLogQueryService CreateService() =>
         new(new TestHostEnvironment { ContentRootPath = _root },
             NullLogger<ApplicationLogQueryService>.Instance);
