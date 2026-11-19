@@ -240,6 +240,7 @@ public sealed class TargetPollsService
         });
         await db.SaveChangesAsync(cancellationToken);
         if (transaction is not null) await transaction.CommitAsync(cancellationToken);
+        return true;
     }
 
     /// <summary>Gets the building name and count of active apartments.</summary>
