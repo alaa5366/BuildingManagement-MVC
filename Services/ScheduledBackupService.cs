@@ -198,6 +198,9 @@ public class ScheduledBackupService
                 throw new InvalidOperationException("Scheduled backup contains an unknown collection.");
 
             var (bytes, result) = await _backup.CreateBackupAsync(collections, "system-scheduler");
+            if (!result.Success)
+                throw new InvalidOperationException(
+                    $"Scheduled backup was incomplete: {string.Join("; ", result.Errors)}");
 
             var folder = GetBackupsFolder(env);
             var fileName = $"scheduled-{DateTime.UtcNow:yyyy-MM-dd-HHmm}.zip";
