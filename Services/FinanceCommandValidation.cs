@@ -12,7 +12,7 @@ public static class FinanceCommandValidation
     public static void ValidateMonthKey(string monthKey)
     {
         if (string.IsNullOrWhiteSpace(monthKey) ||
-            !DateOnly.TryParseExact(monthKey, "yyyy-MM", CultureInfo.InvariantCulture,
+            !DateOnly.TryParseExact(monthKey + "-01", "yyyy-MM-dd", CultureInfo.InvariantCulture,
                 DateTimeStyles.None, out _))
             throw new ArgumentException("Month must use the exact yyyy-MM format.", nameof(monthKey));
     }
