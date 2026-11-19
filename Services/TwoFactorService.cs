@@ -45,7 +45,7 @@ public sealed class TwoFactorService
     public async Task<bool> IsEnabledAsync(string uid, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(uid)) return false;
-        if (Guid.TryParse(uid, out var accountId))
+        if (Guid.TryParse(uid, out var accountId) && await IsTargetAccountAsync(accountId, cancellationToken))
             return await IsTargetEnabledAsync(accountId, cancellationToken);
 
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
@@ -64,7 +64,7 @@ public sealed class TwoFactorService
         string uid, string secret, string code, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(uid) || string.IsNullOrWhiteSpace(secret)) return null;
-        if (Guid.TryParse(uid, out var accountId))
+        if (Guid.TryParse(uid, out var accountId) && await IsTargetAccountAsync(accountId, cancellationToken))
             return await EnableTargetAsync(accountId, secret, code, cancellationToken);
 
         using var gate = await KeyedLock.AcquireAsync("2fa:" + uid, cancellationToken);
@@ -104,7 +104,7 @@ public sealed class TwoFactorService
         string uid, string code, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(uid) || string.IsNullOrWhiteSpace(code)) return false;
-        if (Guid.TryParse(uid, out var accountId))
+        if (Guid.TryParse(uid, out var accountId) && await IsTargetAccountAsync(accountId, cancellationToken))
             return await VerifyAndConsumeTargetAsync(accountId, code, cancellationToken);
 
         using var gate = await KeyedLock.AcquireAsync("2fa:" + uid, cancellationToken);
@@ -125,7 +125,7 @@ public sealed class TwoFactorService
         string uid, string code, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(uid) || string.IsNullOrWhiteSpace(code)) return false;
-        if (Guid.TryParse(uid, out var accountId))
+        if (Guid.TryParse(uid, out var accountId) && await IsTargetAccountAsync(accountId, cancellationToken))
             return await DisableTargetAsync(accountId, code, cancellationToken);
 
         using var gate = await KeyedLock.AcquireAsync("2fa:" + uid, cancellationToken);
@@ -141,6 +141,12 @@ public sealed class TwoFactorService
         await db.SaveChangesAsync(cancellationToken);
         _logger.LogInformation("Two-factor authentication disabled for administrator {Uid}", uid);
         return true;
+    }
+
+    private async Task<bool> IsTargetAccountAsync(Guid accountId, CancellationToken cancellationToken)
+    {
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        return await db.UserAccounts.AsNoTracking().AnyAsync(x => x.AccountId == accountId, cancellationToken);
     }
 
     private async Task<bool> IsTargetEnabledAsync(Guid accountId, CancellationToken cancellationToken)
@@ -316,8 +322,8 @@ public sealed class TwoFactorService
         setting.LastAcceptedTimeStep = null;
         setting.LastVerifiedAtUtc = now;
         setting.UpdatedAtUtc = now;
-        await db.UserRecoveryCodes.Where(x => x.AccountId == accountId && x.UsedAtUtc == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(x => x.UsedAtUtc, now), cancellationToken);
+        foreach (var unused in recovery.Where(x => x.UsedAtUtc == null))
+            unused.UsedAtUtc = now;
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return true;
