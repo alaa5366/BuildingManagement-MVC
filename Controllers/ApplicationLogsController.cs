@@ -41,6 +41,9 @@ public sealed class ApplicationLogsController : Controller
             PageSize = Math.Clamp(pageSize, 10, 100)
         };
 
+        ViewBag.CanViewAuditTrail = User.IsInRole("superadmin") ||
+            User.HasClaim("perm", AdminPermissions.ViewAuditLogBuilding);
+
         if (query.FromUtc.HasValue && query.ToUtc.HasValue &&
             query.FromUtc.Value > query.ToUtc.Value)
         {
@@ -55,9 +58,6 @@ public sealed class ApplicationLogsController : Controller
                 }
             });
         }
-
-        ViewBag.CanViewAuditTrail = User.IsInRole("superadmin") ||
-            User.HasClaim("perm", AdminPermissions.ViewAuditLogBuilding);
 
         var results = await _logs.QueryPageAsync(query, HttpContext.RequestAborted);
         return View(new ApplicationLogsViewModel { Results = results, Query = query });
