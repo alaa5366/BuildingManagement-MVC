@@ -14,6 +14,7 @@
         <div class="col-sm-6 col-xl-3"><div class="card card-body h-100"><span>نشطة</span><strong class="fs-3 text-success">@Model.ActiveAccounts</strong></div></div>
         <div class="col-sm-6 col-xl-3"><div class="card card-body h-100"><span>غير نشطة / حالات أخرى</span><strong class="fs-3">@Model.InactiveAccounts</strong></div></div>
         <div class="col-sm-6 col-xl-3"><div class="card card-body h-100"><span>حسابات بأرقام مكررة</span><strong class="fs-3 text-warning">@Model.DuplicatePhoneAccounts</strong></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card card-body h-100"><span>SuperAdmin (مخزن منفصل)</span><strong class="fs-3">@Model.LegacySuperAdminAccounts</strong></div></div>
     </div>
     @if (Model.AccountsWithoutActiveRole > 0)
     {
@@ -34,7 +35,7 @@
     </div></div>
     <div class="alert alert-info">
         الشاشة للقراءة فقط وتعرض UserAccounts وPersons وUserRoleAssignments؛ لا تغيّر حالة الحساب أو بيانات الاعتماد.
-        حسابات SuperAdmin الموجودة في مخزن الدخول القديم منفصلة ولم يتم دمجها دون خريطة ربط موثّقة.
+        حسابات SuperAdmin القديمة ظاهرة هنا كمصدر منفصل للقراءة فقط، ولم يتم دمجها مع UserAccounts دون خريطة ربط موثّقة.
         يظل دخول SuperAdmin بالإيميل وكلمة المرور، ودخول السكان والإدمن العادي بالموبايل وPIN. لا يتم عرض PIN أو password hash.
     </div>
     <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
@@ -44,7 +45,15 @@
         @foreach (var account in Model.Rows)
         {
             <tr>
-                <td><strong>@account.Name</strong><div><small class="text-muted">Account: @account.AccountId</small></div><div><small class="text-muted">Person: @account.PersonId</small></div></td>
+                <td><strong>@account.Name</strong>@if (account.IsLegacyAccount)
+                    {
+                        <div><small class="text-muted">Legacy User: @account.LegacyUserId</small></div>
+                    }
+                    else
+                    {
+                        <div><small class="text-muted">Account: @account.AccountId</small></div>
+                        <div><small class="text-muted">Person: @account.PersonId</small></div>
+                    }</td>
                 <td>@(account.Phone ?? "—")</td><td>@(account.Email ?? "—")</td>
                 <td><strong>@account.Roles</strong><div><small class="text-muted">@account.RoleContexts</small></div></td>
                 <td>@account.StatusLabel</td><td>@(account.MustChangePin ? "يتطلب التغيير" : "مُعد")</td>
