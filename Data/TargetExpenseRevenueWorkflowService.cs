@@ -113,6 +113,14 @@ public sealed class TargetExpenseRevenueWorkflowService
         if (!assignedAdmin)
             throw new InvalidOperationException("Only an active building-scoped Admin can post expenses or revenues.");
 
+        var buildingSettings = await db.BuildingSettings.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.BuildingId == buildingId, cancellationToken);
+        var currencyCode = string.IsNullOrWhiteSpace(buildingSettings?.Currency)
+            ? "EGP"
+            : buildingSettings.Currency.Trim().ToUpperInvariant();
+        if (currencyCode.Length != 3 || !currencyCode.All(char.IsAsciiLetter))
+            throw new InvalidOperationException("The building currency configuration is invalid.");
+
         var period = await db.FinancialPeriods.SingleOrDefaultAsync(
             x => x.BuildingId == buildingId && x.PeriodKey == monthKey, cancellationToken);
         if (period is null || period.Status == FinancialPeriodStatus.Closed)
@@ -167,7 +175,7 @@ public sealed class TargetExpenseRevenueWorkflowService
                 ApartmentId = share.ApartmentId,
                 EntryKind = entryKind,
                 SignedAmount = share.AllocatedAmount * signedFactor,
-                CurrencyCode = "EGP",
+                CurrencyCode = currencyCode,
                 Description = description,
                 EffectiveAtUtc = effectiveAtUtc,
                 CreatedAtUtc = now
@@ -191,7 +199,7 @@ public sealed class TargetExpenseRevenueWorkflowService
             InputFingerprint = fingerprint,
             SourceAmount = amount,
             AllocatedAmount = allocation.Sum(x => x.AllocatedAmount),
-            CurrencyCode = "EGP",
+            CurrencyCode = currencyCode,
             Status = FinancialAllocationStatus.Completed,
             CreatedAtUtc = now,
             CompletedAtUtc = now,
@@ -256,7 +264,7 @@ public sealed class TargetExpenseRevenueWorkflowService
             Outcome = 0,
             SafeDetailsJson = JsonSerializer.Serialize(new
             {
-                amount, currencyCode = "EGP", monthKey, categoryId,
+                amount, currencyCode, monthKey, categoryId,
                 ledgerTransactionId = transactionId, allocationCount = allocation.Count,
                 algorithm = FinancialAllocationCalculator.AlgorithmVersion
             })
