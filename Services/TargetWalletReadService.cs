@@ -50,30 +50,43 @@ public sealed class TargetWalletReadService
                 Order = floor.SortOrder
             }).ToListAsync(cancellationToken);
 
-        var apartments = await db.Apartments.AsNoTracking()
+        var apartmentRows = await db.Apartments.AsNoTracking()
             .Where(apartment => apartment.BuildingId == buildingId)
             .OrderBy(apartment => apartment.Number)
-            .Select(apartment => new Apartment
+            .Select(apartment => new
             {
-                Id = apartment.Id,
-                FloorId = apartment.FloorId,
-                Number = apartment.Number,
-                Owner = apartment.Owner,
-                Phone = apartment.Phone,
-                MonthlyFee = apartment.MonthlyFee,
-                Closed = apartment.IsClosed,
-                Label = apartment.Label,
-                Email = apartment.Email,
-                Notes = apartment.Notes,
-                OpenDate = apartment.OpenDate.HasValue
-                    ? apartment.OpenDate.Value.ToString("yyyy-MM-dd")
-                    : "",
-                CloseDate = apartment.CloseDate.HasValue
-                    ? apartment.CloseDate.Value.ToString("yyyy-MM-dd")
-                    : null,
-                Disabled = apartment.IsDisabled,
-                DisabledReason = apartment.DisabledReason
+                apartment.Id,
+                apartment.FloorId,
+                apartment.Number,
+                apartment.Owner,
+                apartment.Phone,
+                apartment.MonthlyFee,
+                apartment.IsClosed,
+                apartment.Label,
+                apartment.Email,
+                apartment.Notes,
+                apartment.OpenDate,
+                apartment.CloseDate,
+                apartment.IsDisabled,
+                apartment.DisabledReason
             }).ToListAsync(cancellationToken);
+        var apartments = apartmentRows.Select(apartment => new Apartment
+        {
+            Id = apartment.Id,
+            FloorId = apartment.FloorId,
+            Number = apartment.Number,
+            Owner = apartment.Owner,
+            Phone = apartment.Phone,
+            MonthlyFee = apartment.MonthlyFee,
+            Closed = apartment.IsClosed,
+            Label = apartment.Label,
+            Email = apartment.Email,
+            Notes = apartment.Notes,
+            OpenDate = apartment.OpenDate?.ToString("yyyy-MM-dd") ?? "",
+            CloseDate = apartment.CloseDate?.ToString("yyyy-MM-dd"),
+            Disabled = apartment.IsDisabled,
+            DisabledReason = apartment.DisabledReason
+        }).ToList();
 
         var currencyCode = await db.BuildingSettings.AsNoTracking()
             .Where(settings => settings.BuildingId == buildingId)
