@@ -238,6 +238,81 @@ public sealed class TargetWalletReadServiceTests
         Assert.Equal(40m, snapshot.Totals.Collected);
     }
 
+
+    [Fact]
+    public async Task GetApartmentAsync_MarksReversedDepositAsReversedInsteadOfConfirmed()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        var now = DateTime.UtcNow;
+        var periodId = Guid.NewGuid();
+        var depositId = Guid.NewGuid();
+        var originalId = Guid.NewGuid();
+        var reversalId = Guid.NewGuid();
+
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.FinancialPeriods.Add(new FinancialPeriodEntity
+            {
+                PeriodId = periodId, BuildingId = "B1", PeriodKey = now.ToString("yyyy-MM"),
+                TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Open,
+                StartsAtUtc = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndsAtUtc = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1),
+                CreatedAtUtc = now
+            });
+            seed.PaymentDeposits.Add(new PaymentDepositEntity
+            {
+                PaymentDepositId = depositId, PeriodId = periodId, BuildingId = "B1",
+                ApartmentId = "A1", Amount = 90m, CurrencyCode = "EGP",
+                Status = PaymentDepositStatus.Reversed, SubmittedAtUtc = now.AddDays(-2),
+                ConfirmedAtUtc = now.AddDays(-1), PostedTransactionId = originalId,
+                ReversedAtUtc = now, ReversalTransactionId = reversalId,
+                ResolutionReason = "Duplicate payment", SourceSystem = "application"
+            });
+            seed.LedgerTransactions.AddRange(
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = originalId, PeriodId = periodId, BuildingId = "B1",
+                    Kind = LedgerTransactionKind.Deposit, Status = LedgerTransactionStatus.Posted,
+                    IdempotencyKey = "original-deposit", CreatedAtUtc = now.AddDays(-1),
+                    PostedAtUtc = now.AddDays(-1)
+                },
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = reversalId, PeriodId = periodId, BuildingId = "B1",
+                    Kind = LedgerTransactionKind.Reversal, Status = LedgerTransactionStatus.Posted,
+                    IdempotencyKey = "reverse-deposit", ReversesTransactionId = originalId,
+                    CreatedAtUtc = now, PostedAtUtc = now
+                });
+            seed.LedgerEntries.AddRange(
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = originalId,
+                    PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.Deposit, SignedAmount = 90m,
+                    CurrencyCode = "EGP", EffectiveAtUtc = now.AddDays(-1), CreatedAtUtc = now.AddDays(-1)
+                },
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = reversalId,
+                    PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.Reversal, SignedAmount = -90m,
+                    CurrencyCode = "EGP", EffectiveAtUtc = now, CreatedAtUtc = now
+                });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetWalletReadService(new TestContextFactory(options));
+        var snapshot = await service.GetApartmentAsync("B1", "A1");
+
+        Assert.Equal(0m, snapshot.Balance);
+        var original = Assert.Single(snapshot.Transactions.Where(item => item.Id != depositId.ToString("D") &&
+            item.Type == "deposit"));
+        Assert.Equal("reversed", original.Status);
+        Assert.Contains(snapshot.Transactions, item => item.Type == "adjustment" && item.Amount == -90m);
+    }
+
     [Fact]
     public async Task GetApartmentAsync_ShowsCancelledDepositsWithoutAddingThemToBalance()
     {
