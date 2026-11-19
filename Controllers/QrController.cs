@@ -6,6 +6,7 @@ using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
 
+/// <summary>QrController coordinates the corresponding application controller actions.</summary>
 [Authorize(Roles = "admin")]
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageResidents)]
 public class QrController : Controller
