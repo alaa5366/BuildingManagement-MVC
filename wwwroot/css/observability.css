@@ -31,3 +31,8 @@
 .log-center tr:hover .log-source-filter i { opacity:1; }
 .log-center .audit-event-filter { display:inline-block; }
 .log-center .audit-event-filter strong { color:#29445f; }
+
+.observability-time-presets { display:flex; align-items:center; flex-wrap:wrap; gap:.45rem; margin:0 0 .8rem; }
+.observability-time-presets>span { display:inline-flex; align-items:center; gap:.4rem; margin-inline-end:.25rem; color:#647b91; font-size:.75rem; font-weight:700; }
+.observability-time-presets>a { display:inline-flex; align-items:center; padding:.38rem .7rem; border:1px solid #d9e4ee; border-radius:6px; background:#fff; color:#3b6689; font-size:.73rem; font-weight:700; text-decoration:none; }
+.observability-time-presets>a:hover { border-color:#9fc9e8; background:#edf6fd; color:#086eae; }
