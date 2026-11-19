@@ -18,7 +18,6 @@ public sealed class Phase22_MonthlyInvoiceIssuance : Migration
             {
                 InvoiceSerial = table.Column<long>(type: "bigint", nullable: false)
                     .Annotation("SqlServer:Identity", "1, 1"),
-                InvoiceIssueId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                 BuildingId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                 ApartmentId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                 MonthKey = table.Column<string>(type: "char(7)", maxLength: 7, nullable: false),
@@ -50,12 +49,6 @@ public sealed class Phase22_MonthlyInvoiceIssuance : Migration
             column: "InvoiceNo",
             unique: true,
             filter: "[InvoiceNo] IS NOT NULL");
-
-        migrationBuilder.CreateIndex(
-            name: "UX_InvoiceIssues_Id",
-            table: "InvoiceIssues",
-            column: "InvoiceIssueId",
-            unique: true);
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
