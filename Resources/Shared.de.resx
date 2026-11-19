@@ -1434,4 +1434,5 @@ Beispiel: Bewohner verreist – leere Wohnung – Wartung</value></data>
   <data name="Backup_Collection_cameras" xml:space="preserve"><value>Kameras</value></data>
   <data name="Backup_Collection_qrTokens" xml:space="preserve"><value>QR-Token</value></data>
   <data name="Backup_Collection_qrUsages" xml:space="preserve"><value>QR-Token-Nutzung</value></data>
+  <data name="Backup_Collection_savedWhatsAppTemplates" xml:space="preserve"><value>Gespeicherte WhatsApp-Vorlagen</value></data>
 </root>
