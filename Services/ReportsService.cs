@@ -21,6 +21,7 @@ public sealed class ReportsService
         Loc.T("September"), Loc.T("October"), Loc.T("November"), Loc.T("December")
     ];
 
+    /// <summary>Formats a financial period as a localized month label.</summary>
     public static string MonthLabel(string key)
     {
         var parts = key.Split('-');
@@ -29,6 +30,7 @@ public sealed class ReportsService
         return $"{MonthNamesAr[month - 1]} {parts[0]}";
     }
 
+    /// <summary>Moves a financial period by the specified number of months.</summary>
     public static string ShiftMonth(string key, int delta)
     {
         if (!DateOnly.TryParseExact(key + "-01", "yyyy-MM-dd",
@@ -38,9 +40,11 @@ public sealed class ReportsService
         return date.AddMonths(delta).ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
     }
 
+    /// <summary>Gets the key for the current financial reporting period.</summary>
     public Task<string> GetCurrentPeriodKeyAsync(string buildingId, CancellationToken cancellationToken = default) =>
         _wallet.GetCurrentPeriodKeyAsync(buildingId, cancellationToken: cancellationToken);
 
+    /// <summary>Builds a report for the specified building and reporting period.</summary>
     public async Task<ReportsVm> BuildReportAsync(
         string buildingId,
         string range,
@@ -141,6 +145,7 @@ public sealed class ReportsService
         };
     }
 
+    /// <summary>Gets the available reporting months for the requested building.</summary>
     public static List<string> GetReportMonths(
         IReadOnlyList<string> allKeys, string range, string currentMonth) =>
         SelectMonths(allKeys, range, currentMonth);
