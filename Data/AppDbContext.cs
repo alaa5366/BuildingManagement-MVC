@@ -28,6 +28,12 @@ public class AppDbContext : DbContext
                 "Business audit events are append-only and cannot be updated or deleted by the application.");
         }
 
+        if (ChangeTracker.Entries<InvoiceIssueEntity>()
+            .Any(entry => entry.State == EntityState.Deleted ||
+                entry.State == EntityState.Modified &&
+                !string.IsNullOrWhiteSpace(entry.Property(x => x.SnapshotJson).OriginalValue)))
+            throw new InvalidOperationException("Issued invoices are immutable; reprints must use the stored invoice snapshot.");
+
         if (ChangeTracker.Entries<LedgerEntryEntity>()
             .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
             throw new InvalidOperationException("Ledger entries are immutable; corrections require reversal transactions.");
@@ -213,6 +219,7 @@ public class AppDbContext : DbContext
     public DbSet<FinancialAllocationLineEntity> FinancialAllocationLines => Set<FinancialAllocationLineEntity>();
     public DbSet<FinancialReconciliationRunEntity> FinancialReconciliationRuns => Set<FinancialReconciliationRunEntity>();
     public DbSet<FinancialReconciliationDifferenceEntity> FinancialReconciliationDifferences => Set<FinancialReconciliationDifferenceEntity>();
+    public DbSet<InvoiceIssueEntity> InvoiceIssues => Set<InvoiceIssueEntity>();
     protected override void ConfigureConventions(ModelConfigurationBuilder cb)
     {
         cb.Properties<decimal>().HavePrecision(18, 2);
