@@ -72,11 +72,20 @@ public sealed class InvoiceService
             from entry in db.LedgerEntries.AsNoTracking()
             join transaction in db.LedgerTransactions.AsNoTracking()
                 on entry.LedgerTransactionId equals transaction.LedgerTransactionId
+            join originalRow in db.LedgerTransactions.AsNoTracking()
+                on transaction.ReversesTransactionId equals (Guid?)originalRow.LedgerTransactionId into originalRows
+            from original in originalRows.DefaultIfEmpty()
             where entry.BuildingId == buildingId && entry.ApartmentId == apartmentId &&
                 periodIds.Contains(entry.PeriodId) && entry.CurrencyCode == currencyCode &&
                 transaction.BuildingId == buildingId &&
                 transaction.Status == LedgerTransactionStatus.Posted
-            select new { entry.LedgerTransactionId, entry.EntryKind, entry.SignedAmount })
+            select new
+            {
+                entry.LedgerTransactionId,
+                entry.EntryKind,
+                entry.SignedAmount,
+                OriginalKind = original == null ? (LedgerTransactionKind?)null : original.Kind
+            })
             .ToListAsync(cancellationToken);
 
         var reversedDepositTransactionIds = await db.PaymentDeposits.AsNoTracking()
@@ -97,7 +106,9 @@ public sealed class InvoiceService
         // Monthly charges are period-specific ledger postings. Never use the
         // apartment's current MonthlyFee to reconstruct a historical invoice.
         var monthFee = -monthLedgerEntries
-            .Where(entry => entry.EntryKind == LedgerEntryKind.MonthlyCharge)
+            .Where(entry => entry.EntryKind == LedgerEntryKind.MonthlyCharge ||
+                entry.EntryKind == LedgerEntryKind.Reversal &&
+                entry.OriginalKind == LedgerTransactionKind.MonthlyCharge)
             .Sum(entry => entry.SignedAmount);
 
         var activeExpenseRows = await db.Expenses.AsNoTracking()
@@ -158,7 +169,7 @@ public sealed class InvoiceService
                 .Sum(line => line.AllocatedAmount);
             expenseShare += share;
             var categoryId = expense.CategoryId ?? "";
-            categoryTotals[categoryId] = categoryTotals.GetValueOrDefault(categoryId) + expense.Amount;
+            categoryTotals[categoryId] = categoryTotals.GetValueOrDefault(categoryId) + batch.SourceAmount;
             categoryApartmentShares[categoryId] = categoryApartmentShares.GetValueOrDefault(categoryId) + share;
         }
 
