@@ -24,7 +24,10 @@
 
     <nav class="observability-nav" aria-label="Observability sections">
         <a asp-controller="ApplicationLogs" asp-action="Index"><i class="bi bi-terminal"></i><span>Application Logs</span><small>Runtime events</small></a>
-        <a asp-controller="AuditLog" asp-action="Index"><i class="bi bi-shield-check"></i><span>Audit Trail</span><small>Business activity</small></a>
+        @if (ViewBag.CanViewAuditTrail as bool? == true)
+        {
+            <a asp-controller="AuditLog" asp-action="Index"><i class="bi bi-shield-check"></i><span>Audit Trail</span><small>Business activity</small></a>
+        }
         <a class="active" asp-controller="SystemHealth" asp-action="Index"><i class="bi bi-heart-pulse"></i><span>System Health</span><small>Readiness checks</small></a>
     </nav>
 
