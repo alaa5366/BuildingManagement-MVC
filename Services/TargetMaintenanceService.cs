@@ -17,6 +17,7 @@ public sealed class TargetMaintenanceService
     public async Task<PagedResult<MaintenanceRecord>> GetPageAsync(
         string buildingId, int page, int pageSize, CancellationToken cancellationToken = default)
     {
+        ValidateBuildingId(buildingId);
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
@@ -39,6 +40,7 @@ public sealed class TargetMaintenanceService
     public async Task<List<MaintenanceRecord>> GetResidentLogAsync(
         string buildingId, CancellationToken cancellationToken = default)
     {
+        ValidateBuildingId(buildingId);
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
         var rows = await db.MaintenanceRecords.AsNoTracking()
             .Where(x => x.BuildingId == buildingId && x.Status != "cancelled")
@@ -51,6 +53,8 @@ public sealed class TargetMaintenanceService
     public async Task<MaintenanceRecord?> GetAsync(
         string buildingId, string id, CancellationToken cancellationToken = default)
     {
+        ValidateBuildingId(buildingId);
+        ValidateRecordId(id);
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
         var row = await db.MaintenanceRecords.AsNoTracking()
             .FirstOrDefaultAsync(x => x.BuildingId == buildingId && x.Id == id, cancellationToken);
@@ -61,9 +65,13 @@ public sealed class TargetMaintenanceService
         string buildingId, string title, string? description, string date, decimal cost,
         string? vendor, string? status, string createdBy, CancellationToken cancellationToken = default)
     {
+        ValidateBuildingId(buildingId);
+        ValidateText(title, 200, nameof(title), required: true);
+        ValidateText(description, 2000, nameof(description));
+        ValidateText(vendor, 200, nameof(vendor));
+        ValidateText(createdBy, 256, nameof(createdBy));
+        ValidateCost(cost);
         var normalizedStatus = NormalizeStatus(status, allowEmpty: true);
-        if (string.IsNullOrWhiteSpace(title)) throw new ArgumentException("Maintenance title is required.");
-        if (cost < 0) throw new ArgumentOutOfRangeException(nameof(cost));
         if (!DateOnly.TryParseExact(date, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,
             System.Globalization.DateTimeStyles.None, out var maintenanceDate))
             throw new ArgumentException("Maintenance date must use yyyy-MM-dd.");
@@ -91,8 +99,12 @@ public sealed class TargetMaintenanceService
         string buildingId, string id, string title, string? description, string date,
         decimal cost, string? vendor, string? status, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(title)) throw new ArgumentException("Maintenance title is required.");
-        if (cost < 0) throw new ArgumentOutOfRangeException(nameof(cost));
+        ValidateBuildingId(buildingId);
+        ValidateRecordId(id);
+        ValidateText(title, 200, nameof(title), required: true);
+        ValidateText(description, 2000, nameof(description));
+        ValidateText(vendor, 200, nameof(vendor));
+        ValidateCost(cost);
         if (!DateOnly.TryParseExact(date, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,
             System.Globalization.DateTimeStyles.None, out var maintenanceDate))
             throw new ArgumentException("Maintenance date must use yyyy-MM-dd.");
@@ -124,6 +136,8 @@ public sealed class TargetMaintenanceService
 
     public async Task<bool> DeleteAsync(string buildingId, string id, CancellationToken cancellationToken = default)
     {
+        ValidateBuildingId(buildingId);
+        ValidateRecordId(id);
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
         var row = await db.MaintenanceRecords.FirstOrDefaultAsync(
             x => x.BuildingId == buildingId && x.Id == id, cancellationToken);
@@ -139,6 +153,8 @@ public sealed class TargetMaintenanceService
     public async Task<bool> MarkAddedToExpenseAsync(
         string buildingId, string id, CancellationToken cancellationToken = default)
     {
+        ValidateBuildingId(buildingId);
+        ValidateRecordId(id);
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
         var row = await db.MaintenanceRecords.SingleOrDefaultAsync(
             item => item.BuildingId == buildingId && item.Id == id, cancellationToken);
@@ -188,6 +204,33 @@ public sealed class TargetMaintenanceService
             transaction.Kind == LedgerTransactionKind.Expense &&
             transaction.Status == LedgerTransactionStatus.Posted,
             cancellationToken);
+    }
+
+    private static void ValidateBuildingId(string buildingId)
+    {
+        if (string.IsNullOrWhiteSpace(buildingId) || buildingId.Length > 64)
+            throw new ArgumentException("A valid building id is required.", nameof(buildingId));
+    }
+
+    private static void ValidateRecordId(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id) || id.Length > 64)
+            throw new ArgumentException("A valid maintenance id is required.", nameof(id));
+    }
+
+    private static void ValidateText(string? value, int maxLength, string parameterName, bool required = false)
+    {
+        if (required && string.IsNullOrWhiteSpace(value))
+            throw new ArgumentException("Maintenance title is required.", parameterName);
+        if (value?.Length > maxLength)
+            throw new ArgumentException($"The {parameterName} field exceeds {maxLength} characters.", parameterName);
+    }
+
+    private static void ValidateCost(decimal cost)
+    {
+        if (cost < 0 || cost > 999999999999999m ||
+            decimal.Round(cost, 2, MidpointRounding.AwayFromZero) != cost)
+            throw new ArgumentOutOfRangeException(nameof(cost), "Maintenance cost must be non-negative with at most two decimal places.");
     }
 
     private static string NormalizeStatus(string? status, bool allowEmpty)
