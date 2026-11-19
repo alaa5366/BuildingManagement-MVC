@@ -66,18 +66,29 @@ public class QrAccessController : Controller
             return View("AccessDenied");
         }
 
-        var (allowed, storeReason, bld, apt) = await _qrStore.CheckAndUseTokenAsync(payload.Uid);
-        if (!allowed)
+        // Validate the target apartment before consuming a single-use token.
+        // This prevents inactive/deleted apartments from burning a valid QR link.
+        var preview = await _qrStore.PreviewTargetAsync(payload.Uid, HttpContext.RequestAborted);
+        if (!preview.Allowed || string.IsNullOrWhiteSpace(preview.Bld) || string.IsNullOrWhiteSpace(preview.Apt))
         {
-            ViewBag.Error = MapReason(storeReason);
+            ViewBag.Error = MapReason(preview.Reason);
             return View("AccessDenied");
         }
 
         var apartment = await _targetQr.GetApartmentAsync(
-            bld!, apt!, requireActive: true, HttpContext.RequestAborted);
+            preview.Bld, preview.Apt, requireActive: true, HttpContext.RequestAborted);
         if (apartment is null)
         {
             ViewBag.Error = Loc.T("Could_Not_Determine_The_Apartment");
+            return View("AccessDenied");
+        }
+
+        // The final compare-and-set remains the authority for one-time use.
+        var (allowed, storeReason, bld, apt) = await _qrStore.CheckAndUseTokenAsync(payload.Uid);
+        if (!allowed || !string.Equals(bld, apartment.BuildingId, StringComparison.Ordinal) ||
+            !string.Equals(apt, apartment.ApartmentId, StringComparison.Ordinal))
+        {
+            ViewBag.Error = MapReason(storeReason ?? "not-found");
             return View("AccessDenied");
         }
 
