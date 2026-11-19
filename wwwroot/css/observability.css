@@ -36,3 +36,15 @@
 .observability-time-presets>span { display:inline-flex; align-items:center; gap:.4rem; margin-inline-end:.25rem; color:#647b91; font-size:.75rem; font-weight:700; }
 .observability-time-presets>a { display:inline-flex; align-items:center; padding:.38rem .7rem; border:1px solid #d9e4ee; border-radius:6px; background:#fff; color:#3b6689; font-size:.73rem; font-weight:700; text-decoration:none; }
 .observability-time-presets>a:hover { border-color:#9fc9e8; background:#edf6fd; color:#086eae; }
+
+.system-health-page .health-status-text { font-size:1.35rem; }
+.health-healthy { color:#16845b!important; }
+.health-degraded { color:#a86b08!important; }
+.health-unhealthy { color:#c43d46!important; }
+.health-state { display:inline-flex; align-items:center; gap:.45rem; font-size:.78rem; font-weight:800; }
+.health-state i { font-size:.48rem; }
+.health-process-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; }
+.health-process-grid>div { display:flex; flex-direction:column; gap:.35rem; padding:1rem; border:1px solid #e3ebf2; border-radius:8px; background:#fbfdff; }
+.health-process-grid small { color:#74879a; font-size:.72rem; }
+.health-process-grid strong { color:#29445f; font-size:.85rem; overflow-wrap:anywhere; }
+@media(max-width:767px) { .health-process-grid { grid-template-columns:1fr; } }
