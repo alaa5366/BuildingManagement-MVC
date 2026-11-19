@@ -23,25 +23,19 @@ public class QrController : Controller
     private readonly QrAuthService _qrAuth;
     private readonly QrTokenStoreService _qrStore;
     private readonly AuditLogService _audit;
+    private readonly ILogger<QrController> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="QrController"/> class.
     /// </summary>
     public QrController(BuildingsService buildings, QrGeneratorService qrGen, QrAuthService qrAuth,
-        QrTokenStoreService qrStore, AuditLogService audit)
+        QrTokenStoreService qrStore, AuditLogService audit, ILogger<QrController> logger)
     {
         _buildings = buildings; _qrGen = qrGen; _qrAuth = qrAuth; _qrStore = qrStore; _audit = audit;
+        _logger = logger;
     }
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
-
-    private void _logQrPersistenceFailure(string apartmentId)
-    {
-        // Do not log the generated token or any signed payload material.
-        HttpContext.RequestServices.GetRequiredService<ILogger<QrController>>()
-            .LogError("QR access token persistence failed for building {BuildingId}, apartment {ApartmentId}.",
-                BuildingId, apartmentId);
-    }
 
     /// <summary>
     /// Shows the main page of the QR screen.
@@ -108,7 +102,8 @@ public class QrController : Controller
 
         if (!await _qrStore.SaveTokenAsync(payload))
         {
-            _logQrPersistenceFailure(apt.Id);
+            _logger.LogError("QR access token persistence failed for building {BuildingId}, apartment {ApartmentId}.",
+                BuildingId, apt.Id);
             return StatusCode(StatusCodes.Status503ServiceUnavailable,
                 new { error = "qr-token-persistence-failed", message = "تعذر حفظ رابط الدخول. لم يتم إنشاء رابط صالح." });
         }
