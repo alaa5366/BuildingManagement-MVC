@@ -4722,4 +4722,8 @@
   <data name="Backup_Collection_languages" xml:space="preserve"><value>اللغات</value></data>
   <data name="Backup_Collection_translationEntries" xml:space="preserve"><value>مفاتيح الترجمة</value></data>
   <data name="Backup_Collection_translationValues" xml:space="preserve"><value>قيم الترجمة</value></data>
+  <data name="Backup_Collection_maintenanceRequests" xml:space="preserve"><value>طلبات الصيانة</value></data>
+  <data name="Backup_Collection_maintenanceAssignments" xml:space="preserve"><value>تكليفات الصيانة</value></data>
+  <data name="Backup_Collection_maintenanceComments" xml:space="preserve"><value>تعليقات الصيانة</value></data>
+  <data name="Backup_Collection_maintenanceStatusEvents" xml:space="preserve"><value>سجل حالات الصيانة</value></data>
 </root>
