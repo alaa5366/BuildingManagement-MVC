@@ -48,6 +48,7 @@ public class ReportsController : Controller
         return View(vm);
     }
 
+    [HttpGet]
     public async Task<IActionResult> ExportCsv(string? range)
     {
         var selectedRange = string.IsNullOrWhiteSpace(range) ? "6m" : range;
