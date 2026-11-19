@@ -8,7 +8,7 @@ namespace BuildingManagementMvc.Migrations;
 
 /// <summary>Adds the uniqueness guarantee required for one entitlement per poll subject.</summary>
 [DbContext(typeof(AppDbContext))]
-[Migration("20261119240000_Phase25_PollEligibilityUniqueness")]
+[Migration("20261120140000_Phase25_PollEligibilityUniqueness")]
 public sealed class Phase25_PollEligibilityUniqueness : Migration
 {
     /// <summary>Creates the poll eligibility uniqueness index.</summary>
