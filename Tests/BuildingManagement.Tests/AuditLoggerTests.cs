@@ -57,6 +57,9 @@ public class AuditLoggerTests
         Assert.Equal(2, page.Items.Count);
         Assert.Contains(page.Items, x => x.Action == "error-event" && x.Severity == "error");
         Assert.Contains(page.Items, x => x.Action == "critical-event" && x.Severity == "critical");
+
+        var invalidSeverity = await logger.QueryPageAsync(null, null, null, null, null, null, "unknown", 1, 10);
+        Assert.Empty(invalidSeverity.Items);
     }
 
     [Fact]
