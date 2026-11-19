@@ -155,6 +155,11 @@ public sealed class TargetPollsService
         if (poll is null) return false;
         if (await db.PollBallots.AsNoTracking().AnyAsync(x => x.BuildingId == buildingId && x.PollId == pollId, cancellationToken))
             return false;
+        // A close/reopen or imported legacy-evidence event means the definition is retained history.
+        if (await db.PollLifecycleEvents.AsNoTracking().AnyAsync(x =>
+            x.BuildingId == buildingId && x.PollId == pollId &&
+            (x.EventType != 1 || x.Reason != "Poll created"), cancellationToken))
+            return false;
         var entitlements = await db.PollEligibility.Where(x => x.BuildingId == buildingId && x.PollId == pollId)
             .ToListAsync(cancellationToken);
         var policies = await db.PollVotingPolicies.Where(x => x.BuildingId == buildingId && x.PollId == pollId)
