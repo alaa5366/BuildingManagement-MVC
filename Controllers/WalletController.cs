@@ -21,7 +21,6 @@ namespace BuildingManagementMvc.Controllers;
 public class WalletController : Controller
 {
     private readonly BuildingsService _buildings;
-    private readonly WalletService _wallet;
     private readonly TargetDepositWorkflowService _depositWorkflow;
     private readonly TargetWalletReadService _targetWallet;
     private readonly TargetAccountIdentityResolver _identityResolver;
@@ -33,7 +32,6 @@ public class WalletController : Controller
     /// </summary>
     public WalletController(
         BuildingsService buildings,
-        WalletService wallet,
         TargetDepositWorkflowService depositWorkflow,
         TargetWalletReadService targetWallet,
         TargetAccountIdentityResolver identityResolver,
@@ -41,7 +39,6 @@ public class WalletController : Controller
         NotificationsService notify)
     {
         _buildings = buildings;
-        _wallet = wallet;
         _depositWorkflow = depositWorkflow;
         _targetWallet = targetWallet;
         _identityResolver = identityResolver;
@@ -63,28 +60,42 @@ public class WalletController : Controller
         var building = await _buildings.GetByIdAsync(BuildingId);
         if (building == null) return NotFound();
 
-        var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
-        _wallet.GetOrCreateMonth(building, mk);
+        var mk = string.IsNullOrWhiteSpace(month) ? DateTime.UtcNow.ToString("yyyy-MM") : month;
+        TargetWalletAdminSnapshot snapshot;
+        try
+        {
+            snapshot = await _targetWallet.GetAdminSnapshotAsync(BuildingId, mk, HttpContext.RequestAborted);
+        }
+        catch (ArgumentException ex)
+        {
+            TempData["Error"] = ex.Message;
+            return RedirectToAction(nameof(Index));
+        }
 
         var floorOrderMap = building.Floors.ToDictionary(f => f.Id, f => f.Order);
-
-        // ✅ كل الأرصدة
         var allBalances = building.Apartments
             .OrderBy(a => floorOrderMap.GetValueOrDefault(a.FloorId, int.MaxValue))
             .ThenBy(a => a.Number)
-            .Select(a => (Apt: a, Balance: _wallet.ComputeWalletBalance(building, a.Id, mk)))
+            .Select(a => (Apt: a, Balance: snapshot.Balances.GetValueOrDefault(a.Id)))
             .ToList();
 
-        // ✅ Pagination للشقق
         var pagedBalances = PagedResult<(Apartment Apt, decimal Balance)>
             .Create(allBalances, page, pageSize);
 
-        // ✅ Pagination للدفعات المعلقة (من كل الشهور)
-        var allPending = _wallet.GetAllPendingDepositsCrossMonth(building);
+        var allPending = snapshot.PendingDeposits
+            .Select(item =>
+            {
+                var apartment = building.Apartments.FirstOrDefault(a => a.Id == item.ApartmentId);
+                return apartment is null ? ((Apartment Apt, Deposit Deposit, string MonthKey)?)null
+                    : (apartment, item.Deposit, item.MonthKey);
+            })
+            .Where(item => item.HasValue)
+            .Select(item => item!.Value)
+            .ToList();
         var pagedPending = PagedResult<(Apartment Apt, Deposit Deposit, string MonthKey)>
             .Create(allPending, 1, pageSize);
 
-        var totals = _wallet.TotalsOf(building, mk);
+        var totals = snapshot.Totals;
 
         ViewBag.Building = building;
         ViewBag.Month = mk;
