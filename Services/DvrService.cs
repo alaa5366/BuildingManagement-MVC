@@ -46,9 +46,9 @@ public class DvrService
             BuildingNumber = building.BuildingNumber,
             ApartmentsCount = count
         };
-    /// <summary>Gets DVR summaries for the requested buildings.</summary>
     }
 
+    /// <summary>Gets DVR summaries for the requested buildings.</summary>
     public async Task<List<DvrBuildingSummary>> GetBuildingSummariesAsync(CancellationToken cancellationToken = default)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync(cancellationToken);
