@@ -88,19 +88,13 @@ public sealed class InvoiceService
             })
             .ToListAsync(cancellationToken);
 
-        var reversedDepositTransactionIds = await db.PaymentDeposits.AsNoTracking()
-            .Where(deposit => deposit.BuildingId == buildingId && deposit.ApartmentId == apartmentId &&
-                periodIds.Contains(deposit.PeriodId) && deposit.CurrencyCode == currencyCode &&
-                deposit.Status == PaymentDepositStatus.Reversed &&
-                deposit.ReversalTransactionId.HasValue)
-            .Select(deposit => deposit.ReversalTransactionId!.Value)
-            .ToListAsync(cancellationToken);
-        var reversedDepositIds = reversedDepositTransactionIds.ToHashSet();
-
+        // Classify deposit reversals by their original posted transaction. The
+        // reversal may belong to this invoice period while the deposit itself
+        // belongs to an earlier period.
         var monthDeposits = monthLedgerEntries
             .Where(entry => entry.EntryKind == LedgerEntryKind.Deposit ||
                 entry.EntryKind == LedgerEntryKind.Reversal &&
-                reversedDepositIds.Contains(entry.LedgerTransactionId))
+                entry.OriginalKind == LedgerTransactionKind.Deposit)
             .Sum(entry => entry.SignedAmount);
 
         // Monthly charges are period-specific ledger postings. Never use the
