@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace BuildingManagementMvc.Data.Entities;
 
+/// <summary>LanguageEntity stores localization data used by the application.</summary>
 public sealed class LanguageEntity
 {
     [Key, MaxLength(20)] public string CultureCode { get; set; } = "";
@@ -17,6 +18,7 @@ public sealed class LanguageEntity
     [MaxLength(128)] public string? UpdatedBy { get; set; }
 }
 
+/// <summary>TranslationEntryEntity stores localization data used by the application.</summary>
 public sealed class TranslationEntryEntity
 {
     [Key, MaxLength(200)] public string Key { get; set; } = "";
@@ -29,6 +31,7 @@ public sealed class TranslationEntryEntity
     [Timestamp] public byte[] RowVersion { get; set; } = [];
 }
 
+/// <summary>TranslationValueEntity stores localization data used by the application.</summary>
 public sealed class TranslationValueEntity
 {
     [MaxLength(200)] public string Key { get; set; } = "";
