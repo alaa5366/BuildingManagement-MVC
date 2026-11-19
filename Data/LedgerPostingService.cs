@@ -20,6 +20,7 @@ public sealed class LedgerPostingService
         _timeProvider = timeProvider;
     }
 
+    /// <summary>Posts a balanced ledger transaction.</summary>
     public async Task<Guid> PostAsync(
         string buildingId,
         Guid periodId,
@@ -198,6 +199,7 @@ public sealed class LedgerPostingService
         return transactionId;
     }
 
+    /// <summary>Gets the posted ledger balance for an apartment.</summary>
     public async Task<decimal> GetApartmentBalanceAsync(
         string buildingId,
         string apartmentId,
