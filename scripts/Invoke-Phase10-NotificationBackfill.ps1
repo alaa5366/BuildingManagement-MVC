@@ -32,7 +32,7 @@ SELECT Mid,BuildingId,LKey,Title,Body,0,N'legacy.notifications.v1',Ts,NULL FROM 
 WHERE NOT EXISTS(SELECT 1 FROM dbo.NotificationMessages t WHERE t.LegacyNotificationId=S.LKey);
 ;WITH S AS (SELECT n.*,CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONCAT(N'legacy.notifications.recipient.v1|',BuildingId,N'|',Id)),1,16)) Rid,CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONCAT(N'legacy.notifications.v1|',BuildingId,N'|',Id)),1,16)) Mid FROM dbo.Notifications n)
 INSERT dbo.NotificationRecipients(RecipientId,MessageId,RecipientType,RecipientReference,ApartmentId,CreatedAtUtc)
-SELECT Rid,Mid,CASE WHEN LOWER(RecipientType)=N'apartment' THEN 2 WHEN LOWER(RecipientType)=N'building' THEN 1 WHEN LOWER(RecipientType)=N'user' THEN 3 ELSE 0 END,COALESCE(NULLIF(RecipientApartmentId,N''),BuildingId),RecipientApartmentId,Ts FROM S
+SELECT Rid,Mid,0,COALESCE(NULLIF(RecipientApartmentId,N''),BuildingId),RecipientApartmentId,Ts FROM S
 WHERE NOT EXISTS(SELECT 1 FROM dbo.NotificationRecipients r WHERE r.RecipientId=S.Rid);
 ;WITH S AS (SELECT n.*,CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONCAT(N'legacy.notifications.recipient.v1|',BuildingId,N'|',Id)),1,16)) Rid,CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONCAT(N'legacy.notifications.read.v1|',BuildingId,N'|',Id)),1,16)) ReadId FROM dbo.Notifications n)
 INSERT dbo.NotificationReadStates(ReadStateId,RecipientId,ReadAtUtc,DismissedAtUtc)
@@ -40,7 +40,7 @@ SELECT ReadId,Rid,ReadAt,NULL FROM S WHERE IsRead=1 AND ReadAt IS NOT NULL
 AND NOT EXISTS(SELECT 1 FROM dbo.NotificationReadStates x WHERE x.RecipientId=S.Rid);
 ;WITH S AS (SELECT n.*,CONCAT(BuildingId,N'/',Id) SourceKey,CONVERT(varchar(64),HASHBYTES('SHA2_256',CONCAT(BuildingId,N'|',Id)),2) LKey,HASHBYTES('SHA2_256',CONCAT(BuildingId,N'|',Id,N'|',CONVERT(nvarchar(33),Ts,126),N'|',RecipientType,N'|',COALESCE(RecipientApartmentId,N''),N'|',Type,N'|',Icon,N'|',Title,N'|',Body,N'|',CONVERT(nvarchar(1),IsRead),N'|',COALESCE(CONVERT(nvarchar(33),ReadAt,126),N''))) FP FROM dbo.Notifications n)
 INSERT dbo.LegacyDataMigrationMap(MigrationMapId,SourceSystem,SourceTable,SourceKey,TargetTable,TargetKey,SourceFingerprint,Outcome,Disposition,SafeNote)
-SELECT CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONCAT(N'legacy.notifications.map.v1|',BuildingId,N'|',Id)),1,16)),N'BuildingManagement.Legacy',N'Notifications',SourceKey,N'NotificationMessages',LKey,FP,1,N'Migrated',N'Legacy recipient retained; person not inferred.'
+SELECT CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONCAT(N'legacy.notifications.map.v1|',BuildingId,N'|',Id)),1,16)),N'BuildingManagement.Legacy',N'Notifications',SourceKey,N'NotificationMessages',LKey,FP,1,N'Migrated',N'Legacy recipient type/reference retained in source; target type left unresolved (0), person not inferred.'
 FROM S WHERE NOT EXISTS(SELECT 1 FROM dbo.LegacyDataMigrationMap x WHERE x.SourceSystem=N'BuildingManagement.Legacy' AND x.SourceTable=N'Notifications' AND x.SourceKey=S.LKey);
 "@
 $cmd=$c.CreateCommand();$cmd.Transaction=$tx;$cmd.CommandText=$sql;$cmd.CommandTimeout=300;[void]$cmd.ExecuteNonQuery();$tx.Commit()
@@ -57,7 +57,7 @@ if($c.State -ne 'Closed'){$c.Close()}
 $mode=if($Apply){'APPLY'}else{'DRY RUN'}
 $lines=@("# Phase 10 - Notification Backfill","","- Run: $(Get-Date -Format o)","- Mode: $mode","- Source rows retained: dbo.Notifications","","## Results")
 $lines+=($log|ForEach-Object{"- $_"})
-$lines+=@("","## Rules","- LegacyDataMigrationMap preserves the full composite key BuildingId/Id; NotificationMessages stores its SHA-256 reference to fit the target column limit.","- No person identity inferred from apartment/building recipients.","- Read state copied only when IsRead=1 and ReadAt exists.","- Deterministic IDs and source map make reruns idempotent.","- No source rows are updated or deleted.")
+$lines+=@("","## Rules","- LegacyDataMigrationMap preserves the full composite key BuildingId/Id; NotificationMessages stores its SHA-256 reference to fit the target column limit.","- Target RecipientType is set to unresolved (0) because the target enum mapping is not formally defined; exact legacy type remains in the untouched source row.","- Read state copied only when IsRead=1 and ReadAt exists.","- Deterministic IDs and source map make reruns idempotent.","- No source rows are updated or deleted.")
 Set-Content -LiteralPath $report -Value ($lines -join [Environment]::NewLine) -Encoding UTF8
 Write-Host "Report: $report"
 }
