@@ -25,8 +25,8 @@ public sealed class PersonPhoneCorrectionServiceTests
         Assert.False(rejectedWrongApartment);
         await using var db = await harness.Factory.CreateDbContextAsync();
         var request = await db.PersonPhoneChangeRequests.SingleAsync();
-        Assert.Equal("+20100000099", request.PreviousPhone);
-        Assert.Equal("+20110000099", request.RequestedPhone);
+        Assert.Equal("+201000000099", request.PreviousPhone);
+        Assert.Equal("+201100000099", request.RequestedPhone);
         Assert.Equal((byte)0, request.Status);
     }
 
@@ -65,7 +65,7 @@ public sealed class PersonPhoneCorrectionServiceTests
         var person = await verify.Persons.SingleAsync(x => x.PersonId == personId);
         var account = await verify.UserAccounts.SingleAsync();
         var request = await verify.PersonPhoneChangeRequests.SingleAsync();
-        Assert.Equal("+20110000099", person.PrimaryPhone);
+        Assert.Equal("+201100000099", person.PrimaryPhone);
         Assert.NotEqual(oldStamp, account.SecurityStamp);
         Assert.Equal("legacy-admin-uid-123", request.ReviewedByUserId);
         Assert.Equal((byte)1, request.Status);
