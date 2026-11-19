@@ -84,6 +84,17 @@ public sealed class TargetDepositWorkflowServiceTests
         Assert.Equal(125m, (await verify.LedgerEntries.SingleAsync()).SignedAmount);
         Assert.Contains(await verify.AuditEvents.ToListAsync(), item => item.EventType == "PaymentDepositSubmitted");
         Assert.Contains(await verify.AuditEvents.ToListAsync(), item => item.EventType == "PaymentDepositConfirmed");
+
+        var reversalId = await service.ReverseConfirmedAsync(depositId, actorId, "duplicate payment");
+        var repeatedReversalId = await service.ReverseConfirmedAsync(depositId, actorId, "duplicate payment");
+        Assert.NotNull(reversalId);
+        Assert.Equal(reversalId, repeatedReversalId);
+        await using var afterReversal = new AppDbContext(options);
+        Assert.Equal(PaymentDepositStatus.Reversed, (await afterReversal.PaymentDeposits.SingleAsync()).Status);
+        Assert.Equal(2, await afterReversal.LedgerTransactions.CountAsync());
+        Assert.Equal(2, await afterReversal.LedgerEntries.CountAsync());
+        Assert.Equal(0m, await afterReversal.LedgerEntries.SumAsync(entry => entry.SignedAmount));
+        Assert.Contains(await afterReversal.AuditEvents.ToListAsync(), item => item.EventType == "PaymentDepositReversed");
     }
 
     [Fact]
