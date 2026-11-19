@@ -74,9 +74,21 @@ public sealed class TargetExpenseRevenueWorkflowService
             .SingleOrDefaultAsync(x => x.IdempotencyKey == idempotencyKey, cancellationToken);
         if (existing is not null)
         {
+            var sameSource = isRevenue
+                ? await db.Revenues.AsNoTracking().SingleOrDefaultAsync(x => x.BuildingId == buildingId && x.Id == commandId.ToString("N"), cancellationToken)
+                : null;
+            var sameExpense = !isRevenue
+                ? await db.Expenses.AsNoTracking().SingleOrDefaultAsync(x => x.BuildingId == buildingId && x.Id == commandId.ToString("N"), cancellationToken)
+                : null;
+            var samePayload = isRevenue
+                ? sameSource is not null && sameSource.MonthKey == monthKey && sameSource.CategoryId == categoryId &&
+                  sameSource.Amount == amount && sameSource.Note == note.Trim() && sameSource.RevenueDate == effectiveDate
+                : sameExpense is not null && sameExpense.MonthKey == monthKey && sameExpense.CategoryId == categoryId &&
+                  sameExpense.Amount == amount && sameExpense.Note == note.Trim() && sameExpense.ExpenseDate == effectiveDate;
             if (existing.BuildingId != buildingId || existing.Kind != (isRevenue ? LedgerTransactionKind.Revenue : LedgerTransactionKind.Expense) ||
-                existing.Status != LedgerTransactionStatus.Posted || existing.SourceKey != sourceKey)
-                throw new InvalidOperationException("The command id was already used by a different finance operation.");
+                existing.Status != LedgerTransactionStatus.Posted || existing.SourceSystem != "application" ||
+                existing.SourceType != sourceType || existing.SourceKey != sourceKey || !samePayload)
+                throw new InvalidOperationException("The command id was already used by a different finance payload.");
             await tx.CommitAsync(cancellationToken);
             return existing.LedgerTransactionId;
         }
