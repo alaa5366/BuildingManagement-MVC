@@ -75,10 +75,6 @@ public sealed class InvoiceService
         var activeExpenseRows = await db.Expenses.AsNoTracking()
             .Where(item => item.BuildingId == buildingId && item.MonthKey == monthKey)
             .ToListAsync(cancellationToken);
-        var activeRevenueRows = await db.Revenues.AsNoTracking()
-            .Where(item => item.BuildingId == buildingId && item.MonthKey == monthKey)
-            .ToListAsync(cancellationToken);
-
         var expenseTransactions = await db.LedgerTransactions.AsNoTracking()
             .Where(item => item.BuildingId == buildingId && periodIds.Contains(item.PeriodId) &&
                 item.SourceSystem == "application" && item.SourceType == "Expense" &&
