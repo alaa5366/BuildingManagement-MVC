@@ -552,6 +552,67 @@ public sealed class TargetWalletReadServiceTests
         Assert.True(entry.HasReceipt);
     }
 
+
+    [Fact]
+    public async Task GetApartmentAsync_ClassifiesExpenseReversalAsNegativeExpenseMovement()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        var now = DateTime.UtcNow;
+        var periodId = Guid.NewGuid();
+        var originalId = Guid.NewGuid();
+        var reversalId = Guid.NewGuid();
+
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.FinancialPeriods.Add(new FinancialPeriodEntity
+            {
+                PeriodId = periodId, BuildingId = "B1", PeriodKey = now.ToString("yyyy-MM"),
+                TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Open,
+                StartsAtUtc = now.AddDays(-10), EndsAtUtc = now.AddDays(20), CreatedAtUtc = now
+            });
+            seed.LedgerTransactions.AddRange(
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = originalId, PeriodId = periodId, BuildingId = "B1",
+                    Kind = LedgerTransactionKind.Expense, Status = LedgerTransactionStatus.Posted,
+                    IdempotencyKey = "expense-original", CreatedAtUtc = now, PostedAtUtc = now
+                },
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = reversalId, PeriodId = periodId, BuildingId = "B1",
+                    Kind = LedgerTransactionKind.Reversal, Status = LedgerTransactionStatus.Posted,
+                    IdempotencyKey = "expense-reversal", ReversesTransactionId = originalId,
+                    CreatedAtUtc = now.AddMinutes(1), PostedAtUtc = now.AddMinutes(1)
+                });
+            seed.LedgerEntries.AddRange(
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = originalId,
+                    PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.ExpenseAllocation, SignedAmount = -100m,
+                    CurrencyCode = "EGP", EffectiveAtUtc = now, CreatedAtUtc = now
+                },
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = reversalId,
+                    PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.Reversal, SignedAmount = 100m,
+                    CurrencyCode = "EGP", EffectiveAtUtc = now.AddMinutes(1), CreatedAtUtc = now.AddMinutes(1)
+                });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetWalletReadService(new TestContextFactory(options));
+        var snapshot = await service.GetApartmentAsync("B1", "A1");
+
+        Assert.Equal(0m, snapshot.Balance);
+        Assert.Equal(2, snapshot.Transactions.Count);
+        Assert.All(snapshot.Transactions, item => Assert.Equal("expense", item.Type));
+        Assert.Equal(0m, snapshot.Transactions.Sum(item => item.Amount));
+    }
+
     [Fact]
     public async Task GetApartmentAsync_RejectsInvalidMonthAndCurrency()
     {
