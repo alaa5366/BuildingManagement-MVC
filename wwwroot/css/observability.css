@@ -1,0 +1,26 @@
+/* Shared Kibana-inspired shell for every retained log surface. */
+.observability-nav {
+    display:flex; align-items:stretch; gap:.55rem; margin:1rem 0 1.15rem; padding:.45rem;
+    overflow-x:auto; border:1px solid #dce5ee; border-radius:11px; background:#fff;
+}
+.observability-nav a {
+    display:grid; grid-template-columns:auto 1fr; grid-template-rows:auto auto; align-items:center;
+    column-gap:.65rem; min-width:190px; padding:.7rem .9rem; border:1px solid transparent;
+    border-radius:8px; color:#536b83; text-decoration:none;
+    transition:background .15s ease,border-color .15s ease,color .15s ease;
+}
+.observability-nav a>i { grid-row:1 / span 2; color:#2583c5; font-size:1.1rem; }
+.observability-nav a>span { color:#29445f; font-size:.82rem; font-weight:800; }
+.observability-nav a>small { color:#8292a3; font-size:.68rem; }
+.observability-nav a:hover { border-color:#dce8f3; background:#f7fafd; }
+.observability-nav a.active { border-color:#b9d9f1; background:#edf6fd; box-shadow:inset 3px 0 #1682c8; }
+.observability-nav a.active>span { color:#086eae; }
+.log-center .log-results-panel,.log-center .log-filter-panel { overflow:hidden; }
+.log-center .log-table thead th { position:sticky; top:0; z-index:1; }
+.log-center .log-table tbody tr { transition:background .12s ease; }
+.log-center .log-event-details summary { cursor:pointer; }
+.log-center .log-detail-block pre { max-width:min(72vw,1000px); }
+@media(max-width:575.98px) {
+ .observability-nav { gap:.35rem; }
+ .observability-nav a { min-width:155px; padding:.6rem .7rem; }
+}
