@@ -259,7 +259,7 @@ public sealed class TargetWalletReadService
                 row.EntryKind == LedgerEntryKind.Reversal && row.SourceType == "RevenueReversal")
                 .Sum(row => row.SignedAmount);
             result[monthKey] = new TargetWalletPeriodTotals(
-                collected, Math.Abs(expenseNet), revenues);
+                collected, -expenseNet, revenues);
         }
 
         return result;
@@ -365,7 +365,7 @@ public sealed class TargetWalletReadService
             where entry.BuildingId == buildingId && currentPeriodIds.Contains(entry.PeriodId)
                 && entry.CurrencyCode == currencyCode && transaction.BuildingId == buildingId
                 && transaction.Status == LedgerTransactionStatus.Posted
-            select new { entry.EntryKind, entry.SignedAmount }
+            select new { entry.EntryKind, entry.SignedAmount, transaction.SourceType }
         ).ToListAsync(cancellationToken);
 
         var pendingRows = await (
@@ -402,21 +402,16 @@ public sealed class TargetWalletReadService
             .Select(d => new { d.Status, d.Amount })
             .ToListAsync(cancellationToken);
 
-        var reversedExpenseIds = await GetReversedSourceIdsAsync(db, buildingId, "Expense", cancellationToken);
-        var reversedRevenueIds = await GetReversedSourceIdsAsync(db, buildingId, "Revenue", cancellationToken);
-        var expenseRows = await db.Expenses.AsNoTracking()
-            .Where(item => item.BuildingId == buildingId && item.MonthKey == month)
-            .Select(item => new { item.Id, item.Amount })
-            .ToListAsync(cancellationToken);
-        var revenueRows = await db.Revenues.AsNoTracking()
-            .Where(item => item.BuildingId == buildingId && item.MonthKey == month)
-            .Select(item => new { item.Id, item.Amount })
-            .ToListAsync(cancellationToken);
-
         var totals = (
             Collected: periodDepositRows.Where(d => d.Status == PaymentDepositStatus.Confirmed).Sum(d => d.Amount),
-            Expenses: expenseRows.Where(item => !reversedExpenseIds.Contains(item.Id)).Sum(item => item.Amount),
-            Revenues: revenueRows.Where(item => !reversedRevenueIds.Contains(item.Id)).Sum(item => item.Amount),
+            Expenses: -currentEntries.Where(entry =>
+                entry.EntryKind == LedgerEntryKind.ExpenseAllocation ||
+                entry.EntryKind == LedgerEntryKind.Reversal && entry.SourceType == "ExpenseReversal")
+                .Sum(entry => entry.SignedAmount),
+            Revenues: currentEntries.Where(entry =>
+                entry.EntryKind == LedgerEntryKind.RevenueAllocation ||
+                entry.EntryKind == LedgerEntryKind.Reversal && entry.SourceType == "RevenueReversal")
+                .Sum(entry => entry.SignedAmount),
             OpenCount: periodDepositRows.Count(d => d.Status == PaymentDepositStatus.Pending),
             ClosedCount: periodDepositRows.Count(d => d.Status is PaymentDepositStatus.Confirmed or PaymentDepositStatus.Cancelled or PaymentDepositStatus.Reversed),
             Balance: currentEntries.Sum(e => e.SignedAmount),
