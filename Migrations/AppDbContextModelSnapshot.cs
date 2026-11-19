@@ -1317,7 +1317,6 @@ namespace BuildingManagementMvc.Migrations
 
                     b.HasKey("ReconciliationDifferenceId");
 
-                    b.HasIndex("ReviewedByAccountId");
 
                     b.HasIndex("BuildingId", "ApartmentId");
 
