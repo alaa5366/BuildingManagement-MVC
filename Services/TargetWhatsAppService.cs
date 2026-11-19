@@ -15,6 +15,7 @@ public sealed class TargetWhatsAppService
 
     public TargetWhatsAppService(IDbContextFactory<AppDbContext> factory) => _factory = factory;
 
+    /// <summary>Gets the WhatsApp administration page data.</summary>
     public async Task<WhatsAppIndexViewModel?> GetIndexAsync(string buildingId, CancellationToken cancellationToken = default)
     {
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
@@ -44,6 +45,7 @@ public sealed class TargetWhatsAppService
     }
 
 
+    /// <summary>Creates or updates a WhatsApp message template.</summary>
     public async Task<Guid> SaveTemplateAsync(
         string buildingId, string name, string message, string? createdByUid,
         Guid? templateId = null, CancellationToken cancellationToken = default)
@@ -83,6 +85,7 @@ public sealed class TargetWhatsAppService
         return entity.Id;
     }
 
+    /// <summary>Deletes the specified WhatsApp template.</summary>
     public async Task<bool> DeleteTemplateAsync(
         string buildingId, Guid templateId, CancellationToken cancellationToken = default)
     {
@@ -96,6 +99,7 @@ public sealed class TargetWhatsAppService
         return true;
     }
 
+    /// <summary>Generates a WhatsApp message from the selected template and data.</summary>
     public async Task<WhatsAppResultViewModel?> GenerateAsync(
         string buildingId, string apartmentId, string templateId,
         IReadOnlyDictionary<string, string> extra, string baseUrl,
