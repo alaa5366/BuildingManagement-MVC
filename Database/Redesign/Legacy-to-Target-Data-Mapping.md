@@ -173,3 +173,21 @@ The following additive backfills have reported exact source/target/provenance re
 Phase 14 adds `BackupScheduleConfigurations` as a distinct configuration target for `ScheduledBackupSettings`; schedule configuration is not a backup execution/job. Its backfill script is dry-run by default, requires the Phase14 migration to be recorded, rejects unsupported or out-of-range settings rather than normalizing them, preserves the exact CollectionsJson value, and writes LegacyDataMigrationMap provenance. Phase14 backfill is pending execution and reconciliation.
 
 These phases are additive migration steps, not application cutover. Legacy tables remain authoritative until the later application-read/write transition is separately implemented and verified.
+
+
+## 8. Operational backfill execution status
+
+| Phase | Legacy source | Target | Status |
+|---|---|---|---|
+| 10 | Notifications | NotificationMessages / NotificationRecipients / NotificationReadStates | Reconciliation passed |
+| 11 | MaintenanceRecords | MaintenanceRequests | Reconciliation passed |
+| 12 | AuditLog | AuditEvents | Reconciliation passed |
+| 13 | BackupHistory | BackupJobs | Reconciliation passed |
+| 14 | ScheduledBackupSettings | BackupScheduleConfigurations | Reconciliation passed |
+| 15 | Presence | PresenceSessions | Script and schema migration published; apply pending |
+
+### Presence observation rules (Phase 15)
+- The legacy Presence row stores a last-seen observation, not a login/session start or a heartbeat history.
+- `StartedAtUtc`, `AccountId`, and `DeviceReference` remain NULL; the legacy UID is retained only as a source reference.
+- `ExpiresAtUtc` is derived as LastSeen + the existing two-minute online threshold. No historical heartbeat rows are fabricated.
+- One source row maps to one deterministic PresenceSessions row with LegacyDataMigrationMap provenance. The legacy table is never modified or deleted.
