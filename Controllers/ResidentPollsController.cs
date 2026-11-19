@@ -8,13 +8,11 @@ namespace BuildingManagementMvc.Controllers;
 [Authorize(Roles = "resident")]
 public class ResidentPollsController : Controller
 {
-    private readonly BuildingsService _buildings;
     private readonly TargetPollsService _polls;
     private readonly ILogger<ResidentPollsController> _logger;
 
-    public ResidentPollsController(BuildingsService buildings, TargetPollsService polls, ILogger<ResidentPollsController> logger)
+    public ResidentPollsController(TargetPollsService polls, ILogger<ResidentPollsController> logger)
     {
-        _buildings = buildings;
         _polls = polls;
         _logger = logger;
     }
@@ -25,14 +23,15 @@ public class ResidentPollsController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(int page = 1, int pageSize = 50)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
-        var apt = building.Apartments.FirstOrDefault(a => a.Id == ApartmentId);
-        if (apt == null) return Forbid();
+        var summary = await _polls.GetBuildingSummaryAsync(BuildingId, HttpContext.RequestAborted);
+        if (summary is null) return NotFound();
+        if (!await _polls.IsActiveApartmentAsync(BuildingId, ApartmentId, HttpContext.RequestAborted))
+            return Forbid();
 
         var paged = await _polls.GetPageAsync(BuildingId, page, pageSize, activeOnly: true, HttpContext.RequestAborted);
-        ViewBag.Building = building;
-        ViewBag.Apt = apt;
+        ViewBag.BuildingName = summary.Value.Name;
+        ViewBag.OpenApartmentCount = summary.Value.ActiveApartmentCount;
+        ViewBag.ApartmentId = ApartmentId;
         ViewBag.RouteValues = new Dictionary<string, string?> { ["pageSize"] = paged.PageSize.ToString() };
         return View(paged);
     }
