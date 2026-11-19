@@ -65,8 +65,13 @@ public sealed class TargetDepositWorkflowServiceTests
         }
 
         var service = new TargetDepositWorkflowService(factory, TimeProvider.System);
-        var depositId = await service.CreatePendingAsync("B1", "A1", periodId, actorId, 125m, sourceKey: "receipt-1");
-        var repeatedId = await service.CreatePendingAsync("B1", "A1", periodId, 125m, sourceKey: "receipt-1");
+        const string receiptMetadata = """{"Url":"https://example.test/receipt.png","Success":true}""";
+        var depositId = await service.CreatePendingAsync(
+            "B1", "A1", periodId, actorId, 125m, sourceKey: "receipt-1",
+            note: "Bank transfer", receiptMetadataJson: receiptMetadata);
+        var repeatedId = await service.CreatePendingAsync(
+            "B1", "A1", periodId, actorId, 125m, sourceKey: "receipt-1",
+            note: "Bank transfer", receiptMetadataJson: receiptMetadata);
         Assert.Equal(depositId, repeatedId);
 
         var postedId = await service.ConfirmAsync(depositId, actorId, "test-admin");
