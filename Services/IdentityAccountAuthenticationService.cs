@@ -1,3 +1,4 @@
+using System.Data;
 using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -44,6 +45,25 @@ public sealed class IdentityAccountAuthenticationService
             select new { Account = account, Person = person })
             .Take(2)
             .ToListAsync(cancellationToken);
+
+        if (matches.Count == 0 && string.Equals(credential, "1234", StringComparison.Ordinal))
+        {
+            // First-time resident activation is deliberately limited to one unique,
+            // active Person.PrimaryPhone with at least one current occupancy.
+            // WhatsApp is not an authentication identifier and no legacy account is modified.
+            var provisioned = await ProvisionResidentAccountAsync(db, identifier, cancellationToken);
+            if (provisioned)
+            {
+                matches = await (
+                    from account in db.UserAccounts
+                    join person in db.Persons on account.PersonId equals person.PersonId
+                    where account.NormalizedEmail == email ||
+                          (!string.IsNullOrEmpty(phone) && person.PrimaryPhone == phone)
+                    select new { Account = account, Person = person })
+                    .Take(2)
+                    .ToListAsync(cancellationToken);
+            }
+        }
 
         if (matches.Count == 0) return null;
         if (matches.Count != 1) return AuthResult.Fail("wrong-credentials");
@@ -119,6 +139,115 @@ public sealed class IdentityAccountAuthenticationService
             aptId: occupancy?.ApartmentId);
         result.UsesTargetIdentity = true;
         result.SecurityStamp = match.Account.SecurityStamp;
+        result.MustChangePin = match.Account.MustChangePin;
         return result;
+    }
+
+    private async Task<bool> ProvisionResidentAccountAsync(
+        AppDbContext db,
+        string identifier,
+        CancellationToken cancellationToken)
+    {
+        var normalizedPhone = AuthHelpers.NormalizePhone(identifier);
+        if (string.IsNullOrWhiteSpace(normalizedPhone))
+            return false;
+
+        await using var transaction = await db.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable, cancellationToken);
+        try
+        {
+            var people = await db.Persons
+                .Where(person => !person.IsArchived && person.PrimaryPhone != null)
+                .ToListAsync(cancellationToken);
+            var matches = people
+                .Where(person => string.Equals(
+                    AuthHelpers.NormalizePhone(person.PrimaryPhone),
+                    normalizedPhone,
+                    StringComparison.Ordinal))
+                .ToList();
+
+            // Ambiguous or missing phone numbers are never auto-linked.
+            if (matches.Count != 1)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return false;
+            }
+
+            var person = matches[0];
+            if (await db.UserAccounts.AnyAsync(
+                    account => account.PersonId == person.PersonId,
+                    cancellationToken))
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return false;
+            }
+
+            var now = DateTime.UtcNow;
+            var occupancies = await db.ApartmentOccupancies
+                .Where(item => item.PersonId == person.PersonId
+                    && item.ValidFromUtc <= now
+                    && (item.ValidToUtc == null || item.ValidToUtc > now))
+                .Select(item => new { item.BuildingId, item.ApartmentId })
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            var residentRoleActive = await db.RoleDefinitions.AnyAsync(
+                role => role.RoleKey == "resident" && role.IsActive,
+                cancellationToken);
+            if (occupancies.Count == 0 || !residentRoleActive)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return false;
+            }
+
+            var accountId = Guid.NewGuid();
+            var account = new UserAccountEntity
+            {
+                AccountId = accountId,
+                PersonId = person.PersonId,
+                AccountStatus = 1,
+                MustChangePin = true,
+                NormalizedEmail = string.IsNullOrWhiteSpace(person.PrimaryEmail)
+                    ? null
+                    : person.PrimaryEmail.Trim().ToUpperInvariant(),
+                SecurityStamp = Guid.NewGuid().ToString("N"),
+                CreatedAtUtc = now
+            };
+            db.UserAccounts.Add(account);
+            db.UserCredentials.Add(new UserCredentialEntity
+            {
+                CredentialId = Guid.NewGuid(),
+                AccountId = accountId,
+                CredentialType = 0,
+                CredentialHash = _hasher.HashPin("1234"),
+                HashAlgorithm = "BCrypt.Net-Next",
+                CreatedAtUtc = now
+            });
+
+            foreach (var occupancy in occupancies)
+            {
+                db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+                {
+                    RoleAssignmentId = Guid.NewGuid(),
+                    AccountId = accountId,
+                    RoleKey = "resident",
+                    ScopeType = 2,
+                    ScopeBuildingId = occupancy.BuildingId,
+                    ScopeApartmentId = occupancy.ApartmentId,
+                    ValidFromUtc = now,
+                    GrantedAtUtc = now,
+                    GrantReason = "Initial resident account activation from verified active occupancy."
+                });
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 }
