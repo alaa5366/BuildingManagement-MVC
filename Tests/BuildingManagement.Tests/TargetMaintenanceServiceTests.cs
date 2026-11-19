@@ -76,9 +76,18 @@ public sealed class TargetMaintenanceServiceTests
             .Options;
         var sourceId = Guid.NewGuid();
         var maintenanceId = "mnt-" + sourceId.ToString("N");
+        var periodId = Guid.NewGuid();
         await using (var seed = new AppDbContext(options))
         {
             seed.Buildings.Add(new BuildingEntity { Id = "B1", BuildingNumber = "1", Name = "One" });
+            seed.FinancialPeriods.Add(new FinancialPeriodEntity
+            {
+                PeriodId = periodId, BuildingId = "B1", PeriodKey = "2026-11",
+                TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Open,
+                StartsAtUtc = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndsAtUtc = new DateTime(2026, 12, 1, 0, 0, 0, DateTimeKind.Utc),
+                CreatedAtUtc = DateTime.UtcNow
+            });
             seed.MaintenanceRecords.Add(new MaintenanceRecordEntity
             {
                 BuildingId = "B1", Id = maintenanceId, Title = "Posted repair",
@@ -87,7 +96,7 @@ public sealed class TargetMaintenanceServiceTests
             });
             seed.LedgerTransactions.Add(new LedgerTransactionEntity
             {
-                LedgerTransactionId = Guid.NewGuid(), BuildingId = "B1",
+                LedgerTransactionId = Guid.NewGuid(), PeriodId = periodId, BuildingId = "B1",
                 Kind = LedgerTransactionKind.Expense, Status = LedgerTransactionStatus.Posted,
                 SourceType = "Expense", SourceKey = sourceId.ToString("D"),
                 IdempotencyKey = "maintenance-posted-expense",
