@@ -10,7 +10,8 @@ namespace BuildingManagementMvc.Controllers;
 public sealed class LanguageManagementController : Controller
 {
     private readonly LanguageAdministrationService _service;
-    public LanguageManagementController(LanguageAdministrationService service) => _service=service;
+    private readonly IWebHostEnvironment _environment;
+    public LanguageManagementController(LanguageAdministrationService service, IWebHostEnvironment environment) { _service=service; _environment=environment; }
 
     [HttpGet]
     public async Task<IActionResult> Index(string? culture,string? category,string? search,bool missingOnly=false,CancellationToken ct=default)
@@ -24,7 +25,7 @@ public sealed class LanguageManagementController : Controller
     {
         if(User.HasClaim("impersonated","true")) return Forbid();
         var actor=User.FindFirstValue(ClaimTypes.NameIdentifier); if(string.IsNullOrWhiteSpace(actor)) return Forbid();
-        var count=await _service.ScanSourceFilesAsync(Directory.GetCurrentDirectory(),actor,ct);
+        var count=await _service.ScanSourceFilesAsync(_environment.ContentRootPath,actor,ct);
         TempData["Message"]="تم فحص ملفات المصدر واستيراد الموارد الحالية. عدد المفاتيح المكتشفة: "+count+".";
         return RedirectToAction(nameof(Index));
     }
