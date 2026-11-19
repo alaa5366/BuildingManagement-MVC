@@ -1,13 +1,13 @@
 @model BuildingManagementMvc.Models.ResidentPinChangeVm
 @{
-    ViewData["Title"] = "Change your PIN";
+    ViewData["Title"] = Loc.T("Resident_Change_PIN");
 }
 <div class="auth-wrap">
     <div class="auth-card">
         <div class="auth-brand text-center">
             <div class="auth-brand-icon" aria-hidden="true">🔐</div>
-            <h1>Change your PIN</h1>
-            <p>Your temporary PIN must be replaced before you continue.</p>
+            <h1>@Loc.T("Resident_Change_PIN")</h1>
+            <p>@Loc.T("Temporary_PIN_Replace_Notice")</p>
         </div>
         @if (ViewBag.Error != null)
         {
@@ -16,21 +16,21 @@
         <form method="post" asp-action="ChangePin" autocomplete="off">
             @Html.AntiForgeryToken()
             <div class="field">
-                <label asp-for="NewPin">New PIN</label>
+                <label asp-for="NewPin">@Loc.T("New_PIN")</label>
                 <input asp-for="NewPin" class="form-control form-control-lg"
                        type="password" inputmode="numeric" pattern="[0-9]{4,12}"
                        minlength="4" maxlength="12" autocomplete="new-password" autofocus />
                 <span asp-validation-for="NewPin" class="text-danger small"></span>
             </div>
             <div class="field">
-                <label asp-for="ConfirmNewPin">Confirm new PIN</label>
+                <label asp-for="ConfirmNewPin">@Loc.T("Confirm_New_PIN")</label>
                 <input asp-for="ConfirmNewPin" class="form-control form-control-lg"
                        type="password" inputmode="numeric" pattern="[0-9]{4,12}"
                        minlength="4" maxlength="12" autocomplete="new-password" />
                 <span asp-validation-for="ConfirmNewPin" class="text-danger small"></span>
             </div>
-            <p class="text-muted small">Use 4–12 digits. The temporary PIN 1234 cannot be reused.</p>
-            <button type="submit" class="btn btn-brand w-100 btn-lg">Save new PIN</button>
+            <p class="text-muted small">@Loc.T("PIN_4_12_Digits") @Loc.T("Temporary_PIN_1234_Not_Allowed")</p>
+            <button type="submit" class="btn btn-brand w-100 btn-lg">@Loc.T("Save_New_PIN")</button>
         </form>
     </div>
 </div>
