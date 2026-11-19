@@ -29,12 +29,13 @@ public sealed class TargetFinanceReadService
 
         if (kind == "expense")
         {
+            var reversedIds = await GetReversedSourceIdsAsync(db, buildingId, "Expense", cancellationToken);
             var rows = await db.Expenses.AsNoTracking()
                 .Where(x => x.BuildingId == buildingId && x.MonthKey == monthKey)
                 .OrderByDescending(x => x.ExpenseDate).ThenByDescending(x => x.Id)
                 .Select(x => new { x.Id, x.CategoryId, x.Note, x.Amount, x.ExpenseDate })
                 .ToListAsync(cancellationToken);
-            var items = rows.Select(x => new Expense
+            var items = rows.Where(x => !reversedIds.Contains(x.Id)).Select(x => new Expense
             {
                 Id = x.Id, CategoryId = x.CategoryId ?? "", Note = x.Note,
                 Amount = x.Amount, Date = x.ExpenseDate.ToString("yyyy-MM-dd")
@@ -42,17 +43,37 @@ public sealed class TargetFinanceReadService
             return new TargetFinanceMonthSnapshot(categories, items, Array.Empty<Revenue>(), items.Sum(x => x.Amount));
         }
 
+        var reversedRevenueIds = await GetReversedSourceIdsAsync(db, buildingId, "Revenue", cancellationToken);
         var revenueRows = await db.Revenues.AsNoTracking()
             .Where(x => x.BuildingId == buildingId && x.MonthKey == monthKey)
             .OrderByDescending(x => x.RevenueDate).ThenByDescending(x => x.Id)
             .Select(x => new { x.Id, x.CategoryId, x.Note, x.Amount, x.RevenueDate })
             .ToListAsync(cancellationToken);
-        var revenues = revenueRows.Select(x => new Revenue
+        var revenues = revenueRows.Where(x => !reversedRevenueIds.Contains(x.Id)).Select(x => new Revenue
         {
             Id = x.Id, CategoryId = x.CategoryId ?? "", Note = x.Note,
             Amount = x.Amount, Date = x.RevenueDate.ToString("yyyy-MM-dd")
         }).ToList();
         return new TargetFinanceMonthSnapshot(categories, Array.Empty<Expense>(), revenues, revenues.Sum(x => x.Amount));
+    }
+
+    private static async Task<HashSet<string>> GetReversedSourceIdsAsync(
+        AppDbContext db, string buildingId, string sourceType, CancellationToken cancellationToken)
+    {
+        var sourceKeys = await (
+            from original in db.LedgerTransactions.AsNoTracking()
+            join reversal in db.LedgerTransactions.AsNoTracking()
+                on original.LedgerTransactionId equals reversal.ReversesTransactionId
+            where original.BuildingId == buildingId && original.SourceSystem == "application" &&
+                  original.SourceType == sourceType && original.Status == LedgerTransactionStatus.Posted &&
+                  reversal.BuildingId == buildingId && reversal.Kind == LedgerTransactionKind.Reversal &&
+                  reversal.Status == LedgerTransactionStatus.Posted
+            select original.SourceKey)
+            .ToListAsync(cancellationToken);
+
+        return sourceKeys.Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => Guid.TryParse(x, out var id) ? id.ToString("N") : x!)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 }
 
