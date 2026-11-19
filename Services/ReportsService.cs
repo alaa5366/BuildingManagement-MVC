@@ -1,3 +1,4 @@
+using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Services;
@@ -7,6 +8,7 @@ namespace BuildingManagementMvc.Services;
 /// </summary>
 public sealed class ReportsService
 {
+    private readonly IDbContextFactory<AppDbContext> _factory;
     private readonly TargetWalletReadService _wallet;
     private readonly TargetFinanceReadService _finance;
 
@@ -47,6 +49,29 @@ public sealed class ReportsService
 
     public Task<string> GetCurrentPeriodKeyAsync(string buildingId, CancellationToken cancellationToken = default) =>
         _wallet.GetCurrentPeriodKeyAsync(buildingId, cancellationToken: cancellationToken);
+
+    public async Task<string> GetCurrentPeriodKeyAsync(
+        string buildingId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(buildingId))
+            throw new ArgumentException("Building is required.", nameof(buildingId));
+
+        var now = DateTime.UtcNow;
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        var openPeriod = await db.FinancialPeriods.AsNoTracking()
+            .Where(period => period.BuildingId == buildingId &&
+                period.Status == FinancialPeriodStatus.Open &&
+                period.StartsAtUtc <= now && period.EndsAtUtc > now)
+            .Select(period => period.PeriodKey)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (!string.IsNullOrWhiteSpace(openPeriod))
+            return openPeriod;
+
+        var latestPeriod = await _wallet.GetFinancialPeriodKeysAsync(buildingId, cancellationToken);
+        return latestPeriod.LastOrDefault(key => string.CompareOrdinal(key, now.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture)) <= 0)
+            ?? now.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
+    }
 
     public async Task<ReportsVm> BuildReportAsync(
         string buildingId,
