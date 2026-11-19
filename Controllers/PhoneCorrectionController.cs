@@ -8,6 +8,7 @@ using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Controllers;
 
+/// <summary>PhoneCorrectionController coordinates the corresponding application controller actions.</summary>
 public sealed class PhoneCorrectionController : Controller
 {
     private readonly PersonPhoneCorrectionService _service;
