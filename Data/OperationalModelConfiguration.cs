@@ -170,18 +170,19 @@ internal static class OperationalModelConfiguration
 
         mb.Entity<PollVotingPolicyEntity>(e =>
         {
-            e.ToTable("PollVotingPolicies");
+            e.ToTable("PollVotingPolicies", t => t.HasCheckConstraint("CK_PollVotingPolicies_Mode", "[VotingMode] IN (0,1,2) AND [EligibilityMode] IN (0,1,2)"));
             e.HasKey(x => x.PolicyId);
             e.Property(x => x.PolicyId).ValueGeneratedNever();
             e.Property(x => x.BuildingId).HasMaxLength(64).IsRequired();
             e.Property(x => x.PollId).HasMaxLength(64).IsRequired();
-            e.Property(x => x.CreatedAtUtc).HasColumnType("datetime2(3)");
-            e.HasIndex(x => new { x.BuildingId, x.PollId, x.PolicyVersion }).IsUnique();
+            e.Property(x => x.CreatedAtUtc).HasColumnType("datetime2(3)").HasDefaultValueSql("SYSUTCDATETIME()");
+            e.Property(x => x.IsActive).HasDefaultValue(true);
+            e.HasAlternateKey(x => new { x.BuildingId, x.PollId, x.PolicyVersion }).HasName("UQ_PollVotingPolicies_PollVersion");
         });
 
         mb.Entity<PollEligibilityEntity>(e =>
         {
-            e.ToTable("PollEligibility");
+            e.ToTable("PollEligibility", t => t.HasCheckConstraint("CK_PollEligibility_Expiry", "[ExpiresAtUtc] > [IssuedAtUtc]"));
             e.HasKey(x => x.EligibilityId);
             e.Property(x => x.EligibilityId).ValueGeneratedNever();
             e.Property(x => x.BuildingId).HasMaxLength(64).IsRequired();
@@ -206,8 +207,8 @@ internal static class OperationalModelConfiguration
             e.Property(x => x.BallotTokenHash).HasColumnType("varbinary(64)").IsRequired();
             e.Property(x => x.ChoicePayload).HasColumnType("varbinary(max)").IsRequired();
             e.Property(x => x.CastAtUtc).HasColumnType("datetime2(3)");
-            e.HasIndex(x => x.BallotTokenHash).IsUnique();
-            e.HasIndex(x => new { x.BuildingId, x.PollId, x.CastAtUtc });
+            e.HasAlternateKey(x => x.BallotTokenHash).HasName("UQ_PollBallots_Token");
+            e.HasIndex(x => new { x.BuildingId, x.PollId, x.CastAtUtc }).HasDatabaseName("IX_PollBallots_Building_Poll_CastAt");
         });
 
         mb.Entity<PollLifecycleEventEntity>(e =>
@@ -221,7 +222,7 @@ internal static class OperationalModelConfiguration
             e.Property(x => x.Reason).HasMaxLength(1000);
             e.Property(x => x.MetadataJson).HasColumnType("nvarchar(max)");
             e.Property(x => x.OccurredAtUtc).HasColumnType("datetime2(3)");
-            e.HasIndex(x => new { x.BuildingId, x.PollId, x.OccurredAtUtc });
+            e.HasIndex(x => new { x.BuildingId, x.PollId, x.OccurredAtUtc }).HasDatabaseName("IX_PollLifecycleEvents_LegacyPoll");
         });
 
         mb.Entity<NotificationMessageEntity>(e =>
