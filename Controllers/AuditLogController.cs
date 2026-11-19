@@ -2,6 +2,7 @@
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -19,6 +20,7 @@ namespace BuildingManagementMvc.Controllers;
 /// Access: requires one of the roles <c>superadmin,admin,resident</c>.
 /// </remarks>
 [Authorize(Roles = "superadmin,admin,resident")]
+[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public class AuditLogController : Controller
 {
     private readonly AuditLogQueryService _audit;
@@ -58,6 +60,7 @@ public class AuditLogController : Controller
     /// HTTP GET.
     /// </remarks>
     [HttpGet]
+    [EnableRateLimiting("lookup")]
     public async Task<IActionResult> Index(
     string? buildingId, string? apartmentId, string? userId,
     string? actionFilter, string? severity, string? from, string? to,
@@ -151,6 +154,7 @@ public class AuditLogController : Controller
     /// HTTP GET.
     /// </remarks>
     [HttpGet]
+    [EnableRateLimiting("lookup")]
     public async Task<IActionResult> ExportCsv(
     string? buildingId, string? apartmentId, string? userId,
     string? actionFilter, string? severity, string? from, string? to)
