@@ -1077,11 +1077,13 @@ By: {userId}
             case "pollVotingPolicies":
                 {
                     if (!Guid.TryParse(id, out var policyId)) return false;
-                    var existing = await db.PollVotingPolicies.FirstOrDefaultAsync(x => x.PolicyId == policyId);
-                    // Versioned policy snapshots are immutable: never overwrite an existing version.
-                    if (existing != null) return false;
                     var entity = JsonSerializer.Deserialize<Data.Entities.PollVotingPolicyEntity>(data.GetRawText(), RestoreJsonOptions);
                     if (entity == null || entity.PolicyId != policyId) return false;
+                    // Versioned policy snapshots are immutable and unique per poll/version.
+                    if (await db.PollVotingPolicies.AnyAsync(x =>
+                        x.PolicyId == policyId ||
+                        x.BuildingId == entity.BuildingId && x.PollId == entity.PollId &&
+                        x.PolicyVersion == entity.PolicyVersion)) return false;
                     db.PollVotingPolicies.Add(entity);
                     return true;
                 }
@@ -1089,11 +1091,13 @@ By: {userId}
             case "pollEligibility":
                 {
                     if (!Guid.TryParse(id, out var eligibilityId)) return false;
-                    var existing = await db.PollEligibility.FirstOrDefaultAsync(x => x.EligibilityId == eligibilityId);
-                    // Do not roll back consumed/revoked entitlements by overwriting live eligibility state.
-                    if (existing != null) return false;
                     var entity = JsonSerializer.Deserialize<Data.Entities.PollEligibilityEntity>(data.GetRawText(), RestoreJsonOptions);
                     if (entity == null || entity.EligibilityId != eligibilityId) return false;
+                    // Never overwrite live entitlement state; also respect the subject's unique poll entitlement.
+                    if (await db.PollEligibility.AnyAsync(x =>
+                        x.EligibilityId == eligibilityId ||
+                        x.BuildingId == entity.BuildingId && x.PollId == entity.PollId &&
+                        x.SubjectReference == entity.SubjectReference)) return false;
                     db.PollEligibility.Add(entity);
                     return true;
                 }
@@ -1101,11 +1105,11 @@ By: {userId}
             case "pollBallots":
                 {
                     if (!Guid.TryParse(id, out var ballotId)) return false;
-                    var existing = await db.PollBallots.FirstOrDefaultAsync(x => x.BallotId == ballotId);
-                    // Ballots are immutable records; preserve any ballot already present in the target.
-                    if (existing != null) return false;
                     var entity = JsonSerializer.Deserialize<Data.Entities.PollBallotEntity>(data.GetRawText(), RestoreJsonOptions);
                     if (entity == null || entity.BallotId != ballotId) return false;
+                    // Ballots are immutable; avoid both identifier and opaque-token collisions.
+                    if (await db.PollBallots.AnyAsync(x =>
+                        x.BallotId == ballotId || x.BallotTokenHash == entity.BallotTokenHash)) return false;
                     db.PollBallots.Add(entity);
                     return true;
                 }
