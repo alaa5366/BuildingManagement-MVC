@@ -116,11 +116,11 @@
         </div>
         <div class="table-responsive log-table-wrap">
             <table class="table log-table align-middle mb-0 audit-kibana-table">
-                <thead><tr><th>TIME</th><th>SEVERITY</th><th>EVENT / ACTION</th><th>ACTOR</th><th>SCOPE</th><th>DETAILS</th></tr></thead>
+                <thead><tr><th>TIME</th><th>SEVERITY</th><th>EVENT / ACTION</th><th>ACTOR</th><th>SCOPE</th><th>CORRELATION</th><th>DETAILS</th></tr></thead>
                 <tbody>
                 @if (Model.Items.Count == 0)
                 {
-                    <tr><td colspan="6"><div class="log-empty-state"><span class="log-empty-icon"><i class="bi bi-search"></i></span><strong>@Loc.T("No_Records_Match_The_Filters")</strong><p>Adjust the filters to discover audit events.</p></div></td></tr>
+                    <tr><td colspan="7"><div class="log-empty-state"><span class="log-empty-icon"><i class="bi bi-search"></i></span><strong>@Loc.T("No_Records_Match_The_Filters")</strong><p>Adjust the filters to discover audit events.</p></div></td></tr>
                 }
                 else
                 {
@@ -134,6 +134,7 @@
                             <td class="log-message-cell"><a asp-action="Index" asp-route-actionFilter="@e.Action" asp-route-severity="@ViewBag.SelectedSeverity" asp-route-buildingId="@ViewBag.SelectedBuildingId" asp-route-apartmentId="@ViewBag.SelectedApartmentId" asp-route-userId="@ViewBag.SelectedUserId" asp-route-from="@ViewBag.From" asp-route-to="@ViewBag.To" class="audit-event-filter"><strong>@BuildingManagementMvc.Services.AuditLogQueryService.LabelAr(e.Action)</strong><small class="d-block text-muted"><code>@e.Action</code></small></a></td>
                             <td class="audit-actor-cell"><span>@(e.UserId ?? "—")</span>@if(!string.IsNullOrWhiteSpace(e.UserRole)){<small>@e.UserRole</small>}</td>
                             <td class="audit-scope-cell"><span>@(e.BuildingId ?? "—")</span><small>@(e.ApartmentId ?? "—")</small></td>
+                            <td class="audit-correlation-cell">@if(!string.IsNullOrWhiteSpace(e.CorrelationId)){<a asp-action="Index" asp-route-correlationId="@e.CorrelationId" title="Filter by correlation ID"><code>@e.CorrelationId</code></a>}else{<span class="text-muted">—</span>}</td>
                             <td>@if(e.Metadata != null && e.Metadata.Count > 0){<details class="log-event-details"><summary><i class="bi bi-braces"></i> @Loc.T("Log_Inspect")</summary><div class="log-detail-block"><pre>@System.Text.Json.JsonSerializer.Serialize(e.Metadata, new System.Text.Json.JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.Default })</pre></div></details>}else{<span class="text-muted">—</span>}</td>
                         </tr>
                     }
