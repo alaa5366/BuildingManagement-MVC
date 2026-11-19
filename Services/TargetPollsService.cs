@@ -156,6 +156,27 @@ public sealed class TargetPollsService
         }
     }
 
+    public async Task<(string Name, int ActiveApartmentCount)?> GetBuildingSummaryAsync(
+        string buildingId, CancellationToken cancellationToken = default)
+    {
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        var name = await db.Buildings.AsNoTracking().Where(x => x.Id == buildingId)
+            .Select(x => x.Name).FirstOrDefaultAsync(cancellationToken);
+        if (name is null) return null;
+        var activeApartments = await db.Apartments.AsNoTracking()
+            .CountAsync(x => x.BuildingId == buildingId && !x.IsClosed, cancellationToken);
+        return (name, activeApartments);
+    }
+
+    public async Task<bool> IsActiveApartmentAsync(
+        string buildingId, string apartmentId, CancellationToken cancellationToken = default)
+    {
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        return await db.Apartments.AsNoTracking().AnyAsync(
+            x => x.BuildingId == buildingId && x.Id == apartmentId && !x.IsClosed && !x.IsDisabled,
+            cancellationToken);
+    }
+
     private static Poll Map(PollEntity entity) => new()
     {
         Id = entity.Id,
