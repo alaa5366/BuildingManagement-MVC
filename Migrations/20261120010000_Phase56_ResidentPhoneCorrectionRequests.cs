@@ -33,7 +33,6 @@ public sealed class Phase56_ResidentPhoneCorrectionRequests : Migration
             {
                 table.PrimaryKey("PK_PersonPhoneChangeRequests", x => x.RequestId);
                 table.ForeignKey("FK_PersonPhoneChangeRequests_Persons_PersonId", x => x.PersonId, "Persons", "PersonId");
-                table.ForeignKey("FK_PersonPhoneChangeRequests_UserAccounts_ReviewedByAccountId", x => x.ReviewedByAccountId, "UserAccounts", "AccountId");
                 table.CheckConstraint("CK_PersonPhoneChangeRequests_Status", "[Status] IN (0,1,2)");
                 table.CheckConstraint("CK_PersonPhoneChangeRequests_Review", "(([Status] = 0 AND [ReviewedAtUtc] IS NULL AND [ReviewedByAccountId] IS NULL) OR ([Status] IN (1,2) AND [ReviewedAtUtc] IS NOT NULL AND [ReviewedByAccountId] IS NOT NULL))");
             });
