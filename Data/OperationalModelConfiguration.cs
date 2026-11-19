@@ -102,7 +102,7 @@ internal static class OperationalModelConfiguration
             e.Property(x => x.UpdatedAtUtc).HasColumnType("datetime2(3)");
             e.Property(x => x.ClosedAtUtc).HasColumnType("datetime2(3)");
             e.HasIndex(x => new { x.BuildingId, x.CreatedAtUtc }).HasDatabaseName("IX_MaintenanceRequests_Building_Created");
-            e.HasIndex(x => new { x.BuildingId, x.LegacyMaintenanceId }).IsUnique().HasFilter("[LegacyMaintenanceId] IS NOT NULL");
+            e.HasIndex(x => new { x.BuildingId, x.LegacyMaintenanceId }).IsUnique().HasFilter("[LegacyMaintenanceId] IS NOT NULL").HasDatabaseName("UX_MaintenanceRequests_Legacy");
             e.HasMany(x => x.Assignments).WithOne(x => x.Request).HasForeignKey(x => x.RequestId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(x => x.Comments).WithOne(x => x.Request).HasForeignKey(x => x.RequestId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(x => x.Attachments).WithOne(x => x.Request).HasForeignKey(x => x.RequestId).OnDelete(DeleteBehavior.Cascade);
@@ -184,7 +184,8 @@ internal static class OperationalModelConfiguration
                 .IsDescending(false, true, true)
                 .HasDatabaseName("IX_NotificationMessages_Building_Created");
             e.HasIndex(x => x.LegacyNotificationId).IsUnique()
-                .HasFilter("[LegacyNotificationId] IS NOT NULL");
+                .HasFilter("[LegacyNotificationId] IS NOT NULL")
+                .HasDatabaseName("UX_NotificationMessages_Legacy");
             e.HasMany(x => x.Recipients).WithOne(x => x.Message)
                 .HasForeignKey(x => x.MessageId).OnDelete(DeleteBehavior.Cascade);
         });
