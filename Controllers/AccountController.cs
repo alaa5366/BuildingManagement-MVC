@@ -1172,7 +1172,6 @@ public class AccountController : Controller
         public string? Error { get; init; }
         public QuickTokenPayload? Payload { get; init; }
         public QrApartmentInfo? Apartment { get; init; }
-        public BuildingManagementMvc.Data.Entities.ResidentEntity? Resident { get; init; }
     }
 
     private async Task<QuickLoginContext> ResolveQuickLoginAsync(string token, QrSecurityService qrSecurity)
