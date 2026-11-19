@@ -140,6 +140,7 @@ try
     builder.Services.AddScoped<ApartmentAccessGrantService>();
     builder.Services.AddScoped<LegacyIdentityMappingService>();
     builder.Services.AddScoped<LedgerPostingService>();
+builder.Services.AddScoped<TargetWalletReadService>();
 
     // ✅ Health Checks (فحص صحة الداتابيز)
     builder.Services.AddHealthChecks()
