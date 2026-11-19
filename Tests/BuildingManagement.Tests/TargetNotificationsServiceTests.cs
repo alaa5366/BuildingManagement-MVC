@@ -130,7 +130,10 @@ public sealed class TargetNotificationsServiceTests
         }
 
         var service = new TargetNotificationsService(new TestContextFactory(options));
+        Assert.Equal(1, await service.GetUnreadCountForResidentAsync("B1", "A1"));
+        Assert.Equal(1, await service.GetUnreadCountForAdminAsync("B1"));
         Assert.Equal(1, await service.MarkAllReadAsync("B1", "resident", "A1"));
+        Assert.Equal(0, await service.GetUnreadCountForResidentAsync("B1", "A1"));
 
         await using var verify = new AppDbContext(options);
         Assert.True(await verify.Notifications.Where(item => item.Id == "a1-unread")
