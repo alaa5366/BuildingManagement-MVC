@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -69,34 +70,41 @@ public class AuditLogController : Controller
         pageSize = Math.Clamp(pageSize, 1, 200);
         string? qBuildingId = null;
         string? qApartmentId = null;
+        string? qUserId = null;
 
         if (IsResident)
         {
             qBuildingId = CurrentBuildingId;
             qApartmentId = CurrentApartmentId;
+            qUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             ViewBag.CanFilterByBuilding = false;
             ViewBag.CanFilterByApartment = false;
+            ViewBag.CanFilterByUser = false;
         }
         else if (IsAdmin)
         {
             qBuildingId = CurrentBuildingId;
             if (!string.IsNullOrWhiteSpace(apartmentId))
                 qApartmentId = apartmentId;
+            qUserId = string.IsNullOrWhiteSpace(userId) ? null : userId;
             ViewBag.CanFilterByBuilding = false;
             ViewBag.CanFilterByApartment = true;
+            ViewBag.CanFilterByUser = true;
         }
         else if (IsSuperAdmin)
         {
             qBuildingId = string.IsNullOrWhiteSpace(buildingId) ? null : buildingId;
             qApartmentId = string.IsNullOrWhiteSpace(apartmentId) ? null : apartmentId;
+            qUserId = string.IsNullOrWhiteSpace(userId) ? null : userId;
             ViewBag.CanFilterByBuilding = true;
             ViewBag.CanFilterByApartment = true;
+            ViewBag.CanFilterByUser = true;
         }
 
         var pagedResult = await _audit.QueryPageAsync(
             buildingId: qBuildingId,
             apartmentId: qApartmentId,
-            userId: string.IsNullOrWhiteSpace(userId) ? null : userId,
+            userId: qUserId,
             action: string.IsNullOrWhiteSpace(actionFilter) ? null : actionFilter,
             severity: string.IsNullOrWhiteSpace(severity) ? null : severity,
             from: ParseDate(from, endOfDay: false), to: ParseDate(to, endOfDay: true), page: page, pageSize: pageSize);
@@ -113,7 +121,7 @@ public class AuditLogController : Controller
         ViewBag.SelectedSeverity = severity;
         ViewBag.SelectedBuildingId = buildingId;
         ViewBag.SelectedApartmentId = apartmentId;
-        ViewBag.SelectedUserId = userId;
+        ViewBag.SelectedUserId = IsResident ? null : userId;
         ViewBag.From = from;
         ViewBag.To = to;
 
@@ -123,7 +131,7 @@ public class AuditLogController : Controller
         {
             ["buildingId"] = buildingId,
             ["apartmentId"] = apartmentId,
-            ["userId"] = userId,
+            ["userId"] = IsResident ? null : userId,
             ["actionFilter"] = actionFilter,
             ["severity"] = severity,
             ["from"] = from,
@@ -150,27 +158,31 @@ public class AuditLogController : Controller
             (IsAdmin && string.IsNullOrWhiteSpace(CurrentBuildingId))) return Forbid();
         string? qBuildingId = null;
         string? qApartmentId = null;
+        string? qUserId = null;
 
         if (IsResident)
         {
             qBuildingId = CurrentBuildingId;
             qApartmentId = CurrentApartmentId;
+            qUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         }
         else if (IsAdmin)
         {
             qBuildingId = CurrentBuildingId;
             if (!string.IsNullOrWhiteSpace(apartmentId)) qApartmentId = apartmentId;
+            qUserId = string.IsNullOrWhiteSpace(userId) ? null : userId;
         }
         else if (IsSuperAdmin)
         {
             qBuildingId = string.IsNullOrWhiteSpace(buildingId) ? null : buildingId;
             qApartmentId = string.IsNullOrWhiteSpace(apartmentId) ? null : apartmentId;
+            qUserId = string.IsNullOrWhiteSpace(userId) ? null : userId;
         }
 
         var entries = await _audit.QueryAsync(
             buildingId: qBuildingId,
             apartmentId: qApartmentId,
-            userId: string.IsNullOrWhiteSpace(userId) ? null : userId,
+            userId: qUserId,
             action: string.IsNullOrWhiteSpace(actionFilter) ? null : actionFilter,
             severity: string.IsNullOrWhiteSpace(severity) ? null : severity,
             from: ParseDate(from, endOfDay: false),
