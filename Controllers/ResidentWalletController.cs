@@ -173,7 +173,7 @@ public class ResidentWalletController : Controller
         Guid commandId, IFormFile? receiptImage,
         [FromServices] CloudinaryService cloudinary)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
+        var building = await _targetWallet.GetBuildingShellAsync(BuildingId, HttpContext.RequestAborted);
         if (building == null) return NotFound();
         var apt = building.Apartments.FirstOrDefault(a => a.Id == ApartmentId);
         if (apt == null) return NotFound();
