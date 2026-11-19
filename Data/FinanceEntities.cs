@@ -103,6 +103,8 @@ public sealed class PaymentDepositEntity
     public Guid? ReversedByAccountId { get; set; }
     public Guid? ReversalTransactionId { get; set; }
     public string? ResolutionReason { get; set; }
+    public string? Note { get; set; }
+    public string? ReceiptMetadataJson { get; set; }
     public string SourceSystem { get; set; } = "application";
     public string? SourceKey { get; set; }
     public byte[] RowVersion { get; set; } = Array.Empty<byte>();
