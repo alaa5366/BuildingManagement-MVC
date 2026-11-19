@@ -70,7 +70,11 @@ public class BackupService
         ["notificationPreferences"] = Loc.T("Backup_Collection_notificationPreferences"),
         ["languages"] = Loc.T("Backup_Collection_languages"),
         ["translationEntries"] = Loc.T("Backup_Collection_translationEntries"),
-        ["translationValues"] = Loc.T("Backup_Collection_translationValues")
+        ["translationValues"] = Loc.T("Backup_Collection_translationValues"),
+        ["maintenanceRequests"] = Loc.T("Backup_Collection_maintenanceRequests"),
+        ["maintenanceAssignments"] = Loc.T("Backup_Collection_maintenanceAssignments"),
+        ["maintenanceComments"] = Loc.T("Backup_Collection_maintenanceComments"),
+        ["maintenanceStatusEvents"] = Loc.T("Backup_Collection_maintenanceStatusEvents")
     };
 
     /// <summary>
@@ -160,6 +164,10 @@ public class BackupService
                     "languages" => await db.Languages.CountAsync(),
                     "translationEntries" => await db.TranslationEntries.CountAsync(),
                     "translationValues" => await db.TranslationValues.CountAsync(),
+                    "maintenanceRequests" => await db.MaintenanceRequests.CountAsync(),
+                    "maintenanceAssignments" => await db.MaintenanceAssignments.CountAsync(),
+                    "maintenanceComments" => await db.MaintenanceComments.CountAsync(),
+                    "maintenanceStatusEvents" => await db.MaintenanceStatusEvents.CountAsync(),
                     _ => 0
                 };
             }
@@ -428,6 +436,22 @@ By: {userId}
                 foreach (var value in await db.TranslationValues.AsNoTracking().ToListAsync())
                     result.Add(ToDict(EncodeTranslationValueId(value.Key, value.CultureCode), value));
                 break;
+            case "maintenanceRequests":
+                foreach (var request in await db.MaintenanceRequests.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(request.RequestId.ToString("D"), request));
+                break;
+            case "maintenanceAssignments":
+                foreach (var assignment in await db.MaintenanceAssignments.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(assignment.AssignmentId.ToString("D"), assignment));
+                break;
+            case "maintenanceComments":
+                foreach (var comment in await db.MaintenanceComments.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(comment.CommentId.ToString("D"), comment));
+                break;
+            case "maintenanceStatusEvents":
+                foreach (var statusEvent in await db.MaintenanceStatusEvents.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(statusEvent.StatusEventId.ToString("D"), statusEvent));
+                break;
         }
 
         return result;
@@ -564,7 +588,11 @@ By: {userId}
             "notificationPreferences",
             "languages",
             "translationEntries",
-            "translationValues"
+            "translationValues",
+            "maintenanceRequests",
+            "maintenanceAssignments",
+            "maintenanceComments",
+            "maintenanceStatusEvents"
         };
 
         // نحتفظ فقط بالجداول اللي المستخدم اختارها
@@ -1202,6 +1230,58 @@ By: {userId}
                         !string.Equals(entity.CultureCode, cultureCode, StringComparison.Ordinal))
                         return false;
                     ApplyOrAdd(db, db.TranslationValues, existing, entity);
+                    return true;
+                }
+
+            case "maintenanceRequests":
+                {
+                    if (!Guid.TryParse(id, out var requestId)) return false;
+                    var existing = await db.MaintenanceRequests.FirstOrDefaultAsync(x => x.RequestId == requestId);
+                    if (existing != null && !overwrite) return false;
+                    var entity = JsonSerializer.Deserialize<Data.Entities.MaintenanceRequestEntity>(data.GetRawText(), RestoreJsonOptions);
+                    if (entity == null || entity.RequestId != requestId) return false;
+                    entity.Assignments = new List<Data.Entities.MaintenanceAssignmentEntity>();
+                    entity.Comments = new List<Data.Entities.MaintenanceCommentEntity>();
+                    entity.Attachments = new List<Data.Entities.MaintenanceAttachmentEntity>();
+                    entity.StatusEvents = new List<Data.Entities.MaintenanceStatusEventEntity>();
+                    entity.LedgerLinks = new List<Data.Entities.MaintenanceLedgerLinkEntity>();
+                    ApplyOrAdd(db, db.MaintenanceRequests, existing, entity);
+                    return true;
+                }
+
+            case "maintenanceAssignments":
+                {
+                    if (!Guid.TryParse(id, out var assignmentId)) return false;
+                    var existing = await db.MaintenanceAssignments.FirstOrDefaultAsync(x => x.AssignmentId == assignmentId);
+                    if (existing != null && !overwrite) return false;
+                    var entity = JsonSerializer.Deserialize<Data.Entities.MaintenanceAssignmentEntity>(data.GetRawText(), RestoreJsonOptions);
+                    if (entity == null || entity.AssignmentId != assignmentId) return false;
+                    entity.Request = null;
+                    ApplyOrAdd(db, db.MaintenanceAssignments, existing, entity);
+                    return true;
+                }
+
+            case "maintenanceComments":
+                {
+                    if (!Guid.TryParse(id, out var commentId)) return false;
+                    var existing = await db.MaintenanceComments.FirstOrDefaultAsync(x => x.CommentId == commentId);
+                    if (existing != null && !overwrite) return false;
+                    var entity = JsonSerializer.Deserialize<Data.Entities.MaintenanceCommentEntity>(data.GetRawText(), RestoreJsonOptions);
+                    if (entity == null || entity.CommentId != commentId) return false;
+                    entity.Request = null;
+                    ApplyOrAdd(db, db.MaintenanceComments, existing, entity);
+                    return true;
+                }
+
+            case "maintenanceStatusEvents":
+                {
+                    if (!Guid.TryParse(id, out var statusEventId)) return false;
+                    var existing = await db.MaintenanceStatusEvents.FirstOrDefaultAsync(x => x.StatusEventId == statusEventId);
+                    if (existing != null && !overwrite) return false;
+                    var entity = JsonSerializer.Deserialize<Data.Entities.MaintenanceStatusEventEntity>(data.GetRawText(), RestoreJsonOptions);
+                    if (entity == null || entity.StatusEventId != statusEventId) return false;
+                    entity.Request = null;
+                    ApplyOrAdd(db, db.MaintenanceStatusEvents, existing, entity);
                     return true;
                 }
 
