@@ -385,7 +385,9 @@ public sealed class IdentityAccountAuthenticationServiceTests
         var result = await new IdentityAccountAuthenticationService(factory, new BcryptPasswordHasher())
             .AuthenticateResidentAsync("+201000000088", "1234");
 
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.False(result.Success);
+        Assert.Equal("wrong-credentials", result.Error);
         await using var verify = await factory.CreateDbContextAsync();
         Assert.Empty(await verify.UserAccounts.ToListAsync());
         Assert.Empty(await verify.UserCredentials.ToListAsync());
