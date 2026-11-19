@@ -531,36 +531,33 @@ public class BackupServiceTests
         preference.IsEnabled = false;
         await _db.SaveChangesAsync();
 
-        var tempPath = Path.Combine(Path.GetTempPath(), $"restore-notifications-{Guid.NewGuid():N}.zip");
-        await File.WriteAllBytesAsync(tempPath, bytes);
-        try
-        {
-            var restored = await _service.RestoreAsync(
-                tempPath, selected, overwrite: true, "backup-notification-test");
+        using var upload = new MemoryStream(bytes);
+        var preview = await _service.PreviewRestoreAsync(upload, "notifications.zip", "backup-notification-test");
+        Assert.True(preview.Success, string.Join("; ", preview.Errors));
+        Assert.NotNull(preview.RestoreSessionId);
 
-            Assert.True(restored.Success, string.Join("; ", restored.Errors));
-            var restoredMessage = await _db.NotificationMessages.SingleAsync(x => x.MessageId == messageId);
-            Assert.Equal("Original title", restoredMessage.Title);
-            Assert.Equal("Original body", restoredMessage.Body);
+        var restored = await _service.RestoreSessionAsync(
+            preview.RestoreSessionId!, selected, overwrite: true, "backup-notification-test");
 
-            var restoredRecipient = await _db.NotificationRecipients.SingleAsync(x => x.RecipientId == recipientId);
-            Assert.Equal(messageId, restoredRecipient.MessageId);
-            Assert.Equal("APT-1", restoredRecipient.ApartmentId);
+        Assert.True(restored.Success, string.Join("; ", restored.Errors));
+        var restoredMessage = await _db.NotificationMessages.SingleAsync(x => x.MessageId == messageId);
+        Assert.Equal("Original title", restoredMessage.Title);
+        Assert.Equal("Original body", restoredMessage.Body);
 
-            var restoredDelivery = await _db.NotificationDeliveries.SingleAsync(x => x.DeliveryId == deliveryId);
-            Assert.Equal("provider-ref-original", restoredDelivery.ProviderReference);
-            Assert.Equal("SAFE-001", restoredDelivery.SafeErrorCode);
+        var restoredRecipient = await _db.NotificationRecipients.SingleAsync(x => x.RecipientId == recipientId);
+        Assert.Equal(messageId, restoredRecipient.MessageId);
+        Assert.Equal("APT-1", restoredRecipient.ApartmentId);
 
-            var restoredReadState = await _db.NotificationReadStates.SingleAsync(x => x.ReadStateId == readStateId);
-            Assert.NotNull(restoredReadState.ReadAtUtc);
+        var restoredDelivery = await _db.NotificationDeliveries.SingleAsync(x => x.DeliveryId == deliveryId);
+        Assert.Equal("provider-ref-original", restoredDelivery.ProviderReference);
+        Assert.Equal("SAFE-001", restoredDelivery.SafeErrorCode);
 
-            var restoredPreference = await _db.NotificationPreferences.SingleAsync(x => x.PreferenceId == preferenceId);
-            Assert.True(restoredPreference.IsEnabled);
-        }
-        finally
-        {
-            if (File.Exists(tempPath)) File.Delete(tempPath);
-        }
+        var restoredReadState = await _db.NotificationReadStates.SingleAsync(x => x.ReadStateId == readStateId);
+        Assert.NotNull(restoredReadState.ReadAtUtc);
+
+        var restoredPreference = await _db.NotificationPreferences.SingleAsync(x => x.PreferenceId == preferenceId);
+        Assert.True(restoredPreference.IsEnabled);
+        Assert.False(File.Exists(preview.TempFilePath));
     }
 
     [Fact]
