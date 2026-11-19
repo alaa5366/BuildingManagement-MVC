@@ -114,7 +114,7 @@ public sealed class ReportsServiceTests
         var finance = new TargetFinanceReadService(factory);
         var building = await wallet.GetBuildingShellAsync("B1");
         var service = new ReportsService(wallet, finance);
-        var report = await service.BuildReportAsync(building!, "6m", month);
+        var report = await service.BuildReportAsync(building!.Id, "6m", month);
 
         Assert.Equal(500m, report.TotalCollected);
         Assert.Equal(200m, report.TotalExpenses);
