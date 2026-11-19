@@ -36,7 +36,7 @@ public sealed class ApplicationLogsAuthorizationTests
         var context = CreateContext(new Claim(ClaimTypes.Role, "admin"));
         var filterContext = CreateFilterContext(context);
 
-        await new AdminPermissionAttribute(AdminPermissions.ViewApplicationLogs).OnAuthorizationAsync(filterContext);
+        await await new AdminPermissionAttribute(AdminPermissions.ViewApplicationLogs).OnAuthorizationAsync(filterContext);
 
         var result = Assert.IsType<ContentResult>(filterContext.Result);
         Assert.Equal(StatusCodes.Status403Forbidden, result.StatusCode);
@@ -50,7 +50,7 @@ public sealed class ApplicationLogsAuthorizationTests
             new Claim("perm", AdminPermissions.ViewApplicationLogs));
         var filterContext = CreateFilterContext(context);
 
-        new AdminPermissionAttribute(AdminPermissions.ViewApplicationLogs).OnAuthorization(filterContext);
+        await new AdminPermissionAttribute(AdminPermissions.ViewApplicationLogs).OnAuthorizationAsync(filterContext);
 
         Assert.Null(filterContext.Result);
     }
@@ -61,7 +61,7 @@ public sealed class ApplicationLogsAuthorizationTests
         var context = CreateContext(new Claim(ClaimTypes.Role, "superadmin"));
         var filterContext = CreateFilterContext(context);
 
-        new AdminPermissionAttribute(AdminPermissions.ViewApplicationLogs).OnAuthorization(filterContext);
+        await new AdminPermissionAttribute(AdminPermissions.ViewApplicationLogs).OnAuthorizationAsync(filterContext);
 
         var result = Assert.IsType<ContentResult>(filterContext.Result);
         Assert.Equal(StatusCodes.Status403Forbidden, result.StatusCode);
