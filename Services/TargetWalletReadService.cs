@@ -15,6 +15,34 @@ public sealed class TargetWalletReadService
 
     public TargetWalletReadService(IDbContextFactory<AppDbContext> factory) => _factory = factory;
 
+    public async Task<TargetWalletSubmissionContext?> GetSubmissionContextAsync(
+        string buildingId,
+        string periodKey,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(buildingId))
+            throw new ArgumentException("Building is required.", nameof(buildingId));
+        ValidateMonth(periodKey, nameof(periodKey));
+
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        var periodId = await db.FinancialPeriods.AsNoTracking()
+            .Where(p => p.BuildingId == buildingId && p.PeriodKey == periodKey)
+            .Select(p => (Guid?)p.PeriodId)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (periodId is null) return null;
+
+        var currencyCode = await db.BuildingSettings.AsNoTracking()
+            .Where(settings => settings.BuildingId == buildingId)
+            .Select(settings => settings.Currency)
+            .SingleOrDefaultAsync(cancellationToken) ?? "EGP";
+
+        if (string.IsNullOrWhiteSpace(currencyCode) || currencyCode.Length != 3 ||
+            currencyCode.Any(c => !char.IsAsciiLetter(c)))
+            throw new InvalidOperationException("The building currency configuration is invalid.");
+
+        return new TargetWalletSubmissionContext(periodId.Value, currencyCode.ToUpperInvariant());
+    }
+
     public async Task<TargetWalletSnapshot> GetApartmentAsync(
         string buildingId,
         string apartmentId,
@@ -180,3 +208,5 @@ public sealed record TargetWalletSnapshot(
     decimal Balance,
     IReadOnlyList<WalletTransactionVm> Transactions,
     IReadOnlyList<Deposit> PendingDeposits);
+
+public sealed record TargetWalletSubmissionContext(Guid PeriodId, string CurrencyCode);
