@@ -25,6 +25,7 @@ public enum AuthorizationReason
     AccountInactive,
     StaleSecurityStamp,
     StepUpRequired,
+    MfaNotEnrolled,
     ExplicitDeny,
     NoApplicableAllow
 }
@@ -156,9 +157,16 @@ public sealed class AuthorizationEvaluator
             applicableEffects.Contains((byte)AuthorizationEffect.Deny))
             return Deny(AuthorizationReason.ExplicitDeny);
 
-        if (applicableEffects.Contains((byte)AuthorizationEffect.Allow) && definition.RequiresFreshMfa &&
-            !HasFreshMfa(principal, definition, nowUtc))
-            return new AuthorizationEvaluationResult(AuthorizationDecision.RequiresStepUp, AuthorizationReason.StepUpRequired);
+        if (applicableEffects.Contains((byte)AuthorizationEffect.Allow) && definition.RequiresFreshMfa)
+        {
+            var mfaEnabled = await db.UserTwoFactorSettings.AsNoTracking()
+                .AnyAsync(item => item.AccountId == accountId && item.IsEnabled, cancellationToken);
+            if (!mfaEnabled)
+                return Deny(AuthorizationReason.MfaNotEnrolled);
+
+            if (!HasFreshMfa(principal, definition, nowUtc))
+                return new AuthorizationEvaluationResult(AuthorizationDecision.RequiresStepUp, AuthorizationReason.StepUpRequired);
+        }
 
         if (applicableEffects.Contains((byte)AuthorizationEffect.Allow))
             return new AuthorizationEvaluationResult(AuthorizationDecision.Allow, AuthorizationReason.Granted);
