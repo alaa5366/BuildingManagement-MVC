@@ -24,7 +24,7 @@ public class AdminAptsController : Controller
     private readonly ResidentsService _residents;
     private readonly QrSecurityService _qrSecurity;
     private readonly QrGeneratorService _qrGen;
-    private readonly WhatsAppTemplateService _waTemplates;
+    private readonly TargetWhatsAppService _targetWhatsApp;
     private readonly NotificationsService _notify;
     private readonly TargetNotificationsService _targetNotifications;
     private readonly Microsoft.Extensions.Logging.ILogger<AdminAptsController> _logger;
@@ -38,7 +38,7 @@ public class AdminAptsController : Controller
         ResidentsService residents,
         QrSecurityService qrSecurity,
         QrGeneratorService qrGen,
-        WhatsAppTemplateService waTemplates,
+        TargetWhatsAppService targetWhatsApp,
         NotificationsService notify,
         IAuditLogger auditLogger,
         TargetNotificationsService targetNotifications,
@@ -48,7 +48,7 @@ public class AdminAptsController : Controller
         _residents = residents;
         _qrSecurity = qrSecurity;
         _qrGen = qrGen;
-        _waTemplates = waTemplates;
+        _targetWhatsApp = targetWhatsApp;
         _notify = notify;
         _auditLogger = auditLogger;
         _targetNotifications = targetNotifications;
@@ -180,8 +180,11 @@ public class AdminAptsController : Controller
             ["login_url"] = WhatsAppTemplateService.BuildLoginUrl(baseUrl)
         };
 
-        var messageText = _waTemplates.Render("welcome", building, apt, extra);
-        var waLink = WhatsAppTemplateService.BuildWaLink(apt.Phone, messageText);
+        var welcomeDraft = await _targetWhatsApp.GenerateAsync(
+            BuildingId, apt.Id, "welcome", extra, baseUrl, HttpContext.RequestAborted);
+        if (welcomeDraft is null) return NotFound();
+        var messageText = welcomeDraft.Message;
+        var waLink = welcomeDraft.Link;
 
         var qrPng = _qrGen.GeneratePng(quickUrl, 10);
         var qrBase64 = Convert.ToBase64String(qrPng);
