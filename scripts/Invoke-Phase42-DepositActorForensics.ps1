@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [string]$ConnectionString = "Server=(localdb)\MSSQLLocalDB;Database=BuildingManagement_RestoreTest;Integrated Security=True;TrustServerCertificate=True;Connect Timeout=30"
+    [string]$ConnectionString = "Server=(localdb)\MSSQLLocalDB;Database=BuildingManagement_RestoreTest;Integrated Security=True;TrustServerCertificate=True;Connect Timeout=30",
+    [string]$Phone = "01119221000"
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
@@ -50,7 +51,7 @@ try {
     FROM dbo.Deposits d WHERE NULLIF(LTRIM(RTRIM(d.UpdatedBy)),N'') IS NOT NULL
     UNION ALL
     SELECT h.BuildingId,h.DepositId,N'EditHistory.By',NULLIF(LTRIM(RTRIM(h.ByUser)),N'')
-    FROM dbo.DepositEditHistory h WHERE NULLIF(LTRIM(RTRIM(h.Actor)),N'') IS NOT NULL
+    FROM dbo.DepositEditHistory h WHERE NULLIF(LTRIM(RTRIM(h.ByUser)),N'') IS NOT NULL
 ),
 DistinctActors AS (
     SELECT ActorField,ActorValue,COUNT(*) Occurrences,
@@ -82,13 +83,17 @@ FROM DistinctActors a
 ORDER BY a.ActorField,a.ActorValue;
 "@
 
+    $phoneDigits = [regex]::Replace($Phone, '\D', '')
+    if ([string]::IsNullOrWhiteSpace($phoneDigits)) { throw 'Phone must contain at least one digit.' }
+
+    Log "Phone search (digits only): $phoneDigits"
     Log "Distinct actor values: $($actors.Rows.Count)"
     foreach ($row in $actors.Rows) {
         Log ("Actor: Field={0}; Value={1}; Occurrences={2}; Buildings={3}; ExactUid={4}; ExactName={5}; ExactEmail={6}; TrimmedName={7}; TrimmedEmail={8}; ReviewedUidAccount={9}; CandidateUids={10}" -f $row.ActorField,$row.ActorValue,$row.Occurrences,$row.BuildingCount,$row.ExactUidMatches,$row.ExactNameMatches,$row.ExactEmailMatches,$row.TrimmedNameMatches,$row.TrimmedEmailMatches,$row.ExactReviewedUidAccountMatches,$row.CandidateUserUids)
     }
 
     $users = ReadTable $connection @"
-SELECT u.Uid,u.Name,u.Email,u.Role,
+SELECT u.Uid,u.Name,u.Email,u.Phone,u.Whatsapp,u.Role,
        CASE WHEN EXISTS (
           SELECT 1 FROM dbo.LegacyIdentityMap m
           JOIN dbo.UserAccounts ua ON ua.AccountId=m.AccountId
@@ -99,6 +104,15 @@ SELECT u.Uid,u.Name,u.Email,u.Role,
 FROM dbo.Users u
 ORDER BY u.Uid;
 "@
+    $phoneMatches = @($users | Where-Object {
+        $phone = [regex]::Replace([string]$_.Phone, '\D', '')
+        $whatsapp = [regex]::Replace([string]$_.Whatsapp, '\D', '')
+        $phone -eq $phoneDigits -or $whatsapp -eq $phoneDigits
+    })
+    Log "Users matching supplied phone in Phone/Whatsapp: $($phoneMatches.Count)"
+    foreach ($match in $phoneMatches) {
+        Log ("PHONE CANDIDATE: Uid={0}; Name={1}; Role={2}; Phone={3}; Whatsapp={4}; HasReviewedAccount={5}" -f $match.Uid,$match.Name,$match.Role,$match.Phone,$match.Whatsapp,$match.HasReviewedAccount)
+    }
     Log "Legacy administrative users profiled: $($users.Rows.Count)"
     foreach ($row in $users.Rows) {
         Log ("User: Uid={0}; Name={1}; Role={2}; HasReviewedAccount={3}" -f $row.Uid,$row.Name,$row.Role,$row.HasReviewedAccount)
@@ -121,11 +135,15 @@ ORDER BY u.Uid;
         '',
         '## Administrative user identity inventory',
         ($users | Format-Table -AutoSize -Wrap | Out-String).Trim(),
+        
+        "## Supplied phone candidate matches ($phoneDigits)",
+        ($phoneMatches | Format-Table -AutoSize -Wrap | Out-String).Trim(),
         '',
         '## Safeguards',
         '- No mapping or account was created or modified.',
         '- Exact UID plus reviewed identity mapping and existing UserAccounts row is the only accepted account-resolution path.',
-        '- Exact name/email matches are diagnostic hints only; they are not proof of who performed a historical action.',
+        '- Exact name/email/phone matches are diagnostic hints only; they are not proof of who performed a historical action.'
+        '- The supplied phone is compared to Users.Phone and Users.Whatsapp after removing non-digit formatting; a match is not used to assign historical actors.',
         '- No deposit state, financial period, ledger transaction, ledger entry, or wallet balance was changed.',
         ''
     )
