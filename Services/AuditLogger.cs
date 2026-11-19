@@ -83,7 +83,7 @@ public class AuditLogger : IAuditLogger
 
     public async Task<BuildingManagementMvc.Models.PagedResult<AuditEntryDoc>> QueryPageAsync(
         string? buildingId, string? apartmentId, string? userId, DateTime? from, DateTime? to,
-        string? action, string? severity, int page, int pageSize)
+        string? action, string? severity, int page, int pageSize, string? correlationId = null)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
         var query = ApplyFilters(db.AuditEvents.AsNoTracking(), buildingId, apartmentId,
