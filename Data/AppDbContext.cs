@@ -43,7 +43,7 @@ public class AppDbContext : DbContext
     /// </summary>
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
-        EnsureAuditLogIsAppendOnly();
+        EnsureAppendOnlyAndPostedFinanceIsImmutable();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
@@ -54,7 +54,7 @@ public class AppDbContext : DbContext
         bool acceptAllChangesOnSuccess,
         CancellationToken cancellationToken = default)
     {
-        EnsureAuditLogIsAppendOnly();
+        EnsureAppendOnlyAndPostedFinanceIsImmutable();
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
