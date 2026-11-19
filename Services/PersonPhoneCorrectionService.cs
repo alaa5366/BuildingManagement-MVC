@@ -71,6 +71,7 @@ public sealed class PersonPhoneCorrectionService
 
     public async Task<bool> ReviewAsync(Guid requestId, Guid reviewerAccountId, bool approve, string reason, bool superAdmin, string? buildingId)
     {
+        if (approve && string.IsNullOrWhiteSpace(reason)) return false;
         await using var db = await _factory.CreateDbContextAsync();
         await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
         var request = await db.PersonPhoneChangeRequests.SingleOrDefaultAsync(r => r.RequestId == requestId && r.Status == 0);
