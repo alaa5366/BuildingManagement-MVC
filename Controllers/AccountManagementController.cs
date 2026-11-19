@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -6,50 +5,28 @@ using Microsoft.AspNetCore.Mvc;
 namespace BuildingManagementMvc.Controllers;
 
 [Authorize(Roles = "superadmin")]
+[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public sealed class AccountManagementController : Controller
 {
     private readonly AccountManagementService _service;
-    private readonly IPasswordHasher _hasher;
 
-    public AccountManagementController(AccountManagementService service, IPasswordHasher hasher)
-    {
-        _service = service;
-        _hasher = hasher;
-    }
+    public AccountManagementController(AccountManagementService service) => _service = service;
 
     [HttpGet]
-    public async Task<IActionResult> Index(string? search, string? role, string? status, int page = 1,
-        int pageSize = 25, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Index(
+        string? search, string? role, string? status,
+        int page = 1, int pageSize = 25,
+        CancellationToken cancellationToken = default)
     {
-        if (User.HasClaim("impersonated", "true")) return Forbid();
-        ViewBag.AccountMessage = TempData["AccountMessage"];
-        ViewBag.TemporaryPin = TempData["TemporaryPin"];
-        return View(await _service.GetPageAsync(search, role, status, page, pageSize, cancellationToken));
-    }
+        if (User.HasClaim("impersonated", "true"))
+            return Forbid();
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public Task<IActionResult> Activate(Guid accountId, CancellationToken cancellationToken) =>
-        MutateAsync(() => _service.SetResidentStatusAsync(accountId, true, ActorId(), cancellationToken));
+        // Bound user-controlled query values before they reach in-memory filtering.
+        search = string.IsNullOrWhiteSpace(search) ? null : search.Trim()[..Math.Min(search.Trim().Length, 128)];
+        role = role is "resident" or "admin" or "superadmin" ? role : null;
+        status = status is "active" or "inactive" ? status : null;
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public Task<IActionResult> Deactivate(Guid accountId, CancellationToken cancellationToken) =>
-        MutateAsync(() => _service.SetResidentStatusAsync(accountId, false, ActorId(), cancellationToken));
-
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public Task<IActionResult> ResetPin(Guid accountId, CancellationToken cancellationToken) =>
-        MutateAsync(() => _service.ResetResidentPinAsync(accountId, ActorId(), _hasher, cancellationToken));
-
-    private string ActorId() => User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "superadmin";
-
-    private async Task<IActionResult> MutateAsync(Func<Task<AccountManagementMutationResult>> operation)
-    {
-        if (User.HasClaim("impersonated", "true")) return Forbid();
-        var result = await operation();
-        TempData["AccountMessage"] = result.Message;
-        if (result.TemporaryPin is not null) TempData["TemporaryPin"] = result.TemporaryPin;
-        return RedirectToAction(nameof(Index));
+        var model = await _service.GetPageAsync(search, role, status, page, pageSize, cancellationToken);
+        return View(model);
     }
 }
