@@ -315,6 +315,7 @@ public sealed class TargetWalletReadService
                 entry.Description,
                 entry.EffectiveAtUtc,
                 DepositPaymentId = deposit == null ? (Guid?)null : deposit.PaymentDepositId,
+                DepositStatus = deposit == null ? (PaymentDepositStatus?)null : deposit.Status,
                 DepositNote = deposit == null ? null : deposit.Note,
                 ReceiptMetadataJson = deposit == null ? null : deposit.ReceiptMetadataJson
             }).ToListAsync(cancellationToken);
@@ -354,7 +355,7 @@ public sealed class TargetWalletReadService
             return new WalletTransactionVm
             {
                 Type = ToLegacyType(entry.EntryKind),
-                Status = "confirmed",
+                Status = entry.DepositStatus == PaymentDepositStatus.Reversed ? "reversed" : "confirmed",
                 Id = entry.LedgerEntryId.ToString("D"),
                 Number = entry.DepositPaymentId is Guid paymentDepositId
                     ? paymentDepositId.ToString("N")[..8].ToUpperInvariant()
