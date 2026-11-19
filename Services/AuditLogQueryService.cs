@@ -44,7 +44,8 @@ public class AuditLogQueryService
     /// <param name="from"></param>
     /// <param name="to"></param>
     /// <param name="page"></param>
-    /// <param name="pageSize"></param>
+    /// <param name="pageSize">عدد السجلات في الصفحة.</param>
+    /// <param name="correlationId">معرّف ربط اختياري لتصفية السجلات.</param>
     /// <returns>صفحة من سجلات التدقيق.</returns>
     public Task<BuildingManagementMvc.Models.PagedResult<AuditEntryDoc>> QueryPageAsync(
         string? buildingId, string? apartmentId, string? userId, string? action, string? severity,
