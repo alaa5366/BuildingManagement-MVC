@@ -348,7 +348,7 @@ public class ImpersonationController : Controller
         if (backup.Role is "admin" or "superadmin")
             claims.Add(new Claim("twoFactorVerified", backup.TwoFactorVerified ? "true" : "false"));
 
-        if (isSuperAdmin || SqlAuthService.IsSuperAdminEmail(backup.Email))
+        if (isSuperAdmin)
         {
             claims.Add(new Claim("originalRole", "superadmin"));
         }
