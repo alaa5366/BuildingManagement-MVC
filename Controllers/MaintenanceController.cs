@@ -106,6 +106,13 @@ public class MaintenanceController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        if (!DateOnly.TryParseExact(record.Date, "yyyy-MM-dd",
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out _))
+        {
+            TempData["Error"] = "تاريخ سجل الصيانة غير صالح لتسجيل المصروف.";
+            return RedirectToAction(nameof(Index));
+        }
         var expenseDate = record.Date;
         var monthKey = expenseDate[..7];
         var actorAccountId = await _identityResolver.ResolveAsync(User, HttpContext.RequestAborted);
