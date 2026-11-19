@@ -4713,4 +4713,5 @@
   <data name="Phone_Correction_Requests" xml:space="preserve">
     <value>طلبات تصحيح أرقام الهاتف</value>
   </data>
+  <data name="Backup_Collection_savedWhatsAppTemplates" xml:space="preserve"><value>قوالب رسائل واتساب المحفوظة</value></data>
 </root>
