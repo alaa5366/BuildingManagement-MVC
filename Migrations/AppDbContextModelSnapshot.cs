@@ -3820,6 +3820,65 @@ modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity",
 
                     b.Navigation("Permissions");
                 });
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.LanguageEntity", b =>
+                {
+                    b.Property<string>("CultureCode").HasMaxLength(20).HasColumnType("nvarchar(20)");
+                    b.Property<string>("Direction").IsRequired().HasMaxLength(12).HasColumnType("nvarchar(12)");
+                    b.Property<string>("EnglishName").IsRequired().HasMaxLength(100).HasColumnType("nvarchar(100)");
+                    b.Property<string>("FallbackCulture").HasMaxLength(20).HasColumnType("nvarchar(20)");
+                    b.Property<string>("Flag").HasMaxLength(8).HasColumnType("nvarchar(8)");
+                    b.Property<bool>("IsDefault").HasColumnType("bit");
+                    b.Property<bool>("IsEnabled").HasColumnType("bit");
+                    b.Property<string>("NativeName").IsRequired().HasMaxLength(100).HasColumnType("nvarchar(100)");
+                    b.Property<int>("SortOrder").HasColumnType("int");
+                    b.Property<DateTime>("UpdatedAtUtc").HasColumnType("datetime2");
+                    b.Property<string>("UpdatedBy").HasMaxLength(128).HasColumnType("nvarchar(128)");
+                    b.HasKey("CultureCode");
+                    b.ToTable("Languages");
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.TranslationEntryEntity", b =>
+                {
+                    b.Property<string>("Key").HasMaxLength(200).HasColumnType("nvarchar(200)");
+                    b.Property<string>("Category").IsRequired().HasMaxLength(40).HasColumnType("nvarchar(40)");
+                    b.Property<string>("Description").HasMaxLength(500).HasColumnType("nvarchar(500)");
+                    b.Property<bool>("IsArchived").HasColumnType("bit");
+                    b.Property<byte[]>("RowVersion").IsConcurrencyToken().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
+                    b.Property<string>("SourceGroup").IsRequired().HasMaxLength(160).HasColumnType("nvarchar(160)");
+                    b.Property<DateTime>("UpdatedAtUtc").HasColumnType("datetime2");
+                    b.Property<string>("UpdatedBy").HasMaxLength(128).HasColumnType("nvarchar(128)");
+                    b.HasKey("Key");
+                    b.HasIndex("Category", "SourceGroup");
+                    b.ToTable("TranslationEntries");
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.TranslationValueEntity", b =>
+                {
+                    b.Property<string>("Key").HasMaxLength(200).HasColumnType("nvarchar(200)");
+                    b.Property<string>("CultureCode").HasMaxLength(20).HasColumnType("nvarchar(20)");
+                    b.Property<string>("UpdatedBy").HasMaxLength(128).HasColumnType("nvarchar(128)");
+                    b.Property<DateTime>("UpdatedAtUtc").HasColumnType("datetime2");
+                    b.Property<string>("Value").IsRequired().HasMaxLength(4000).HasColumnType("nvarchar(4000)");
+                    b.HasKey("Key", "CultureCode");
+                    b.HasIndex("CultureCode");
+                    b.ToTable("TranslationValues");
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.TranslationValueEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.LanguageEntity", null)
+                        .WithMany()
+                        .HasForeignKey("CultureCode")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BuildingManagementMvc.Data.Entities.TranslationEntryEntity", null)
+                        .WithMany()
+                        .HasForeignKey("Key")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
 #pragma warning restore 612, 618
         }
     }
