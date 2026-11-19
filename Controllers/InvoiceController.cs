@@ -45,74 +45,49 @@ public class InvoiceController : Controller
     [HttpGet]
     public async Task<IActionResult> Download(string? aptId, string? month)
     {
-        // ✅ نحدد buildingId من الـ claims
         var buildingId = User.FindFirstValue("buildingId");
+        var isResident = User.IsInRole("resident");
+        var isSuperAdmin = User.IsInRole("superadmin");
 
-        // ✅ لو مش موجود (SuperAdmin من غير Impersonation) → نستخدم aptId للبحث
-        if (string.IsNullOrEmpty(buildingId) && !string.IsNullOrEmpty(aptId))
+        if (string.IsNullOrWhiteSpace(buildingId))
         {
-            // SuperAdmin: نجيب العمارة من الشقة بدل ما نحمّل كل العمارات
-            var foundBuildingId = await _targetWallet.FindBuildingIdByApartmentAsync(
-                aptId, HttpContext.RequestAborted);
-            if (string.IsNullOrEmpty(foundBuildingId)) return NotFound();
-
-            var foundBuilding = await _targetWallet.GetBuildingShellAsync(
-                foundBuildingId, aptId, HttpContext.RequestAborted);
-            var foundApt = foundBuilding?.Apartments.FirstOrDefault(a => a.Id == aptId);
-
-            if (foundBuilding == null || foundApt == null) return NotFound();
-
-            return await GenerateInvoiceAsync(foundBuilding, foundApt, month, "superadmin");
+            if (!isSuperAdmin || string.IsNullOrWhiteSpace(aptId)) return NotFound();
+            buildingId = await _invoice.FindBuildingIdByApartmentAsync(aptId, HttpContext.RequestAborted);
+            if (string.IsNullOrWhiteSpace(buildingId)) return NotFound();
         }
 
-        // الأدمن أو الساكن
-        if (string.IsNullOrEmpty(buildingId)) return NotFound();
+        var targetApartmentId = isResident ? User.FindFirstValue("apartmentId") : aptId;
+        if (string.IsNullOrWhiteSpace(targetApartmentId)) return NotFound();
 
-        var isResident = User.IsInRole("resident");
-        var targetAptId = isResident ? User.FindFirstValue("apartmentId") : aptId;
-        if (string.IsNullOrEmpty(targetAptId) && isResident) return Forbid();
-
-        var building = await _targetWallet.GetBuildingShellAsync(
-            buildingId, isResident ? targetAptId : null, HttpContext.RequestAborted);
-        if (building == null) return NotFound();
-
-        if (string.IsNullOrEmpty(targetAptId)) return NotFound();
-
-        var targetApt = building.Apartments.FirstOrDefault(a => a.Id == targetAptId);
-        if (targetApt == null) return NotFound();
-
-        var role = isResident ? "resident" : "admin";
-        return await GenerateInvoiceAsync(building, targetApt, month, role);
+        var role = isResident ? "resident" : isSuperAdmin ? "superadmin" : "admin";
+        return await GenerateInvoiceAsync(buildingId, targetApartmentId, month, role);
     }
 
-    private async Task<IActionResult> GenerateInvoiceAsync(Building building, Apartment apt,
-        string? month, string role)
+    private async Task<IActionResult> GenerateInvoiceAsync(
+        string buildingId, string apartmentId, string? month, string role)
     {
-        var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
+        var monthKey = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
+        var data = await _invoice.BuildInvoiceDataAsync(
+            buildingId, apartmentId, monthKey, HttpContext.RequestAborted);
+        if (data is null) return NotFound();
 
-        InvoiceData data;
-        try
-        {
-            data = await _invoice.BuildInvoiceDataAsync(
-                building, apt, mk, HttpContext.RequestAborted);
-        }
-        catch (ArgumentException)
-        {
-            return BadRequest("Invalid invoice month.");
-        }
         var pdfBytes = _pdf.Generate(data);
-
-        // تسجيل في جدول الـ Audit مباشرة (من غير ما نحفظ العمارة كلها في طلب GET)
         await _audit.LogAsync(
             action: "invoice_download",
-            buildingId: building.Id,
-            apartmentId: apt.Id,
+            buildingId: data.Building.Id,
+            apartmentId: data.Apt.Id,
             userId: User.FindFirstValue(ClaimTypes.NameIdentifier),
             userRole: role,
-            metadata: new { aptNumber = apt.Number, invoiceNo = data.InvoiceNo, actor = User.Identity?.Name ?? role },
+            metadata: new
+            {
+                aptNumber = data.Apt.Number,
+                invoiceNo = data.InvoiceNo,
+                monthKey,
+                actor = User.Identity?.Name ?? role
+            },
             severity: "info");
 
-        var fileName = $"invoice-{building.BuildingNumber}-apt-{apt.Number}-{mk}.pdf";
+        var fileName = $"invoice-{data.Building.BuildingNumber}-apt-{data.Apt.Number}-{monthKey}.pdf";
         return File(pdfBytes, "application/pdf", fileName);
     }
 }
