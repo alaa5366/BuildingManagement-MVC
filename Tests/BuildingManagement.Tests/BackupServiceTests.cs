@@ -385,6 +385,51 @@ public class BackupServiceTests
     // ================================================================
 
     [Fact]
+    [Fact]
+    public async Task SavedWhatsAppTemplates_BackupAndRestore_RestoresTemplateByStableGuid()
+    {
+        var templateId = Guid.NewGuid();
+        _db.SavedWhatsAppTemplates.Add(new SavedWhatsAppTemplateEntity
+        {
+            Id = templateId,
+            BuildingId = "backup-template-building",
+            Name = "Emergency notice",
+            Message = "Please contact building management.",
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+
+        var (bytes, backup) = await _service.CreateBackupAsync(
+            new() { "savedWhatsAppTemplates" }, "backup-template-test");
+
+        Assert.True(backup.Success, string.Join("; ", backup.Errors));
+        Assert.Equal(1, backup.TotalDocuments);
+
+        _db.SavedWhatsAppTemplates.Remove(
+            await _db.SavedWhatsAppTemplates.SingleAsync(x => x.Id == templateId));
+        await _db.SaveChangesAsync();
+
+        var tempPath = Path.Combine(Path.GetTempPath(), $"restore-{Guid.NewGuid():N}.zip");
+        await File.WriteAllBytesAsync(tempPath, bytes);
+        try
+        {
+            var restored = await _service.RestoreAsync(
+                tempPath, new() { "savedWhatsAppTemplates" }, overwrite: false, "backup-template-test");
+
+            Assert.True(restored.Success, string.Join("; ", restored.Errors));
+            var entity = await _db.SavedWhatsAppTemplates.SingleAsync(x => x.Id == templateId);
+            Assert.Equal("Emergency notice", entity.Name);
+            Assert.Equal("Please contact building management.", entity.Message);
+            Assert.Equal("backup-template-building", entity.BuildingId);
+        }
+        finally
+        {
+            if (File.Exists(tempPath)) File.Delete(tempPath);
+        }
+    }
+
     public void GetKnownCollections_ReturnsAllKnownTables()
     {
         var collections = BackupService.GetKnownCollections();
@@ -393,6 +438,7 @@ public class BackupServiceTests
         Assert.Contains("users", collections.Keys);
         Assert.Contains("residents", collections.Keys);
         Assert.Contains("auditLog", collections.Keys);
+        Assert.Contains("savedWhatsAppTemplates", collections.Keys);
     }
 
     [Fact]
