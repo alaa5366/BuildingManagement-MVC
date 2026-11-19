@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BuildingManagementMvc.Services;
 
-/// <summary>Authenticates resident accounts against the target identity tables.</summary>
+/// <summary>Authenticates resident, admin, and allow-listed SuperAdmin accounts against target identity tables.</summary>
 public sealed class IdentityAccountAuthenticationService
 {
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
@@ -326,7 +326,6 @@ public sealed class IdentityAccountAuthenticationService
     }
 
 
-    /// <summary>Authenticates a target-schema admin by the person's primary mobile, PIN, and selected building scope.</summary>
     /// <summary>Authenticates an allow-listed SuperAdmin against the target identity schema.</summary>
     public async Task<AuthResult> AuthenticateSuperAdminAsync(
         string email, string password, CancellationToken cancellationToken = default)
@@ -417,14 +416,18 @@ public sealed class IdentityAccountAuthenticationService
         }
 
         var now = DateTime.UtcNow;
-        var activeCredentialExists = await db.UserCredentials.AnyAsync(item =>
-            item.AccountId == match.Account.AccountId && item.CredentialType == 0
-            && item.RevokedAtUtc == null && (item.ExpiresAtUtc == null || item.ExpiresAtUtc > now),
-            cancellationToken);
-        if (activeCredentialExists)
+        var activeCredentials = await db.UserCredentials.AsNoTracking()
+            .Where(item => item.AccountId == match.Account.AccountId && item.CredentialType == 0
+                && item.RevokedAtUtc == null && (item.ExpiresAtUtc == null || item.ExpiresAtUtc > now))
+            .Select(item => new { item.CredentialHash, item.HashAlgorithm })
+            .ToListAsync(cancellationToken);
+        if (activeCredentials.Count > 0)
         {
+            var alreadyConfiguredWithSuppliedPassword = activeCredentials.Any(item =>
+                (item.HashAlgorithm == "BCrypt.Net-Next" || item.HashAlgorithm == "bcrypt-v1")
+                && _hasher.Verify(password, item.CredentialHash));
             await transaction.RollbackAsync(cancellationToken);
-            return false;
+            return alreadyConfiguredWithSuppliedPassword;
         }
 
         var role = await db.RoleDefinitions.SingleOrDefaultAsync(
