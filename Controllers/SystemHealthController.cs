@@ -32,7 +32,10 @@ public sealed class SystemHealthController : Controller
         var report = await _healthChecks.CheckHealthAsync(cancellationToken: cancellationToken);
         using var process = Process.GetCurrentProcess();
         var handleCount = 0;
+        var threadCount = 0;
         try { handleCount = process.HandleCount; }
+        catch (Exception ex) when (ex is PlatformNotSupportedException or InvalidOperationException) { }
+        try { threadCount = process.Threads.Count; }
         catch (Exception ex) when (ex is PlatformNotSupportedException or InvalidOperationException) { }
         var model = new SystemHealthViewModel
         {
@@ -43,7 +46,7 @@ public sealed class SystemHealthController : Controller
             WorkingSetBytes = process.WorkingSet64,
             PrivateMemoryBytes = process.PrivateMemorySize64,
             ManagedMemoryBytes = GC.GetTotalMemory(forceFullCollection: false),
-            ThreadCount = process.Threads.Count,
+            ThreadCount = threadCount,
             HandleCount = handleCount,
             Checks = report.Entries.OrderBy(x => x.Key, StringComparer.Ordinal)
                 .Select(x => new SystemHealthCheckViewModel
