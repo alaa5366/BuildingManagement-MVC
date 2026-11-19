@@ -183,13 +183,33 @@ public class BackupService
         var sw = Stopwatch.StartNew();
         var result = new BackupResult();
 
+        var requestedTables = selectedTables?
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .ToList() ?? new List<string>();
+        var unknownTables = requestedTables
+            .Where(name => !KnownTables.ContainsKey(name))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (unknownTables.Count > 0)
+        {
+            result.Errors.Add($"Unknown backup collections: {string.Join(", ", unknownTables)}");
+            result.Duration = sw.Elapsed;
+            return (Array.Empty<byte>(), result);
+        }
+
+        requestedTables = requestedTables.Distinct(StringComparer.Ordinal).ToList();
+        if (requestedTables.Count == 0)
+        {
+            result.Errors.Add("At least one valid backup collection must be selected.");
+            result.Duration = sw.Elapsed;
+            return (Array.Empty<byte>(), result);
+        }
+
         using var ms = new MemoryStream();
         using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, true))
         {
-            foreach (var tableName in selectedTables)
+            foreach (var tableName in requestedTables)
             {
-                // تجاهل أي collection غير معروفة
-                if (!KnownTables.ContainsKey(tableName)) continue;
 
                 try
                 {
@@ -231,7 +251,10 @@ By: {userId}
         }
 
         sw.Stop();
-        result.Success = true;
+        result.Success = result.Errors.Count == 0 &&
+            result.Collections.Count == requestedTables.Count;
+        if (!result.Success && result.Errors.Count == 0)
+            result.Errors.Add("The backup archive is incomplete.");
         result.TotalCollections = result.Collections.Count;
         result.FileSize = ms.Length;
         result.Duration = sw.Elapsed;
@@ -246,7 +269,9 @@ By: {userId}
             {
                 collections = result.Collections,
                 totalDocs = result.TotalDocuments,
-                fileSize = result.FileSize
+                fileSize = result.FileSize,
+                success = result.Success,
+                errors = result.Errors.Count
             },
             severity: "warning");
 
