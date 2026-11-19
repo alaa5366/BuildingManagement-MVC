@@ -89,7 +89,7 @@ public class InvoicePdfService
                             c.Item().Row(r =>
                             {
                                 r.RelativeItem().Text(Loc.T("Monthly_Fee_Due"));
-                                r.RelativeItem().AlignRight().Text((d.MonthFee >= 0 ? Loc.T("N_EGP_4", d.MonthFee) : Loc.T("N_EGP_2", d.MonthFee))).FontColor("#A0432A");
+                                r.RelativeItem().AlignRight().Text((d.MonthFee >= 0 ? Loc.T("N_EGP_4", d.MonthFee) : Loc.T("N_EGP_2", d.MonthFee))).FontColor(d.MonthFee >= 0 ? "#A0432A" : "#2E7D5B");
                             });
                         }
 
