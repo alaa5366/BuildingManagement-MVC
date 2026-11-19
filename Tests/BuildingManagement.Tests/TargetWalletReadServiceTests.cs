@@ -197,6 +197,20 @@ public sealed class TargetWalletReadServiceTests
                     ApartmentId = "A2", Amount = 25m, CurrencyCode = "EGP",
                     Status = PaymentDepositStatus.Pending, SubmittedAtUtc = now.AddDays(-2),
                     Note = "Older pending", SourceSystem = "application"
+                },
+                new PaymentDepositEntity
+                {
+                    PaymentDepositId = Guid.NewGuid(), PeriodId = currentPeriodId, BuildingId = "B1",
+                    ApartmentId = "A1", Amount = 40m, CurrencyCode = "EGP",
+                    Status = PaymentDepositStatus.Confirmed, SubmittedAtUtc = now,
+                    ConfirmedAtUtc = now, SourceSystem = "application"
+                },
+                new PaymentDepositEntity
+                {
+                    PaymentDepositId = Guid.NewGuid(), PeriodId = currentPeriodId, BuildingId = "B1",
+                    ApartmentId = "A1", Amount = 90m, CurrencyCode = "EGP",
+                    Status = PaymentDepositStatus.Reversed, SubmittedAtUtc = now,
+                    ConfirmedAtUtc = now, ReversedAtUtc = now, SourceSystem = "application"
                 });
             await seed.SaveChangesAsync();
         }
@@ -211,6 +225,7 @@ public sealed class TargetWalletReadServiceTests
         Assert.Equal("A2", pending.ApartmentId);
         Assert.Equal("2026-11", pending.MonthKey);
         Assert.Equal(75m, pending.Deposit.Amount);
+        Assert.Equal(40m, snapshot.Totals.Collected);
     }
 
     [Fact]
