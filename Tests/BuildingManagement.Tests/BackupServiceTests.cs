@@ -540,6 +540,11 @@ public class BackupServiceTests
             preview.RestoreSessionId!, selected, overwrite: true, "backup-notification-test");
 
         Assert.True(restored.Success, string.Join("; ", restored.Errors));
+
+        // Restore runs in a separate DbContext. Clear the arrange context's identity map
+        // so assertions read the persisted values instead of already-tracked stale entities.
+        _db.ChangeTracker.Clear();
+
         var restoredMessage = await _db.NotificationMessages.SingleAsync(x => x.MessageId == messageId);
         Assert.Equal("Original title", restoredMessage.Title);
         Assert.Equal("Original body", restoredMessage.Body);
