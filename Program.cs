@@ -232,13 +232,11 @@ builder.Services.AddScoped<TargetQrService>();
 
     builder.Services.Configure<RequestLocalizationOptions>(options =>
     {
-        var supportedCultures = new[]
-        {
-            new CultureInfo("ar"),
-            new CultureInfo("en"),
-            new CultureInfo("fr"),
-            new CultureInfo("de")
-        };
+        // Enabled languages are selected from the database; register valid .NET cultures so adding a language does not require redeployment.
+        var supportedCultures = CultureInfo.GetCultures(CultureTypes.SpecificCultures)
+            .Where(c => !string.IsNullOrWhiteSpace(c.Name))
+            .DistinctBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
 
         options.DefaultRequestCulture = new RequestCulture("ar");
         options.SupportedCultures = supportedCultures;
