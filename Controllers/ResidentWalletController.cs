@@ -21,13 +21,15 @@ public class ResidentWalletController : Controller
     private readonly BuildingsService _buildings;
     private readonly WalletService _wallet;
     private readonly AuditLogService _audit;
+    private readonly TargetWalletReadService _targetWallet;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ResidentWalletController"/> class.
     /// </summary>
-    public ResidentWalletController(BuildingsService buildings, WalletService wallet, AuditLogService audit)
+    public ResidentWalletController(BuildingsService buildings, WalletService wallet, AuditLogService audit,
+        TargetWalletReadService targetWallet)
     {
-        _buildings = buildings; _wallet = wallet; _audit = audit;
+        _buildings = buildings; _wallet = wallet; _audit = audit; _targetWallet = targetWallet;
     }
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
@@ -58,7 +60,15 @@ public class ResidentWalletController : Controller
 
         var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
 
-        var vm = BuildViewModel(building, apt, mk, allMonths, fromMonth, toMonth,
+        var statementFrom = allMonths ? fromMonth : mk;
+        var statementTo = allMonths ? toMonth : mk;
+        var snapshot = await _targetWallet.GetApartmentAsync(BuildingId, ApartmentId,
+            statementFrom, statementTo, cancellationToken: HttpContext.RequestAborted);
+        var currentSnapshot = allMonths
+            ? await _targetWallet.GetApartmentAsync(BuildingId, ApartmentId, mk, mk,
+                cancellationToken: HttpContext.RequestAborted)
+            : snapshot;
+        var vm = BuildTargetViewModel(snapshot, mk, allMonths, fromMonth, toMonth,
             typeFilter, statusFilter, page, pageSize);
 
         // ✅ AJAX — ارجع Partial بس
@@ -75,7 +85,7 @@ public class ResidentWalletController : Controller
         ViewBag.ToMonth = toMonth;
         ViewBag.TypeFilter = typeFilter;
         ViewBag.StatusFilter = statusFilter;
-        ViewBag.Balance = _wallet.ComputeWalletBalance(building, apt.Id, mk);
+        ViewBag.Balance = currentSnapshot.Balance;
         ViewBag.Transactions = vm.Statement.Transactions;
         ViewBag.PendingDeposits = vm.PendingDeposits;
         ViewBag.RouteValues = vm.Statement.RouteValues;
@@ -158,6 +168,54 @@ public class ResidentWalletController : Controller
         };
 
         return (statementVm, pagedPending);
+    }
+
+    /// <summary>Builds the resident statement exclusively from the canonical ledger projection.</summary>
+    private static (StatementPartialViewModels Statement, PagedResult<Deposit> PendingDeposits) BuildTargetViewModel(
+        TargetWalletSnapshot snapshot, string month, bool allMonths,
+        string? fromMonth, string? toMonth, string? typeFilter, string? statusFilter,
+        int page, int pageSize)
+    {
+        var transactions = snapshot.Transactions.AsEnumerable();
+        var selectedTypes = (typeFilter ?? "all")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(value => value.Trim().ToLowerInvariant())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (selectedTypes.Count > 0 && !selectedTypes.Contains("all"))
+        {
+            transactions = transactions.Where(item =>
+                (selectedTypes.Contains("deposits") && item.Type == "deposit") ||
+                (selectedTypes.Contains("expenses") && item.Type == "expense") ||
+                (selectedTypes.Contains("revenues") && item.Type == "revenue") ||
+                (selectedTypes.Contains("carry_over") && item.Type == "carry_over") ||
+                (selectedTypes.Contains("adjustments") && item.Type == "adjustment") ||
+                (selectedTypes.Contains("monthly_fee") && item.Type is "monthly_fee_due" or "monthly_fee_credit") ||
+                (selectedTypes.Contains("success") && item.Status == "confirmed"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(statusFilter))
+            transactions = transactions.Where(item =>
+                string.Equals(item.Status, statusFilter, StringComparison.OrdinalIgnoreCase));
+
+        var statement = new StatementPartialViewModels
+        {
+            Transactions = PagedResult<WalletTransactionVm>.Create(
+                transactions.OrderByDescending(item => item.CreatedAt).ToList(), page, pageSize),
+            AllMonths = allMonths,
+            RouteValues = new Dictionary<string, string?>
+            {
+                ["month"] = month,
+                ["allMonths"] = allMonths.ToString().ToLowerInvariant(),
+                ["fromMonth"] = fromMonth,
+                ["toMonth"] = toMonth,
+                ["typeFilter"] = typeFilter,
+                ["statusFilter"] = statusFilter,
+                ["pageSize"] = pageSize.ToString()
+            }
+        };
+
+        return (statement, PagedResult<Deposit>.Create(snapshot.PendingDeposits.ToList(), 1, pageSize));
     }
 
     // ============================================================
