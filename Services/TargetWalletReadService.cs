@@ -90,6 +90,39 @@ public sealed class TargetWalletReadService
             CreatedAt = entry.EffectiveAtUtc.ToString("O")
         }).ToList();
 
+        // Cancelled submissions do not create ledger entries, but remain part of
+        // the resident's financial history and must still be visible in statements.
+        var cancelled = await db.PaymentDeposits.AsNoTracking()
+            .Where(d => d.BuildingId == buildingId && d.ApartmentId == apartmentId
+                && periodIds.Contains(d.PeriodId) && d.Status == PaymentDepositStatus.Cancelled
+                && d.CurrencyCode == currencyCode)
+            .OrderByDescending(d => d.CancelledAtUtc)
+            .Select(d => new
+            {
+                d.PaymentDepositId,
+                d.Amount,
+                d.ResolutionReason,
+                OccurredAtUtc = d.CancelledAtUtc ?? d.SubmittedAtUtc
+            })
+            .ToListAsync(cancellationToken);
+
+        transactions.AddRange(cancelled.Select(deposit => new WalletTransactionVm
+        {
+            Type = "deposit",
+            Status = "cancelled",
+            Id = deposit.PaymentDepositId.ToString("D"),
+            Amount = deposit.Amount,
+            Note = string.IsNullOrWhiteSpace(deposit.ResolutionReason)
+                ? "Deposit cancelled"
+                : deposit.ResolutionReason,
+            CreatedAt = deposit.OccurredAtUtc.ToString("O")
+        }));
+
+        transactions = transactions
+            .OrderByDescending(item => item.CreatedAt, StringComparer.Ordinal)
+            .ThenByDescending(item => item.Id, StringComparer.Ordinal)
+            .ToList();
+
         return new TargetWalletSnapshot(
             posted.Sum(x => x.SignedAmount),
             transactions,
