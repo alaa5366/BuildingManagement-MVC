@@ -354,6 +354,11 @@ public class SessionRevalidator
                 where assignment.AccountId == accountId && assignment.RoleKey == "resident" && role.IsActive
                     && assignment.RevokedAtUtc == null && assignment.ValidFromUtc <= now
                     && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
+                    && (
+                        (assignment.ScopeType == 1 && assignment.ScopeBuildingId == buildingId
+                            && assignment.ScopeApartmentId == null) ||
+                        (assignment.ScopeType == 2 && assignment.ScopeBuildingId == buildingId
+                            && assignment.ScopeApartmentId == apartmentId))
                 select assignment.RoleAssignmentId).AnyAsync();
             if (!activeResidentRole) return new Result(false, null);
 
