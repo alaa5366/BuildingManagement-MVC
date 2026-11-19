@@ -45,8 +45,8 @@ public sealed class PresenceServiceTests
             .ReturnsAsync(() => new AppDbContext(options));
         var service = new PresenceService(factory.Object, NullLogger<PresenceService>.Instance);
 
-        await service.HeartbeatAsync("uid-1", "", "");
-        await service.HeartbeatAsync("uid-2", "", "");
+        await service.HeartbeatAsync("uid-1", "", "building-1");
+        await service.HeartbeatAsync("uid-2", "", "building-1");
 
         Assert.Equal(2, await service.GetOnlineCountAsync("building-1"));
     }
