@@ -382,3 +382,75 @@ body.no-sidebar .auth-content .btn { min-height: 42px; }
 }
 .content-wrapper .qa-btn:hover { border-color: rgba(23,107,91,.35); color: var(--ui-primary); box-shadow: var(--ui-shadow); }
 .content-wrapper .pin-value { background: var(--ui-primary); border-radius: 7px; }
+
+
+/* Polls, maintenance, notifications and QR feature screens */
+.content-wrapper .ui-panel {
+  border: 1px solid var(--ui-border); border-radius: 15px;
+  background: #fff; box-shadow: var(--ui-shadow);
+}
+.content-wrapper .ui-form-panel {
+  position: relative; overflow: hidden;
+}
+.content-wrapper .ui-form-panel > h5 {
+  display: flex; align-items: center; gap: 9px;
+  margin: 0 0 16px; padding-bottom: 12px;
+  border-bottom: 1px solid var(--ui-border);
+}
+.content-wrapper .ui-record-card,
+.content-wrapper .ui-poll-card,
+.content-wrapper .ui-notification-card,
+.content-wrapper .ui-qr-card {
+  border: 1px solid var(--ui-border); border-radius: 14px;
+  background: #fff; box-shadow: 0 3px 13px rgba(24,45,54,.035);
+  transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+.content-wrapper .ui-record-card:hover,
+.content-wrapper .ui-poll-card:hover,
+.content-wrapper .ui-notification-card:hover,
+.content-wrapper .ui-qr-card:hover {
+  border-color: #d5e5df; box-shadow: var(--ui-shadow);
+}
+.content-wrapper .ui-record-card .fw-bold,
+.content-wrapper .ui-poll-card h5,
+.content-wrapper .ui-notification-card .fw-bold { color: var(--ui-text); }
+.content-wrapper .ui-stat-tile {
+  height: 100%; min-height: 88px; border: 1px solid var(--ui-border);
+  border-radius: 13px; background: #fff; box-shadow: var(--ui-shadow);
+}
+.content-wrapper .ui-stat-tile .fw-bold {
+  color: var(--ui-primary); font-size: 1.35rem; font-variant-numeric: tabular-nums;
+}
+.content-wrapper .ui-poll-card h5 { margin-bottom: 8px; line-height: 1.5; }
+.content-wrapper .ui-poll-card .progress { height: 9px !important; margin-top: 6px; }
+.content-wrapper .ui-poll-card .progress-bar { background-color: var(--ui-primary) !important; }
+.content-wrapper .ui-poll-card form { margin-top: 7px; }
+.content-wrapper .ui-poll-card form .btn { min-width: 118px; }
+.content-wrapper .ui-notification-card {
+  position: relative; align-items: flex-start;
+}
+.content-wrapper .ui-notification-card.border-start {
+  border-inline-start: 3px solid var(--ui-accent) !important;
+  border-inline-end: 1px solid var(--ui-border) !important;
+}
+.content-wrapper .ui-notification-card > div:first-child {
+  display: grid; place-items: center; flex: 0 0 42px;
+  width: 42px; height: 42px; border-radius: 12px;
+  background: var(--ui-primary-soft); font-size: 1.2rem !important;
+}
+.content-wrapper .ui-notification-card .flex-grow-1 { min-width: 0; }
+.content-wrapper .ui-notification-card .text-muted { overflow-wrap: anywhere; }
+.content-wrapper .ui-qr-card { height: 100%; padding: 18px !important; }
+.content-wrapper .ui-qr-card img { display: block; max-width: 100%; height: auto; margin-inline: auto; }
+.content-wrapper .ui-qr-card .form-select { min-width: 0; }
+.content-wrapper .ui-qr-card .btn { white-space: nowrap; }
+.content-wrapper .ui-record-card .badge,
+.content-wrapper .ui-poll-card .badge,
+.content-wrapper .ui-notification-card .badge { vertical-align: middle; }
+@media (max-width: 767.98px) {
+  .content-wrapper .ui-notification-card { gap: 10px !important; }
+  .content-wrapper .ui-notification-card > form { flex: 0 0 100%; margin-inline-start: 52px; }
+  .content-wrapper .ui-qr-card form { flex-wrap: wrap; }
+  .content-wrapper .ui-qr-card form .form-select { flex: 1 1 100%; }
+  .content-wrapper .ui-qr-card form .btn { flex: 1 1 100%; }
+}
