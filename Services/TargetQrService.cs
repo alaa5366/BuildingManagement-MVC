@@ -32,6 +32,7 @@ public sealed class TargetQrService
                 ApartmentId = x.Id,
                 ApartmentNumber = x.Number,
                 Owner = x.Owner,
+                Phone = x.Phone,
                 FloorLabel = x.Floor == null ? "" : x.Floor.Label,
                 FloorOrder = x.Floor == null ? 0 : x.Floor.SortOrder
             })
@@ -61,6 +62,7 @@ public sealed class TargetQrService
             ApartmentId = x.Id,
             ApartmentNumber = x.Number,
             Owner = x.Owner,
+            Phone = x.Phone,
             FloorLabel = x.Floor == null ? "" : x.Floor.Label,
             FloorOrder = x.Floor == null ? 0 : x.Floor.SortOrder
         }).FirstOrDefaultAsync(cancellationToken);
