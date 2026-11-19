@@ -63,7 +63,9 @@ public class ResidentWalletController : Controller
         var apt = building.Apartments.FirstOrDefault(a => a.Id == ApartmentId);
         if (apt == null) return NotFound();
 
-        var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
+        var mk = string.IsNullOrWhiteSpace(month)
+            ? await _targetWallet.GetCurrentPeriodKeyAsync(BuildingId, cancellationToken: HttpContext.RequestAborted)
+            : month;
 
         var vm = await BuildViewModelAsync(building, apt, mk, allMonths, fromMonth, toMonth,
             typeFilter, statusFilter, page, pageSize);
@@ -178,7 +180,9 @@ public class ResidentWalletController : Controller
         var apt = building.Apartments.FirstOrDefault(a => a.Id == ApartmentId);
         if (apt == null) return NotFound();
 
-        var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
+        var mk = string.IsNullOrWhiteSpace(month)
+            ? await _targetWallet.GetCurrentPeriodKeyAsync(BuildingId, cancellationToken: HttpContext.RequestAborted)
+            : month;
         if (commandId == Guid.Empty)
         {
             TempData["Error"] = "انتهت صلاحية نموذج الإيداع. حدّث الصفحة وحاول مرة أخرى.";
