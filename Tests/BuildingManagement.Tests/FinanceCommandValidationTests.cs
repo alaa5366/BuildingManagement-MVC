@@ -29,11 +29,12 @@ public class FinanceCommandValidationTests
         => Assert.Throws<ArgumentException>(() => FinanceCommandValidation.ResolveTransactionDate(date, month));
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(1.001)]
-    public void AddExpense_RejectsInvalidAmount(decimal amount)
+    [InlineData("0")]
+    [InlineData("-1")]
+    [InlineData("1.001")]
+    public void AddExpense_RejectsInvalidAmount(string rawAmount)
     {
+        var amount = decimal.Parse(rawAmount, System.Globalization.CultureInfo.InvariantCulture);
         var building = CreateBuilding();
         var service = new ExpensesService(new WalletService());
         Assert.Throws<ArgumentOutOfRangeException>(() => service.AddExpense(building, "expense-1", "test", amount, "2026-11-19", "2026-11"));
@@ -82,10 +83,11 @@ public class FinanceCommandValidationTests
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(1.001)]
-    public void AddWalletAdjustment_RejectsZeroOrSubCentAmount(decimal amount)
+    [InlineData("0")]
+    [InlineData("1.001")]
+    public void AddWalletAdjustment_RejectsZeroOrSubCentAmount(string rawAmount)
     {
+        var amount = decimal.Parse(rawAmount, System.Globalization.CultureInfo.InvariantCulture);
         var service = new WalletService();
         var building = CreateBuilding();
         Assert.Throws<ArgumentOutOfRangeException>(() => service.AddWalletAdjustment(building, "apt-1", amount, "reason", "2026-11", "admin"));
