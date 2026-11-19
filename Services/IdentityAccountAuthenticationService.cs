@@ -53,21 +53,6 @@ public sealed class IdentityAccountAuthenticationService
             return AuthResult.Fail("wrong-credentials");
 
         var now = DateTime.UtcNow;
-        var roleExists = await (
-            from assignment in db.UserRoleAssignments.AsNoTracking()
-            join role in db.RoleDefinitions.AsNoTracking() on assignment.RoleKey equals role.RoleKey
-            where assignment.AccountId == match.Account.AccountId
-                  && assignment.RoleKey == "resident"
-                  && role.IsActive
-                  && assignment.ValidFromUtc <= now
-                  && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
-                  && assignment.RevokedAtUtc == null
-            select assignment.RoleAssignmentId)
-            .AnyAsync(cancellationToken);
-        // This service owns only the resident sign-in path for now. Let the caller
-        // continue its explicitly retained legacy admin/super-admin path when the
-        // matched target account has no active resident assignment.
-        if (!roleExists) return null;
 
         // Do not let a newer expired/revoked credential shadow an older still-valid
         // credential. Credential material is opaque: the submitted value is never trimmed.
@@ -99,6 +84,27 @@ public sealed class IdentityAccountAuthenticationService
             .FirstOrDefaultAsync(cancellationToken);
 
         if (occupancy == null)
+            return AuthResult.Fail("wrong-credentials");
+
+        var roleExists = await (
+            from assignment in db.UserRoleAssignments.AsNoTracking()
+            join role in db.RoleDefinitions.AsNoTracking() on assignment.RoleKey equals role.RoleKey
+            where assignment.AccountId == match.Account.AccountId
+                  && assignment.RoleKey == "resident"
+                  && role.IsActive
+                  && assignment.ValidFromUtc <= now
+                  && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
+                  && assignment.RevokedAtUtc == null
+                  && (
+                      (assignment.ScopeType == 1 && assignment.ScopeBuildingId == occupancy.BuildingId
+                          && assignment.ScopeApartmentId == null) ||
+                      (assignment.ScopeType == 2 && assignment.ScopeBuildingId == occupancy.BuildingId
+                          && assignment.ScopeApartmentId == occupancy.ApartmentId))
+            select assignment.RoleAssignmentId)
+            .AnyAsync(cancellationToken);
+        // Only a building- or apartment-scoped resident assignment can authorize
+        // the resolved occupancy. Unscoped/system/personal grants are not resident access.
+        if (!roleExists)
             return AuthResult.Fail("wrong-credentials");
 
         match.Account.LastLoginAtUtc = now;
