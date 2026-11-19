@@ -236,7 +236,8 @@ public class AdminAptsController : Controller
 
         _notify.NotifyResidentApartmentReopened(building, apt, null);
         await TryNotifyResidentAsync(apt.Id, "تم إعادة تفعيل شقتك",
-            $"تم إعادة تفعيل شقتك رقم {apt.Number} في {building.Name}.");
+            $"تم إعادة تفعيل شقتك رقم {apt.Number} في {building.Name}.",
+            "apartment_reopened", "🔓");
 
         await _buildings.SaveFullAsync(building);
 
@@ -294,7 +295,8 @@ public class AdminAptsController : Controller
 
         _notify.NotifyResidentApartmentClosed(building, apt, reason);
         await TryNotifyResidentAsync(apt.Id, "تم إغلاق شقتك",
-            $"تم إغلاق شقتك رقم {apt.Number} في {building.Name}. {reason}".Trim());
+            $"تم إغلاق شقتك رقم {apt.Number} في {building.Name}. {reason}".Trim(),
+            "apartment_closed", "🔒");
 
         await _buildings.SaveFullAsync(building);
 
@@ -341,7 +343,8 @@ public class AdminAptsController : Controller
 
         _notify.NotifyResidentApartmentDisabled(building, apt, reason);
         await TryNotifyResidentAsync(apt.Id, "تم تعطيل حساب الشقة",
-            $"تم تعطيل الشقة رقم {apt.Number} في {building.Name}. {reason}".Trim());
+            $"تم تعطيل الشقة رقم {apt.Number} في {building.Name}. {reason}".Trim(),
+            "apartment_disabled", "🚫");
 
         await _buildings.SaveFullAsync(building);
 
@@ -388,7 +391,8 @@ public class AdminAptsController : Controller
 
         _notify.NotifyResidentApartmentEnabled(building, apt, reason);
         await TryNotifyResidentAsync(apt.Id, "تم إعادة تفعيل حساب الشقة",
-            $"تم إعادة تفعيل الشقة رقم {apt.Number} في {building.Name}. {reason}".Trim());
+            $"تم إعادة تفعيل الشقة رقم {apt.Number} في {building.Name}. {reason}".Trim(),
+            "apartment_enabled", "✅");
 
         await _buildings.SaveFullAsync(building);
 
@@ -502,12 +506,12 @@ public class AdminAptsController : Controller
         return RedirectToAction(nameof(Edit), new { aptId });
     }
 
-    private async Task TryNotifyResidentAsync(string apartmentId, string title, string body)
+    private async Task TryNotifyResidentAsync(string apartmentId, string title, string body, string type, string icon)
     {
         try
         {
             await _targetNotifications.CreateResidentDepositNoticeAsync(
-                BuildingId, apartmentId, title, body, HttpContext.RequestAborted);
+                BuildingId, apartmentId, title, body, HttpContext.RequestAborted, type, icon);
         }
         catch (Exception ex)
         {
