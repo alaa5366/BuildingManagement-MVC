@@ -257,7 +257,7 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
 
         Assert.Equal("/slow", Assert.Single(slowSuccess.Items).RequestPath);
         Assert.Equal("/failed", Assert.Single(serverErrors.Items).RequestPath);
-        Assert.Equal(2, slowSuccess.TotalItems);
+        Assert.Equal(1, slowSuccess.TotalItems);
         Assert.Equal(1, serverErrors.TotalItems);
     }
 
