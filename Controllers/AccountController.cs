@@ -462,6 +462,7 @@ public class AccountController : Controller
         return RedirectToAction(nameof(ChangePin));
     }
 
+    /// <summary>Changes the PIN for the authenticated account.</summary>
     [HttpGet]
     [AllowAnonymous]
     public IActionResult ChangePin()
@@ -471,6 +472,7 @@ public class AccountController : Controller
         return View(new ResidentPinChangeVm());
     }
 
+    /// <summary>Changes the PIN for the authenticated account.</summary>
     [HttpPost]
     [AllowAnonymous]
     [EnableRateLimiting("login")]
