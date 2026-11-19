@@ -52,6 +52,14 @@ public class SqlAuthService
     }
 
     private static bool VerifySecret(string? input, string? stored) => SecretVerifier.Verify(input, stored);
+    /// <summary>Builds a non-reversible session version for legacy SuperAdmin credentials and status.</summary>
+    public static string CreateSuperAdminSecurityStamp(string? credentialHash, DateTime? updatedAt, bool isActive, bool isDisabled)
+    {
+        var material = string.Join("|", credentialHash ?? "", updatedAt?.Ticks ?? 0, isActive, isDisabled);
+        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(material)));
+    }
+
 
     /// <summary>
     /// Determines whether an e-mail address is in the configured super-admin list.
@@ -274,8 +282,8 @@ public class SqlAuthService
                 ? "Super Admin" : superAdmin.Name,
             buildingIds: new List<string>(),
             permissions: superAdmin.Permissions.Select(p => p.Permission).Distinct(StringComparer.Ordinal).ToList());
-        result.SecurityStamp = (superAdmin.UpdatedAt ?? superAdmin.CreatedAt ?? DateTime.MinValue)
-            .Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        result.SecurityStamp = CreateSuperAdminSecurityStamp(
+            superAdmin.Pin, superAdmin.UpdatedAt ?? superAdmin.CreatedAt, superAdmin.IsActive, superAdmin.IsDisabled);
         return result;
     }
 
