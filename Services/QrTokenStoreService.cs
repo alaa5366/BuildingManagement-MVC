@@ -84,6 +84,7 @@ public class QrTokenStoreService
         }
     }
 
+    /// <summary>Validates a QR token and atomically marks it as used when valid.</summary>
     public async Task<(bool Allowed, string? Reason, string? Bld, string? Apt)> CheckAndUseTokenAsync(string uid)
     {
         try
