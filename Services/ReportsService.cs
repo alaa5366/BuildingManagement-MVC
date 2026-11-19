@@ -1,77 +1,45 @@
-using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Services;
 
-/// <summary>
-/// Builds financial reports from target financial periods, allocation records and posted ledger entries.
-/// </summary>
+/// <summary>Builds financial reports from target periods, allocation records and posted ledger entries.</summary>
 public sealed class ReportsService
 {
-    private readonly IDbContextFactory<AppDbContext> _factory;
     private readonly TargetWalletReadService _wallet;
     private readonly TargetFinanceReadService _finance;
 
-    public ReportsService(
-        IDbContextFactory<AppDbContext> factory,
-        TargetWalletReadService wallet,
-        TargetFinanceReadService finance)
+    public ReportsService(TargetWalletReadService wallet, TargetFinanceReadService finance)
     {
-        _factory = factory;
         _wallet = wallet;
         _finance = finance;
     }
 
-    private static string[] MonthNamesAr => new[]
-    {
-        Loc.T("January"), Loc.T("February"), Loc.T("March"), Loc.T("April"), Loc.T("May"), Loc.T("June"),
-        Loc.T("July"), Loc.T("August"), Loc.T("September"), Loc.T("October"), Loc.T("November"), Loc.T("December")
-    };
+    private static string[] MonthNamesAr =>
+    [
+        Loc.T("January"), Loc.T("February"), Loc.T("March"), Loc.T("April"),
+        Loc.T("May"), Loc.T("June"), Loc.T("July"), Loc.T("August"),
+        Loc.T("September"), Loc.T("October"), Loc.T("November"), Loc.T("December")
+    ];
 
     public static string MonthLabel(string key)
     {
         var parts = key.Split('-');
-        if (parts.Length != 2 || !int.TryParse(parts[1], out var month) || month < 1 || month > 12)
+        if (parts.Length != 2 || !int.TryParse(parts[1], out var month) || month is < 1 or > 12)
             return key;
         return $"{MonthNamesAr[month - 1]} {parts[0]}";
     }
 
     public static string ShiftMonth(string key, int delta)
     {
-        var parts = key.Split('-');
-        if (parts.Length != 2 || !int.TryParse(parts[0], out var year) ||
-            !int.TryParse(parts[1], out var month) || month is < 1 or > 12)
+        if (!DateOnly.TryParseExact(key + "-01", "yyyy-MM-dd",
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out var date))
             throw new ArgumentException("Month must use yyyy-MM format.", nameof(key));
-
-        var shifted = new DateTime(year, month, 1).AddMonths(delta);
-        return shifted.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
+        return date.AddMonths(delta).ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
     }
 
     public Task<string> GetCurrentPeriodKeyAsync(string buildingId, CancellationToken cancellationToken = default) =>
         _wallet.GetCurrentPeriodKeyAsync(buildingId, cancellationToken: cancellationToken);
-
-    public async Task<string> GetCurrentPeriodKeyAsync(
-        string buildingId,
-        CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(buildingId))
-            throw new ArgumentException("Building is required.", nameof(buildingId));
-
-        var now = DateTime.UtcNow;
-        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
-        var openPeriod = await db.FinancialPeriods.AsNoTracking()
-            .Where(period => period.BuildingId == buildingId &&
-                period.Status == FinancialPeriodStatus.Open &&
-                period.StartsAtUtc <= now && period.EndsAtUtc > now)
-            .Select(period => period.PeriodKey)
-            .SingleOrDefaultAsync(cancellationToken);
-        if (!string.IsNullOrWhiteSpace(openPeriod))
-            return openPeriod;
-
-        var latestPeriod = await _wallet.GetFinancialPeriodKeysAsync(buildingId, cancellationToken);
-        return latestPeriod.LastOrDefault(key => string.CompareOrdinal(key, now.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture)) <= 0)
-            ?? now.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
-    }
 
     public async Task<ReportsVm> BuildReportAsync(
         string buildingId,
@@ -82,9 +50,8 @@ public sealed class ReportsService
         if (string.IsNullOrWhiteSpace(buildingId))
             throw new ArgumentException("Building is required.", nameof(buildingId));
         var building = await _wallet.GetBuildingShellAsync(
-            buildingId, cancellationToken: cancellationToken);
-        if (building is null)
-            throw new KeyNotFoundException("The requested building was not found in the target store.");
+            buildingId, null, cancellationToken)
+            ?? throw new KeyNotFoundException("The requested building was not found in the target store.");
 
         var normalizedRange = range is "all" or "year" or "12m" or "6m" ? range : "6m";
         var allKeys = (await _wallet.GetFinancialPeriodKeysAsync(building.Id, cancellationToken))
@@ -175,19 +142,14 @@ public sealed class ReportsService
     }
 
     public static List<string> GetReportMonths(
-        IReadOnlyList<string> allKeys,
-        string range,
-        string currentMonth) =>
+        IReadOnlyList<string> allKeys, string range, string currentMonth) =>
         SelectMonths(allKeys, range, currentMonth);
 
     private static List<string> SelectMonths(
-        IReadOnlyList<string> allKeys,
-        string range,
-        string currentMonth)
+        IReadOnlyList<string> allKeys, string range, string currentMonth)
     {
         if (range == "all")
             return allKeys.Count > 0 ? allKeys.ToList() : new List<string> { currentMonth };
-
         if (range == "year")
         {
             var year = currentMonth[..4];
