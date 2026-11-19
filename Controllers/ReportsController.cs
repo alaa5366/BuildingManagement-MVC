@@ -19,16 +19,14 @@ namespace BuildingManagementMvc.Controllers;
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ViewReports)]
 public class ReportsController : Controller
 {
-    private readonly TargetWalletReadService _targetWallet;
     private readonly ReportsService _reports;
     private readonly IAuditLogger _audit;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReportsController"/> class.
     /// </summary>
-    public ReportsController(TargetWalletReadService targetWallet, ReportsService reports, IAuditLogger audit)
+    public ReportsController(ReportsService reports, IAuditLogger audit)
     {
-        _targetWallet = targetWallet;
         _reports = reports;
         _audit = audit;
     }
@@ -44,28 +42,21 @@ public class ReportsController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(string? range)
     {
-        var building = await _targetWallet.GetBuildingShellAsync(
-            BuildingId, cancellationToken: HttpContext.RequestAborted);
-        if (building is null) return NotFound();
-
         var selectedRange = string.IsNullOrWhiteSpace(range) ? "6m" : range;
         var currentMonth = await _reports.GetCurrentPeriodKeyAsync(BuildingId, HttpContext.RequestAborted);
         var vm = await _reports.BuildReportAsync(
-            building, selectedRange, currentMonth, HttpContext.RequestAborted);
+            BuildingId, selectedRange, currentMonth, HttpContext.RequestAborted);
         return View(vm);
     }
 
     [HttpGet]
     public async Task<IActionResult> ExportCsv(string? range)
     {
-        var building = await _targetWallet.GetBuildingShellAsync(
-            BuildingId, cancellationToken: HttpContext.RequestAborted);
-        if (building is null) return NotFound();
-
         var selectedRange = string.IsNullOrWhiteSpace(range) ? "6m" : range;
         var currentMonth = await _reports.GetCurrentPeriodKeyAsync(BuildingId, HttpContext.RequestAborted);
         var vm = await _reports.BuildReportAsync(
-            building, selectedRange, currentMonth, HttpContext.RequestAborted);
+            BuildingId, selectedRange, currentMonth, HttpContext.RequestAborted);
+        var building = vm.Building;
 
         var sb = new StringBuilder();
         sb.Append('\uFEFF');
