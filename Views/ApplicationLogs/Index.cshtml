@@ -48,7 +48,7 @@
 
     <nav class="observability-nav" aria-label="Observability sections">
         <a class="active" asp-controller="ApplicationLogs" asp-action="Index"><i class="bi bi-terminal"></i><span>Application Logs</span><small>Runtime events</small></a>
-        <a class="" asp-controller="AuditLog" asp-action="Index"><i class="bi bi-shield-check"></i><span>Audit Trail</span><small>Business activity</small></a>
+        <a asp-controller="AuditLog" asp-action="Index"><i class="bi bi-shield-check"></i><span>Audit Trail</span><small>Business activity</small></a>
         <a asp-controller="SystemHealth" asp-action="Index"><i class="bi bi-heart-pulse"></i><span>System Health</span><small>Readiness checks</small></a>
     </nav>
 
@@ -216,6 +216,7 @@
                     <tr>
                         <th class="log-time-column">@Loc.T("Log_UTC_Time")</th>
                         <th>@Loc.T("Level")</th>
+                        <th>HTTP / Duration</th>
                         <th class="log-message-column">@Loc.T("Message")</th>
                         <th>@Loc.T("Source_Context")</th>
                         <th>@Loc.T("Correlation_ID")</th>
@@ -226,7 +227,7 @@
                 @if (visibleItems.Count == 0)
                 {
                     <tr>
-                        <td colspan="6">
+                        <td colspan="7">
                             <div class="log-empty-state">
                                 <span class="log-empty-icon"><i class="bi bi-search"></i></span>
                                 <strong>@Loc.T("Log_Empty_Title")</strong>
@@ -264,6 +265,16 @@
                                 <small>UTC</small>
                             </td>
                             <td><span class="log-level-badge @levelClass"><i class="bi @levelIcon"></i>@item.Level</span></td>
+                            <td class="log-http-cell">
+                                @if (item.HttpStatusCode.HasValue)
+                                {
+                                    var statusClass = item.HttpStatusCode.Value >= 500 ? "http-status-error" : item.HttpStatusCode.Value >= 400 ? "http-status-warning" : "http-status-ok";
+                                    <span class="http-status @statusClass">@item.HttpStatusCode</span>
+                                    <small class="d-block text-muted">@item.HttpMethod @item.RequestPath</small>
+                                    <strong class="http-duration">@item.DurationMs?.ToString("N2") ms</strong>
+                                }
+                                else { <span class="text-muted">—</span> }
+                            </td>
                             <td class="log-message-cell">
                                 <div>@item.Message</div>
                                 @if (item.HasException)
