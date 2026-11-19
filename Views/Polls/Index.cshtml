@@ -7,12 +7,12 @@
 @model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Poll>
 @{
     ViewData["Title"] = Loc.T("Polls_3");
-    var building = (Building)ViewBag.Building;
-    var openApts = building.Apartments.Count(a => !a.Closed);
+    var buildingName = (string)ViewBag.BuildingName;
+    var openApts = (int)ViewBag.OpenApartmentCount;
     var routeValuesStr = ViewBag.RouteValues as Dictionary<string, string> ?? new();
 }
 
-<h3 class="mb-3">@Loc.T("Polls_Of_N_N", building.Name, Model.TotalItems)</h3>
+<h3 class="mb-3">@Loc.T("Polls_Of_N_N", buildingName, Model.TotalItems)</h3>
 
 <div class="bg-white rounded shadow-sm p-3 mb-3">
     <h5>@Loc.T("New_Poll")</h5>
