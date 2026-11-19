@@ -14,6 +14,7 @@ public sealed class TargetMaintenanceService
 
     public TargetMaintenanceService(IDbContextFactory<AppDbContext> factory) => _factory = factory;
 
+    /// <summary>Gets a paged maintenance list for the requested building and filters.</summary>
     public async Task<PagedResult<MaintenanceRecord>> GetPageAsync(
         string buildingId, int page, int pageSize, CancellationToken cancellationToken = default)
     {
@@ -37,6 +38,7 @@ public sealed class TargetMaintenanceService
         };
     }
 
+    /// <summary>Gets the maintenance history visible to the specified resident.</summary>
     public async Task<List<MaintenanceRecord>> GetResidentLogAsync(
         string buildingId, CancellationToken cancellationToken = default)
     {
@@ -50,6 +52,7 @@ public sealed class TargetMaintenanceService
         return rows.Select(Map).ToList();
     }
 
+    /// <summary>Gets a maintenance record by its identifier.</summary>
     public async Task<MaintenanceRecord?> GetAsync(
         string buildingId, string id, CancellationToken cancellationToken = default)
     {
@@ -61,6 +64,7 @@ public sealed class TargetMaintenanceService
         return row is null ? null : Map(row);
     }
 
+    /// <summary>Creates a maintenance record after validating the submitted data.</summary>
     public async Task<MaintenanceRecord> AddAsync(
         string buildingId, string title, string? description, string date, decimal cost,
         string? vendor, string? status, string createdBy, CancellationToken cancellationToken = default)
@@ -95,6 +99,7 @@ public sealed class TargetMaintenanceService
         return Map(row);
     }
 
+    /// <summary>Updates an existing maintenance record.</summary>
     public async Task<MaintenanceRecord?> UpdateAsync(
         string buildingId, string id, string title, string? description, string date,
         decimal cost, string? vendor, string? status, CancellationToken cancellationToken = default)
@@ -135,6 +140,7 @@ public sealed class TargetMaintenanceService
         return Map(row);
     }
 
+    /// <summary>Deletes the specified maintenance record.</summary>
     public async Task<bool> DeleteAsync(string buildingId, string id, CancellationToken cancellationToken = default)
     {
         ValidateBuildingId(buildingId);
@@ -151,6 +157,7 @@ public sealed class TargetMaintenanceService
         return true;
     }
 
+    /// <summary>Marks a maintenance record as transferred to expenses.</summary>
     public async Task<bool> MarkAddedToExpenseAsync(
         string buildingId, string id, CancellationToken cancellationToken = default)
     {
@@ -168,6 +175,7 @@ public sealed class TargetMaintenanceService
         return true;
     }
 
+    /// <summary>Gets the display name of a building.</summary>
     public async Task<string?> GetBuildingNameAsync(
         string buildingId, CancellationToken cancellationToken = default)
     {
@@ -176,6 +184,7 @@ public sealed class TargetMaintenanceService
             .Select(x => x.Name).FirstOrDefaultAsync(cancellationToken);
     }
 
+    /// <summary>Gets the active apartment identifiers for the specified building.</summary>
     public async Task<List<string>> GetActiveApartmentIdsAsync(
         string buildingId, CancellationToken cancellationToken = default)
     {
