@@ -200,6 +200,7 @@ public class SessionRevalidator
         var actorEmail = user.FindFirst("impersonationActorEmail")?.Value;
         var actorPermissionsJson = user.FindFirst("impersonationActorPermissions")?.Value;
         var actorTwoFactorVerified = user.FindFirst("impersonationActorTwoFactorVerified")?.Value;
+        var actorSecurityStamp = user.FindFirst("impersonationActorSecurityStamp")?.Value;
         var buildingId = user.FindFirst("impersonationTargetBuildingId")?.Value;
         var apartmentId = user.FindFirst("impersonationTargetApartmentId")?.Value;
         var effectiveRole = user.FindFirst(ClaimTypes.Role)?.Value;
@@ -259,14 +260,22 @@ public class SessionRevalidator
             await using var db = await _sqlFactory.CreateDbContextAsync();
             var actorSecurity = await db.Users.AsNoTracking()
                 .Where(u => u.Uid == actorUid && u.Role == actorRole)
-                .Select(u => new { u.Email, u.IsActive, u.IsDisabled, u.TwoFactorEnabled })
+                .Select(u => new { u.Email, u.IsActive, u.IsDisabled, u.TwoFactorEnabled, u.Pin, u.CreatedAt, u.UpdatedAt })
                 .FirstOrDefaultAsync();
 
             actorValid = actorValid && actorSecurity != null
                 && actorSecurity.IsActive && !actorSecurity.IsDisabled;
             if (actorRole == "superadmin")
+            {
+                var currentActorStamp = actorSecurity == null ? null
+                    : SqlAuthService.CreateSuperAdminSecurityStamp(
+                        actorSecurity.Pin, actorSecurity.UpdatedAt ?? actorSecurity.CreatedAt,
+                        actorSecurity.IsActive, actorSecurity.IsDisabled);
                 actorValid = actorValid && actorSecurity?.Email == actorEmail
-                    && SqlAuthService.IsSuperAdminEmail(actorEmail);
+                    && SqlAuthService.IsSuperAdminEmail(actorEmail)
+                    && !string.IsNullOrWhiteSpace(actorSecurityStamp)
+                    && string.Equals(currentActorStamp, actorSecurityStamp, StringComparison.Ordinal);
+            }
             if (actorSecurity?.TwoFactorEnabled == true && actorTwoFactorVerified != "true")
                 actorValid = false;
 
