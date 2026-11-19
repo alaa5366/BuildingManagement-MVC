@@ -9,6 +9,7 @@ namespace BuildingManagementMvc.Services;
 public sealed record LanguageAdminRow(string CultureCode, string EnglishName, string NativeName, string Direction, string? FallbackCulture, string? Flag, bool IsEnabled, bool IsDefault, int SortOrder);
 public sealed record TranslationAdminRow(string Key, string Category, string SourceGroup, string? Description, string Value, bool IsMissing, int LanguageCount);
 public sealed record TranslationGroupRow(string Category, string SourceGroup, int Total, int Missing);
+public sealed record TranslationImportRow(string Key,string Category,string SourceGroup,string Description,string Culture,string Value);
 public sealed record LanguageAdminPage(IReadOnlyList<LanguageAdminRow> Languages, IReadOnlyList<TranslationGroupRow> Groups, IReadOnlyList<TranslationAdminRow> Entries, string? Culture, string? Category, string? Search, bool MissingOnly, int TotalKeys, int MissingCount);
 
 public sealed class LanguageAdministrationService
@@ -209,6 +210,38 @@ public sealed class LanguageAdministrationService
         var lines=new List<string>{"Key,Category,SourceGroup,Description,Culture,Value"};
         lines.AddRange(rows.Select(x=>string.Join(",",Q(x.Key),Q(x.Category),Q(x.SourceGroup),Q(x.Description),Q(x.CultureCode),Q(x.Value))));
         return string.Join("\r\n",lines);
+    }
+
+    public async Task<int> ImportTranslationsAsync(IReadOnlyCollection<TranslationImportRow> rows,string actor,CancellationToken ct)
+    {
+        var valid=rows.Where(x=>!string.IsNullOrWhiteSpace(x.Key)&&x.Key.Length<=200&&!string.IsNullOrWhiteSpace(x.Value)&&x.Value.Length<=4000).ToList();
+        if(valid.Count==0) return 0;
+        await using var db=await _factory.CreateDbContextAsync(ct);
+        var cultures=await db.Languages.AsNoTracking().Where(x=>x.IsEnabled).Select(x=>x.CultureCode).ToListAsync(ct);
+        valid=valid.Where(x=>cultures.Contains(x.Culture,StringComparer.OrdinalIgnoreCase)).ToList();
+        var keys=valid.Select(x=>x.Key).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var existingEntries=await db.TranslationEntries.Where(x=>keys.Contains(x.Key)).ToDictionaryAsync(x=>x.Key,StringComparer.OrdinalIgnoreCase,ct);
+        var existingValues=await db.TranslationValues.Where(x=>keys.Contains(x.Key)).ToListAsync(ct);
+        var valueMap=existingValues.ToDictionary(x=>(x.Key,x.CultureCode),x=>x);
+        foreach(var row in valid)
+        {
+            if(!existingEntries.TryGetValue(row.Key,out var entry))
+            {
+                entry=new TranslationEntryEntity{Key=row.Key};db.TranslationEntries.Add(entry);existingEntries[row.Key]=entry;
+            }
+            entry.Category=NormalizeCategory(row.Category);entry.SourceGroup=string.IsNullOrWhiteSpace(row.SourceGroup)?"Shared":row.SourceGroup.Trim()[..Math.Min(160,row.SourceGroup.Trim().Length)];
+            entry.Description=string.IsNullOrWhiteSpace(row.Description)?null:row.Description.Trim()[..Math.Min(500,row.Description.Trim().Length)];
+            entry.IsArchived=false;entry.UpdatedAtUtc=DateTime.UtcNow;entry.UpdatedBy=actor;
+            if(!valueMap.TryGetValue((row.Key,row.Culture),out var translation))
+            {
+                translation=new TranslationValueEntity{Key=row.Key,CultureCode=row.Culture};db.TranslationValues.Add(translation);valueMap[(row.Key,row.Culture)]=translation;
+            }
+            translation.Value=row.Value;translation.UpdatedAtUtc=DateTime.UtcNow;translation.UpdatedBy=actor;
+        }
+        await db.SaveChangesAsync(ct);
+        await _audit.LogAsync("Language.Translation.Imported",userId:actor,userRole:"superadmin",metadata:new{count=valid.Count});
+        await RefreshRuntimeAsync(ct);
+        return valid.Count;
     }
 
     private static string NormalizeCategory(string? value) => value is "Controllers" or "Services" or "Views" or "Shared" or "JavaScript" or "Validation" or "System" ? value : "System";
