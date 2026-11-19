@@ -20,7 +20,6 @@ namespace BuildingManagementMvc.Controllers;
 public class DvrsController : Controller
 {
     private readonly DvrService _dvrs;
-    private readonly BuildingsService _buildings;
     private readonly MediaMtxService _mediamtx;
     private readonly ILogger<DvrsController> _log;
 
@@ -29,12 +28,10 @@ public class DvrsController : Controller
     /// </summary>
     public DvrsController(
         DvrService dvrs,
-        BuildingsService buildings,
         MediaMtxService mediamtx,
         ILogger<DvrsController> log)
     {
         _dvrs = dvrs;
-        _buildings = buildings;
         _mediamtx = mediamtx;
         _log = log;
     }
@@ -58,19 +55,20 @@ public class DvrsController : Controller
     {
         if (IsSuperAdmin && string.IsNullOrEmpty(buildingId))
         {
-            var allBuildings = await _buildings.GetSummariesWithCountsAsync();
+            var allBuildings = await _dvrs.GetBuildingSummariesAsync(HttpContext.RequestAborted);
             return View("ChooseBuilding", allBuildings);
         }
 
         var bid = IsSuperAdmin ? buildingId! : CurrentBuildingId!;
         if (!await CanManageAsync(bid)) return Forbid();
 
-        var building = await _buildings.GetByIdAsync(bid);
+        var building = await _dvrs.GetBuildingSummaryAsync(bid, HttpContext.RequestAborted);
         if (building == null) return NotFound();
 
         var dvrs = await _dvrs.GetByBuildingAsync(bid);
 
-        ViewBag.Building = building;
+        ViewBag.BuildingName = building.Name;
+        ViewBag.BuildingNumber = building.BuildingNumber;
         ViewBag.BuildingId = bid;
         return View(dvrs);
     }
@@ -88,10 +86,11 @@ public class DvrsController : Controller
     public async Task<IActionResult> Create(string buildingId)
     {
         if (!await CanManageAsync(buildingId)) return Forbid();
-        var building = await _buildings.GetByIdAsync(buildingId);
+        var building = await _dvrs.GetBuildingSummaryAsync(buildingId, HttpContext.RequestAborted);
         if (building == null) return NotFound();
 
-        ViewBag.Building = building;
+        ViewBag.BuildingName = building.Name;
+        ViewBag.BuildingNumber = building.BuildingNumber;
         ViewBag.BuildingId = buildingId;
         return View();
     }
@@ -112,7 +111,9 @@ public class DvrsController : Controller
         {
             ModelState.AddModelError(string.Empty, "يجب إدخال عنوان IP خاص بالشبكة الداخلية ومنفذ صحيح.");
             ViewBag.BuildingId = buildingId;
-            ViewBag.Building = await _buildings.GetByIdAsync(buildingId);
+            var building = await _dvrs.GetBuildingSummaryAsync(buildingId, HttpContext.RequestAborted);
+            ViewBag.BuildingName = building?.Name;
+            ViewBag.BuildingNumber = building?.BuildingNumber;
             return View();
         }
 
@@ -137,7 +138,9 @@ public class DvrsController : Controller
         if (dvr == null) return NotFound();
         if (!await CanManageAsync(dvr.BuildingId)) return Forbid();
 
-        ViewBag.Building = await _buildings.GetByIdAsync(dvr.BuildingId);
+        var building = await _dvrs.GetBuildingSummaryAsync(dvr.BuildingId, HttpContext.RequestAborted);
+        ViewBag.BuildingName = building?.Name;
+        ViewBag.BuildingNumber = building?.BuildingNumber;
         return View(dvr);
     }
 
@@ -178,7 +181,9 @@ public class DvrsController : Controller
         if (dvr == null) return NotFound();
         if (!await CanManageAsync(dvr.BuildingId)) return Forbid();
 
-        ViewBag.Building = await _buildings.GetByIdAsync(dvr.BuildingId);
+        var building = await _dvrs.GetBuildingSummaryAsync(dvr.BuildingId, HttpContext.RequestAborted);
+        ViewBag.BuildingName = building?.Name;
+        ViewBag.BuildingNumber = building?.BuildingNumber;
         return View(dvr);
     }
 
