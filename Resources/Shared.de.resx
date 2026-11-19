@@ -1435,4 +1435,9 @@ Beispiel: Bewohner verreist – leere Wohnung – Wartung</value></data>
   <data name="Backup_Collection_qrTokens" xml:space="preserve"><value>QR-Token</value></data>
   <data name="Backup_Collection_qrUsages" xml:space="preserve"><value>QR-Token-Nutzung</value></data>
   <data name="Backup_Collection_savedWhatsAppTemplates" xml:space="preserve"><value>Gespeicherte WhatsApp-Vorlagen</value></data>
+  <data name="Backup_Collection_notificationMessages" xml:space="preserve"><value>Benachrichtigungsnachrichten</value></data>
+  <data name="Backup_Collection_notificationRecipients" xml:space="preserve"><value>Benachrichtigungsempfänger</value></data>
+  <data name="Backup_Collection_notificationDeliveries" xml:space="preserve"><value>Benachrichtigungszustellungen</value></data>
+  <data name="Backup_Collection_notificationReadStates" xml:space="preserve"><value>Lesestatus von Benachrichtigungen</value></data>
+  <data name="Backup_Collection_notificationPreferences" xml:space="preserve"><value>Benachrichtigungseinstellungen</value></data>
 </root>
