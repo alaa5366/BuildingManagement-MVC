@@ -243,6 +243,8 @@ public class ImpersonationController : Controller
             ImpersonationActorPermissions = User.FindFirst("impersonationActorPermissions")?.Value ?? "",
             ImpersonationActorTwoFactorVerified = User.FindFirst("impersonationActorTwoFactorVerified")?.Value
                 ?? (User.HasClaim("twoFactorVerified", "true") ? "true" : "false"),
+            ImpersonationActorSecurityStamp = User.FindFirst("impersonationActorSecurityStamp")?.Value
+                ?? User.FindFirst("legacySuperAdminSecurityStamp")?.Value ?? "",
             TwoFactorVerified = User.HasClaim("twoFactorVerified", "true")
                 || User.HasClaim("impersonationActorTwoFactorVerified", "true"),
             StartedAt = DateTime.UtcNow.ToString("o")
@@ -309,6 +311,9 @@ public class ImpersonationController : Controller
         var actorTwoFactorVerified = User.HasClaim("impersonated", "true")
             ? User.FindFirst("impersonationActorTwoFactorVerified")?.Value
             : (User.HasClaim("twoFactorVerified", "true") ? "true" : "false");
+        var actorSecurityStamp = User.HasClaim("impersonated", "true")
+            ? User.FindFirst("impersonationActorSecurityStamp")?.Value
+            : User.FindFirst("legacySuperAdminSecurityStamp")?.Value;
 
         if (!string.IsNullOrWhiteSpace(actorUid))
             claims.Add(new Claim("impersonationActorUid", actorUid));
@@ -320,6 +325,8 @@ public class ImpersonationController : Controller
             claims.Add(new Claim("impersonationActorPermissions", actorPermissions));
         if (!string.IsNullOrWhiteSpace(actorTwoFactorVerified))
             claims.Add(new Claim("impersonationActorTwoFactorVerified", actorTwoFactorVerified));
+        if (!string.IsNullOrWhiteSpace(actorSecurityStamp))
+            claims.Add(new Claim("impersonationActorSecurityStamp", actorSecurityStamp));
 
         claims.Add(new Claim("impersonationTargetBuildingId", buildingId));
         if (!string.IsNullOrWhiteSpace(apartmentId))
@@ -363,6 +370,8 @@ public class ImpersonationController : Controller
                 claims.Add(new Claim("impersonationActorPermissions", backup.ImpersonationActorPermissions));
             if (!string.IsNullOrWhiteSpace(backup.ImpersonationActorTwoFactorVerified))
                 claims.Add(new Claim("impersonationActorTwoFactorVerified", backup.ImpersonationActorTwoFactorVerified));
+            if (!string.IsNullOrWhiteSpace(backup.ImpersonationActorSecurityStamp))
+                claims.Add(new Claim("impersonationActorSecurityStamp", backup.ImpersonationActorSecurityStamp));
             if (!string.IsNullOrWhiteSpace(backup.BuildingId))
                 claims.Add(new Claim("impersonationTargetBuildingId", backup.BuildingId));
         }
