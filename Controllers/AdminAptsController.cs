@@ -121,6 +121,79 @@ public class AdminAptsController : Controller
     }
 
     // ============================================================
+    // 3. GenerateRecoveryQr
+    // ============================================================
+    /// <summary>
+    /// Creates a five-minute, single-use resident login QR for an administrator-approved recovery.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> GenerateRecoveryQr(string aptId)
+    {
+        var apt = await _targetQr.GetApartmentAsync(
+            BuildingId, aptId, requireActive: true, HttpContext.RequestAborted);
+        if (apt is null) return NotFound();
+
+        var phone = AuthHelpers.NormalizePhone(apt.Phone);
+        if (string.IsNullOrWhiteSpace(phone))
+        {
+            TempData["Error"] = "لا يوجد رقم هاتف مسجل للشقة.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // Never send a recovery credential to a phone shared by another active apartment.
+        var buildingPage = await _targetQr.GetBuildingPageAsync(
+            BuildingId, HttpContext.RequestAborted);
+        var duplicatePhone = buildingPage?.Apartments.Any(x =>
+            x.ApartmentId != apt.ApartmentId &&
+            string.Equals(AuthHelpers.NormalizePhone(x.Phone), phone, StringComparison.Ordinal)) == true;
+        if (duplicatePhone)
+        {
+            TempData["Error"] = "رقم الهاتف مكرر في شقة أخرى؛ راجع بيانات الهاتف قبل إصدار رمز الدخول.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var token = _qrSecurity.GenerateQuickToken(new QuickQrOptions
+        {
+            BuildingId = apt.BuildingId,
+            AptId = apt.ApartmentId,
+            AptNumber = apt.ApartmentNumber,
+            FloorOrder = apt.FloorOrder,
+            Validity = TimeSpan.FromMinutes(5),
+            OneTime = true,
+            MaxUses = 1,
+            Purpose = "login"
+        });
+
+        var quickUrl = $"{Request.Scheme}://{Request.Host}/Account/QuickLogin?token={Uri.EscapeDataString(token)}";
+        var message =
+            $"مرحباً، هذا رابط دخول مؤقت لحساب شقتك رقم {apt.ApartmentNumber} في {apt.BuildingName}.\n" +
+            "صالح لمدة 5 دقائق ويُستخدم مرة واحدة فقط. افتح الرابط ثم أكد الدخول.\n" +
+            "إذا لم تطلب هذا الرابط، تجاهل الرسالة ولا تشاركها مع أي شخص.\n" +
+            quickUrl;
+        var waLink = WhatsAppTemplateService.BuildWaLink(phone, message);
+        var qrBase64 = Convert.ToBase64String(_qrGen.GeneratePng(quickUrl, 12));
+
+        await _auditLogger.LogAsync(
+            action: "resident.recovery_qr_issued",
+            buildingId: apt.BuildingId,
+            apartmentId: apt.ApartmentId,
+            userId: CurrentUserId,
+            userRole: "admin",
+            metadata: new { aptNumber = apt.ApartmentNumber, phoneSuffix = phone.Length > 4 ? phone[^4..] : phone, expiresInMinutes = 5, oneTime = true },
+            severity: "warning");
+
+        ViewBag.BuildingName = apt.BuildingName;
+        ViewBag.ApartmentNumber = apt.ApartmentNumber;
+        ViewBag.ApartmentPhone = apt.Phone;
+        ViewBag.QuickUrl = quickUrl;
+        ViewBag.WhatsAppLink = waLink;
+        ViewBag.QrBase64 = qrBase64;
+        ViewBag.ExpiresInMinutes = 5;
+        return View("RecoveryQr");
+    }
+
+    // ============================================================
     // 3. GenerateWelcome
     // ============================================================
     /// <summary>
