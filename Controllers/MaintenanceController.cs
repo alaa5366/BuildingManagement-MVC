@@ -177,12 +177,11 @@ public class MaintenanceController : Controller
     /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddToExpenses(string id, string? month)
+    public async Task<IActionResult> AddToExpenses(string id)
     {
         var building = await _buildings.GetByIdAsync(BuildingId);
         if (building == null) return NotFound();
 
-        var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
         var record = building.MaintenanceLog.FirstOrDefault(item => item.Id == id);
         var sourceCommand = id.StartsWith("mnt-", StringComparison.OrdinalIgnoreCase) ? id[4..] : id;
         if (!Guid.TryParse(sourceCommand, out var commandId) || commandId == Guid.Empty)
@@ -195,6 +194,13 @@ public class MaintenanceController : Controller
             TempData["Error"] = "سجل الصيانة غير موجود أو تمت إضافته للمصروفات بالفعل.";
             return RedirectToAction("Index");
         }
+
+        var expenseDate = DateOnly.TryParseExact(record.Date, "yyyy-MM-dd",
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out var sourceDate)
+            ? sourceDate.ToString("yyyy-MM-dd")
+            : DateTime.UtcNow.ToString("yyyy-MM-dd");
+        var mk = expenseDate[..7];
 
         var actorAccountId = await _identityResolver.ResolveAsync(User, HttpContext.RequestAborted);
         if (actorAccountId is null)
@@ -218,9 +224,6 @@ public class MaintenanceController : Controller
                 return RedirectToAction("Index");
             }
 
-            var expenseDate = string.IsNullOrWhiteSpace(record.Date)
-                ? DateTime.UtcNow.ToString("yyyy-MM-dd")
-                : record.Date;
             var note = "🔧 " + record.Title +
                 (string.IsNullOrWhiteSpace(record.Vendor) ? "" : $" — {record.Vendor}");
             await _financeWorkflow.AddExpenseAsync(
