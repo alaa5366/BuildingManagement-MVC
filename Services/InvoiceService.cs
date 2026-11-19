@@ -66,11 +66,30 @@ public sealed class InvoiceService
             throw new InvalidOperationException("Building currency configuration is invalid.");
         currencyCode = currencyCode.ToUpperInvariant();
 
-        var monthDeposits = await db.PaymentDeposits.AsNoTracking()
-            .Where(deposit => deposit.BuildingId == buildingId && periodIds.Contains(deposit.PeriodId) &&
-                deposit.ApartmentId == apartmentId && deposit.CurrencyCode == currencyCode &&
-                deposit.Status == PaymentDepositStatus.Confirmed)
-            .SumAsync(deposit => (decimal?)deposit.Amount, cancellationToken) ?? 0m;
+        // Invoice money totals come from posted ledger entries, not mutable deposit
+        // workflow rows. A posted reversal is included as a signed credit/debit.
+        var monthLedgerEntries = await (
+            from entry in db.LedgerEntries.AsNoTracking()
+            join transaction in db.LedgerTransactions.AsNoTracking()
+                on entry.LedgerTransactionId equals transaction.LedgerTransactionId
+            where entry.BuildingId == buildingId && entry.ApartmentId == apartmentId &&
+                periodIds.Contains(entry.PeriodId) && entry.CurrencyCode == currencyCode &&
+                transaction.BuildingId == buildingId &&
+                transaction.Status == LedgerTransactionStatus.Posted
+            select new { entry.EntryKind, entry.SignedAmount, transaction.SourceType })
+            .ToListAsync(cancellationToken);
+
+        var monthDeposits = monthLedgerEntries
+            .Where(entry => entry.EntryKind == LedgerEntryKind.Deposit ||
+                entry.EntryKind == LedgerEntryKind.Reversal &&
+                entry.SourceType == "PaymentDepositReversal")
+            .Sum(entry => entry.SignedAmount);
+
+        // Monthly charges are period-specific ledger postings. Never use the
+        // apartment's current MonthlyFee to reconstruct a historical invoice.
+        var monthFee = -monthLedgerEntries
+            .Where(entry => entry.EntryKind == LedgerEntryKind.MonthlyCharge)
+            .Sum(entry => entry.SignedAmount);
 
         var activeExpenseRows = await db.Expenses.AsNoTracking()
             .Where(item => item.BuildingId == buildingId && item.MonthKey == monthKey)
@@ -189,7 +208,7 @@ public sealed class InvoiceService
             MonthDeposits = monthDeposits,
             MonthExpensesShare = expenseShare,
             MonthRevenuesShare = revenueShare,
-            MonthFee = apartment.MonthlyFee,
+            MonthFee = monthFee,
             CategoryShares = categoryShares.OrderBy(item => item.Name, StringComparer.CurrentCulture).ToList(),
             Payment = building.PaymentInfo,
             MonthKey = monthKey,
