@@ -168,8 +168,9 @@
                             <form method="post" asp-action="AddAdjustment" class="d-flex gap-1">
                                 <input type="hidden" name="month" value="@month" />
                                 <input type="hidden" name="aptId" value="@apt.Id" />
-                                <input name="amount" type="number" step="0.01" class="form-control form-control-sm" placeholder="@Loc.T("Amount_3")" style="width:110px" />
-                                <input name="reason" class="form-control form-control-sm" placeholder="@Loc.T("Reason")" />
+                                <input type="hidden" name="commandId" value="@Guid.NewGuid()" />
+                                <input name="amount" type="number" step="0.0001" min="-999999999999999" max="999999999999999" required class="form-control form-control-sm" placeholder="@Loc.T("Amount_3")" style="width:110px" />
+                                <input name="reason" required maxlength="500" class="form-control form-control-sm" placeholder="@Loc.T("Reason")" />
                                 <button class="btn btn-sm btn-outline-secondary text-nowrap">@Loc.T("Adjustment_2")</button>
                             </form>
                         </td>
