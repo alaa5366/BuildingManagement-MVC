@@ -166,8 +166,6 @@ internal static class OperationalModelConfiguration
             e.Property(x => x.LinkId).ValueGeneratedNever();
             e.Property(x => x.CreatedAtUtc).HasColumnType("datetime2(3)");
             e.HasIndex(x => new { x.RequestId, x.LedgerTransactionId }).IsUnique();
-            e.HasOne<LedgerTransactionEntity>().WithMany()
-                .HasForeignKey(x => x.LedgerTransactionId).OnDelete(DeleteBehavior.NoAction);
         });
 
         mb.Entity<NotificationMessageEntity>(e =>
