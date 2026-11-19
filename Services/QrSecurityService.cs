@@ -151,6 +151,9 @@ public class QrSecurityService
         var usage = await db.QrUsages.AsNoTracking()
             .FirstOrDefaultAsync(x => x.TokenId == payload.TokenId);
 
+        if (string.Equals(payload.Purpose, "recovery", StringComparison.OrdinalIgnoreCase) && usage == null)
+            return QuickTokenValidation.Fail(Loc.T("Invalid_Token"));
+
         if (usage != null)
         {
             if (payload.OneTime && usage.UseCount >= 1)
@@ -166,6 +169,55 @@ public class QrSecurityService
         }
 
         return QuickTokenValidation.Ok(payload);
+    }
+
+    private static string RecoveryRegistryId(string buildingId, string apartmentId)
+    {
+        var key = Encoding.UTF8.GetBytes(buildingId + "|" + apartmentId);
+        return "recovery:" + Convert.ToHexString(SHA256.HashData(key)).ToLowerInvariant();
+    }
+
+    /// <summary>Registers the current recovery token and atomically replaces any earlier token for the same apartment.</summary>
+    public async Task RegisterRecoveryTokenAsync(string token, string buildingId, string apartmentId,
+        CancellationToken cancellationToken = default)
+    {
+        var payload = JsonSerializer.Deserialize<QuickTokenPayload>(OpenQuick(token.StartsWith("v2.", StringComparison.Ordinal) ? token[3..] : token))
+            ?? throw new InvalidOperationException("Invalid recovery QR payload.");
+        if (!string.Equals(payload.Purpose, "recovery", StringComparison.Ordinal) ||
+            !string.Equals(payload.BuildingId, buildingId, StringComparison.Ordinal) ||
+            !string.Equals(payload.AptId, apartmentId, StringComparison.Ordinal) ||
+            string.IsNullOrWhiteSpace(payload.TokenId))
+            throw new InvalidOperationException("Recovery QR scope validation failed.");
+
+        await using var db = await _sqlFactory.CreateDbContextAsync(cancellationToken);
+        var registryId = RecoveryRegistryId(buildingId, apartmentId);
+        var entry = await db.QrUsages.SingleOrDefaultAsync(x => x.Id == registryId, cancellationToken);
+        var now = DateTime.UtcNow;
+        if (entry == null)
+        {
+            entry = new QrUsageEntity { Id = registryId, CreatedAt = now };
+            db.QrUsages.Add(entry);
+        }
+        entry.TokenId = payload.TokenId;
+        entry.UseCount = 0;
+        entry.FirstUsedAt = string.Empty;
+        entry.LastUsedAt = string.Empty;
+        entry.DeviceFingerprint = null;
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>Revokes the currently registered recovery token. Reissuing replaces its token id.</summary>
+    public async Task<bool> RevokeRecoveryTokenAsync(string buildingId, string apartmentId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var db = await _sqlFactory.CreateDbContextAsync(cancellationToken);
+        var registryId = RecoveryRegistryId(buildingId, apartmentId);
+        var now = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+        var changed = await db.QrUsages.Where(x => x.Id == registryId && x.UseCount == 0)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(x => x.UseCount, 1)
+                .SetProperty(x => x.LastUsedAt, now), cancellationToken);
+        return changed == 1;
     }
 
     /// <summary>
