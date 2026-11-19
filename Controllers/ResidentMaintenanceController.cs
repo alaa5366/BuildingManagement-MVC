@@ -14,6 +14,7 @@ public class ResidentMaintenanceController : Controller
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
 
+    /// <summary>Displays the current records and associated management actions.</summary>
     [HttpGet]
     public async Task<IActionResult> Index()
     {
