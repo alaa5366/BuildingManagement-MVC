@@ -90,7 +90,10 @@ public sealed class TargetDepositWorkflowServiceTests
         Assert.Single(await verify.LedgerEntries.ToListAsync());
         Assert.Equal(125m, (await verify.LedgerEntries.SingleAsync()).SignedAmount);
         Assert.Contains(await verify.AuditEvents.ToListAsync(), item => item.EventType == "PaymentDepositSubmitted");
-        Assert.Contains(await verify.AuditEvents.ToListAsync(), item => item.EventType == "PaymentDepositConfirmed");
+        var confirmedAudit = await verify.AuditEvents.SingleAsync(item => item.EventType == "PaymentDepositConfirmed");
+        Assert.Equal("Apartment", confirmedAudit.ResourceType);
+        Assert.Equal("A1", confirmedAudit.ResourceReference);
+        Assert.Contains(depositId.ToString("D"), confirmedAudit.SafeDetailsJson);
 
         var reversalId = await service.ReverseConfirmedAsync(depositId, actorId, "duplicate payment");
         var repeatedReversalId = await service.ReverseConfirmedAsync(depositId, actorId, "duplicate payment");
