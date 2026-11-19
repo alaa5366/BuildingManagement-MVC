@@ -386,6 +386,9 @@ public sealed class TargetWalletReadServiceTests
         var now = DateTime.UtcNow;
         await using (var seed = new AppDbContext(options))
         {
+            seed.Buildings.AddRange(
+                new BuildingEntity { Id = "B1", BuildingNumber = "1", Name = "One" },
+                new BuildingEntity { Id = "B2", BuildingNumber = "2", Name = "Two" });
             seed.FinancialPeriods.AddRange(
                 new FinancialPeriodEntity
                 {
