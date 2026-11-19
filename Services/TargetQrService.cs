@@ -22,7 +22,7 @@ public sealed class TargetQrService
         if (building is null) return null;
 
         var apartments = await db.Apartments.AsNoTracking()
-            .Where(x => x.BuildingId == buildingId && !x.IsClosed)
+            .Where(x => x.BuildingId == buildingId && !x.IsClosed && !x.IsDisabled)
             .OrderBy(x => x.Floor!.SortOrder).ThenBy(x => x.Number)
             .Select(x => new QrApartmentInfo
             {
