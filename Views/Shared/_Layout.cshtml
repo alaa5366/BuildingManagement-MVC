@@ -45,6 +45,7 @@
     }
 
     @await RenderSectionAsync("Styles", required: false)
+    <link rel="stylesheet" href="~/css/ui-refresh.css" asp-append-version="true" />
 </head>
 <body class="@(isRtl ? "rtl" : "ltr") @(showSidebar ? "has-sidebar" : "no-sidebar")">
 
