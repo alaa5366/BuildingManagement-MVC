@@ -21,7 +21,7 @@
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="requestId" value="@item.RequestId" />
                             <input type="hidden" name="buildingId" value="@item.BuildingId" />
-                            <input name="reason" class="form-control form-control-sm" placeholder="ملاحظات التحقق" maxlength="500" />
+                            <input name="reason" class="form-control form-control-sm" placeholder="سبب القرار (مطلوب)" maxlength="500" required />
                             <button class="btn btn-sm btn-success" name="approve" value="true">موافقة</button>
                             <button class="btn btn-sm btn-outline-danger" name="approve" value="false">رفض</button>
                         </form>
