@@ -111,81 +111,76 @@ public sealed class InvoiceService
                 entry.OriginalKind == LedgerTransactionKind.MonthlyCharge)
             .Sum(entry => entry.SignedAmount);
 
-        var activeExpenseRows = await db.Expenses.AsNoTracking()
-            .Where(item => item.BuildingId == buildingId && item.MonthKey == monthKey)
-            .ToListAsync(cancellationToken);
-        var expenseTransactions = await db.LedgerTransactions.AsNoTracking()
-            .Where(item => item.BuildingId == buildingId && periodIds.Contains(item.PeriodId) &&
-                item.SourceSystem == "application" && item.SourceType == "Expense" &&
-                item.Kind == LedgerTransactionKind.Expense && item.Status == LedgerTransactionStatus.Posted)
-            .ToListAsync(cancellationToken);
-        var revenueTransactions = await db.LedgerTransactions.AsNoTracking()
-            .Where(item => item.BuildingId == buildingId && periodIds.Contains(item.PeriodId) &&
-                item.SourceSystem == "application" && item.SourceType == "Revenue" &&
-                item.Kind == LedgerTransactionKind.Revenue && item.Status == LedgerTransactionStatus.Posted)
+        // Build the category breakdown from posted expense allocation entries.
+        // Reversals are linked to their original expense transaction so the original
+        // category is retained even when the reversal is posted in a later period.
+        var expenseLedgerRows = await (
+            from entry in db.LedgerEntries.AsNoTracking()
+            join transaction in db.LedgerTransactions.AsNoTracking()
+                on entry.LedgerTransactionId equals transaction.LedgerTransactionId
+            join originalRow in db.LedgerTransactions.AsNoTracking()
+                on transaction.ReversesTransactionId equals (Guid?)originalRow.LedgerTransactionId into originalRows
+            from original in originalRows.DefaultIfEmpty()
+            where entry.BuildingId == buildingId && periodIds.Contains(entry.PeriodId) &&
+                entry.CurrencyCode == currencyCode && transaction.BuildingId == buildingId &&
+                transaction.Status == LedgerTransactionStatus.Posted &&
+                (entry.EntryKind == LedgerEntryKind.ExpenseAllocation ||
+                 entry.EntryKind == LedgerEntryKind.Reversal &&
+                 original != null && original.Kind == LedgerTransactionKind.Expense)
+            select new
+            {
+                entry.ApartmentId,
+                entry.SignedAmount,
+                SourceKey = transaction.Kind == LedgerTransactionKind.Reversal
+                    ? original!.SourceKey
+                    : transaction.SourceKey
+            })
             .ToListAsync(cancellationToken);
 
-        var originalIds = expenseTransactions.Concat(revenueTransactions)
-            .Select(item => item.LedgerTransactionId).ToList();
-        var reversedIds = await db.LedgerTransactions.AsNoTracking()
-            .Where(item => item.BuildingId == buildingId && item.Kind == LedgerTransactionKind.Reversal &&
-                item.Status == LedgerTransactionStatus.Posted && item.ReversesTransactionId.HasValue &&
-                originalIds.Contains(item.ReversesTransactionId.Value))
-            .Select(item => item.ReversesTransactionId!.Value).ToListAsync(cancellationToken);
-        var reversedSet = reversedIds.ToHashSet();
-        expenseTransactions = expenseTransactions.Where(item => !reversedSet.Contains(item.LedgerTransactionId)).ToList();
-        revenueTransactions = revenueTransactions.Where(item => !reversedSet.Contains(item.LedgerTransactionId)).ToList();
-
-        var transactionIds = expenseTransactions.Concat(revenueTransactions)
-            .Select(item => item.LedgerTransactionId).ToList();
-        var batches = await db.FinancialAllocationBatches.AsNoTracking()
-            .Where(batch => batch.BuildingId == buildingId && transactionIds.Contains(batch.SourceTransactionId) &&
-                batch.Status == FinancialAllocationStatus.Completed)
+        var expenseSourceKeys = expenseLedgerRows
+            .Select(row => row.SourceKey)
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .Distinct()
+            .ToList();
+        var normalizedExpenseSourceKeys = expenseSourceKeys
+            .Select(NormalizeSourceKey)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var expenseRows = await db.Expenses.AsNoTracking()
+            .Where(item => item.BuildingId == buildingId &&
+                (expenseSourceKeys.Contains(item.Id) || normalizedExpenseSourceKeys.Contains(item.Id)))
+            .Select(item => new { item.Id, item.CategoryId })
             .ToListAsync(cancellationToken);
-        var batchIds = batches.Select(batch => batch.AllocationBatchId).ToList();
-        var lines = await db.FinancialAllocationLines.AsNoTracking()
-            .Where(line => line.BuildingId == buildingId && batchIds.Contains(line.AllocationBatchId))
-            .ToListAsync(cancellationToken);
-        var apartmentLines = lines.Where(line => line.ApartmentId == apartmentId).ToList();
-        var batchByTransaction = batches.ToDictionary(batch => batch.SourceTransactionId);
+        var expenseCategoryBySource = expenseRows
+            .GroupBy(item => NormalizeSourceKey(item.Id), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First().CategoryId ?? "",
+                StringComparer.OrdinalIgnoreCase);
 
-        decimal expenseShare = 0, revenueShare = 0;
-        var categoryShares = new List<CategoryShare>();
         var categories = await db.FinancialCategories.AsNoTracking()
             .Where(category => category.BuildingId == buildingId && category.Kind == "expense")
             .ToListAsync(cancellationToken);
         var categoryById = categories.ToDictionary(category => category.Id, StringComparer.Ordinal);
-        var expenseRowsById = activeExpenseRows.ToDictionary(item => NormalizeSourceKey(item.Id), StringComparer.OrdinalIgnoreCase);
         var categoryTotals = new Dictionary<string, decimal>(StringComparer.Ordinal);
         var categoryApartmentShares = new Dictionary<string, decimal>(StringComparer.Ordinal);
 
-        foreach (var transaction in expenseTransactions)
+        foreach (var row in expenseLedgerRows)
         {
-            var sourceId = NormalizeSourceKey(transaction.SourceKey);
-            if (!expenseRowsById.TryGetValue(sourceId, out var expense) ||
-                !batchByTransaction.TryGetValue(transaction.LedgerTransactionId, out var batch))
+            var sourceKey = NormalizeSourceKey(row.SourceKey);
+            if (!expenseCategoryBySource.TryGetValue(sourceKey, out var categoryId))
                 continue;
-            var share = apartmentLines.Where(line => line.AllocationBatchId == batch.AllocationBatchId)
-                .Sum(line => line.AllocatedAmount);
-            expenseShare += share;
-            var categoryId = expense.CategoryId ?? "";
-            categoryTotals[categoryId] = categoryTotals.GetValueOrDefault(categoryId) + batch.SourceAmount;
-            categoryApartmentShares[categoryId] = categoryApartmentShares.GetValueOrDefault(categoryId) + share;
+
+            // Expense allocations are negative wallet movements; reversal entries
+            // are positive. Negating the signed amount yields a net expense value.
+            categoryTotals[categoryId] = categoryTotals.GetValueOrDefault(categoryId) - row.SignedAmount;
+            if (row.ApartmentId == apartmentId)
+                categoryApartmentShares[categoryId] =
+                    categoryApartmentShares.GetValueOrDefault(categoryId) - row.SignedAmount;
         }
 
-        foreach (var transaction in revenueTransactions)
-        {
-            if (!batchByTransaction.TryGetValue(transaction.LedgerTransactionId, out var batch)) continue;
-            revenueShare += apartmentLines.Where(line => line.AllocationBatchId == batch.AllocationBatchId)
-                .Sum(line => line.AllocatedAmount);
-        }
-
-        // Ledger entries include same-period reversal credits; use them for invoice totals
-        // rather than summing only original allocation batches.
-        expenseShare = -currentSnapshot.Transactions
+        var expenseShare = -currentSnapshot.Transactions
             .Where(item => item.Type == "expense")
             .Sum(item => item.Amount);
-        revenueShare = currentSnapshot.Transactions
+        var revenueShare = currentSnapshot.Transactions
             .Where(item => item.Type == "revenue")
             .Sum(item => item.Amount);
 
