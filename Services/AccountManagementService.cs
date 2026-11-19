@@ -156,7 +156,10 @@ public sealed class AccountManagementService
             account.DisabledReason = "تم الإيقاف من مركز إدارة الحسابات.";
         }
 
-        account.UpdatedAt = DateTime.UtcNow;
+        var updatedAt = DateTime.UtcNow;
+        if (account.UpdatedAt is DateTime previousUpdate && previousUpdate >= updatedAt.AddSeconds(-1))
+            updatedAt = previousUpdate.AddSeconds(1);
+        account.UpdatedAt = updatedAt;
         account.UpdatedBy = actorId;
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
@@ -182,7 +185,10 @@ public sealed class AccountManagementService
         var temporaryPassword = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(24))
             .TrimEnd('=');
         account.Pin = hasher.Hash(temporaryPassword);
-        account.UpdatedAt = DateTime.UtcNow;
+        var updatedAt = DateTime.UtcNow;
+        if (account.UpdatedAt is DateTime previousUpdate && previousUpdate >= updatedAt.AddSeconds(-1))
+            updatedAt = previousUpdate.AddSeconds(1);
+        account.UpdatedAt = updatedAt;
         account.UpdatedBy = actorId;
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
