@@ -99,7 +99,7 @@ public class AuditLogController : Controller
             userId: string.IsNullOrWhiteSpace(userId) ? null : userId,
             action: string.IsNullOrWhiteSpace(actionFilter) ? null : actionFilter,
             severity: string.IsNullOrWhiteSpace(severity) ? null : severity,
-            from: ParseDate(from), to: ParseDate(to), page: page, pageSize: pageSize);
+            from: ParseDate(from, endOfDay: false), to: ParseDate(to, endOfDay: true), page: page, pageSize: pageSize);
         page = pagedResult.CurrentPage;
         pageSize = pagedResult.PageSize;
 
@@ -173,8 +173,8 @@ public class AuditLogController : Controller
             userId: string.IsNullOrWhiteSpace(userId) ? null : userId,
             action: string.IsNullOrWhiteSpace(actionFilter) ? null : actionFilter,
             severity: string.IsNullOrWhiteSpace(severity) ? null : severity,
-            from: ParseDate(from),
-            to: ParseDate(to),
+            from: ParseDate(from, endOfDay: false),
+            to: ParseDate(to, endOfDay: true),
             limit: 50000);  // ← كل السجلات
 
         var sb = new StringBuilder();
@@ -202,11 +202,13 @@ public class AuditLogController : Controller
         return File(bytes, "text/csv", fileName);
     }
 
-    private static DateTime? ParseDate(string? s)
+    private static DateTime? ParseDate(string? value, bool endOfDay)
     {
-        if (string.IsNullOrWhiteSpace(s)) return null;
-        if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
-            return DateTime.SpecifyKind(d, DateTimeKind.Utc);
-        return null;
+        if (!DateOnly.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture,
+            DateTimeStyles.None, out var date))
+            return null;
+
+        var utc = DateTime.SpecifyKind(date.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
+        return endOfDay ? utc.AddDays(1).AddTicks(-1) : utc;
     }
 }
