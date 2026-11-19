@@ -59,7 +59,8 @@ public class AdminHomeController : Controller
         var buildingId = User.FindFirstValue("buildingId");
         if (string.IsNullOrEmpty(buildingId)) return Unauthorized();
 
-        var building = await _buildings.GetByIdAsync(buildingId);
+        var building = await _targetWallet.GetBuildingShellAsync(
+            buildingId, aptId, HttpContext.RequestAborted);
         if (building == null) return NotFound();
 
         var currentMonth = await _targetWallet.GetCurrentPeriodKeyAsync(buildingId, cancellationToken: HttpContext.RequestAborted);
