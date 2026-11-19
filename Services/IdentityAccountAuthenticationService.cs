@@ -34,9 +34,23 @@ public sealed class IdentityAccountAuthenticationService
             return AuthResult.Fail("wrong-credentials");
 
         var email = identifier.Trim().ToUpperInvariant();
-        var phone = AuthHelpers.NormalizePhone(identifier);
+        var phone = identifier.Contains('@')
+            ? ""
+            : AuthHelpers.NormalizePhone(identifier);
 
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        if (!string.IsNullOrEmpty(phone))
+        {
+            var phonePeople = await db.Persons
+                .Where(person => !person.IsArchived && person.PrimaryPhone != null)
+                .Select(person => new { person.PersonId, person.PrimaryPhone })
+                .ToListAsync(cancellationToken);
+            var phonePersonMatches = phonePeople.Count(person =>
+                string.Equals(AuthHelpers.NormalizePhone(person.PrimaryPhone), phone, StringComparison.Ordinal));
+            if (phonePersonMatches > 1)
+                return AuthResult.Fail("wrong-credentials");
+        }
+
         var matches = await (
             from account in db.UserAccounts
             join person in db.Persons on account.PersonId equals person.PersonId
@@ -179,7 +193,7 @@ public sealed class IdentityAccountAuthenticationService
         string newPin,
         CancellationToken cancellationToken = default)
     {
-        if (newPin.Length < 4 || newPin.Length > 12 || newPin.Any(character => character < '0' || character > '9')
+        if (string.IsNullOrEmpty(newPin) || newPin.Length < 4 || newPin.Length > 12 || newPin.Any(character => character < '0' || character > '9')
             || string.Equals(newPin, "1234", StringComparison.Ordinal))
             return false;
 
