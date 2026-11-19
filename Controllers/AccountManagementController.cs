@@ -18,6 +18,7 @@ public sealed class AccountManagementController : Controller
         _hasher = hasher;
     }
 
+    /// <summary>Displays the management page and its current records.</summary>
     [HttpGet]
     public async Task<IActionResult> Index(
         string? search, string? role, string? status,
@@ -31,6 +32,7 @@ public sealed class AccountManagementController : Controller
         return View(await _service.GetPageAsync(search, role, status, page, pageSize, cancellationToken));
     }
 
+    /// <summary>Updates the enabled status of a resident account.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SetResidentStatus(Guid accountId, bool activate, CancellationToken cancellationToken)
@@ -45,6 +47,7 @@ public sealed class AccountManagementController : Controller
     }
 
 
+    /// <summary>Updates the status of a managed account.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SetManagedAccountStatus(Guid accountId, bool activate, CancellationToken cancellationToken)
@@ -58,6 +61,7 @@ public sealed class AccountManagementController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>Resets the PIN for a managed account.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ResetManagedAccountPin(Guid accountId, CancellationToken cancellationToken)
@@ -73,6 +77,7 @@ public sealed class AccountManagementController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>Updates the status of a legacy super-administrator account.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SetLegacySuperAdminStatus(string legacyUserId, bool activate, CancellationToken cancellationToken)
@@ -86,6 +91,7 @@ public sealed class AccountManagementController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>Resets the password for a legacy super-administrator account.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ResetLegacySuperAdminPassword(string legacyUserId, CancellationToken cancellationToken)
@@ -101,6 +107,7 @@ public sealed class AccountManagementController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>Resets the PIN for a resident account.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ResetResidentPin(Guid accountId, CancellationToken cancellationToken)
