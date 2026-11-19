@@ -173,8 +173,9 @@ public static class AdminPermissions
         ManageWallet, ManageExpenses, ManageRevenues, ManageCategories, ViewReports,
         ManagePolls, ManageMaintenance, SendNotifications, UseWhatsApp,
         ViewAuditLogAll, ViewAuditLogBuilding, ViewAuditLogOwn, ViewApplicationLogs, ViewSystemHealth,
+        ViewBackups, CreateBackup, DownloadBackup, RestoreBackup, DeleteBackup,
         ManageSettingsGlobal, ManageSettingsBuilding, ManageSettingsOwn,
-        ManageTools, ViewSystemHealth, ManageSync, SecretAccess
+        ManageTools, ManageSync, SecretAccess
     };
 
     /// <summary>
@@ -224,7 +225,7 @@ public static class AdminPermissions
     ManagePolls, ManageMaintenance, SendNotifications, UseWhatsApp,
     ViewAuditLogAll, ViewAuditLogBuilding, ViewAuditLogOwn,
     ManageSettingsGlobal, ManageSettingsBuilding, ManageSettingsOwn,
-    ManageTools, ManageBackup, ManageSync, SecretAccess
+    ManageTools, ViewBackups, CreateBackup, DownloadBackup, RestoreBackup, DeleteBackup, ViewSystemHealth, ManageSync, SecretAccess
 };
     // ← 27 عنصر
 
