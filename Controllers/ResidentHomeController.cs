@@ -93,9 +93,9 @@ public class ResidentHomeController : Controller
             .Where(t => t.Type == "deposit" && t.Status == "confirmed")
             .Sum(t => t.Amount);
 
-        var totalExpenses = Math.Abs(allTx
+        var totalExpenses = -allTx
             .Where(t => t.Type == "expense")
-            .Sum(t => t.Amount));
+            .Sum(t => t.Amount);
 
         var totalRevenue = allTx
             .Where(t => t.Type == "revenue")
