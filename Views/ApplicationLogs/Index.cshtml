@@ -151,7 +151,7 @@
                 </div>
             </div>
 
-            <details class="log-advanced-filters" open="@( !string.IsNullOrWhiteSpace(query.Source) || !string.IsNullOrWhiteSpace(query.CorrelationId) || !string.IsNullOrWhiteSpace(query.ComponentType) || query.HasException.HasValue )">
+            <details class="log-advanced-filters" open="@( !string.IsNullOrWhiteSpace(query.Source) || !string.IsNullOrWhiteSpace(query.CorrelationId) || !string.IsNullOrWhiteSpace(query.ComponentType) || query.HasException.HasValue || query.HttpStatusCode.HasValue || query.MinDurationMs.HasValue || query.MaxDurationMs.HasValue )">
                 <summary><i class="bi bi-sliders"></i> @Loc.T("Log_Advanced_Filters")</summary>
                 <div class="log-advanced-grid">
                     <div class="log-field">
@@ -179,6 +179,24 @@
                         <label for="correlationId">@Loc.T("Correlation_ID")</label>
                         <input class="form-control font-monospace" id="correlationId" name="correlationId"
                                value="@query.CorrelationId" maxlength="100" placeholder="Correlation ID" />
+                    </div>
+                    <div class="log-field">
+                        <label for="httpStatusCode">@(isArabic ? "كود HTTP" : "HTTP status")</label>
+                        <select class="form-select" id="httpStatusCode" name="httpStatusCode">
+                            <option value="">@(isArabic ? "كل الحالات" : "All statuses")</option>
+                            @foreach (var status in new[] { 200, 201, 204, 301, 302, 400, 401, 403, 404, 409, 422, 429, 500, 502, 503 })
+                            {
+                                <option value="@status" selected="@(query.HttpStatusCode == status)">@status</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="log-field">
+                        <label for="minDurationMs">@(isArabic ? "أقل زمن استجابة (ms)" : "Min duration (ms)")</label>
+                        <input class="form-control" type="number" min="0" max="3600000" step="0.1" id="minDurationMs" name="minDurationMs" value="@query.MinDurationMs" />
+                    </div>
+                    <div class="log-field">
+                        <label for="maxDurationMs">@(isArabic ? "أقصى زمن استجابة (ms)" : "Max duration (ms)")</label>
+                        <input class="form-control" type="number" min="0" max="3600000" step="0.1" id="maxDurationMs" name="maxDurationMs" value="@query.MaxDurationMs" />
                     </div>
                     <div class="log-field">
                         <label for="hasException">@Loc.T("Exception")</label>
