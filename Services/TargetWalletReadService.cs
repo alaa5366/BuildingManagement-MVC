@@ -20,12 +20,17 @@ public sealed class TargetWalletReadService
         string apartmentId,
         string? fromMonth = null,
         string? toMonth = null,
+        string currencyCode = "EGP",
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(buildingId))
             throw new ArgumentException("Building is required.", nameof(buildingId));
         if (string.IsNullOrWhiteSpace(apartmentId))
             throw new ArgumentException("Apartment is required.", nameof(apartmentId));
+        if (string.IsNullOrWhiteSpace(currencyCode) || currencyCode.Length != 3 ||
+            currencyCode.Any(c => !char.IsAsciiLetter(c)))
+            throw new ArgumentException("Currency code must contain exactly three ASCII letters.", nameof(currencyCode));
+        currencyCode = currencyCode.ToUpperInvariant();
         ValidateMonth(fromMonth, nameof(fromMonth));
         ValidateMonth(toMonth, nameof(toMonth));
         if (fromMonth is not null && toMonth is not null &&
@@ -47,6 +52,7 @@ public sealed class TargetWalletReadService
                 && periodIds.Contains(entry.PeriodId)
                 && transaction.BuildingId == buildingId
                 && transaction.Status == LedgerTransactionStatus.Posted
+                && entry.CurrencyCode == currencyCode
             orderby entry.EffectiveAtUtc descending, entry.LedgerEntryId descending
             select new
             {
@@ -60,7 +66,8 @@ public sealed class TargetWalletReadService
 
         var pending = await db.PaymentDeposits.AsNoTracking()
             .Where(d => d.BuildingId == buildingId && d.ApartmentId == apartmentId
-                && periodIds.Contains(d.PeriodId) && d.Status == PaymentDepositStatus.Pending)
+                && periodIds.Contains(d.PeriodId) && d.Status == PaymentDepositStatus.Pending
+                && d.CurrencyCode == currencyCode)
             .OrderByDescending(d => d.SubmittedAtUtc)
             .Select(d => new Deposit
             {
