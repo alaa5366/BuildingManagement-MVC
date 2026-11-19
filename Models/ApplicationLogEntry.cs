@@ -11,6 +11,10 @@ public sealed class ApplicationLogEntry
     public string Exception { get; set; } = "";
     public string Details { get; set; } = "";
     public string FileName { get; init; } = "";
+    public string HttpMethod { get; init; } = "";
+    public string RequestPath { get; init; } = "";
+    public int? HttpStatusCode { get; init; }
+    public double? DurationMs { get; init; }
     public bool HasException => !string.IsNullOrWhiteSpace(Exception);
 
     /// <summary>
