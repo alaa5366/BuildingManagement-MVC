@@ -1,3 +1,7 @@
+@section Styles {
+    <link rel="stylesheet" href="~/css/audit-log.css" asp-append-version="true" />
+}
+
 ﻿@* =============================================================================
    View:        AuditLog/Index
    Rendered by: AuditLogController.Index
@@ -23,8 +27,8 @@
     }
 }
 
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+<div class="container-fluid audit-log-page">
+    <div class="d-flex justify-content-between align-items-center mb-3 audit-log-header">
         <h2>
             @Loc.T("Log_2")
             @if (role == "superadmin")
@@ -57,7 +61,7 @@
     </div>
 
     @* ============ الفلاتر ============ *@
-    <div class="card mb-3">
+    <div class="card mb-3 audit-log-filter-panel">
         <div class="card-body">
             <form method="get" class="row g-2 align-items-end">
                 @if (canFilterBuilding && buildings.Count > 0)
@@ -105,6 +109,11 @@
                         <input name="apartmentId" value="@ViewBag.SelectedApartmentId" class="form-control form-control-sm" placeholder="@Loc.T("Optional")" />
                     </div>
                 }
+
+                <div class="col-md-2">
+                    <label class="form-label small">@Loc.T("User")</label>
+                    <input name="userId" value="@ViewBag.SelectedUserId" class="form-control form-control-sm" maxlength="160" autocomplete="off" />
+                </div>
 
                 <div class="col-md-2">
                     <label class="form-label small">@Loc.T("From_Date")</label>
@@ -167,8 +176,8 @@
     }
     else
     {
-        <div class="table-responsive">
-            <table class="table table-sm table-striped table-hover">
+        <div class="table-responsive audit-log-table-wrap">
+            <table class="table table-sm table-striped table-hover audit-log-table">
                 <thead class="table-dark">
                     <tr>
                         <th>@Loc.T("Date")</th>
