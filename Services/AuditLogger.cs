@@ -157,6 +157,7 @@ public class AuditLogger : IAuditLogger
             BuildingId = e.BuildingId,
             ApartmentId = e.ResourceType == "Apartment" ? e.ResourceReference : null,
             UserId = e.ActorReference,
+            CorrelationId = e.CorrelationId,
             UserRole = ReadActorRole(e.SafeDetailsJson),
             Severity = e.Outcome switch { 1 => "warning", 2 => "error", 3 => "critical", _ => "info" },
             Metadata = metadata,
