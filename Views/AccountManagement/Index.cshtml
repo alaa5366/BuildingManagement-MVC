@@ -4,7 +4,7 @@
     @if (TempData["Message"] is string accountMessage) { <div class="alert alert-info" role="status">@accountMessage</div> }
     @if (TempData["Error"] is string accountError) { <div class="alert alert-danger" role="alert">@accountError</div> }
     @if (TempData["TemporaryResidentPin"] is string temporaryPin) { <div class="alert alert-warning" role="alert"><strong>PIN مؤقت — يظهر مرة واحدة فقط:</strong> <code class="fs-4">@temporaryPin</code><br />انقله للمستخدم بأمان واطلب منه تغييره عند أول دخول.</div> }
-    @if (TempData["TemporarySuperAdminPassword"] is string temporaryPassword) { <div class="alert alert-warning" role="alert"><strong>كلمة مرور SuperAdmin مؤقتة — تظهر مرة واحدة فقط:</strong> <code class="fs-5">@temporaryPassword</code><br />سلّمها لصاحب الحساب عبر قناة آمنة، واطلب منه تغييرها فورًا.</div> }
+    @if (TempData["TemporarySuperAdminPassword"] is string temporaryPassword) { <div class="alert alert-warning" role="alert"><strong>كلمة مرور SuperAdmin الجديدة — تظهر مرة واحدة فقط:</strong> <code class="fs-5">@temporaryPassword</code><br />سلّمها لصاحب الحساب عبر قناة آمنة، واطلب منه تغييرها فورًا.</div> }
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div><h2 class="mb-1">مركز إدارة الحسابات</h2><div class="text-muted">مراجعة حسابات الهوية الموحدة ونطاقات صلاحياتها</div></div>
         <div class="d-flex flex-wrap gap-2">
