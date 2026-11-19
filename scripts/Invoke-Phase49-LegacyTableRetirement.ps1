@@ -73,6 +73,9 @@ GROUP BY SourceTable;
         $status='READY_FOR_REVIEW'
         if([string]$s.TableName -eq '__EFMigrationsHistory') {
             $status='RETAIN_EF_METADATA'
+        } elseif([long]$s.RowCount -gt 0) {
+            $status='BLOCKED_NONEMPTY_REQUIRES_TARGET_PAYLOAD_PROOF'
+            $blockers.Add("$name contains $($s.RowCount) non-empty source rows. Migration-map counts alone cannot prove the mapped target payloads are complete and identical; table-specific target fingerprint reconciliation is required before DROP.")
         } elseif([long]$s.RowCount -gt 0 -and $mapRows -lt [long]$s.RowCount) {
             $status='BLOCKED_INCOMPLETE_ROW_PROVENANCE'
             $blockers.Add("$name has $($s.RowCount) source rows but only $mapRows migration-map rows.")
