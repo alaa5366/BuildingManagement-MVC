@@ -66,9 +66,12 @@ public class NotificationsController : Controller
             User.HasClaim("impersonated", "true"))
             return Forbid();
         if (string.IsNullOrWhiteSpace(title) || title.Length > 200 ||
-            string.IsNullOrWhiteSpace(body) || body.Length > 800)
+            string.IsNullOrWhiteSpace(body) || body.Length > 800 ||
+            body.Contains("token=", StringComparison.OrdinalIgnoreCase) ||
+            body.Contains("/Account/QuickLogin", StringComparison.OrdinalIgnoreCase) ||
+            body.Contains("/Account/SetPin", StringComparison.OrdinalIgnoreCase))
         {
-            TempData["Error"] = "العنوان مطلوب (حتى 200 حرف) ونص الإشعار مطلوب (حتى 800 حرف).";
+            TempData["Error"] = "العنوان مطلوب (حتى 200 حرف) ونص الإشعار مطلوب (حتى 800 حرف)، ولا يُسمح بإضافة روابط دخول أو رموز مؤقتة.";
             return RedirectToAction(nameof(Compose));
         }
 
