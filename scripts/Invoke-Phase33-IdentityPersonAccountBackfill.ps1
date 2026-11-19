@@ -23,6 +23,8 @@ try{
  }
  $migration=[int](Scalar $c "SELECT COUNT(*) FROM dbo.__EFMigrationsHistory WHERE MigrationId='20261119200000_Phase20_IdentityProfileEvidence'")
  if($migration -ne 1){throw 'Required identity schema migration is not applied'}
+ $reviewMigration=[int](Scalar $c "SELECT COUNT(*) FROM dbo.__EFMigrationsHistory WHERE MigrationId='20261119220000_Phase34_SystemReviewedIdentityEvidence'")
+ if($reviewMigration -ne 1){throw 'Required Phase34 system-reviewed identity evidence migration is not applied'}
  $preflight=@"
 SELECT
  (SELECT COUNT(*) FROM dbo.Users u WHERE LEN(LTRIM(RTRIM(u.Name)))>160 OR LEN(NULLIF(LTRIM(RTRIM(u.Phone)),N''))>32 OR LEN(NULLIF(LTRIM(RTRIM(u.Whatsapp)),N''))>32 OR LEN(NULLIF(LTRIM(RTRIM(u.PhotoUrl)),N''))>2048 OR LEN(LTRIM(RTRIM(u.Email)))>254) InvalidUsers,
@@ -99,7 +101,7 @@ BEGIN
  INSERT dbo.UserAccounts(AccountId,PersonId,AccountStatus,NormalizedEmail,ExternalProvider,ExternalSubject,SecurityStamp,LastLoginAtUtc,CreatedAtUtc)
  VALUES(@accountId,@personId,0,UPPER(LTRIM(RTRIM(@email))),NULL,NULL,CONVERT(nvarchar(128),NEWID()),NULL,@now);
  UPDATE dbo.LegacyIdentityMap
- SET PersonId=@personId,AccountId=@accountId,MappingStatus=1,MatchMethod=N'exact-legacy-user-row',
+ SET PersonId=@personId,AccountId=@accountId,MappingStatus=1,MatchMethod=N'system-exact-source-identity',
      EvidenceReference=N'Phase30 exact Users role classification; Phase32 unique email and exact UID source row',
      ReviewReason=N'Administrative account migrated as a distinct Person and pending UserAccount. Credentials and roles are provisioned only in later controlled phases.',
      ReviewedAtUtc=@now,ReviewedByAccountId=NULL,UpdatedAtUtc=@now
