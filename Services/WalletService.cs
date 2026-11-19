@@ -324,16 +324,26 @@ public class WalletService
     /// </summary>
     public WalletAdjustment AddWalletAdjustment(Building building, string aptId, decimal amount, string? reason, string monthKey, string createdBy)
     {
+        ArgumentNullException.ThrowIfNull(building);
+        FinanceCommandValidation.ValidateMonthKey(monthKey);
+        FinanceCommandValidation.ValidateActor(createdBy, nameof(createdBy));
+        if (string.IsNullOrWhiteSpace(aptId) || !building.Apartments.Any(a => a.Id == aptId))
+            throw new ArgumentException("Apartment must belong to the target building.", nameof(aptId));
+        if (amount == 0 || decimal.Round(amount, 2, MidpointRounding.AwayFromZero) != amount)
+            throw new ArgumentOutOfRangeException(nameof(amount), "Adjustment must be non-zero and use whole currency cents.");
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new ArgumentException("A reason is required for every wallet adjustment.", nameof(reason));
+
         building.WalletAdjustments ??= new List<WalletAdjustment>();
         var adj = new WalletAdjustment
         {
             Id = "adj-" + Guid.NewGuid().ToString("N"),
             AptId = aptId,
             Amount = amount,
-            Reason = reason ?? "",
+            Reason = reason.Trim(),
             MonthKey = monthKey,
             CreatedAt = DateTime.UtcNow.ToString("o"),
-            CreatedBy = createdBy
+            CreatedBy = createdBy.Trim()
         };
         building.WalletAdjustments.Add(adj);
         return adj;
