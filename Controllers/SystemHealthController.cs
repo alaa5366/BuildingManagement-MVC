@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using BuildingManagementMvc.Attributes;
+using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -16,7 +18,7 @@ public sealed class SystemHealthController : Controller
     private readonly HealthCheckService _healthChecks;
     private readonly TimeProvider _timeProvider;
     private static readonly DateTimeOffset ProcessStartedAt =
-        DateTimeOffset.UtcNow - TimeSpan.FromMilliseconds(Environment.TickCount64);
+        new(Process.GetCurrentProcess().StartTime.ToUniversalTime());
 
     public SystemHealthController(HealthCheckService healthChecks, TimeProvider timeProvider)
     {
@@ -27,7 +29,7 @@ public sealed class SystemHealthController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var report = await _healthChecks.CheckHealthAsync(cancellationToken);
+        var report = await _healthChecks.CheckHealthAsync(cancellationToken: cancellationToken);
         var model = new SystemHealthViewModel
         {
             CheckedAtUtc = _timeProvider.GetUtcNow(),
