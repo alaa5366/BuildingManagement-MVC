@@ -189,9 +189,7 @@ public sealed class TargetPollsService
         await using var transaction = db.Database.IsRelational()
             ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken)
             : null;
-        try
-        {
-            var entitlement = await db.PollEligibility.FirstOrDefaultAsync(x => x.BuildingId == buildingId &&
+        var entitlement = await db.PollEligibility.FirstOrDefaultAsync(x => x.BuildingId == buildingId &&
                 x.PollId == pollId && x.SubjectReference == apartmentId, cancellationToken);
             if (entitlement is null || entitlement.ConsumedAtUtc is not null ||
                 entitlement.RevokedAtUtc is not null || entitlement.ExpiresAtUtc <= now)
@@ -213,8 +211,6 @@ public sealed class TargetPollsService
             await db.SaveChangesAsync(cancellationToken);
             if (transaction is not null) await transaction.CommitAsync(cancellationToken);
             return true;
-        }
-
     }
 
     /// <summary>Gets the building name and count of active apartments.</summary>
