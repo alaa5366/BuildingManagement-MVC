@@ -141,6 +141,7 @@ try
     builder.Services.AddScoped<LegacyIdentityMappingService>();
     builder.Services.AddScoped<LedgerPostingService>();
 builder.Services.AddScoped<TargetWalletReadService>();
+builder.Services.AddScoped<TargetWalletAdjustmentWorkflowService>();
 builder.Services.AddScoped<TargetDepositWorkflowService>();
 builder.Services.AddScoped<TargetExpenseRevenueWorkflowService>();
 builder.Services.AddScoped<TargetFinanceReadService>();
