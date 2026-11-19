@@ -51,6 +51,9 @@ public sealed class ApplicationLogQueryService
     private static readonly Regex IpAddress = new(
         @"(?<![\d.])(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?![\d.])",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex HttpRequestEvent = new(
+        @"^HTTP (?<method>[A-Z]+) (?<path>\\S+) responded (?<status>\\d{3}) in (?<elapsed>\\d+(?:\\.\\d+)?) ms$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex ExceptionStart = new(
         @"^\s*(?:[A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*)?(?:Exception|Error|Fault)(?:\s*\([^)]*\))?:",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -188,7 +191,11 @@ public sealed class ApplicationLogQueryService
                         : current.SourceContext,
                     Exception = current.Exception,
                     Details = current.Details,
-                    FileName = current.FileName
+                    FileName = current.FileName,
+                    HttpMethod = current.HttpMethod,
+                    RequestPath = current.RequestPath,
+                    HttpStatusCode = current.HttpStatusCode,
+                    DurationMs = current.DurationMs
                 };
             }
 
@@ -238,6 +245,11 @@ public sealed class ApplicationLogQueryService
             "WRN" => "Warning", "ERR" => "Error", "FTL" => "Fatal", _ => match.Groups["level"].Value
         };
         var (message, correlation, source) = SplitProperties(match.Groups["body"].Value);
+        var request = HttpRequestEvent.Match(message);
+        int? statusCode = request.Success && int.TryParse(request.Groups["status"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var parsedStatus)
+            ? parsedStatus : null;
+        double? durationMs = request.Success && double.TryParse(request.Groups["elapsed"].Value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var parsedDuration)
+            ? parsedDuration : null;
         entry = new ApplicationLogEntry
         {
             Timestamp = timestamp,
@@ -245,7 +257,11 @@ public sealed class ApplicationLogQueryService
             Message = Limit(Redact(message), MaxMessageLength),
             CorrelationId = Limit(Redact(correlation), 100),
             SourceContext = Limit(Redact(source), 250),
-            FileName = fileName
+            FileName = fileName,
+            HttpMethod = request.Success ? request.Groups["method"].Value : "",
+            RequestPath = request.Success ? Limit(Redact(request.Groups["path"].Value), 300) : "",
+            HttpStatusCode = statusCode,
+            DurationMs = durationMs
         };
         return true;
     }
