@@ -171,6 +171,7 @@ public class AuditLogQueryService
     public static string SeverityBadgeClass(string severity) => severity switch
     {
         "critical" => "bg-danger",
+        "error" => "bg-danger",
         "warning" => "bg-warning text-dark",
         "info" => "bg-info text-dark",
         _ => "bg-secondary"
@@ -182,6 +183,7 @@ public class AuditLogQueryService
     public static string SeverityLabelAr(string severity) => severity switch
     {
         "critical" => Loc.T("Critical"),
+        "error" => Loc.T("Error"),
         "warning" => Loc.T("Warning"),
         "info" => Loc.T("Info"),
         _ => severity
