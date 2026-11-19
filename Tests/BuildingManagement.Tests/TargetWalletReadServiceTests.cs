@@ -213,6 +213,61 @@ public sealed class TargetWalletReadServiceTests
         Assert.Equal(50m, statementEntry.Amount);
     }
 
+
+    [Fact]
+    public async Task GetApartmentAsync_RetainsReceiptAndNoteAfterDepositConfirmation()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        var periodId = Guid.NewGuid();
+        var depositId = Guid.NewGuid();
+        var transactionId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        const string receiptJson = """{"Url":"https://example.test/receipt.png","Success":true}""";
+
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.FinancialPeriods.Add(new FinancialPeriodEntity
+            {
+                PeriodId = periodId, BuildingId = "B1", PeriodKey = now.ToString("yyyy-MM"),
+                TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Open,
+                StartsAtUtc = now.AddDays(-10), EndsAtUtc = now.AddDays(20), CreatedAtUtc = now
+            });
+            seed.LedgerTransactions.Add(new LedgerTransactionEntity
+            {
+                LedgerTransactionId = transactionId, PeriodId = periodId, BuildingId = "B1",
+                Kind = LedgerTransactionKind.Deposit, Status = LedgerTransactionStatus.Posted,
+                IdempotencyKey = "confirmed-deposit", CreatedAtUtc = now, PostedAtUtc = now
+            });
+            seed.PaymentDeposits.Add(new PaymentDepositEntity
+            {
+                PaymentDepositId = depositId, PeriodId = periodId, BuildingId = "B1",
+                ApartmentId = "A1", PostedTransactionId = transactionId, Amount = 80m,
+                CurrencyCode = "EGP", Status = PaymentDepositStatus.Confirmed,
+                SubmittedAtUtc = now.AddHours(-1), ConfirmedAtUtc = now,
+                Note = "Bank transfer", ReceiptMetadataJson = receiptJson, SourceSystem = "application"
+            });
+            seed.LedgerEntries.Add(new LedgerEntryEntity
+            {
+                LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = transactionId,
+                PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
+                EntryKind = LedgerEntryKind.Deposit, SignedAmount = 80m, CurrencyCode = "EGP",
+                EffectiveAtUtc = now, CreatedAtUtc = now
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetWalletReadService(new TestContextFactory(options));
+        var snapshot = await service.GetApartmentAsync("B1", "A1");
+
+        var entry = Assert.Single(snapshot.Transactions);
+        Assert.Equal("Bank transfer", entry.Note);
+        Assert.Equal(depositId.ToString("N")[..8].ToUpperInvariant(), entry.Number);
+        Assert.Equal("https://example.test/receipt.png", entry.ReceiptUrl);
+        Assert.True(entry.HasReceipt);
+    }
+
     [Fact]
     public async Task GetApartmentAsync_RejectsInvalidMonthAndCurrency()
     {
