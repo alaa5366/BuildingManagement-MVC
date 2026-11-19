@@ -90,9 +90,9 @@ GROUP BY SourceTable;
         } elseif([long]$s.TotalRows -gt 0) {
             $status='BLOCKED_NONEMPTY_REQUIRES_TARGET_PAYLOAD_PROOF'
             $blockers.Add("$name contains $($s.TotalRows) non-empty source rows. Migration-map counts alone cannot prove the mapped target payloads are complete and identical; table-specific target fingerprint reconciliation is required before DROP.")
-        } elseif([long]$s.TotalRows -gt 0 -and $mapRows -lt [long]$s.RowCount) {
+        } elseif([long]$s.TotalRows -gt 0 -and $mapRows -lt [long]$s.TotalRows) {
             $status='BLOCKED_INCOMPLETE_ROW_PROVENANCE'
-            $blockers.Add("$name has $($s.RowCount) source rows but only $mapRows migration-map rows.")
+            $blockers.Add("$name has $($s.TotalRows) source rows but only $mapRows migration-map rows.")
         } elseif($null -ne $map -and ([long]$map.MissingTargetKeys -gt 0 -or [long]$map.MissingTargetTables -gt 0)) {
             $status='BLOCKED_INVALID_TARGET_MAPPING'
             $blockers.Add("$name has migration-map entries with missing target keys or target tables.")
@@ -120,11 +120,11 @@ WHERE EXISTS(SELECT 1 FROM @Legacy l WHERE l.TableName=pt.name AND l.SchemaName=
     foreach($r in $tableResults){Log ("{0}: source={1}; target={2}; map={3}; {4}" -f $r.Table,$r.SourceRows,$r.TargetRows,$r.MapRows,$r.Status)}
     foreach($b in $blockers){Log "BLOCKER: $b"}
     if($blockers.Count -gt 0){throw "Retirement stopped safely: $($blockers.Count) blocker(s). No table was dropped."}
-    if($Apply){
-        Log 'APPLY requested, but destructive table retirement is disabled pending complete payload and relationship reconciliation.'
+    if($Apply) {
+        Log 'APPLY requested, but destructive retirement is disabled pending complete table-by-table migration proof and dependency review.'
         throw 'Phase49 is a read-only migration readiness audit. No tables were dropped.'
     } else {
-        Log 'READ-ONLY PREFLIGHT: no backup or table retirement is performed by this phase.'
+        Log 'READ-ONLY PREFLIGHT: no schema changes or table drops are performed.'
     }
 }
 catch { $failure=$_.Exception.Message; Log "ERROR: $failure" }
@@ -137,10 +137,10 @@ finally {
     $lines+=@('','## Execution log','')
     $lines+=($log|ForEach-Object{"- $_"})
     $lines+=@('','## Backup','',"- Backup file: $(if($backupPath){$backupPath}else{'Not created'})","- Tables dropped: $($dropped.Count)",'','## Safety notes','',
-      '- This phase is strictly read-only. It never backs up, drops, truncates, or modifies any table.',
+      '- The script fails closed. Any missing target table, incomplete migration-map coverage, invalid target mapping, or foreign-key dependency prevents all drops.',
       '- __EFMigrationsHistory is deliberately retained as Entity Framework deployment metadata.',
       '- Target-only operational tables are never selected for deletion.',
-      '- A migration-map count is not proof of payload equality. Exact row fingerprints, table-specific target mappings, and FK relationship reconciliation are required before any retirement plan.',
+      '- A migration-map count is a conservative gate, not a cryptographic proof of payload equality; the Phase 47 fingerprints and table-specific migration reports remain required evidence.',
       '- If any blocker is reported, resolve it before retrying. No source table or source row is ever changed.')
     Set-Content -LiteralPath $report -Value ($lines -join [Environment]::NewLine) -Encoding UTF8
     Write-Host "Report: $report"
