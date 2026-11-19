@@ -70,6 +70,49 @@ public sealed class LedgerPostingService
             if (existing.BuildingId == buildingId && existing.PeriodId == periodId &&
                 existing.Kind == kind && existing.Status == LedgerTransactionStatus.Posted)
             {
+                var persistedLines = await db.LedgerEntries.AsNoTracking()
+                    .Where(x => x.LedgerTransactionId == existing.LedgerTransactionId)
+                    .Select(x => new
+                    {
+                        x.ApartmentId,
+                        x.EntryKind,
+                        x.SignedAmount,
+                        x.CurrencyCode,
+                        x.Description
+                    })
+                    .ToListAsync(cancellationToken);
+
+                var requestedPayload = lines
+                    .Select(x => (
+                        ApartmentId: x.ApartmentId,
+                        EntryKind: x.EntryKind,
+                        SignedAmount: x.SignedAmount,
+                        CurrencyCode: x.CurrencyCode.ToUpperInvariant(),
+                        Description: string.IsNullOrWhiteSpace(x.Description) ? null : x.Description.Trim()))
+                    .OrderBy(x => x.ApartmentId, StringComparer.Ordinal)
+                    .ThenBy(x => x.EntryKind)
+                    .ThenBy(x => x.SignedAmount)
+                    .ThenBy(x => x.CurrencyCode, StringComparer.Ordinal)
+                    .ThenBy(x => x.Description, StringComparer.Ordinal)
+                    .ToArray();
+
+                var persistedPayload = persistedLines
+                    .Select(x => (
+                        ApartmentId: x.ApartmentId,
+                        EntryKind: x.EntryKind,
+                        SignedAmount: x.SignedAmount,
+                        CurrencyCode: x.CurrencyCode,
+                        Description: x.Description))
+                    .OrderBy(x => x.ApartmentId, StringComparer.Ordinal)
+                    .ThenBy(x => x.EntryKind)
+                    .ThenBy(x => x.SignedAmount)
+                    .ThenBy(x => x.CurrencyCode, StringComparer.Ordinal)
+                    .ThenBy(x => x.Description, StringComparer.Ordinal)
+                    .ToArray();
+
+                if (!requestedPayload.SequenceEqual(persistedPayload))
+                    throw new InvalidOperationException("The idempotency key was already used with a different ledger payload.");
+
                 await tx.CommitAsync(cancellationToken);
                 return existing.LedgerTransactionId;
             }
