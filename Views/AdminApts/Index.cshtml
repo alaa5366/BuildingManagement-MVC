@@ -62,12 +62,12 @@
 
                                 @* QR مؤقت لاستعادة دخول الساكن عند نسيان PIN *@
                                 <form method="post" asp-action="GenerateRecoveryQr" class="d-inline"
-                                      onsubmit="return confirm('سيتم إنشاء رابط دخول للشقة صالح 5 دقائق ولمرة واحدة وإرساله إلى رقم الهاتف المسجل. هل تريد المتابعة؟');">
+                                      onsubmit="return confirm('سيتم إنشاء رمز جديد صالح 5 دقائق ولمرة واحدة وإرسال رابط الدخول إلى رقم الهاتف المسجل، وسيتم إبطال أي رمز استعادة سابق للشقة. هل تريد المتابعة؟');">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="aptId" value="@apt.Id" />
                                     <button type="submit" class="apt-action-btn btn-welcome">
                                         <span class="icon">🔐</span>
-                                        <span class="label">إرسال QR لاستعادة الدخول</span>
+                                        <span class="label">إصدار / إعادة إصدار QR</span>
                                     </button>
                                 </form>
                                 <form method="post" asp-action="CancelRecoveryQr" class="d-inline"
