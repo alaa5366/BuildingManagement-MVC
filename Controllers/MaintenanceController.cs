@@ -22,13 +22,26 @@ public class MaintenanceController : Controller
     private readonly MaintenanceService _maint;
     private readonly AuditLogService _audit;
     private readonly NotificationsService _notify;
+    private readonly TargetNotificationsService _targetNotifications;
+    private readonly Microsoft.Extensions.Logging.ILogger<MaintenanceController> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MaintenanceController"/> class.
     /// </summary>
-    public MaintenanceController(BuildingsService buildings, MaintenanceService maint, AuditLogService audit, NotificationsService notify)
+    public MaintenanceController(
+        BuildingsService buildings,
+        MaintenanceService maint,
+        AuditLogService audit,
+        NotificationsService notify,
+        TargetNotificationsService targetNotifications,
+        Microsoft.Extensions.Logging.ILogger<MaintenanceController> logger)
     {
-        _buildings = buildings; _maint = maint; _audit = audit; _notify = notify;
+        _buildings = buildings;
+        _maint = maint;
+        _audit = audit;
+        _notify = notify;
+        _targetNotifications = targetNotifications;
+        _logger = logger;
     }
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
@@ -166,6 +179,21 @@ public class MaintenanceController : Controller
             _audit.Push(building, "maint_add_expense", $"{expense.Note} — {expense.Amount:0.##}", "admin", User.Identity?.Name ?? "admin");
             var catName = building.ExpenseCategories.FirstOrDefault(c => c.Id == expense.CategoryId)?.Name ?? expense.CategoryId;
             _notify.NotifyResidentsNewExpense(building, catName, expense.Amount);
+            foreach (var apartment in building.Apartments.Where(item => !item.Closed))
+            {
+                try
+                {
+                    await _targetNotifications.CreateResidentDepositNoticeAsync(
+                        building.Id, apartment.Id, "مصروف جديد",
+                        $"{catName}: {expense.Amount:0.##} ج.م — {building.Name}",
+                        HttpContext.RequestAborted);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Expense notification failed for building {BuildingId}, apartment {ApartmentId}.",
+                        building.Id, apartment.Id);
+                }
+            }
             await _buildings.SaveFullAsync(building);
             TempData["Message"] = Loc.T("Cost_Added_To_Expenses");
         }
