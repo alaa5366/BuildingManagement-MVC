@@ -28,10 +28,10 @@
 
 @* ===== Totals ===== *@
 <div class="row mb-3 text-center">
-    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">@Loc.T("Collected")</div><div class="fw-bold">@totals.Collected.ToString("0.##")</div></div></div>
-    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">@Loc.T("Expenses_3")</div><div class="fw-bold">@totals.Expenses.ToString("0.##")</div></div></div>
-    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">@Loc.T("Revenues")</div><div class="fw-bold">@totals.Revenues.ToString("0.##")</div></div></div>
-    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">@Loc.T("Wallet_Total")</div><div class="fw-bold">@totals.TotalWallet.ToString("0.##")</div></div></div>
+    <div class="col"><div class="ui-stat-tile p-3"><div class="text-muted small">@Loc.T("Collected")</div><div class="fw-bold">@totals.Collected.ToString("0.##")</div></div></div>
+    <div class="col"><div class="ui-stat-tile p-3"><div class="text-muted small">@Loc.T("Expenses_3")</div><div class="fw-bold">@totals.Expenses.ToString("0.##")</div></div></div>
+    <div class="col"><div class="ui-stat-tile p-3"><div class="text-muted small">@Loc.T("Revenues")</div><div class="fw-bold">@totals.Revenues.ToString("0.##")</div></div></div>
+    <div class="col"><div class="ui-stat-tile p-3"><div class="text-muted small">@Loc.T("Wallet_Total")</div><div class="fw-bold">@totals.TotalWallet.ToString("0.##")</div></div></div>
 </div>
 
 @* ============================================================ *@
@@ -39,7 +39,7 @@
 @* ============================================================ *@
 @if (pending.TotalItems > 0)
 {
-    <div class="bg-white rounded shadow-sm p-3 mb-3">
+    <div class="ui-panel p-3 mb-3">
         <h5>@Loc.T("Payments_Awaiting_Confirmation_N", pending.TotalItems)</h5>
         <table class="table table-sm">
             <thead>
@@ -121,7 +121,7 @@
 @* ============================================================ *@
 @* ✅ أرصدة الشقق + Pagination                                  *@
 @* ============================================================ *@
-<div class="bg-white rounded shadow-sm p-3">
+<div class="ui-panel p-3">
     <h5>@Loc.T("Apartment_Balances_N", balances.TotalItems)</h5>
 
     @* ✅ Pagination (فوق) *@

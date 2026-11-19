@@ -23,21 +23,21 @@
 </div>
 
 <div class="row mb-3 text-center g-2">
-    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">@Loc.T("Total_Collected")</div><div class="fw-bold">@Model.TotalCollected.ToString("0.##")</div></div></div>
-    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">@Loc.T("Total_Revenues")</div><div class="fw-bold text-success">@Model.TotalRevenues.ToString("0.##")</div></div></div>
-    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">@Loc.T("Total_Expenses")</div><div class="fw-bold text-danger">@Model.TotalExpenses.ToString("0.##")</div></div></div>
-    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">@Loc.T("Net_Balance")</div><div class="fw-bold @(Model.NetBalance >= 0 ? "text-success" : "text-danger")">@Model.NetBalance.ToString("0.##")</div></div></div>
-    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">@Loc.T("Monthly_Average")</div><div class="fw-bold @(Model.AvgMonthly >= 0 ? "text-success" : "text-danger")">@Model.AvgMonthly.ToString("0.##")</div></div></div>
+    <div class="col"><div class="ui-stat-tile p-3"><div class="text-muted small">@Loc.T("Total_Collected")</div><div class="fw-bold">@Model.TotalCollected.ToString("0.##")</div></div></div>
+    <div class="col"><div class="ui-stat-tile p-3"><div class="text-muted small">@Loc.T("Total_Revenues")</div><div class="fw-bold text-success">@Model.TotalRevenues.ToString("0.##")</div></div></div>
+    <div class="col"><div class="ui-stat-tile p-3"><div class="text-muted small">@Loc.T("Total_Expenses")</div><div class="fw-bold text-danger">@Model.TotalExpenses.ToString("0.##")</div></div></div>
+    <div class="col"><div class="ui-stat-tile p-3"><div class="text-muted small">@Loc.T("Net_Balance")</div><div class="fw-bold @(Model.NetBalance >= 0 ? "text-success" : "text-danger")">@Model.NetBalance.ToString("0.##")</div></div></div>
+    <div class="col"><div class="ui-stat-tile p-3"><div class="text-muted small">@Loc.T("Monthly_Average")</div><div class="fw-bold @(Model.AvgMonthly >= 0 ? "text-success" : "text-danger")">@Model.AvgMonthly.ToString("0.##")</div></div></div>
 </div>
 
-<div class="bg-white rounded shadow-sm p-3 mb-3">
+<div class="ui-panel p-3 mb-3">
     <h5>@Loc.T("Collected_Vs_Expenses_By_Month")</h5>
     <div style="height:320px"><canvas id="chartMonthly"></canvas></div>
 </div>
 
 <div class="row">
     <div class="col-md-6 mb-3">
-        <div class="bg-white rounded shadow-sm p-3">
+        <div class="ui-panel p-3">
             <h5>@Loc.T("Expenses_By_Item")</h5>
             @if (Model.Categories.Count == 0)
             {
@@ -50,7 +50,7 @@
         </div>
     </div>
     <div class="col-md-6 mb-3">
-        <div class="bg-white rounded shadow-sm p-3">
+        <div class="ui-panel p-3">
             <h5>@Loc.T("Wallet_Distribution_Current_Month")</h5>
             @if (Model.Wallet.Count == 0)
             {
@@ -66,7 +66,7 @@
 
 <div class="row">
     <div class="col-md-6 mb-3">
-        <div class="bg-white rounded shadow-sm p-3">
+        <div class="ui-panel p-3">
             <h5>@Loc.T("Most_Indebted_Apartments")</h5>
             @if (Model.Debtors.Count == 0)
             {
@@ -86,7 +86,7 @@
         </div>
     </div>
     <div class="col-md-6 mb-3">
-        <div class="bg-white rounded shadow-sm p-3">
+        <div class="ui-panel p-3">
             <h5>@Loc.T("Apartments_With_The_Highest_Balance")</h5>
             @if (Model.Creditors.Count == 0)
             {

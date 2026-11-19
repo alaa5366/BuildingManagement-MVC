@@ -48,7 +48,7 @@ else
         var myVote = poll.Votes.TryGetValue(apartmentId, out var mv) ? mv : null;
         var active = !poll.Closed && (string.IsNullOrEmpty(poll.Deadline) || !(DateTime.TryParse(poll.Deadline, out var dl) && dl < DateTime.UtcNow));
 
-        <div class="bg-white rounded shadow-sm p-3 mb-3">
+        <div class="ui-poll-card p-3 mb-3">
             <h5>@poll.Question</h5>
             @if (!string.IsNullOrEmpty(poll.Description))
             {
