@@ -185,7 +185,7 @@ BEGIN
    CASE WHEN o.Kind=2 THEN N'Historical expense share' ELSE N'Historical revenue share' END,
    o.EffectiveAtUtc,SYSUTCDATETIME()
   FROM #Ops o JOIN dbo.MonthlyApartmentShares s ON s.BuildingId=o.BuildingId AND s.MonthKey=o.MonthKey
-  WHERE (o.Kind=2 AND s.ExpenseShare<>0) OR (o.Kind=3 AND s.RevenueShare<>0)
+  WHERE ((o.Kind=2 AND s.ExpenseShare<>0) OR (o.Kind=3 AND s.RevenueShare<>0))
   AND NOT EXISTS(
    SELECT 1 FROM dbo.LedgerEntries le WHERE le.LedgerEntryId=
     CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONVERT(varbinary(max),CONCAT(N'legacy.finance.share-entry.v1|',s.BuildingId,N'|',s.MonthKey,N'|',s.ApartmentId,N'|',o.Kind))),1,16))
