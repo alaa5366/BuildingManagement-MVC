@@ -39,7 +39,7 @@ public class AdminHomeController : Controller
         var building = await _targetWallet.GetBuildingShellAsync(buildingId, null, HttpContext.RequestAborted);
         if (building == null) return NotFound();
 
-        var currentMonth = WalletService.CurrentMonthKey();
+        var currentMonth = await _targetWallet.GetCurrentPeriodKeyAsync(buildingId, cancellationToken: HttpContext.RequestAborted);
         var vm = await _map.BuildAsync(building, currentMonth);
 
         return View(vm);
@@ -62,7 +62,7 @@ public class AdminHomeController : Controller
         var building = await _buildings.GetByIdAsync(buildingId);
         if (building == null) return NotFound();
 
-        var currentMonth = WalletService.CurrentMonthKey();
+        var currentMonth = await _targetWallet.GetCurrentPeriodKeyAsync(buildingId, cancellationToken: HttpContext.RequestAborted);
         var vm = await _map.GetApartmentDetailsAsync(building, aptId, currentMonth);
         if (vm == null) return NotFound();
 
