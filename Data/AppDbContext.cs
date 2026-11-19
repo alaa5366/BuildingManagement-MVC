@@ -222,6 +222,9 @@ public class AppDbContext : DbContext
     public DbSet<FinancialReconciliationRunEntity> FinancialReconciliationRuns => Set<FinancialReconciliationRunEntity>();
     public DbSet<FinancialReconciliationDifferenceEntity> FinancialReconciliationDifferences => Set<FinancialReconciliationDifferenceEntity>();
     public DbSet<InvoiceIssueEntity> InvoiceIssues => Set<InvoiceIssueEntity>();
+    public DbSet<LanguageEntity> Languages => Set<LanguageEntity>();
+    public DbSet<TranslationEntryEntity> TranslationEntries => Set<TranslationEntryEntity>();
+    public DbSet<TranslationValueEntity> TranslationValues => Set<TranslationValueEntity>();
     protected override void ConfigureConventions(ModelConfigurationBuilder cb)
     {
         cb.Properties<decimal>().HavePrecision(18, 2);
@@ -233,6 +236,9 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder mb)
     {
         IdentityModelConfiguration.Configure(mb);
+        mb.Entity<LanguageEntity>(e => { e.ToTable("Languages"); e.HasKey(x => x.CultureCode); e.Property(x => x.CultureCode).HasMaxLength(20); e.Property(x => x.EnglishName).HasMaxLength(100).IsRequired(); e.Property(x => x.NativeName).HasMaxLength(100).IsRequired(); e.Property(x => x.Direction).HasMaxLength(12).IsRequired(); e.Property(x => x.FallbackCulture).HasMaxLength(20); e.Property(x => x.Flag).HasMaxLength(8); e.Property(x => x.UpdatedBy).HasMaxLength(128); });
+        mb.Entity<TranslationEntryEntity>(e => { e.ToTable("TranslationEntries"); e.HasKey(x => x.Key); e.Property(x => x.Key).HasMaxLength(200); e.Property(x => x.Category).HasMaxLength(40).IsRequired(); e.Property(x => x.SourceGroup).HasMaxLength(160).IsRequired(); e.Property(x => x.Description).HasMaxLength(500); e.Property(x => x.UpdatedBy).HasMaxLength(128); e.Property(x => x.RowVersion).IsRowVersion(); e.HasIndex(x => new { x.Category, x.SourceGroup }); });
+        mb.Entity<TranslationValueEntity>(e => { e.ToTable("TranslationValues"); e.HasKey(x => new { x.Key, x.CultureCode }); e.Property(x => x.Key).HasMaxLength(200); e.Property(x => x.CultureCode).HasMaxLength(20); e.Property(x => x.Value).HasMaxLength(4000).IsRequired(); e.Property(x => x.UpdatedBy).HasMaxLength(128); e.HasOne<TranslationEntryEntity>().WithMany().HasForeignKey(x => x.Key).OnDelete(DeleteBehavior.Cascade); e.HasOne<LanguageEntity>().WithMany().HasForeignKey(x => x.CultureCode).OnDelete(DeleteBehavior.Restrict); });
         FinanceModelConfiguration.Configure(mb);
         OperationalModelConfiguration.Configure(mb);
 
