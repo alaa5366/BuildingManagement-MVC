@@ -51,7 +51,7 @@ public sealed class ApplicationLogsController : Controller
         if (query.HttpStatusCode is < 100 or > 599 ||
             query.MinDurationMs is < 0 or > 3600000 ||
             query.MaxDurationMs is < 0 or > 3600000 ||
-            (query.MinDurationMs.HasValue && query.MaxDurationMs.HasValue && query.MinDurationMs > query.MaxDurationMs))
+            (query.MinDurationMs.HasValue && query.MaxDurationMs.HasValue && query.MinDurationMs.Value > query.MaxDurationMs.Value))
         {
             ModelState.AddModelError(nameof(httpStatusCode), "HTTP status and duration filters are outside the supported range.");
             return View(new ApplicationLogsViewModel
