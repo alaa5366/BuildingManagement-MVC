@@ -50,7 +50,7 @@ else
 {
     foreach (var n in Model.Items)
     {
-        <div class="bg-white rounded shadow-sm p-3 mb-2 d-flex gap-3 align-items-start @(n.Read ? "" : "border-start border-4 border-warning")">
+        <div class="ui-notification-card p-3 mb-2 d-flex gap-3 align-items-start @(n.Read ? "" : "border-start border-4 border-warning")">
             <div style="font-size:22px;">@n.Icon</div>
             <div class="flex-grow-1">
                 <div class="fw-bold">@n.Title</div>
