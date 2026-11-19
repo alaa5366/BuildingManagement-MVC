@@ -41,6 +41,46 @@ public sealed class TargetNotificationsService
     }
 
 
+    public async Task<PagedResult<Notification>> GetPageForAdminAsync(
+        string buildingId, int page = 1, int pageSize = 50,
+        CancellationToken cancellationToken = default) =>
+        await GetPageAsync(buildingId, "admin", null, page, pageSize, cancellationToken);
+
+    public async Task<PagedResult<Notification>> GetPageForResidentAsync(
+        string buildingId, string apartmentId, int page = 1, int pageSize = 50,
+        CancellationToken cancellationToken = default) =>
+        await GetPageAsync(buildingId, "resident", apartmentId, page, pageSize, cancellationToken);
+
+    private async Task<PagedResult<Notification>> GetPageAsync(
+        string buildingId, string recipientType, string? apartmentId, int page, int pageSize,
+        CancellationToken cancellationToken)
+    {
+        ValidateScope(buildingId, recipientType == "resident" ? apartmentId : null);
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        var query = db.Notifications.AsNoTracking().Where(item =>
+            item.BuildingId == buildingId && item.RecipientType == recipientType &&
+            (recipientType == "admin"
+                ? item.RecipientApartmentId == null
+                : item.RecipientApartmentId == apartmentId));
+
+        var total = await query.CountAsync(cancellationToken);
+        var totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
+        page = Math.Min(page, totalPages);
+        var items = await query.OrderByDescending(item => item.Ts).ThenByDescending(item => item.Id)
+            .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
+
+        return new PagedResult<Notification>
+        {
+            Items = items.Select(ToModel).ToList(),
+            CurrentPage = page,
+            PageSize = pageSize,
+            TotalItems = total
+        };
+    }
+
     public async Task CreateResidentDepositNoticeAsync(
         string buildingId,
         string apartmentId,
@@ -122,15 +162,12 @@ public sealed class TargetNotificationsService
         else
             query = query.Where(item => item.RecipientApartmentId == apartmentId);
 
-        var unread = await query.ToListAsync(cancellationToken);
         var now = DateTime.UtcNow;
-        foreach (var item in unread)
-        {
-            item.IsRead = true;
-            item.ReadAt = now;
-        }
-        await db.SaveChangesAsync(cancellationToken);
-        return unread.Count;
+        return await query.ExecuteUpdateAsync(
+            setters => setters
+                .SetProperty(item => item.IsRead, true)
+                .SetProperty(item => item.ReadAt, now),
+            cancellationToken);
     }
 
     private static Notification ToModel(NotificationEntity item) => new()
