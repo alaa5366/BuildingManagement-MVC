@@ -3,17 +3,27 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
+using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Controllers;
 
 public sealed class PhoneCorrectionController : Controller
 {
     private readonly PersonPhoneCorrectionService _service;
-    public PhoneCorrectionController(PersonPhoneCorrectionService service) => _service = service;
+    private readonly BuildingsService _buildings;
+    public PhoneCorrectionController(PersonPhoneCorrectionService service, BuildingsService buildings)
+    {
+        _service = service;
+        _buildings = buildings;
+    }
 
     [HttpGet]
     [AllowAnonymous]
-    public IActionResult Request() => View();
+    public async Task<IActionResult> Request()
+    {
+        ViewBag.Buildings = await _buildings.GetSummariesAsync();
+        return View();
+    }
 
     [HttpPost]
     [AllowAnonymous]
@@ -21,8 +31,9 @@ public sealed class PhoneCorrectionController : Controller
     [EnableRateLimiting("login")]
     public async Task<IActionResult> Request(string previousPhone, string requestedPhone, string buildingId, string apartmentId)
     {
-        var accepted = await _service.SubmitAsync(previousPhone, requestedPhone, buildingId, apartmentId);
+        await _service.SubmitAsync(previousPhone, requestedPhone, buildingId, apartmentId);
         ViewBag.Message = "إذا كانت البيانات صحيحة وتنطبق عليها شروط المراجعة، فسيظهر الطلب لإدارة العمارة للتحقق من هويتك. لا يتم تغيير الرقم تلقائيًا.";
+        ViewBag.Buildings = await _buildings.GetSummariesAsync();
         return View();
     }
 
