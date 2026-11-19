@@ -245,7 +245,7 @@ public class BuildingMapService
                 Deposit = new RecentDepositVm
                 {
                     Id = item.Id,
-                    Number = item.Number,
+                    Number = item.Number ?? string.Empty,
                     Amount = item.Amount,
                     Status = item.Status,
                     Note = item.Note ?? string.Empty,
