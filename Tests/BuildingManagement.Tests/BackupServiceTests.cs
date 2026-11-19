@@ -493,7 +493,7 @@ public class BackupServiceTests
 
         var restoredEligibility = await _db.PollEligibility.SingleAsync(x => x.EligibilityId == eligibilityId);
         Assert.Equal("resident-reference-1", restoredEligibility.SubjectReference);
-        Assert.Equal(now, restoredEligibility.ConsumedAtUtc);
+        Assert.Equal<DateTime?>(now, restoredEligibility.ConsumedAtUtc);
         Assert.Equal(new byte[] { 20, 21, 22 }, restoredEligibility.CredentialHash);
 
         var restoredBallot = await _db.PollBallots.SingleAsync(x => x.BallotId == ballotId);
