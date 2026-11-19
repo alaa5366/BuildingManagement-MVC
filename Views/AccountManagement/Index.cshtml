@@ -4,6 +4,7 @@
     @if (TempData["Message"] is string accountMessage) { <div class="alert alert-info" role="status">@accountMessage</div> }
     @if (TempData["Error"] is string accountError) { <div class="alert alert-danger" role="alert">@accountError</div> }
     @if (TempData["TemporaryResidentPin"] is string temporaryPin) { <div class="alert alert-warning" role="alert"><strong>PIN مؤقت — يظهر مرة واحدة فقط:</strong> <code class="fs-4">@temporaryPin</code><br />انقله للمستخدم بأمان واطلب منه تغييره عند أول دخول.</div> }
+    @if (TempData["TemporarySuperAdminPassword"] is string temporaryPassword) { <div class="alert alert-warning" role="alert"><strong>كلمة مرور SuperAdmin مؤقتة — تظهر مرة واحدة فقط:</strong> <code class="fs-5">@temporaryPassword</code><br />سلّمها لصاحب الحساب عبر قناة آمنة، واطلب منه تغييرها فورًا.</div> }
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div><h2 class="mb-1">مركز إدارة الحسابات</h2><div class="text-muted">مراجعة حسابات الهوية الموحدة ونطاقات صلاحياتها</div></div>
         <div class="d-flex flex-wrap gap-2">
@@ -38,7 +39,7 @@
     </div></div>
     <div class="alert alert-info">
         المركز يعرض حسابات الهوية الموحدة، ويتيح تفعيل/إيقاف حسابات السكان وإعادة تعيين PIN مؤقت لها. حسابات الإدمن القديمة تُدار من شاشة الإدمن الحالية لحين اكتمال تحويل تسجيل دخولها.
-        حسابات SuperAdmin القديمة ظاهرة هنا كمصدر منفصل للقراءة فقط، ولم يتم دمجها مع UserAccounts دون خريطة ربط موثّقة.
+        حسابات SuperAdmin القديمة ظاهرة كمصدر منفصل؛ يمكن إدارة الحسابات المدرجة في قائمة السماح (مع منع إدارة الحساب الحالي وآخر حساب نشط)، دون دمجها مع UserAccounts.
         يظل دخول SuperAdmin بالإيميل وكلمة المرور، ودخول السكان والإدمن العادي بالموبايل وPIN. لا يتم عرض PIN أو password hash.
     </div>
     <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
@@ -63,11 +64,31 @@
                 <td>@(account.LastLoginAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "لم يسجل")</td>
                 <td>
                     @if (account.IsArchived) { <span class="badge bg-secondary">شخص مؤرشف</span> }
+                    @if (account.IsLegacyAccount && !account.IsSuperAdminEmailAllowed) { <span class="badge bg-warning text-dark">البريد غير مدرج بقائمة السماح</span> }
                     @if (account.IsDuplicatePhone) { <span class="badge bg-warning text-dark">موبايل مكرر</span> }
                     @if (account.ActiveRoleCount == 0) { <span class="badge bg-danger">بدون دور نشط</span> }
                 </td>
                 <td>
-                    @if (!account.IsLegacyAccount && !account.IsArchived && account.Roles == "resident")
+                    @if (account.IsLegacyAccount && account.IsSuperAdminEmailAllowed)
+                    {
+                        var currentActorId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                        if (!string.Equals(account.LegacyUserId, currentActorId, StringComparison.Ordinal))
+                        {
+                            <div class="d-flex flex-wrap gap-1">
+                                @if (account.AccountStatus == 1)
+                                {
+                                    <form asp-action="SetLegacySuperAdminStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="legacyUserId" value="@account.LegacyUserId" /><input type="hidden" name="activate" value="false" /><button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm(&quot;إيقاف حساب SuperAdmin؟&quot;)">إيقاف</button></form>
+                                    <form asp-action="ResetLegacySuperAdminPassword" method="post">@Html.AntiForgeryToken()<input type="hidden" name="legacyUserId" value="@account.LegacyUserId" /><button type="submit" class="btn btn-sm btn-outline-primary" onclick="return confirm(&quot;إصدار كلمة مرور مؤقتة جديدة؟&quot;)">إعادة تعيين كلمة المرور</button></form>
+                                }
+                                else
+                                {
+                                    <form asp-action="SetLegacySuperAdminStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="legacyUserId" value="@account.LegacyUserId" /><input type="hidden" name="activate" value="true" /><button type="submit" class="btn btn-sm btn-outline-success">تفعيل</button></form>
+                                }
+                            </div>
+                        }
+                        else { <span class="text-muted small">لا يمكن إدارة حسابك الحالي من هنا</span> }
+                    }
+                    else if (!account.IsLegacyAccount && !account.IsArchived && account.Roles == "resident")
                     {
                         <div class="d-flex flex-wrap gap-1">
                             @if (account.AccountStatus == 1)
