@@ -1,9 +1,3 @@
-﻿@* =============================================================================
-   View:        AuditLog/Index
-   Rendered by: AuditLogController.Index
-   Model:       BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Services.AuditEntryDoc>
-   Purpose:     Main page.
-   ============================================================================= *@
 @model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Services.AuditEntryDoc>
 @{
     ViewData["Title"] = Loc.T("Log");
@@ -13,264 +7,135 @@
     var canFilterBuilding = ViewBag.CanFilterByBuilding as bool? ?? false;
     var canFilterApartment = ViewBag.CanFilterByApartment as bool? ?? false;
     var canFilterUser = ViewBag.CanFilterByUser as bool? ?? true;
-    var routeValues = ViewBag.RouteValues as Dictionary<string, string?> ?? new();
-
-    // ✅ تجهيز RouteValues للـ Partial (بدون القيم الفاضية)
-    var routeValuesStr = new Dictionary<string, string>();
-    foreach (var kv in routeValues)
+    var infoCount = Model.Items.Count(x => x.Severity == "info");
+    var warningCount = Model.Items.Count(x => x.Severity == "warning");
+    var errorCount = Model.Items.Count(x => x.Severity == "error");
+    var criticalCount = Model.Items.Count(x => x.Severity == "critical");
+    var routeValues = new Dictionary<string, string?>
     {
-        if (!string.IsNullOrWhiteSpace(kv.Value))
-            routeValuesStr[kv.Key] = kv.Value!;
-    }
+        ["buildingId"] = ViewBag.SelectedBuildingId as string,
+        ["apartmentId"] = ViewBag.SelectedApartmentId as string,
+        ["userId"] = ViewBag.SelectedUserId as string,
+        ["actionFilter"] = ViewBag.SelectedAction as string,
+        ["severity"] = ViewBag.SelectedSeverity as string,
+        ["from"] = ViewBag.From as string,
+        ["to"] = ViewBag.To as string,
+        ["pageSize"] = Model.PageSize.ToString()
+    };
+    var queryString = string.Join("&", routeValues.Where(x => !string.IsNullOrWhiteSpace(x.Value))
+        .Select(x => $"{Uri.EscapeDataString(x.Key)}={Uri.EscapeDataString(x.Value!)}"));
+    string PageUrl(int page) => Url.Action("Index", "AuditLog", new
+    {
+        buildingId = ViewBag.SelectedBuildingId,
+        apartmentId = ViewBag.SelectedApartmentId,
+        userId = ViewBag.SelectedUserId,
+        actionFilter = ViewBag.SelectedAction,
+        severity = ViewBag.SelectedSeverity,
+        from = ViewBag.From,
+        to = ViewBag.To,
+        page,
+        pageSize = Model.PageSize
+    }) ?? "#";
 }
-
 @section Styles {
+    <link rel="stylesheet" href="~/css/application-logs.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/audit-log.css" asp-append-version="true" />
 }
-
-<div class="container-fluid audit-log-page">
-    <div class="d-flex justify-content-between align-items-center mb-3 audit-log-header">
-        <h2>
-            @Loc.T("Log_2")
-            @if (role == "superadmin")
-            {
-                <small class="text-muted">@Loc.T("All_Records")</small>
-            }
-            else if (role == "admin")
-            {
-
-                <small class="text-muted">@Loc.T("My_Building_S_Log")</small>
-            }
-            else
-            {
-
-                <small class="text-muted">@Loc.T("My_Apartment_S_Log")</small>
-            }
-        </h2>
-        <div>
-            <span class="badge bg-secondary">@Loc.T("N_Operations", Model.TotalItems)</span>
-            <a asp-action="ExportCsv"
-               asp-route-buildingId="@ViewBag.SelectedBuildingId"
-               asp-route-apartmentId="@ViewBag.SelectedApartmentId"
-               asp-route-userId="@ViewBag.SelectedUserId"
-               asp-route-actionFilter="@ViewBag.SelectedAction"
-               asp-route-severity="@ViewBag.SelectedSeverity"
-               asp-route-from="@ViewBag.From"
-               asp-route-to="@ViewBag.To"
-               class="btn btn-outline-success">@Loc.T("Export_CSV")</a>
+<div class="container-fluid log-center audit-log-page kibana-audit">
+    <header class="log-hero">
+        <div class="log-hero-copy">
+            <div class="log-eyebrow"><i class="bi bi-shield-check"></i> OBSERVABILITY / AUDIT</div>
+            <h1>@Loc.T("Log_2")</h1>
+            <p>@(role == "superadmin" ? Loc.T("All_Records") : role == "admin" ? Loc.T("My_Building_S_Log") : Loc.T("My_Apartment_S_Log"))</p>
+            <div class="log-hero-note"><i class="bi bi-lock"></i><span>Role-scoped, read-only audit events</span></div>
         </div>
-    </div>
-
-    @* ============ الفلاتر ============ *@
-    <div class="card mb-3 audit-log-filter-panel">
-        <div class="card-body">
-            <form method="get" class="row g-2 align-items-end">
-                @if (canFilterBuilding && buildings.Count > 0)
-                {
-                    <div class="col-md-3">
-                        <label class="form-label small">@Loc.T("Building")</label>
-                        <select name="buildingId" class="form-select form-select-sm">
-                            <option value="">@Loc.T("All_Buildings")</option>
-                            @foreach (var b in buildings)
-                            {
-                                <option value="@b.Id" selected="@(ViewBag.SelectedBuildingId == b.Id)">@b.Name (@b.BuildingNumber)</option>
-                            }
-                        </select>
-                    </div>
-                }
-
-                <div class="col-md-3">
-                    <label class="form-label small">@Loc.T("Action")</label>
-                    <select name="actionFilter" class="form-select form-select-sm">
-                        <option value="">@Loc.T("All")</option>
-                        @foreach (var a in knownActions)
-                        {
-                            <option value="@a" selected="@(ViewBag.SelectedAction == a)">
-                                @BuildingManagementMvc.Services.AuditLogQueryService.LabelAr(a)
-                            </option>
-                        }
-                    </select>
-                </div>
-
-                <div class="col-md-2">
-                    <label class="form-label small">@Loc.T("Severity")</label>
-                    <select name="severity" class="form-select form-select-sm">
-                        <option value="">@Loc.T("All")</option>
-                        <option value="info" selected="@(ViewBag.SelectedSeverity == "info")">@Loc.T("Info")</option>
-                        <option value="warning" selected="@(ViewBag.SelectedSeverity == "warning")">@Loc.T("Warning")</option>
-                        <option value="error" selected="@(ViewBag.SelectedSeverity == "error")">@Loc.T("Error")</option>
-                        <option value="critical" selected="@(ViewBag.SelectedSeverity == "critical")">@Loc.T("Critical")</option>
-                    </select>
-                </div>
-
-                @if (canFilterApartment)
-                {
-                    <div class="col-md-2">
-                        <label class="form-label small">Apartment ID</label>
-                        <input name="apartmentId" value="@ViewBag.SelectedApartmentId" class="form-control form-control-sm" placeholder="@Loc.T("Optional")" />
-                    </div>
-                }
-
-                @if (canFilterUser)
-                {
-                    <div class="col-md-2">
-                        <label class="form-label small">@Loc.T("User")</label>
-                        <input name="userId" value="@ViewBag.SelectedUserId" class="form-control form-control-sm" maxlength="160" autocomplete="off" />
-                    </div>
-                }
-
-                <div class="col-md-2">
-                    <label class="form-label small">@Loc.T("From_Date")</label>
-                    <input name="from" type="date" value="@ViewBag.From" class="form-control form-control-sm" />
-                </div>
-
-                <div class="col-md-2">
-                    <label class="form-label small">@Loc.T("To_Date")</label>
-                    <input name="to" type="date" value="@ViewBag.To" class="form-control form-control-sm" />
-                </div>
-
-                @* ✅ بنحفظ حجم الصفحة الحالي *@
-                <input type="hidden" name="pageSize" value="@Model.PageSize" />
-
-                <div class="col-md-2">
-                    <button class="btn btn-primary btn-sm w-100">@Loc.T("Filter")</button>
-                </div>
-                <div class="col-md-2">
-                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm w-100">@Loc.T("Reset")</a>
-                </div>
-            </form>
+        <div class="log-hero-total">
+            <span>@Loc.T("Log_Total_Matching")</span>
+            <strong>@Model.TotalItems.ToString("N0")</strong>
+            <small>@Loc.T("Events")</small>
         </div>
-    </div>
+    </header>
 
-    @* ============ Pagination (فوق) ============ *@
-    @{
-        ViewData["CurrentPage"] = Model.CurrentPage;
-        ViewData["PageSize"] = Model.PageSize;
-        ViewData["TotalItems"] = Model.TotalItems;
-        ViewData["TotalPages"] = Model.TotalPages;
-        ViewData["HasPrevious"] = Model.HasPrevious;
-        ViewData["HasNext"] = Model.HasNext;
-        ViewData["FirstItemIndex"] = Model.FirstItemIndex;
-        ViewData["LastItemIndex"] = Model.LastItemIndex;
-        ViewData["ActionName"] = "Index";
-        ViewData["ControllerName"] = "AuditLog";
-        ViewData["RouteValues"] = routeValuesStr;
-        ViewData["PageSizeOptions"] = new[] { 10, 25, 50, 100 };
-    }
-    @await Html.PartialAsync("_Pagination", new
-    {
-        CurrentPage = Model.CurrentPage,
-        PageSize = Model.PageSize,
-        TotalItems = Model.TotalItems,
-        TotalPages = Model.TotalPages,
-        HasPrevious = Model.HasPrevious,
-        HasNext = Model.HasNext,
-        FirstItemIndex = Model.FirstItemIndex,
-        LastItemIndex = Model.LastItemIndex,
-        ActionName = "Index",
-        ControllerName = "AuditLog",
-        RouteValues = routeValuesStr,
-        PageSizeOptions = new[] { 10, 25, 50, 100 }
-    })
+    <nav class="audit-observability-nav" aria-label="Log sections">
+        <a asp-controller="ApplicationLogs" asp-action="Index"><i class="bi bi-terminal"></i> Application Logs</a>
+        <a class="active" asp-controller="AuditLog" asp-action="Index"><i class="bi bi-shield-check"></i> Audit Trail</a>
+        <span><i class="bi bi-graph-up"></i> Analytics <small>Coming with telemetry pipeline</small></span>
+    </nav>
 
-    @* ============ الجدول ============ *@
-    @if (Model.Items.Count == 0)
-    {
-        <div class="alert alert-info">@Loc.T("No_Records_Match_The_Filters")</div>
-    }
-    else
-    {
-        <div class="table-responsive audit-log-table-wrap">
-            <table class="table table-sm table-striped table-hover audit-log-table">
-                <thead class="table-dark">
-                    <tr>
-                        <th>@Loc.T("Date")</th>
-                        <th>@Loc.T("Action")</th>
-                        <th>@Loc.T("Severity")</th>
-                        <th>@Loc.T("User")</th>
-                        <th>@Loc.T("Role")</th>
-                        <th>@Loc.T("Building")</th>
-                        <th>@Loc.T("Apartment")</th>
-                        <th>@Loc.T("Details")</th>
-                    </tr>
-                </thead>
+    <section class="log-metrics audit-kpi-grid" aria-label="Audit event levels">
+        <article class="log-metric-card metric-blue"><div class="log-metric-top"><span class="log-metric-icon"><i class="bi bi-activity"></i></span><span class="log-metric-caption">Matching events</span></div><strong>@Model.TotalItems.ToString("N0")</strong><small>All filtered records</small></article>
+        <article class="log-metric-card metric-teal"><div class="log-metric-top"><span class="log-metric-icon"><i class="bi bi-info-circle"></i></span><span class="log-metric-caption">@Loc.T("Info")</span></div><strong>@infoCount</strong><small>Visible page only</small></article>
+        <article class="log-metric-card metric-amber"><div class="log-metric-top"><span class="log-metric-icon"><i class="bi bi-exclamation-triangle"></i></span><span class="log-metric-caption">@Loc.T("Warning")</span></div><strong>@warningCount</strong><small>Visible page only</small></article>
+        <article class="log-metric-card metric-red"><div class="log-metric-top"><span class="log-metric-icon"><i class="bi bi-exclamation-octagon"></i></span><span class="log-metric-caption">Errors / Critical</span></div><strong>@(errorCount + criticalCount)</strong><small>@errorCount errors · @criticalCount critical</small></article>
+    </section>
+
+    <section class="log-filter-panel audit-kibana-filter">
+        <div class="log-section-heading">
+            <div><span class="log-section-kicker">DISCOVER</span><h2><i class="bi bi-funnel"></i> @Loc.T("Search")</h2></div>
+            <a asp-controller="AuditLog" asp-action="Index" class="log-reset-link"><i class="bi bi-arrow-counterclockwise"></i> @Loc.T("Reset")</a>
+        </div>
+        <form method="get" asp-controller="AuditLog" asp-action="Index" class="audit-kibana-filter-grid">
+            @if (canFilterBuilding && buildings.Count > 0)
+            {
+                <div><label class="form-label">@Loc.T("Building")</label><select name="buildingId" class="form-select"><option value="">@Loc.T("All_Buildings")</option>@foreach (var b in buildings){<option value="@b.Id" selected="@(ViewBag.SelectedBuildingId == b.Id)">@b.Name (@b.BuildingNumber)</option>}</select></div>
+            }
+            <div><label class="form-label">@Loc.T("Action")</label><select name="actionFilter" class="form-select"><option value="">@Loc.T("All")</option>@foreach (var action in knownActions){<option value="@action" selected="@(ViewBag.SelectedAction == action)">@BuildingManagementMvc.Services.AuditLogQueryService.LabelAr(action)</option>}</select></div>
+            <div><label class="form-label">@Loc.T("Severity")</label><select name="severity" class="form-select"><option value="">@Loc.T("All")</option><option value="info" selected="@(ViewBag.SelectedSeverity == "info")">@Loc.T("Info")</option><option value="warning" selected="@(ViewBag.SelectedSeverity == "warning")">@Loc.T("Warning")</option><option value="error" selected="@(ViewBag.SelectedSeverity == "error")">@Loc.T("Error")</option><option value="critical" selected="@(ViewBag.SelectedSeverity == "critical")">@Loc.T("Critical")</option></select></div>
+            @if (canFilterApartment){<div><label class="form-label">@Loc.T("Apartment")</label><input name="apartmentId" value="@ViewBag.SelectedApartmentId" class="form-control" placeholder="@Loc.T("Optional")" /></div>}
+            @if (canFilterUser){<div><label class="form-label">@Loc.T("User")</label><input name="userId" value="@ViewBag.SelectedUserId" class="form-control" maxlength="160" autocomplete="off" /></div>}
+            <div><label class="form-label">@Loc.T("From_Date")</label><input name="from" type="date" value="@ViewBag.From" class="form-control" /></div>
+            <div><label class="form-label">@Loc.T("To_Date")</label><input name="to" type="date" value="@ViewBag.To" class="form-control" /></div>
+            <input type="hidden" name="pageSize" value="@Model.PageSize" />
+            <div class="audit-filter-submit"><button class="log-search-button w-100"><i class="bi bi-search"></i> @Loc.T("Filter")</button></div>
+        </form>
+    </section>
+
+    <section class="log-results-panel audit-kibana-results">
+        <div class="log-results-heading d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div><span class="log-section-kicker">EVENT STREAM</span><h2 class="h5 mb-0">@Loc.T("Log_2")</h2><p>Immutable business events · newest first</p></div>
+            <a asp-action="ExportCsv" asp-route-buildingId="@ViewBag.SelectedBuildingId" asp-route-apartmentId="@ViewBag.SelectedApartmentId" asp-route-userId="@ViewBag.SelectedUserId" asp-route-actionFilter="@ViewBag.SelectedAction" asp-route-severity="@ViewBag.SelectedSeverity" asp-route-from="@ViewBag.From" asp-route-to="@ViewBag.To" class="btn btn-outline-success btn-sm"><i class="bi bi-download"></i> @Loc.T("Export_CSV")</a>
+        </div>
+        <div class="log-level-summary">
+            <span class="level-summary-item"><i class="level-dot dot-info"></i>@Loc.T("Info") <strong>@infoCount</strong></span>
+            <span class="level-summary-item"><i class="level-dot dot-warning"></i>@Loc.T("Warning") <strong>@warningCount</strong></span>
+            <span class="level-summary-item"><i class="level-dot dot-error"></i>@Loc.T("Error") <strong>@errorCount</strong></span>
+            <span class="level-summary-item"><i class="level-dot dot-error"></i>@Loc.T("Critical") <strong>@criticalCount</strong></span>
+            <span class="log-level-summary-note">Counts reflect the current page</span>
+        </div>
+        <div class="table-responsive log-table-wrap">
+            <table class="table log-table align-middle mb-0 audit-kibana-table">
+                <thead><tr><th>TIME</th><th>SEVERITY</th><th>EVENT / ACTION</th><th>ACTOR</th><th>SCOPE</th><th>DETAILS</th></tr></thead>
                 <tbody>
+                @if (Model.Items.Count == 0)
+                {
+                    <tr><td colspan="6"><div class="log-empty-state"><span class="log-empty-icon"><i class="bi bi-search"></i></span><strong>@Loc.T("No_Records_Match_The_Filters")</strong><p>Adjust the filters to discover audit events.</p></div></td></tr>
+                }
+                else
+                {
                     @foreach (var e in Model.Items)
                     {
+                        var severityClass = e.Severity switch { "critical" => "log-level-fatal", "error" => "log-level-error", "warning" => "log-level-warning", "info" => "log-level-information", _ => "log-level-muted" };
+                        var severityIcon = e.Severity switch { "critical" or "error" => "bi-exclamation-octagon-fill", "warning" => "bi-exclamation-triangle-fill", _ => "bi-info-circle-fill" };
                         <tr>
-                            <td class="text-nowrap">
-                                <small>@e.EffectiveDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</small>
-                            </td>
-                            <td>
-                                <strong>@BuildingManagementMvc.Services.AuditLogQueryService.LabelAr(e.Action)</strong>
-                                <br /><small class="text-muted"><code>@e.Action</code></small>
-                            </td>
-                            <td>
-                                <span class="badge @BuildingManagementMvc.Services.AuditLogQueryService.SeverityBadgeClass(e.Severity)">
-                                    @BuildingManagementMvc.Services.AuditLogQueryService.SeverityLabelAr(e.Severity)
-                                </span>
-                            </td>
-                            <td><small>@(e.UserId ?? "—")</small></td>
-                            <td>
-                                @if (!string.IsNullOrEmpty(e.UserRole))
-                                {
-                                    <span class="badge bg-secondary">@e.UserRole</span>
-                                }
-                            </td>
-                            <td><small>@(e.BuildingId ?? "—")</small></td>
-                            <td><small>@(e.ApartmentId ?? "—")</small></td>
-                            <td>
-                                @if (e.Metadata != null && e.Metadata.Count > 0)
-                                {
-                                    <button class="btn btn-sm btn-outline-info" type="button"
-                                            data-bs-toggle="collapse" data-bs-target="#meta-@e.Id">
-                                        @Loc.T("View")
-                                    </button>
-                                }
-                            </td>
+                            <td class="log-time-cell"><span>@e.EffectiveDate.ToLocalTime().ToString("yyyy-MM-dd")</span><strong>@e.EffectiveDate.ToLocalTime().ToString("HH:mm:ss.fff")</strong><small>LOCAL</small></td>
+                            <td><span class="log-level-badge @severityClass"><i class="bi @severityIcon"></i>@BuildingManagementMvc.Services.AuditLogQueryService.SeverityLabelAr(e.Severity)</span></td>
+                            <td class="log-message-cell"><strong>@BuildingManagementMvc.Services.AuditLogQueryService.LabelAr(e.Action)</strong><small class="d-block text-muted"><code>@e.Action</code></small></td>
+                            <td class="audit-actor-cell"><span>@(e.UserId ?? "—")</span>@if(!string.IsNullOrWhiteSpace(e.UserRole)){<small>@e.UserRole</small>}</td>
+                            <td class="audit-scope-cell"><span>@(e.BuildingId ?? "—")</span><small>@(e.ApartmentId ?? "—")</small></td>
+                            <td>@if(e.Metadata != null && e.Metadata.Count > 0){<details class="log-event-details"><summary><i class="bi bi-braces"></i> @Loc.T("Log_Inspect")</summary><div class="log-detail-block"><pre>@System.Text.Json.JsonSerializer.Serialize(e.Metadata, new System.Text.Json.JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.Default })</pre></div></details>}else{<span class="text-muted">—</span>}</td>
                         </tr>
-                        @if (e.Metadata != null && e.Metadata.Count > 0)
-                        {
-                            <tr class="collapse" id="meta-@e.Id">
-                                <td colspan="8">
-                                    <pre class="bg-light p-2 mb-0" style="font-size:11px;max-height:200px;overflow:auto;">@System.Text.Json.JsonSerializer.Serialize(e.Metadata, new System.Text.Json.JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping })</pre>
-                                </td>
-                            </tr>
-                        }
                     }
+                }
                 </tbody>
             </table>
         </div>
-    }
-
-    @* ============ Pagination (تحت) ============ *@
-    @{
-        ViewData["CurrentPage"] = Model.CurrentPage;
-        ViewData["PageSize"] = Model.PageSize;
-        ViewData["TotalItems"] = Model.TotalItems;
-        ViewData["TotalPages"] = Model.TotalPages;
-        ViewData["HasPrevious"] = Model.HasPrevious;
-        ViewData["HasNext"] = Model.HasNext;
-        ViewData["FirstItemIndex"] = Model.FirstItemIndex;
-        ViewData["LastItemIndex"] = Model.LastItemIndex;
-        ViewData["ActionName"] = "Index";
-        ViewData["ControllerName"] = "AuditLog";
-        ViewData["RouteValues"] = routeValuesStr;
-        ViewData["PageSizeOptions"] = new[] { 10, 25, 50, 100 };
-    }
-    @await Html.PartialAsync("_Pagination", new
-    {
-        CurrentPage = Model.CurrentPage,
-        PageSize = Model.PageSize,
-        TotalItems = Model.TotalItems,
-        TotalPages = Model.TotalPages,
-        HasPrevious = Model.HasPrevious,
-        HasNext = Model.HasNext,
-        FirstItemIndex = Model.FirstItemIndex,
-        LastItemIndex = Model.LastItemIndex,
-        ActionName = "Index",
-        ControllerName = "AuditLog",
-        RouteValues = routeValuesStr,
-        PageSizeOptions = new[] { 10, 25, 50, 100 }
-    })
+        <footer class="log-pagination">
+            <span class="log-pagination-caption">@Model.FirstItemIndex–@Model.LastItemIndex @Loc.T("Log_Of") @Model.TotalItems.ToString("N0")</span>
+            <nav aria-label="Audit event pages"><ul class="pagination mb-0">
+                <li class="page-item @(!Model.HasPrevious ? "disabled" : "")"><a class="page-link" href="@PageUrl(Model.CurrentPage - 1)"><i class="bi bi-chevron-right"></i> @Loc.T("Previous")</a></li>
+                <li class="page-item disabled"><span class="page-link">@Model.CurrentPage / @Math.Max(1, Model.TotalPages)</span></li>
+                <li class="page-item @(!Model.HasNext ? "disabled" : "")"><a class="page-link" href="@PageUrl(Model.CurrentPage + 1)">@Loc.T("Next") <i class="bi bi-chevron-left"></i></a></li>
+            </ul></nav>
+        </footer>
+    </section>
 </div>
