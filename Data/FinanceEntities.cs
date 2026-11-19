@@ -234,7 +234,6 @@ public sealed class FinancialReconciliationDifferenceEntity
 public sealed class InvoiceIssueEntity
 {
     public long InvoiceSerial { get; set; }
-    public Guid InvoiceIssueId { get; set; }
     public string BuildingId { get; set; } = "";
     public string ApartmentId { get; set; } = "";
     public string MonthKey { get; set; } = "";
