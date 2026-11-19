@@ -55,7 +55,7 @@ public sealed class IdentityAccountAuthenticationService
             return AuthResult.Fail("wrong-credentials");
 
         var match = matches[0];
-        if (requirePinChange)
+        if (requirePinChange || match.Account.MustChangePin)
         {
             var normalizedPhone = AuthHelpers.NormalizePhone(match.Person.PrimaryPhone);
             if (string.IsNullOrWhiteSpace(normalizedPhone))
