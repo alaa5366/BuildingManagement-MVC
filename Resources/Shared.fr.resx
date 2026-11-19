@@ -5171,4 +5171,9 @@ Cette opération peut prendre quelques secondes.</value>
   <data name="Backup_Collection_qrTokens" xml:space="preserve"><value>Jetons QR</value></data>
   <data name="Backup_Collection_qrUsages" xml:space="preserve"><value>Utilisation des jetons QR</value></data>
   <data name="Backup_Collection_savedWhatsAppTemplates" xml:space="preserve"><value>Modèles WhatsApp enregistrés</value></data>
+  <data name="Backup_Collection_notificationMessages" xml:space="preserve"><value>Messages de notification</value></data>
+  <data name="Backup_Collection_notificationRecipients" xml:space="preserve"><value>Destinataires des notifications</value></data>
+  <data name="Backup_Collection_notificationDeliveries" xml:space="preserve"><value>Tentatives de livraison des notifications</value></data>
+  <data name="Backup_Collection_notificationReadStates" xml:space="preserve"><value>États de lecture des notifications</value></data>
+  <data name="Backup_Collection_notificationPreferences" xml:space="preserve"><value>Préférences de notification</value></data>
 </root>
