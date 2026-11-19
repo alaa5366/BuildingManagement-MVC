@@ -5,6 +5,7 @@ using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
 
+/// <summary>ResidentMaintenanceController coordinates the corresponding application functionality.</summary>
 [Authorize(Roles = "resident")]
 public class ResidentMaintenanceController : Controller
 {
