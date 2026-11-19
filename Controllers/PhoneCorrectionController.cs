@@ -57,10 +57,12 @@ public sealed class PhoneCorrectionController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Review(Guid requestId, bool approve, string? reason)
     {
-        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var reviewerId))
-            return Forbid();
+        var reviewerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(reviewerId)) return Forbid();
         var superAdmin = User.IsInRole("superadmin");
         var buildingId = HttpContext.Request.Form["buildingId"].FirstOrDefault();
+        var authorizedBuildings = User.FindAll("buildingId").Select(claim => claim.Value).ToHashSet(StringComparer.Ordinal);
+        if (!superAdmin && (string.IsNullOrWhiteSpace(buildingId) || !authorizedBuildings.Contains(buildingId))) return Forbid();
         var success = await _service.ReviewAsync(requestId, reviewerId, approve, reason ?? "", superAdmin, buildingId);
         TempData[success ? "Message" : "Error"] = success
             ? "تم تسجيل قرار مراجعة طلب تغيير الهاتف."
