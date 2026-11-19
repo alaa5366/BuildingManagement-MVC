@@ -141,6 +141,7 @@ try
     builder.Services.AddScoped<LegacyIdentityMappingService>();
     builder.Services.AddScoped<LedgerPostingService>();
 builder.Services.AddScoped<TargetWalletReadService>();
+builder.Services.AddScoped<TargetDepositWorkflowService>();
 
     // ✅ Health Checks (فحص صحة الداتابيز)
     builder.Services.AddHealthChecks()
