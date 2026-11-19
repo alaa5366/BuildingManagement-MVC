@@ -155,4 +155,66 @@ public sealed class AccountManagementRow
     public string StatusLabel { get; set; } = "";
     public int ActiveRoleCount { get; set; }
     public DateTime? LastLoginAtUtc { get; set; }
+
+    public async Task<AccountManagementMutationResult> SetResidentStatusAsync(Guid accountId, bool activate, string actorId, CancellationToken ct = default)
+    {
+        await using var db = await _factory.CreateDbContextAsync(ct);
+        await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+        var account = await db.UserAccounts.SingleOrDefaultAsync(x => x.AccountId == accountId, ct);
+        if (account is null) return AccountManagementMutationResult.Fail("الحساب غير موجود.");
+        if (await db.Persons.AnyAsync(x => x.PersonId == account.PersonId && x.IsArchived, ct))
+            return AccountManagementMutationResult.Fail("لا يمكن تفعيل حساب شخص مؤرشف.");
+        var now = DateTime.UtcNow;
+        var hasResidentRole = await db.UserRoleAssignments.AnyAsync(x => x.AccountId == accountId
+            && x.RoleKey == "resident" && x.ValidFromUtc <= now
+            && (x.ValidToUtc == null || x.ValidToUtc > now) && x.RevokedAtUtc == null, ct);
+        if (!hasResidentRole)
+            return AccountManagementMutationResult.Fail("إدارة حالة الحساب من هذه الشاشة متاحة حاليًا لحسابات السكان المرتبطة بدور resident فقط. حسابات الإدمن تُدار من مسارها الحالي لحين اكتمال تحويل تسجيل دخول الإدمن.");
+        if (account.AccountStatus is not (0 or 1))
+            return AccountManagementMutationResult.Fail("الحساب موقوف/معلق بحالة خاصة؛ لا تغيّر حالته من هذه الشاشة.");
+        var next = activate ? (byte)1 : (byte)0;
+        if (account.AccountStatus == next)
+            return AccountManagementMutationResult.Ok("الحساب بالفعل على الحالة المطلوبة.");
+        account.AccountStatus = next;
+        account.SecurityStamp = Guid.NewGuid().ToString("N");
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return AccountManagementMutationResult.Ok(activate ? "تم تفعيل حساب الساكن." : "تم إيقاف حساب الساكن.");
+    }
+
+    public async Task<AccountManagementMutationResult> ResetResidentPinAsync(Guid accountId, string actorId, IPasswordHasher hasher, CancellationToken ct = default)
+    {
+        await using var db = await _factory.CreateDbContextAsync(ct);
+        await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+        var account = await db.UserAccounts.SingleOrDefaultAsync(x => x.AccountId == accountId, ct);
+        if (account is null) return AccountManagementMutationResult.Fail("الحساب غير موجود.");
+        var now = DateTime.UtcNow;
+        var hasResidentRole = await db.UserRoleAssignments.AnyAsync(x => x.AccountId == accountId
+            && x.RoleKey == "resident" && x.ValidFromUtc <= now
+            && (x.ValidToUtc == null || x.ValidToUtc > now) && x.RevokedAtUtc == null, ct);
+        if (!hasResidentRole)
+            return AccountManagementMutationResult.Fail("إعادة تعيين PIN من هذه الشاشة متاحة حاليًا لحسابات السكان فقط.");
+        if (account.AccountStatus != 1)
+            return AccountManagementMutationResult.Fail("فعّل الحساب أولًا قبل إعادة تعيين PIN.");
+        var pin = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var activeCredentials = await db.UserCredentials.Where(x => x.AccountId == accountId
+            && x.CredentialType == 0 && x.RevokedAtUtc == null).ToListAsync(ct);
+        foreach (var credential in activeCredentials) credential.RevokedAtUtc = now;
+        db.UserCredentials.Add(new BuildingManagementMvc.Data.Entities.UserCredentialEntity
+        {
+            CredentialId = Guid.NewGuid(), AccountId = accountId, CredentialType = 0,
+            CredentialHash = hasher.HashPin(pin), HashAlgorithm = "BCrypt.Net-Next", CreatedAtUtc = now
+        });
+        account.MustChangePin = true;
+        account.SecurityStamp = Guid.NewGuid().ToString("N");
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return AccountManagementMutationResult.Ok("تم إصدار PIN مؤقت. اعرضه للمستخدم مرة واحدة واطلب تغييره عند أول دخول.", pin);
+    }
+}
+
+public sealed record AccountManagementMutationResult(bool Success, string Message, string? TemporaryPin = null)
+{
+    public static AccountManagementMutationResult Fail(string message) => new(false, message);
+    public static AccountManagementMutationResult Ok(string message, string? pin = null) => new(true, message, pin);
 }
