@@ -81,12 +81,13 @@ public sealed class LanguageAdministrationService
         var query = db.TranslationEntries.AsNoTracking().Where(x => !x.IsArchived);
         if (!string.IsNullOrWhiteSpace(category)) query = query.Where(x => x.Category == category);
         if (!string.IsNullOrWhiteSpace(search)) query = query.Where(x => x.Key.Contains(search) || x.SourceGroup.Contains(search) || (x.Description != null && x.Description.Contains(search)));
-        var entries = await query.OrderBy(x => x.Category).ThenBy(x => x.SourceGroup).ThenBy(x => x.Key).Take(1500).ToListAsync(ct);
+        var totalKeys = await query.CountAsync(ct);
+        var entries = await query.OrderBy(x => x.Category).ThenBy(x => x.SourceGroup).ThenBy(x => x.Key).Take(5000).ToListAsync(ct);
         var values = await db.TranslationValues.AsNoTracking().Where(x => x.CultureCode == selected).ToDictionaryAsync(x => x.Key, x => x.Value, ct);
         var rows = entries.Select(x => new TranslationAdminRow(x.Key,x.Category,x.SourceGroup,x.Description,values.GetValueOrDefault(x.Key) ?? "",!values.ContainsKey(x.Key),languages.Count(l => l.IsEnabled))).ToList();
         if (missingOnly) rows = rows.Where(x => x.IsMissing).ToList();
         var groups = rows.GroupBy(x => new { x.Category, x.SourceGroup }).Select(g => new TranslationGroupRow(g.Key.Category,g.Key.SourceGroup,g.Count(),g.Count(x=>x.IsMissing))).ToList();
-        return new(languages,groups,rows,selected,category,search,missingOnly,entries.Count,rows.Count(x=>x.IsMissing));
+        return new(languages,groups,rows,selected,category,search,missingOnly,totalKeys,rows.Count(x=>x.IsMissing));
     }
 
     public async Task<(bool Success,string Message)> SaveLanguageAsync(string culture,string englishName,string nativeName,string direction,string? fallback,string? flag,bool enabled,bool isDefault,int sortOrder,string actor,CancellationToken ct)
