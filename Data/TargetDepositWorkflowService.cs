@@ -1,4 +1,5 @@
 using System.Data;
+using System.Text.Json;
 using BuildingManagementMvc.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,11 +26,13 @@ public sealed class TargetDepositWorkflowService
         string buildingId,
         string apartmentId,
         Guid periodId,
+        Guid actorAccountId,
         decimal amount,
         string currencyCode = "EGP",
         string? sourceKey = null,
         CancellationToken cancellationToken = default)
     {
+        if (actorAccountId == Guid.Empty) throw new ArgumentException("An authenticated actor is required.", nameof(actorAccountId));
         if (string.IsNullOrWhiteSpace(buildingId) || buildingId.Length > 64)
             throw new ArgumentException("A valid building is required.", nameof(buildingId));
         if (string.IsNullOrWhiteSpace(apartmentId) || apartmentId.Length > 64)
@@ -48,6 +51,17 @@ public sealed class TargetDepositWorkflowService
             p => p.PeriodId == periodId && p.BuildingId == buildingId, cancellationToken);
         if (period is null || period.Status == FinancialPeriodStatus.Closed)
             throw new InvalidOperationException("An open financial period for this building is required.");
+
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        if (now < period.StartsAtUtc || now >= period.EndsAtUtc)
+            throw new InvalidOperationException("A deposit can only be submitted inside its financial period.");
+        var actorIsActive = await (
+            from account in db.UserAccounts.AsNoTracking()
+            join person in db.Persons.AsNoTracking() on account.PersonId equals person.PersonId
+            where account.AccountId == actorAccountId && account.AccountStatus == 1 && !person.IsArchived
+            select account.AccountId).AnyAsync(cancellationToken);
+        if (!actorIsActive)
+            throw new InvalidOperationException("An active target account is required to submit a deposit.");
 
         var apartmentExists = await db.Apartments.AsNoTracking()
             .AnyAsync(a => a.BuildingId == buildingId && a.Id == apartmentId, cancellationToken);
@@ -81,10 +95,13 @@ public sealed class TargetDepositWorkflowService
             Amount = amount,
             CurrencyCode = currencyCode.ToUpperInvariant(),
             Status = PaymentDepositStatus.Pending,
-            SubmittedAtUtc = _timeProvider.GetUtcNow().UtcDateTime,
+            SubmittedAtUtc = now,
             SourceSystem = "application",
             SourceKey = sourceKey
         });
+        db.AuditEvents.Add(CreateAuditEvent(
+            buildingId, actorAccountId, "PaymentDepositSubmitted", id, now,
+            new { amount, currencyCode = currencyCode.ToUpperInvariant() }));
         await db.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return id;
@@ -116,8 +133,11 @@ public sealed class TargetDepositWorkflowService
         if (deposit.Status != PaymentDepositStatus.Pending)
             throw new InvalidOperationException("Only a pending deposit can be confirmed.");
 
-        var actorIsActive = await db.UserAccounts.AsNoTracking()
-            .AnyAsync(a => a.AccountId == actorAccountId && a.AccountStatus == 1, cancellationToken);
+        var actorIsActive = await (
+            from account in db.UserAccounts.AsNoTracking()
+            join person in db.Persons.AsNoTracking() on account.PersonId equals person.PersonId
+            where account.AccountId == actorAccountId && account.AccountStatus == 1 && !person.IsArchived
+            select account.AccountId).AnyAsync(cancellationToken);
         if (!actorIsActive)
             throw new InvalidOperationException("An active target account is required to confirm a deposit.");
 
@@ -169,6 +189,9 @@ public sealed class TargetDepositWorkflowService
         deposit.PostedTransactionId = transactionId;
         deposit.ConfirmedAtUtc = now;
         deposit.ConfirmedByAccountId = actorAccountId;
+        db.AuditEvents.Add(CreateAuditEvent(
+            deposit.BuildingId, actorAccountId, "PaymentDepositConfirmed", deposit.PaymentDepositId, now,
+            new { amount = deposit.Amount, currencyCode = deposit.CurrencyCode, transactionId }));
         await db.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return transactionId;
@@ -202,8 +225,33 @@ public sealed class TargetDepositWorkflowService
         deposit.CancelledAtUtc = _timeProvider.GetUtcNow().UtcDateTime;
         deposit.CancelledByAccountId = actorAccountId;
         deposit.ResolutionReason = reason.Trim();
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        db.AuditEvents.Add(CreateAuditEvent(
+            deposit.BuildingId, actorAccountId, "PaymentDepositCancelled", deposit.PaymentDepositId, now,
+            new { reason = reason.Trim() }));
         await db.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return true;
     }
+
+    private static AuditEventEntity CreateAuditEvent(
+        string buildingId,
+        Guid actorAccountId,
+        string eventType,
+        Guid depositId,
+        DateTime occurredAtUtc,
+        object details) => new()
+    {
+        AuditEventId = Guid.NewGuid(),
+        OccurredAtUtc = occurredAtUtc,
+        ActorAccountId = actorAccountId,
+        ActorReference = actorAccountId.ToString("D"),
+        BuildingId = buildingId,
+        EventCategory = "Finance",
+        EventType = eventType,
+        ResourceType = "PaymentDeposit",
+        ResourceReference = depositId.ToString("D"),
+        Outcome = 0,
+        SafeDetailsJson = JsonSerializer.Serialize(details)
+    };
 }
