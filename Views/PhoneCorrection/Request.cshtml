@@ -1,0 +1,21 @@
+@{
+    ViewData["Title"] = "طلب تصحيح رقم الهاتف";
+}
+<div class="container py-4" style="max-width:560px">
+    <h2>طلب تصحيح رقم الهاتف</h2>
+    <p>لن يتغير رقمك تلقائيًا. ستتحقق إدارة العمارة من هويتك قبل اعتماد الرقم الجديد.</p>
+    @if (ViewBag.Message != null) { <div class="alert alert-info">@ViewBag.Message</div> }
+    <form method="post" asp-action="Request">
+        @Html.AntiForgeryToken()
+        <label class="form-label">رقم الهاتف المسجل حاليًا</label>
+        <input class="form-control mb-3" name="previousPhone" type="tel" required maxlength="32" />
+        <label class="form-label">رقم الهاتف الجديد</label>
+        <input class="form-control mb-3" name="requestedPhone" type="tel" required maxlength="32" />
+        <label class="form-label">معرّف العمارة</label>
+        <input class="form-control mb-3" name="buildingId" required maxlength="64" />
+        <label class="form-label">معرّف الشقة</label>
+        <input class="form-control mb-3" name="apartmentId" required maxlength="64" />
+        <button class="btn btn-primary" type="submit">إرسال طلب المراجعة</button>
+        <a class="btn btn-link" asp-controller="Account" asp-action="UnifiedLogin">العودة للدخول</a>
+    </form>
+</div>
