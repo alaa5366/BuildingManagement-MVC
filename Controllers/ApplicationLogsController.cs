@@ -56,6 +56,9 @@ public sealed class ApplicationLogsController : Controller
             });
         }
 
+        ViewBag.CanViewAuditTrail = User.IsInRole("superadmin") ||
+            User.HasClaim("perm", AdminPermissions.ViewAuditLogBuilding);
+
         var results = await _logs.QueryPageAsync(query, HttpContext.RequestAborted);
         return View(new ApplicationLogsViewModel { Results = results, Query = query });
     }
