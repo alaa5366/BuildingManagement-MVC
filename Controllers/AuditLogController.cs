@@ -73,6 +73,8 @@ public class AuditLogController : Controller
             (IsAdmin && string.IsNullOrWhiteSpace(CurrentBuildingId))) return Forbid();
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 200);
+        correlationId = string.IsNullOrWhiteSpace(correlationId) ? null : correlationId.Trim();
+        if (correlationId?.Length > 100) correlationId = correlationId[..100];
         string? qBuildingId = null;
         string? qApartmentId = null;
         string? qUserId = null;
