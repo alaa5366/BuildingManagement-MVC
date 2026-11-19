@@ -11,6 +11,7 @@ public sealed class TargetFinanceReadService
     private readonly IDbContextFactory<AppDbContext> _factory;
     public TargetFinanceReadService(IDbContextFactory<AppDbContext> factory) => _factory = factory;
 
+    /// <summary>Gets financial totals for the requested month.</summary>
     public async Task<TargetFinanceMonthSnapshot> GetMonthAsync(
         string buildingId, string monthKey, string kind, CancellationToken cancellationToken = default)
     {
@@ -57,6 +58,7 @@ public sealed class TargetFinanceReadService
         return new TargetFinanceMonthSnapshot(categories, Array.Empty<Expense>(), revenues, revenues.Sum(x => x.Amount));
     }
 
+    /// <summary>Gets expense totals grouped by category for the requested period.</summary>
     public async Task<IReadOnlyDictionary<string, decimal>> GetExpenseCategoryTotalsAsync(
         string buildingId,
         IReadOnlyCollection<string> monthKeys,
