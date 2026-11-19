@@ -240,6 +240,59 @@ public sealed class IdentityAccountAuthenticationServiceTests
         Assert.Equal(accountId.ToString("D"), result.Uid);
     }
 
+    [Fact]
+    public async Task AuthenticateResidentAsync_RejectsResidentRoleScopedToAnotherApartment()
+    {
+        var factory = new TestContextFactory();
+        var hasher = new BcryptPasswordHasher();
+        var accountId = Guid.NewGuid();
+        var personId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        await using (var db = await factory.CreateDbContextAsync())
+        {
+            db.Persons.Add(new PersonEntity
+            {
+                PersonId = personId, DisplayName = "Wrong Scope Resident",
+                PrimaryPhone = "+201000000098", CreatedAtUtc = now
+            });
+            db.UserAccounts.Add(new UserAccountEntity
+            {
+                AccountId = accountId, PersonId = personId, AccountStatus = 1,
+                SecurityStamp = "wrong-scope-stamp", CreatedAtUtc = now
+            });
+            db.RoleDefinitions.Add(new RoleDefinitionEntity
+            {
+                RoleKey = "resident", DisplayName = "Resident", IsActive = true
+            });
+            db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            {
+                RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "resident",
+                ScopeType = 2, ScopeBuildingId = "building-1", ScopeApartmentId = "apt-other",
+                ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1)
+            });
+            db.ApartmentOccupancies.Add(new ApartmentOccupancyEntity
+            {
+                OccupancyId = Guid.NewGuid(), BuildingId = "building-1", ApartmentId = "apt-1",
+                PersonId = personId, OccupancyType = 1, IsPrimary = true,
+                ValidFromUtc = now.AddDays(-1), RecordedAtUtc = now.AddDays(-1)
+            });
+            db.UserCredentials.Add(new UserCredentialEntity
+            {
+                CredentialId = Guid.NewGuid(), AccountId = accountId, CredentialType = 0,
+                CredentialHash = hasher.Hash("Scope-Test-Password-42!"),
+                HashAlgorithm = "BCrypt.Net-Next", CreatedAtUtc = now.AddDays(-1)
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var result = await new IdentityAccountAuthenticationService(factory, hasher)
+            .AuthenticateResidentAsync("+201000000098", "Scope-Test-Password-42!", "building-1", "apt-1");
+
+        Assert.NotNull(result);
+        Assert.False(result.Success);
+        Assert.Equal("wrong-credentials", result.Error);
+    }
+
     private sealed class TestContextFactory : IDbContextFactory<AppDbContext>
     {
         private readonly DbContextOptions<AppDbContext> _options = new DbContextOptionsBuilder<AppDbContext>()
