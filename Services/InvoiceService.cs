@@ -22,10 +22,12 @@ public sealed class InvoiceService
     {
         if (string.IsNullOrWhiteSpace(apartmentId)) return null;
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
-        return await db.Apartments.AsNoTracking()
+        var matches = await db.Apartments.AsNoTracking()
             .Where(item => item.Id == apartmentId)
             .Select(item => item.BuildingId)
-            .SingleOrDefaultAsync(cancellationToken);
+            .Take(2)
+            .ToListAsync(cancellationToken);
+        return matches.Count == 1 ? matches[0] : null;
     }
 
     public async Task<InvoiceData?> BuildInvoiceDataAsync(
@@ -93,8 +95,6 @@ public sealed class InvoiceService
         expenseTransactions = expenseTransactions.Where(item => !reversedSet.Contains(item.LedgerTransactionId)).ToList();
         revenueTransactions = revenueTransactions.Where(item => !reversedSet.Contains(item.LedgerTransactionId)).ToList();
 
-        var activeExpenseTransactions = expenseTransactions.ToDictionary(item => NormalizeSourceKey(item.SourceKey));
-        var activeRevenueTransactions = revenueTransactions.ToDictionary(item => NormalizeSourceKey(item.SourceKey));
         var transactionIds = expenseTransactions.Concat(revenueTransactions)
             .Select(item => item.LedgerTransactionId).ToList();
         var batches = await db.FinancialAllocationBatches.AsNoTracking()
