@@ -210,6 +210,122 @@ public sealed class TargetDepositWorkflowService
         return transactionId;
     }
 
+    public async Task<Guid?> ReverseConfirmedAsync(
+        Guid paymentDepositId,
+        Guid actorAccountId,
+        string reason,
+        CancellationToken cancellationToken = default)
+    {
+        if (paymentDepositId == Guid.Empty) throw new ArgumentException("Deposit id is required.", nameof(paymentDepositId));
+        if (actorAccountId == Guid.Empty) throw new ArgumentException("An authenticated actor is required.", nameof(actorAccountId));
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+            throw new ArgumentException("A reversal reason of 1 to 500 characters is required.", nameof(reason));
+
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        var deposit = await db.PaymentDeposits.SingleOrDefaultAsync(
+            d => d.PaymentDepositId == paymentDepositId, cancellationToken);
+        if (deposit is null) return null;
+
+        if (deposit.Status == PaymentDepositStatus.Reversed)
+        {
+            if (deposit.ReversalTransactionId is null)
+                throw new InvalidOperationException("Reversed deposit has no reversal transaction.");
+            var existingReversal = await db.LedgerTransactions.AsNoTracking().AnyAsync(
+                item => item.LedgerTransactionId == deposit.ReversalTransactionId &&
+                    item.PeriodId == deposit.PeriodId && item.BuildingId == deposit.BuildingId &&
+                    item.Kind == LedgerTransactionKind.Reversal &&
+                    item.Status == LedgerTransactionStatus.Posted &&
+                    item.ReversesTransactionId == deposit.PostedTransactionId,
+                cancellationToken);
+            if (!existingReversal)
+                throw new InvalidOperationException("Deposit reversal provenance is inconsistent.");
+            await tx.CommitAsync(cancellationToken);
+            return deposit.ReversalTransactionId;
+        }
+        if (deposit.Status != PaymentDepositStatus.Confirmed || deposit.PostedTransactionId is null)
+            throw new InvalidOperationException("Only a confirmed deposit can be reversed.");
+
+        var actorIsActive = await (
+            from account in db.UserAccounts.AsNoTracking()
+            join person in db.Persons.AsNoTracking() on account.PersonId equals person.PersonId
+            where account.AccountId == actorAccountId && account.AccountStatus == 1 && !person.IsArchived
+            select account.AccountId).AnyAsync(cancellationToken);
+        if (!actorIsActive)
+            throw new InvalidOperationException("An active target account is required to reverse a deposit.");
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        if (!await HasFinanceManagementRoleAsync(db, actorAccountId, deposit.BuildingId, now, cancellationToken))
+            throw new InvalidOperationException("The actor has no active finance-management assignment for this building.");
+
+        var period = await db.FinancialPeriods.SingleOrDefaultAsync(
+            p => p.PeriodId == deposit.PeriodId && p.BuildingId == deposit.BuildingId, cancellationToken);
+        if (period is null || period.Status == FinancialPeriodStatus.Closed ||
+            now < period.StartsAtUtc || now >= period.EndsAtUtc)
+            throw new InvalidOperationException("The deposit can only be reversed inside its open financial period.");
+
+        var original = await db.LedgerTransactions.AsNoTracking().SingleOrDefaultAsync(
+            item => item.LedgerTransactionId == deposit.PostedTransactionId &&
+                item.PeriodId == deposit.PeriodId && item.BuildingId == deposit.BuildingId &&
+                item.Kind == LedgerTransactionKind.Deposit && item.Status == LedgerTransactionStatus.Posted,
+            cancellationToken);
+        if (original is null)
+            throw new InvalidOperationException("The original deposit posting is unavailable.");
+
+        var originalEntries = await db.LedgerEntries.AsNoTracking()
+            .Where(item => item.LedgerTransactionId == original.LedgerTransactionId &&
+                item.BuildingId == deposit.BuildingId && item.ApartmentId == deposit.ApartmentId &&
+                item.EntryKind == LedgerEntryKind.Deposit && item.CurrencyCode == deposit.CurrencyCode)
+            .ToListAsync(cancellationToken);
+        if (originalEntries.Count != 1 || originalEntries[0].SignedAmount != deposit.Amount)
+            throw new InvalidOperationException("The original deposit ledger amount does not match its source record.");
+
+        var reversalId = Guid.NewGuid();
+        db.LedgerTransactions.Add(new LedgerTransactionEntity
+        {
+            LedgerTransactionId = reversalId,
+            PeriodId = deposit.PeriodId,
+            BuildingId = deposit.BuildingId,
+            Kind = LedgerTransactionKind.Reversal,
+            Status = LedgerTransactionStatus.Posted,
+            IdempotencyKey = $"payment-deposit:{deposit.PaymentDepositId:D}:reverse",
+            SourceSystem = deposit.SourceSystem,
+            SourceType = "PaymentDepositReversal",
+            SourceKey = deposit.PaymentDepositId.ToString("D"),
+            ReversesTransactionId = original.LedgerTransactionId,
+            ActorAccountId = actorAccountId,
+            ActorReference = actorAccountId.ToString("D"),
+            Reason = reason.Trim(),
+            CreatedAtUtc = now,
+            PostedAtUtc = now
+        });
+        db.LedgerEntries.Add(new LedgerEntryEntity
+        {
+            LedgerEntryId = Guid.NewGuid(),
+            LedgerTransactionId = reversalId,
+            PeriodId = deposit.PeriodId,
+            BuildingId = deposit.BuildingId,
+            ApartmentId = deposit.ApartmentId,
+            EntryKind = LedgerEntryKind.Reversal,
+            SignedAmount = -originalEntries[0].SignedAmount,
+            CurrencyCode = deposit.CurrencyCode,
+            Description = reason.Trim(),
+            EffectiveAtUtc = now,
+            CreatedAtUtc = now
+        });
+
+        deposit.Status = PaymentDepositStatus.Reversed;
+        deposit.ReversedAtUtc = now;
+        deposit.ReversedByAccountId = actorAccountId;
+        deposit.ReversalTransactionId = reversalId;
+        deposit.ResolutionReason = reason.Trim();
+        db.AuditEvents.Add(CreateAuditEvent(
+            deposit.BuildingId, actorAccountId, "PaymentDepositReversed", deposit.PaymentDepositId, now,
+            new { amount = deposit.Amount, currencyCode = deposit.CurrencyCode, reversalId, reason = reason.Trim() }));
+        await db.SaveChangesAsync(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return reversalId;
+    }
+
     public async Task<bool> CancelAsync(
         Guid paymentDepositId,
         Guid actorAccountId,
