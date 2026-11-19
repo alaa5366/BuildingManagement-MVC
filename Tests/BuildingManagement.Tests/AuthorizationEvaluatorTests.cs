@@ -181,6 +181,24 @@ public sealed class AuthorizationEvaluatorTests
         Assert.Equal(AuthorizationReason.StaleSecurityStamp, result.Reason);
     }
 
+    [Fact]
+    public async Task EvaluateAsync_DeniesSensitivePermissionWhenTargetMfaIsNotEnrolled()
+    {
+        await using var db = CreateContext();
+        var actor = await SeedAccountWithGrantsAsync(db,
+            ("audit-role", AuthorizationEffect.Allow));
+        var evaluator = new AuthorizationEvaluator(db, new DefaultAuthorizationPermissionCatalog());
+
+        var result = await evaluator.EvaluateAsync(
+            Principal(actor.AccountId, actor.SecurityStamp),
+            "audit.view.all",
+            new ResolvedAuthorizationResource(AuthorizationScopeType.System),
+            NowUtc);
+
+        Assert.Equal(AuthorizationDecision.Deny, result.Decision);
+        Assert.Equal(AuthorizationReason.MfaNotEnrolled, result.Reason);
+    }
+
     private static AppDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
