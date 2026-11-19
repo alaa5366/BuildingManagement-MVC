@@ -23,6 +23,7 @@ QuestPDF.Settings.License = LicenseType.Community;
 QuestPDF.Settings.UseEnvironmentFonts = false;
 
 var builder = WebApplication.CreateBuilder(args);
+var isSuperAdminBootstrapCommand = args.Contains("--bootstrap-superadmins", StringComparer.OrdinalIgnoreCase);
 
 // ═══════════════════════════════════════════════════════════════
 // ✅ Serilog — bootstrap logger (يلتقط أخطاء الإقلاع)
@@ -355,27 +356,32 @@ builder.Services.AddScoped<TargetQrService>();
         }
     });
 
-    var dpKeysPath = builder.Configuration["DataProtection:KeysPath"];
-    if (string.IsNullOrWhiteSpace(dpKeysPath))
+    string? encryptionSecret = null;
+    if (!isSuperAdminBootstrapCommand)
     {
-        dpKeysPath = builder.Environment.IsDevelopment()
-            ? Path.Combine(builder.Environment.ContentRootPath, "keys")
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "BuildingManagement", "DataProtection-Keys");
+        var dpKeysPath = builder.Configuration["DataProtection:KeysPath"];
+        if (string.IsNullOrWhiteSpace(dpKeysPath))
+        {
+            dpKeysPath = builder.Environment.IsDevelopment()
+                ? Path.Combine(builder.Environment.ContentRootPath, "keys")
+                : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "BuildingManagement", "DataProtection-Keys");
+        }
+        Directory.CreateDirectory(dpKeysPath);
+
+        builder.Services.AddDataProtection()
+            .PersistKeysToFileSystem(new DirectoryInfo(dpKeysPath))
+            .SetApplicationName("BuildingManagement");
+
+        encryptionSecret = ConfigSecrets.Require(builder.Configuration, "Encryption:SecretKey");
+        var dpKeyHolder = new DataProtectionKeyHolder(encryptionSecret);
+        builder.Services.AddSingleton(dpKeyHolder);
+        builder.Services.Configure<KeyManagementOptions>(o => o.XmlEncryptor = new AesGcmXmlEncryptor(dpKeyHolder.Key));
     }
-    Directory.CreateDirectory(dpKeysPath);
-
-    builder.Services.AddDataProtection()
-        .PersistKeysToFileSystem(new DirectoryInfo(dpKeysPath))
-        .SetApplicationName("BuildingManagement");
-
-    var encryptionSecret = ConfigSecrets.Require(builder.Configuration, "Encryption:SecretKey");
-    var dpKeyHolder = new DataProtectionKeyHolder(encryptionSecret);
-    builder.Services.AddSingleton(dpKeyHolder);
-    builder.Services.Configure<KeyManagementOptions>(o => o.XmlEncryptor = new AesGcmXmlEncryptor(dpKeyHolder.Key));
 
     var app = builder.Build();
-    await app.Services.GetRequiredService<LanguageAdministrationService>().RefreshRuntimeAsync();
+    if (!isSuperAdminBootstrapCommand)
+        await app.Services.GetRequiredService<LanguageAdministrationService>().RefreshRuntimeAsync();
 
     if (app.Environment.IsDevelopment())
     {
@@ -405,12 +411,15 @@ builder.Services.AddScoped<TargetQrService>();
         Console.WriteLine("==============================");
     }
 
-    ConfigSecrets.Require(app.Configuration, "Cloudinary:CloudName");
-    ConfigSecrets.Require(app.Configuration, "Cloudinary:ApiKey");
-    ConfigSecrets.Require(app.Configuration, "Cloudinary:ApiSecret");
-    ConfigSecrets.Require(app.Configuration, "Excel:SecretKey");
-    ConfigSecrets.Require(app.Configuration, "Qr:SecretKey");
-    ConfigSecrets.Require(app.Configuration, "Encryption:SecretKey");
+    if (!isSuperAdminBootstrapCommand)
+    {
+        ConfigSecrets.Require(app.Configuration, "Cloudinary:CloudName");
+        ConfigSecrets.Require(app.Configuration, "Cloudinary:ApiKey");
+        ConfigSecrets.Require(app.Configuration, "Cloudinary:ApiSecret");
+        ConfigSecrets.Require(app.Configuration, "Excel:SecretKey");
+        ConfigSecrets.Require(app.Configuration, "Qr:SecretKey");
+        ConfigSecrets.Require(app.Configuration, "Encryption:SecretKey");
+    }
 
     var superAdminEmails = ConfigSecrets.Require(app.Configuration, "Auth:SuperAdminEmails");
     SqlAuthService.ConfigureSuperAdmins(superAdminEmails);
@@ -418,7 +427,7 @@ builder.Services.AddScoped<TargetQrService>();
     // Explicit one-time command: bootstrap only the two pre-existing allow-listed
     // target identity accounts. Passwords are supplied through process environment
     // variables and are never written to configuration, logs, or source control.
-    if (args.Contains("--bootstrap-superadmins", StringComparer.OrdinalIgnoreCase))
+    if (isSuperAdminBootstrapCommand)
     {
         var connectionBuilder = new System.Data.Common.DbConnectionStringBuilder
         {
@@ -454,7 +463,7 @@ builder.Services.AddScoped<TargetQrService>();
 
     SecretVerifier.AllowLegacyPlain = app.Configuration.GetValue<bool>("Auth:AllowLegacyPlainPins");
 
-    BackupFileProtector.Initialize(encryptionSecret);
+    BackupFileProtector.Initialize(encryptionSecret!);
 
     // Startup must never rewrite credentials or create/clean operational tables.
     // Legacy PIN reconciliation is handled only by an explicit, checkpointed migration.
