@@ -81,6 +81,11 @@ public sealed class TargetDepositWorkflowService
         if (!apartmentExists)
             throw new InvalidOperationException("The apartment does not belong to this building.");
 
+        var normalizedNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+        var normalizedReceiptMetadata = string.IsNullOrWhiteSpace(receiptMetadataJson)
+            ? null
+            : receiptMetadataJson;
+
         if (sourceKey is not null)
         {
             var existing = await db.PaymentDeposits.AsNoTracking().SingleOrDefaultAsync(
@@ -89,7 +94,9 @@ public sealed class TargetDepositWorkflowService
             {
                 if (existing.BuildingId == buildingId && existing.ApartmentId == apartmentId &&
                     existing.PeriodId == periodId && existing.Amount == amount &&
-                    existing.CurrencyCode == currencyCode.ToUpperInvariant())
+                    existing.CurrencyCode == currencyCode.ToUpperInvariant() &&
+                    existing.Note == normalizedNote &&
+                    existing.ReceiptMetadataJson == normalizedReceiptMetadata)
                 {
                     await tx.CommitAsync(cancellationToken);
                     return existing.PaymentDepositId;
@@ -109,8 +116,8 @@ public sealed class TargetDepositWorkflowService
             CurrencyCode = currencyCode.ToUpperInvariant(),
             Status = PaymentDepositStatus.Pending,
             SubmittedAtUtc = now,
-            Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
-            ReceiptMetadataJson = string.IsNullOrWhiteSpace(receiptMetadataJson) ? null : receiptMetadataJson,
+            Note = normalizedNote,
+            ReceiptMetadataJson = normalizedReceiptMetadata,
             SourceSystem = "application",
             SourceKey = sourceKey
         });
