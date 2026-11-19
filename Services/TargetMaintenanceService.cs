@@ -120,9 +120,10 @@ public sealed class TargetMaintenanceService
             (row.Cost != cost ||
              row.MaintenanceDate != maintenanceDate ||
              !string.Equals(row.Title, title.Trim(), StringComparison.Ordinal) ||
-             !string.Equals(row.Vendor, vendor?.Trim() ?? "", StringComparison.Ordinal)))
+             !string.Equals(row.Vendor, vendor?.Trim() ?? "", StringComparison.Ordinal) ||
+             !string.Equals(row.Status, normalizedStatus, StringComparison.Ordinal)))
             throw new InvalidOperationException(
-                "A maintenance record posted to expenses cannot change its title, date, vendor or cost.");
+                "A maintenance record posted to expenses cannot change its title, date, vendor, cost or status.");
 
         row.Title = title.Trim();
         row.Description = description?.Trim() ?? "";
