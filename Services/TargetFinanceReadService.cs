@@ -29,25 +29,29 @@ public sealed class TargetFinanceReadService
 
         if (kind == "expense")
         {
-            var items = await db.Expenses.AsNoTracking()
+            var rows = await db.Expenses.AsNoTracking()
                 .Where(x => x.BuildingId == buildingId && x.MonthKey == monthKey)
                 .OrderByDescending(x => x.ExpenseDate).ThenByDescending(x => x.Id)
-                .Select(x => new Expense
-                {
-                    Id = x.Id, CategoryId = x.CategoryId ?? "", Note = x.Note,
-                    Amount = x.Amount, Date = x.ExpenseDate.ToString("yyyy-MM-dd")
-                }).ToListAsync(cancellationToken);
+                .Select(x => new { x.Id, x.CategoryId, x.Note, x.Amount, x.ExpenseDate })
+                .ToListAsync(cancellationToken);
+            var items = rows.Select(x => new Expense
+            {
+                Id = x.Id, CategoryId = x.CategoryId ?? "", Note = x.Note,
+                Amount = x.Amount, Date = x.ExpenseDate.ToString("yyyy-MM-dd")
+            }).ToList();
             return new TargetFinanceMonthSnapshot(categories, items, Array.Empty<Revenue>(), items.Sum(x => x.Amount));
         }
 
-        var revenues = await db.Revenues.AsNoTracking()
+        var revenueRows = await db.Revenues.AsNoTracking()
             .Where(x => x.BuildingId == buildingId && x.MonthKey == monthKey)
             .OrderByDescending(x => x.RevenueDate).ThenByDescending(x => x.Id)
-            .Select(x => new Revenue
-            {
-                Id = x.Id, CategoryId = x.CategoryId ?? "", Note = x.Note,
-                Amount = x.Amount, Date = x.RevenueDate.ToString("yyyy-MM-dd")
-            }).ToListAsync(cancellationToken);
+            .Select(x => new { x.Id, x.CategoryId, x.Note, x.Amount, x.RevenueDate })
+            .ToListAsync(cancellationToken);
+        var revenues = revenueRows.Select(x => new Revenue
+        {
+            Id = x.Id, CategoryId = x.CategoryId ?? "", Note = x.Note,
+            Amount = x.Amount, Date = x.RevenueDate.ToString("yyyy-MM-dd")
+        }).ToList();
         return new TargetFinanceMonthSnapshot(categories, Array.Empty<Expense>(), revenues, revenues.Sum(x => x.Amount));
     }
 }
