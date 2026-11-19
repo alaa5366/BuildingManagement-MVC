@@ -43,6 +43,7 @@ public sealed class TargetMaintenanceService
         var rows = await db.MaintenanceRecords.AsNoTracking()
             .Where(x => x.BuildingId == buildingId && x.Status != "cancelled")
             .OrderByDescending(x => x.MaintenanceDate).ThenByDescending(x => x.CreatedAt)
+            .Take(500)
             .ToListAsync(cancellationToken);
         return rows.Select(Map).ToList();
     }
