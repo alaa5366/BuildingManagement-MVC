@@ -10,8 +10,12 @@ public sealed class ReportsService
     private readonly TargetWalletReadService _wallet;
     private readonly TargetFinanceReadService _finance;
 
-    public ReportsService(TargetWalletReadService wallet, TargetFinanceReadService finance)
+    public ReportsService(
+        IDbContextFactory<AppDbContext> factory,
+        TargetWalletReadService wallet,
+        TargetFinanceReadService finance)
     {
+        _factory = factory;
         _wallet = wallet;
         _finance = finance;
     }
@@ -45,12 +49,18 @@ public sealed class ReportsService
         _wallet.GetCurrentPeriodKeyAsync(buildingId, cancellationToken: cancellationToken);
 
     public async Task<ReportsVm> BuildReportAsync(
-        Building building,
+        string buildingId,
         string range,
         string currentMonth,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(building);
+        if (string.IsNullOrWhiteSpace(buildingId))
+            throw new ArgumentException("Building is required.", nameof(buildingId));
+        var building = await _wallet.GetBuildingShellAsync(
+            buildingId, cancellationToken: cancellationToken);
+        if (building is null)
+            throw new KeyNotFoundException("The requested building was not found in the target store.");
+
         var normalizedRange = range is "all" or "year" or "12m" or "6m" ? range : "6m";
         var allKeys = (await _wallet.GetFinancialPeriodKeysAsync(building.Id, cancellationToken))
             .Where(key => string.CompareOrdinal(key, currentMonth) <= 0)
