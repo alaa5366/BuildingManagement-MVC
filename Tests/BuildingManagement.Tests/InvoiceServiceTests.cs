@@ -232,7 +232,10 @@ public sealed class InvoiceServiceTests
         Assert.Equal(25m, categoryShare.Share);
         Assert.Equal("12345", invoice.Payment.AccountNumber);
         Assert.StartsWith("INV-01-101-", invoice.InvoiceNo);
-        Assert.Equal(6, invoice.InvoiceNo.Split('-').Last().Length);
+        var invoiceNumberParts = invoice.InvoiceNo.Split('-');
+        Assert.Equal(5, invoiceNumberParts.Length);
+        Assert.Equal(8, invoiceNumberParts[3].Length); // Original print date: yyyyMMdd.
+        Assert.Equal(6, invoiceNumberParts[4].Length); // Stable sequential serial.
 
         // Reprinting in the same month returns the frozen invoice, even if
         // mutable building profile data changes after the first issuance.
