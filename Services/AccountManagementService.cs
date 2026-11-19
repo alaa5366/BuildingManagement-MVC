@@ -129,9 +129,14 @@ public sealed class AccountManagementService
         if (activate && personArchived)
             return AccountManagementMutationResult.Fail("لا يمكن تفعيل حساب شخص مؤرشف.");
         var now = DateTime.UtcNow;
-        var hasResidentRole = await db.UserRoleAssignments.AnyAsync(x => x.AccountId == accountId
-            && x.RoleKey == "resident" && x.ValidFromUtc <= now
-            && (x.ValidToUtc == null || x.ValidToUtc > now) && x.RevokedAtUtc == null, ct);
+        var hasResidentRole = await (
+            from assignment in db.UserRoleAssignments
+            join definition in db.RoleDefinitions on assignment.RoleKey equals definition.RoleKey
+            where assignment.AccountId == accountId && assignment.RoleKey == "resident"
+                && definition.IsActive && assignment.ValidFromUtc <= now
+                && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
+                && assignment.RevokedAtUtc == null
+            select assignment.RoleAssignmentId).AnyAsync(ct);
         var hasAdminRole = await db.UserRoleAssignments.AnyAsync(x => x.AccountId == accountId
             && x.RoleKey == "admin" && x.ValidFromUtc <= now
             && (x.ValidToUtc == null || x.ValidToUtc > now) && x.RevokedAtUtc == null, ct);
@@ -161,9 +166,6 @@ public sealed class AccountManagementService
         if (await db.Persons.AnyAsync(x => x.PersonId == account.PersonId && x.IsArchived, ct))
             return AccountManagementMutationResult.Fail("لا يمكن إعادة تعيين PIN لشخص مؤرشف.");
         var now = DateTime.UtcNow;
-        var personArchived = await db.Persons.AnyAsync(x => x.PersonId == account.PersonId && x.IsArchived, ct);
-        if (personArchived)
-            return AccountManagementMutationResult.Fail("لا يمكن إعادة تعيين PIN لشخص مؤرشف.");
         var hasResidentRole = await db.UserRoleAssignments.AnyAsync(x => x.AccountId == accountId
             && x.RoleKey == "resident" && x.ValidFromUtc <= now
             && (x.ValidToUtc == null || x.ValidToUtc > now) && x.RevokedAtUtc == null, ct);
