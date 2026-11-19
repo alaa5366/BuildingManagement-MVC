@@ -165,10 +165,11 @@ public class DvrService
     /// <summary>
     /// Deletes the camera.
     /// </summary>
-    public async Task DeleteCameraAsync(string cameraId)
+    public async Task<bool> DeleteCameraAsync(string cameraId, string dvrId)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
-        await db.Cameras.Where(c => c.Id == cameraId).ExecuteDeleteAsync();
+        var affected = await db.Cameras.Where(c => c.Id == cameraId && c.DvrId == dvrId).ExecuteDeleteAsync();
+        return affected == 1;
     }
 
     /// <summary>
