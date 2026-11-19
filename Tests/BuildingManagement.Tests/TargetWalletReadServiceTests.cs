@@ -50,35 +50,6 @@ public sealed class TargetWalletReadServiceTests
                     IdempotencyKey = "draft",
                     CreatedAtUtc = DateTime.UtcNow
                 });
-            seed.LedgerEntries.AddRange(
-                new LedgerEntryEntity
-                {
-                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = transactionId,
-                    PeriodId = previousPeriodId, BuildingId = "B1", ApartmentId = "A1",
-                    EntryKind = LedgerEntryKind.Deposit, SignedAmount = 120m, CurrencyCode = "EGP",
-                    EffectiveAtUtc = now.AddMonths(-1), CreatedAtUtc = now.AddMonths(-1)
-                },
-                new LedgerEntryEntity
-                {
-                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = confirmedTransactionId,
-                    PeriodId = currentPeriodId, BuildingId = "B1", ApartmentId = "A1",
-                    EntryKind = LedgerEntryKind.Deposit, SignedAmount = 40m, CurrencyCode = "EGP",
-                    EffectiveAtUtc = now, CreatedAtUtc = now
-                },
-                new LedgerEntryEntity
-                {
-                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = reversedTransactionId,
-                    PeriodId = currentPeriodId, BuildingId = "B1", ApartmentId = "A1",
-                    EntryKind = LedgerEntryKind.Deposit, SignedAmount = 90m, CurrencyCode = "EGP",
-                    EffectiveAtUtc = now, CreatedAtUtc = now
-                },
-                new LedgerEntryEntity
-                {
-                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = reversalTransactionId,
-                    PeriodId = currentPeriodId, BuildingId = "B1", ApartmentId = "A1",
-                    EntryKind = LedgerEntryKind.Reversal, SignedAmount = -90m, CurrencyCode = "EGP",
-                    EffectiveAtUtc = now, CreatedAtUtc = now
-                });
             seed.PaymentDeposits.AddRange(
                 new PaymentDepositEntity
                 {
