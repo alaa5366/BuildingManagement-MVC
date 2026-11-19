@@ -57,7 +57,7 @@ public class WalletController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(string? month, int page = 1, int pageSize = 50)
     {
-        var building = await _targetWallet.GetBuildingShellAsync(BuildingId, HttpContext.RequestAborted);
+        var building = await _targetWallet.GetBuildingShellAsync(BuildingId, null, HttpContext.RequestAborted);
         if (building == null) return NotFound();
 
         var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
