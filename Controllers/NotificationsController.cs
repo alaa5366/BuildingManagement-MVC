@@ -27,12 +27,11 @@ public class NotificationsController : Controller
             (RecipientType == "resident" && string.IsNullOrWhiteSpace(ApartmentId)))
             return Forbid();
 
-        var allNotifications = RecipientType == "admin"
-            ? await _notifications.GetForAdminAsync(BuildingId, 500, HttpContext.RequestAborted)
-            : await _notifications.GetForResidentAsync(
-                BuildingId, ApartmentId!, 500, HttpContext.RequestAborted);
-
-        var paged = PagedResult<Notification>.Create(allNotifications, page, pageSize);
+        var paged = RecipientType == "admin"
+            ? await _notifications.GetPageForAdminAsync(
+                BuildingId, page, pageSize, HttpContext.RequestAborted)
+            : await _notifications.GetPageForResidentAsync(
+                BuildingId, ApartmentId!, page, pageSize, HttpContext.RequestAborted);
         ViewBag.RouteValues = new Dictionary<string, string?>
         {
             ["pageSize"] = paged.PageSize.ToString()
