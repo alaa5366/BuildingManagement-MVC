@@ -46,6 +46,34 @@ public sealed class AccountManagementController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetLegacySuperAdminStatus(string legacyUserId, bool activate, CancellationToken cancellationToken)
+    {
+        if (User.HasClaim("impersonated", "true")) return Forbid();
+        var actorId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(actorId)) return Forbid();
+
+        var result = await _service.SetLegacySuperAdminStatusAsync(legacyUserId, activate, actorId, cancellationToken);
+        TempData[result.Success ? "Message" : "Error"] = result.Message;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResetLegacySuperAdminPassword(string legacyUserId, CancellationToken cancellationToken)
+    {
+        if (User.HasClaim("impersonated", "true")) return Forbid();
+        var actorId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(actorId)) return Forbid();
+
+        var result = await _service.ResetLegacySuperAdminPasswordAsync(legacyUserId, actorId, _hasher, cancellationToken);
+        TempData[result.Success ? "Message" : "Error"] = result.Message;
+        if (result.Success && !string.IsNullOrWhiteSpace(result.TemporaryPassword))
+            TempData["TemporarySuperAdminPassword"] = result.TemporaryPassword;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> ResetResidentPin(Guid accountId, CancellationToken cancellationToken)
     {
         if (User.HasClaim("impersonated", "true")) return Forbid();
