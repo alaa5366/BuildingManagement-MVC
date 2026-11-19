@@ -68,7 +68,11 @@ public sealed class LedgerPostingService
         if (existing is not null)
         {
             if (existing.BuildingId == buildingId && existing.PeriodId == periodId &&
-                existing.Kind == kind && existing.Status == LedgerTransactionStatus.Posted)
+                existing.Kind == kind && existing.Status == LedgerTransactionStatus.Posted &&
+                existing.SourceSystem == sourceSystem &&
+                existing.SourceType == sourceType &&
+                existing.SourceKey == sourceKey &&
+                existing.Reason == (string.IsNullOrWhiteSpace(reason) ? null : reason.Trim()))
             {
                 var persistedLines = await db.LedgerEntries.AsNoTracking()
                     .Where(x => x.LedgerTransactionId == existing.LedgerTransactionId)
@@ -178,12 +182,17 @@ public sealed class LedgerPostingService
     {
         if (string.IsNullOrWhiteSpace(buildingId) || string.IsNullOrWhiteSpace(apartmentId))
             return 0m;
+        if (string.IsNullOrWhiteSpace(currencyCode) || currencyCode.Length != 3 ||
+            currencyCode.Any(c => c < 'A' || c > 'Z') &&
+            currencyCode.Any(c => c < 'a' || c > 'z'))
+            throw new ArgumentException("Currency code must contain exactly three ASCII letters.", nameof(currencyCode));
 
+        var normalizedCurrency = currencyCode.ToUpperInvariant();
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
         return await db.LedgerEntries.AsNoTracking()
             .Where(e => e.BuildingId == buildingId &&
                         e.ApartmentId == apartmentId &&
-                        e.CurrencyCode == currencyCode &&
+                        e.CurrencyCode == normalizedCurrency &&
                         db.LedgerTransactions.Any(t =>
                             t.LedgerTransactionId == e.LedgerTransactionId &&
                             t.BuildingId == buildingId &&
