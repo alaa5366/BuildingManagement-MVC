@@ -1177,7 +1177,65 @@ namespace BuildingManagementMvc.Migrations
                     b.ToTable("FinancialCategories", (string)null);
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity", b =>
+                        modelBuilder.Entity("BuildingManagementMvc.Data.Entities.InvoiceIssueEntity", b =>
+                {
+                    b.Property<long>("InvoiceSerial")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .UseIdentityColumn();
+
+                    b.Property<string>("ApartmentId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("BuildingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<Guid>("InvoiceIssueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("InvoiceNo")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<string>("MonthKey")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("char(7)");
+
+                    b.Property<string>("SnapshotJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("IssuedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.HasKey("InvoiceSerial");
+
+                    b.HasIndex("BuildingId", "ApartmentId", "MonthKey")
+                        .IsUnique()
+                        .HasDatabaseName("UX_InvoiceIssues_Apartment_Month");
+
+                    b.HasIndex("InvoiceIssueId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_InvoiceIssues_Id");
+
+                    b.HasIndex("InvoiceNo")
+                        .IsUnique()
+                        .HasDatabaseName("UX_InvoiceIssues_Number")
+                        .HasFilter("[InvoiceNo] IS NOT NULL");
+
+                    b.ToTable("InvoiceIssues", t =>
+                        {
+                            t.HasCheckConstraint("CK_InvoiceIssues_MonthKey", "[MonthKey] LIKE '[0-9][0-9][0-9][0-9]-[01][0-9]' AND SUBSTRING([MonthKey],6,2) BETWEEN '01' AND '12'");
+                        });
+                });
+
+modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity", b =>
                 {
                     b.Property<Guid>("PeriodId")
                         .HasColumnType("uniqueidentifier");
@@ -3288,7 +3346,16 @@ namespace BuildingManagementMvc.Migrations
                     b.Navigation("Building");
                 });
 
-            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity", b =>
+                        modelBuilder.Entity("BuildingManagementMvc.Data.Entities.InvoiceIssueEntity", b =>
+                {
+                    b.HasOne("BuildingManagementMvc.Data.Entities.ApartmentEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BuildingId", "ApartmentId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+modelBuilder.Entity("BuildingManagementMvc.Data.Entities.FinancialPeriodEntity", b =>
                 {
                     b.HasOne("BuildingManagementMvc.Data.Entities.BuildingEntity", null)
                         .WithMany()
