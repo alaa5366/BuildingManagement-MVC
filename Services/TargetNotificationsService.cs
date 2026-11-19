@@ -46,13 +46,19 @@ public sealed class TargetNotificationsService
         string apartmentId,
         string title,
         string body,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string type = "deposit",
+        string icon = "💳")
     {
         ValidateScope(buildingId, apartmentId);
         if (string.IsNullOrWhiteSpace(title) || title.Length > 200)
             throw new ArgumentException("A notification title of 1 to 200 characters is required.", nameof(title));
         if (string.IsNullOrWhiteSpace(body) || body.Length > 1000)
             throw new ArgumentException("A notification body of 1 to 1000 characters is required.", nameof(body));
+        if (string.IsNullOrWhiteSpace(type) || type.Length > 40)
+            throw new ArgumentException("A notification type of 1 to 40 characters is required.", nameof(type));
+        if (string.IsNullOrWhiteSpace(icon) || icon.Length > 16)
+            throw new ArgumentException("A notification icon of 1 to 16 characters is required.", nameof(icon));
 
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
         var apartmentExists = await db.Apartments.AsNoTracking().AnyAsync(
@@ -68,8 +74,8 @@ public sealed class TargetNotificationsService
             Ts = DateTime.UtcNow,
             RecipientType = "resident",
             RecipientApartmentId = apartmentId,
-            Type = "deposit",
-            Icon = "💳",
+            Type = type.Trim(),
+            Icon = icon,
             Title = title.Trim(),
             Body = body.Trim(),
             IsRead = false
