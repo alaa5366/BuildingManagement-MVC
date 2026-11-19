@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using BuildingManagementMvc.Attributes;
+using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,6 +9,7 @@ namespace BuildingManagementMvc.Controllers;
 
 /// <summary>AccountManagementController coordinates the corresponding application controller actions.</summary>
 [Authorize(Roles = "superadmin")]
+[AdminPermission(AdminPermissions.ManageAdmins)]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public sealed class AccountManagementController : Controller
 {
@@ -75,36 +78,6 @@ public sealed class AccountManagementController : Controller
         TempData[result.Success ? "Message" : "Error"] = result.Message;
         if (result.Success && !string.IsNullOrWhiteSpace(result.TemporaryPin))
             TempData["TemporaryManagedAccountPin"] = result.TemporaryPin;
-        return RedirectToAction(nameof(Index));
-    }
-
-    /// <summary>Updates the status of a legacy super-administrator account.</summary>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SetLegacySuperAdminStatus(string legacyUserId, bool activate, CancellationToken cancellationToken)
-    {
-        if (User.HasClaim("impersonated", "true")) return Forbid();
-        var actorId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrWhiteSpace(actorId)) return Forbid();
-
-        var result = await _service.SetLegacySuperAdminStatusAsync(legacyUserId, activate, actorId, cancellationToken);
-        TempData[result.Success ? "Message" : "Error"] = result.Message;
-        return RedirectToAction(nameof(Index));
-    }
-
-    /// <summary>Resets the password for a legacy super-administrator account.</summary>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ResetLegacySuperAdminPassword(string legacyUserId, CancellationToken cancellationToken)
-    {
-        if (User.HasClaim("impersonated", "true")) return Forbid();
-        var actorId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrWhiteSpace(actorId)) return Forbid();
-
-        var result = await _service.ResetLegacySuperAdminPasswordAsync(legacyUserId, actorId, _hasher, cancellationToken);
-        TempData[result.Success ? "Message" : "Error"] = result.Message;
-        if (result.Success && !string.IsNullOrWhiteSpace(result.TemporaryPassword))
-            TempData["TemporarySuperAdminPassword"] = result.TemporaryPassword;
         return RedirectToAction(nameof(Index));
     }
 
