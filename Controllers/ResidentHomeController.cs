@@ -138,9 +138,7 @@ public class ResidentHomeController : Controller
         // ============================================================
         var activePolls = (await _targetPolls.GetPageAsync(
                 building.Id, 1, 3, activeOnly: true, HttpContext.RequestAborted))
-            .Items
-            .Where(p => !PollsService.IsPollExpired(p))
-            .ToList();
+            .Items;
 
         // ============================================================
         // 7. آخر 3 إشعارات + unread
