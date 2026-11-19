@@ -41,7 +41,7 @@ AND NOT EXISTS(SELECT 1 FROM dbo.NotificationReadStates x WHERE x.RecipientId=S.
 ;WITH S AS (SELECT n.*,CONCAT(BuildingId,N'/',Id) SourceKey,CONVERT(varchar(64),HASHBYTES('SHA2_256',CONCAT(BuildingId,N'|',Id)),2) LKey,HASHBYTES('SHA2_256',CONCAT(BuildingId,N'|',Id,N'|',CONVERT(nvarchar(33),Ts,126),N'|',RecipientType,N'|',COALESCE(RecipientApartmentId,N''),N'|',Type,N'|',Icon,N'|',Title,N'|',Body,N'|',CONVERT(nvarchar(1),IsRead),N'|',COALESCE(CONVERT(nvarchar(33),ReadAt,126),N''))) FP FROM dbo.Notifications n)
 INSERT dbo.LegacyDataMigrationMap(MigrationMapId,SourceSystem,SourceTable,SourceKey,TargetTable,TargetKey,SourceFingerprint,Outcome,Disposition,SafeNote)
 SELECT CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONCAT(N'legacy.notifications.map.v1|',BuildingId,N'|',Id)),1,16)),N'BuildingManagement.Legacy',N'Notifications',SourceKey,N'NotificationMessages',LKey,FP,1,N'Migrated',N'Legacy recipient type/reference retained in source; target type left unresolved (0), person not inferred.'
-FROM S WHERE NOT EXISTS(SELECT 1 FROM dbo.LegacyDataMigrationMap x WHERE x.SourceSystem=N'BuildingManagement.Legacy' AND x.SourceTable=N'Notifications' AND x.SourceKey=S.LKey);
+FROM S WHERE NOT EXISTS(SELECT 1 FROM dbo.LegacyDataMigrationMap x WHERE x.SourceSystem=N'BuildingManagement.Legacy' AND x.SourceTable=N'Notifications' AND x.SourceKey=S.SourceKey);
 "@
 $cmd=$c.CreateCommand();$cmd.Transaction=$tx;$cmd.CommandText=$sql;$cmd.CommandTimeout=300;[void]$cmd.ExecuteNonQuery();$tx.Commit()
 }catch{$tx.Rollback();throw}
