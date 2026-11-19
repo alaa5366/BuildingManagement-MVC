@@ -46,12 +46,13 @@ public sealed class LanguageManagementController : Controller
         var actor=User.FindFirstValue(ClaimTypes.NameIdentifier); if(string.IsNullOrWhiteSpace(actor)) return Forbid();
         if(file==null||file.Length==0||file.Length>5*1024*1024){TempData["Error"]="ملف CSV غير صالح أو أكبر من 5 ميجابايت.";return RedirectToAction(nameof(Index));}
         using var reader=new StreamReader(file.OpenReadStream(),System.Text.Encoding.UTF8,true);
-        var count=0; var lineNumber=0;
+        var rows=new List<TranslationImportRow>(); var lineNumber=0;
         while(await reader.ReadLineAsync(ct) is string line){lineNumber++;if(lineNumber==1||string.IsNullOrWhiteSpace(line))continue;
             var fields=ParseCsvLine(line);if(fields.Count!=6)continue;
-            var result=await _service.SaveTranslationAsync(fields[0],fields[1],fields[2],fields[3],fields[4],fields[5],actor,ct);
-            if(result.Success)count++;
+            rows.Add(new TranslationImportRow(fields[0],fields[1],fields[2],fields[3],fields[4],fields[5]));
+            if(rows.Count>=5000) break;
         }
+        var count=await _service.ImportTranslationsAsync(rows,actor,ct);
         TempData["Message"]="تم استيراد أو تحديث "+count+" ترجمة."; return RedirectToAction(nameof(Index));
     }
 
