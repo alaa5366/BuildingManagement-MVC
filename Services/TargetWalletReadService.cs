@@ -234,11 +234,21 @@ public sealed class TargetWalletReadService
             .Select(d => new { d.Status, d.Amount })
             .ToListAsync(cancellationToken);
 
+        var reversedExpenseIds = await GetReversedSourceIdsAsync(db, buildingId, "Expense", cancellationToken);
+        var reversedRevenueIds = await GetReversedSourceIdsAsync(db, buildingId, "Revenue", cancellationToken);
+        var expenseRows = await db.Expenses.AsNoTracking()
+            .Where(item => item.BuildingId == buildingId && item.MonthKey == month)
+            .Select(item => new { item.Id, item.Amount })
+            .ToListAsync(cancellationToken);
+        var revenueRows = await db.Revenues.AsNoTracking()
+            .Where(item => item.BuildingId == buildingId && item.MonthKey == month)
+            .Select(item => new { item.Id, item.Amount })
+            .ToListAsync(cancellationToken);
+
         var totals = (
-            Collected: periodDepositRows.Where(d => d.Status is PaymentDepositStatus.Confirmed or PaymentDepositStatus.Reversed)
-                .Sum(d => d.Status == PaymentDepositStatus.Reversed ? -d.Amount : d.Amount),
-            Expenses: Math.Abs(currentEntries.Where(e => e.EntryKind == LedgerEntryKind.ExpenseAllocation).Sum(e => e.SignedAmount)),
-            Revenues: currentEntries.Where(e => e.EntryKind == LedgerEntryKind.RevenueAllocation).Sum(e => e.SignedAmount),
+            Collected: periodDepositRows.Where(d => d.Status == PaymentDepositStatus.Confirmed).Sum(d => d.Amount),
+            Expenses: expenseRows.Where(item => !reversedExpenseIds.Contains(item.Id)).Sum(item => item.Amount),
+            Revenues: revenueRows.Where(item => !reversedRevenueIds.Contains(item.Id)).Sum(item => item.Amount),
             OpenCount: periodDepositRows.Count(d => d.Status == PaymentDepositStatus.Pending),
             ClosedCount: periodDepositRows.Count(d => d.Status is PaymentDepositStatus.Confirmed or PaymentDepositStatus.Cancelled or PaymentDepositStatus.Reversed),
             Balance: currentEntries.Sum(e => e.SignedAmount),
@@ -416,6 +426,28 @@ public sealed class TargetWalletReadService
             cumulativeBalance,
             transactions,
             pending);
+    }
+
+    private static async Task<HashSet<string>> GetReversedSourceIdsAsync(
+        AppDbContext db,
+        string buildingId,
+        string sourceType,
+        CancellationToken cancellationToken)
+    {
+        var sourceKeys = await (
+            from original in db.LedgerTransactions.AsNoTracking()
+            join reversal in db.LedgerTransactions.AsNoTracking()
+                on original.LedgerTransactionId equals reversal.ReversesTransactionId
+            where original.BuildingId == buildingId && original.SourceSystem == "application" &&
+                  original.SourceType == sourceType && original.Status == LedgerTransactionStatus.Posted &&
+                  reversal.BuildingId == buildingId && reversal.Kind == LedgerTransactionKind.Reversal &&
+                  reversal.Status == LedgerTransactionStatus.Posted
+            select original.SourceKey)
+            .ToListAsync(cancellationToken);
+
+        return sourceKeys.Where(key => !string.IsNullOrWhiteSpace(key))
+            .Select(key => Guid.TryParse(key, out var id) ? id.ToString("N") : key!)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     private static ReceiptData? DeserializeReceipt(string? json)
