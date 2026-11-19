@@ -40,6 +40,8 @@ public class AuthResult
     /// Gets or sets the display name.
     /// </summary>
     public string? Name { get; set; }
+    /// <summary>Canonical phone identifier for resident PIN-change continuation.</summary>
+    public string? Phone { get; set; }
     /// <summary>Marks a principal issued from the target identity schema.</summary>
     public bool UsesTargetIdentity { get; set; }
     /// <summary>Requires replacement of a temporary initial resident PIN before access is granted.</summary>
