@@ -1,8 +1,9 @@
 @model BuildingManagementMvc.Services.AccountManagementPage
 @{ ViewData["Title"] = "مركز إدارة الحسابات"; }
 <div class="container-fluid py-3" dir="rtl">
-    @if (ViewBag.AccountMessage != null) { <div class="alert alert-info" role="status">@ViewBag.AccountMessage</div> }
-    @if (ViewBag.TemporaryPin != null) { <div class="alert alert-warning" role="alert"><strong>PIN مؤقت — يظهر مرة واحدة فقط:</strong> <code class="fs-4">@ViewBag.TemporaryPin</code><br />انقله للمستخدم بأمان واطلب منه تغييره عند أول دخول.</div> }
+    @if (TempData["Message"] is string accountMessage) { <div class="alert alert-info" role="status">@accountMessage</div> }
+    @if (TempData["Error"] is string accountError) { <div class="alert alert-danger" role="alert">@accountError</div> }
+    @if (TempData["TemporaryResidentPin"] is string temporaryPin) { <div class="alert alert-warning" role="alert"><strong>PIN مؤقت — يظهر مرة واحدة فقط:</strong> <code class="fs-4">@temporaryPin</code><br />انقله للمستخدم بأمان واطلب منه تغييره عند أول دخول.</div> }
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div><h2 class="mb-1">مركز إدارة الحسابات</h2><div class="text-muted">مراجعة حسابات الهوية الموحدة ونطاقات صلاحياتها</div></div>
         <div class="d-flex flex-wrap gap-2">
@@ -71,12 +72,12 @@
                         <div class="d-flex flex-wrap gap-1">
                             @if (account.AccountStatus == 1)
                             {
-                                <form asp-action="Deactivate" method="post">@Html.AntiForgeryToken()<input type="hidden" name="accountId" value="@account.AccountId" /><button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm(&quot;إيقاف حساب الساكن؟&quot;)">إيقاف</button></form>
-                                <form asp-action="ResetPin" method="post">@Html.AntiForgeryToken()<input type="hidden" name="accountId" value="@account.AccountId" /><button type="submit" class="btn btn-sm btn-outline-primary" onclick="return confirm(&quot;إصدار PIN مؤقت جديد وإلغاء الحالي؟&quot;)">إعادة تعيين PIN</button></form>
+                                <form asp-action="SetResidentStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="accountId" value="@account.AccountId" /><input type="hidden" name="activate" value="false" /><button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm(&quot;إيقاف حساب الساكن؟&quot;)">إيقاف</button></form>
+                                <form asp-action="ResetResidentPin" method="post">@Html.AntiForgeryToken()<input type="hidden" name="accountId" value="@account.AccountId" /><button type="submit" class="btn btn-sm btn-outline-primary" onclick="return confirm(&quot;إصدار PIN مؤقت جديد وإلغاء الحالي؟&quot;)">إعادة تعيين PIN</button></form>
                             }
                             else if (account.AccountStatus == 0)
                             {
-                                <form asp-action="Activate" method="post">@Html.AntiForgeryToken()<input type="hidden" name="accountId" value="@account.AccountId" /><button type="submit" class="btn btn-sm btn-outline-success">تفعيل</button></form>
+                                <form asp-action="SetResidentStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="accountId" value="@account.AccountId" /><input type="hidden" name="activate" value="true" /><button type="submit" class="btn btn-sm btn-outline-success">تفعيل</button></form>
                             }
                         </div>
                     }
