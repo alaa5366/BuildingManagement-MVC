@@ -43,7 +43,7 @@ public class AuditLogger : IAuditLogger
 
             var correlationId = Activity.Current?
                 .GetTagItem(CorrelationIdMiddleware.ActivityTagName)?.ToString();
-            var details = SerializeSafeMetadata(metadata);
+            var details = SerializeSafeMetadata(metadata, userRole, correlationId);
             db.AuditEvents.Add(new AuditEventEntity
             {
                 AuditEventId = Guid.NewGuid(),
@@ -140,7 +140,8 @@ public class AuditLogger : IAuditLogger
         {
             try
             {
-                metadata = JsonConvert.DeserializeObject<Dictionary<string, object>>(e.SafeDetailsJson);
+                var parsed = JObject.Parse(e.SafeDetailsJson);
+                metadata = parsed["metadata"]?.ToObject<Dictionary<string, object>>() ?? new Dictionary<string, object>();
             }
             catch (JsonException)
             {
@@ -154,6 +155,7 @@ public class AuditLogger : IAuditLogger
             BuildingId = e.BuildingId,
             ApartmentId = e.ResourceType == "Apartment" ? e.ResourceReference : null,
             UserId = e.ActorReference,
+            UserRole = ReadActorRole(e.SafeDetailsJson),
             Severity = e.Outcome switch { 1 => "warning", 2 => "error", 3 => "critical", _ => "info" },
             Metadata = metadata,
             Details = e.SafeDetailsJson,
@@ -162,12 +164,25 @@ public class AuditLogger : IAuditLogger
         };
     }
 
-    private static string? SerializeSafeMetadata(object? metadata)
+    private static string? SerializeSafeMetadata(object? metadata, string? actorRole, string? correlationId)
     {
-        if (metadata == null) return null;
-        var token = JToken.FromObject(metadata);
-        RedactSensitiveValues(token);
-        return token.ToString(Formatting.None);
+        if (metadata == null && string.IsNullOrWhiteSpace(actorRole) &&
+            string.IsNullOrWhiteSpace(correlationId)) return null;
+        var envelope = new JObject
+        {
+            ["actorRole"] = actorRole,
+            ["correlationId"] = correlationId,
+            ["metadata"] = metadata == null ? null : JToken.FromObject(metadata)
+        };
+        RedactSensitiveValues(envelope);
+        return envelope.ToString(Formatting.None);
+    }
+
+    private static string? ReadActorRole(string? details)
+    {
+        if (string.IsNullOrWhiteSpace(details)) return null;
+        try { return JObject.Parse(details)["actorRole"]?.Value<string>(); }
+        catch (JsonException) { return null; }
     }
 
     private static void RedactSensitiveValues(JToken token)
