@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace BuildingManagementMvc.Controllers;
 
+/// <summary>MaintenanceController coordinates the corresponding application controller actions.</summary>
 [Authorize(Roles = "admin")]
 [AdminPermission(AdminPermissions.ManageMaintenance)]
 public class MaintenanceController : Controller
