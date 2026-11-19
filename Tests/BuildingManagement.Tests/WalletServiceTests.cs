@@ -407,6 +407,28 @@ public void EnsureMonth_ExistingMonthWithEmptyCarryOver_DepositEqualsFee_YieldsZ
     }
 
     [Fact]
+    public void FinanceAllocation_October2026Amounts_ReconcileExactlyAcross57Apartments()
+    {
+        var apartments = Enumerable.Range(1, 57)
+            .Select(i => ($"apt-{i:D3}", false, 0m))
+            .ToArray();
+        var b = BuildingWithApartments(apartments);
+        var month = Svc.EnsureMonth(b, Month);
+        month.Expenses.Add(new Expense { Id = "e1", Amount = 4700m });
+        month.Revenues.Add(new Revenue { Id = "r1", Amount = 27173m });
+
+        var expenses = Svc.RecalculateDistribution(b, Month);
+        var revenues = Svc.RecalculateRevenueDistribution(b, Month);
+
+        Assert.Equal(4700m, expenses.Values.Sum());
+        Assert.Equal(35, expenses.Values.Count(x => x == 82.46m));
+        Assert.Equal(22, expenses.Values.Count(x => x == 82.45m));
+        Assert.Equal(27173m, revenues.Values.Sum());
+        Assert.Equal(53, revenues.Values.Count(x => x == 476.72m));
+        Assert.Equal(4, revenues.Values.Count(x => x == 476.71m));
+    }
+
+    [Fact]
     public void RevenueDistribution_AllocatesRoundingRemainderExactly()
     {
         var b = BuildingWithApartments(("a1", false, 0), ("a2", false, 0), ("a3", false, 0));
