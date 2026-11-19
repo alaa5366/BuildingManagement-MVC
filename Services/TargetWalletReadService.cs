@@ -92,6 +92,93 @@ public sealed class TargetWalletReadService
             row.PeriodKey)).ToList();
     }
 
+    public async Task<TargetWalletAdminSnapshot> GetAdminSnapshotAsync(
+        string buildingId,
+        string month,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(buildingId))
+            throw new ArgumentException("Building is required.", nameof(buildingId));
+        ValidateMonth(month, nameof(month));
+
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        var periodsThroughMonth = db.FinancialPeriods.AsNoTracking()
+            .Where(p => p.BuildingId == buildingId && string.Compare(p.PeriodKey, month) <= 0);
+        var balancePeriodIds = await periodsThroughMonth.Select(p => p.PeriodId).ToListAsync(cancellationToken);
+
+        var balanceRows = await (
+            from entry in db.LedgerEntries.AsNoTracking()
+            join transaction in db.LedgerTransactions.AsNoTracking()
+                on entry.LedgerTransactionId equals transaction.LedgerTransactionId
+            where entry.BuildingId == buildingId && balancePeriodIds.Contains(entry.PeriodId)
+                && transaction.BuildingId == buildingId
+                && transaction.Status == LedgerTransactionStatus.Posted
+            group entry by entry.ApartmentId into apartmentEntries
+            select new { ApartmentId = apartmentEntries.Key, Balance = apartmentEntries.Sum(x => x.SignedAmount) }
+        ).ToListAsync(cancellationToken);
+        var balances = balanceRows.ToDictionary(x => x.ApartmentId, x => x.Balance, StringComparer.Ordinal);
+
+        var currentPeriodIds = await db.FinancialPeriods.AsNoTracking()
+            .Where(p => p.BuildingId == buildingId && p.PeriodKey == month)
+            .Select(p => p.PeriodId)
+            .ToListAsync(cancellationToken);
+
+        var currentEntries = await (
+            from entry in db.LedgerEntries.AsNoTracking()
+            join transaction in db.LedgerTransactions.AsNoTracking()
+                on entry.LedgerTransactionId equals transaction.LedgerTransactionId
+            where entry.BuildingId == buildingId && currentPeriodIds.Contains(entry.PeriodId)
+                && transaction.BuildingId == buildingId
+                && transaction.Status == LedgerTransactionStatus.Posted
+            select new { entry.EntryKind, entry.SignedAmount }
+        ).ToListAsync(cancellationToken);
+
+        var pendingRows = await (
+            from deposit in db.PaymentDeposits.AsNoTracking()
+            join period in db.FinancialPeriods.AsNoTracking() on deposit.PeriodId equals period.PeriodId
+            where deposit.BuildingId == buildingId && deposit.Status == PaymentDepositStatus.Pending
+            orderby deposit.SubmittedAtUtc
+            select new
+            {
+                deposit.PaymentDepositId, deposit.ApartmentId, deposit.Amount, deposit.Note,
+                deposit.ReceiptMetadataJson, deposit.SubmittedAtUtc, period.PeriodKey
+            }
+        ).ToListAsync(cancellationToken);
+
+        var pending = pendingRows.Select(deposit => new TargetPendingWalletDeposit(
+            new Deposit
+            {
+                Id = deposit.PaymentDepositId.ToString("D"),
+                Number = deposit.PaymentDepositId.ToString("N")[..8].ToUpperInvariant(),
+                AptId = deposit.ApartmentId,
+                Amount = deposit.Amount,
+                Note = deposit.Note ?? "",
+                Receipt = DeserializeReceipt(deposit.ReceiptMetadataJson),
+                Status = "pending",
+                CreatedAt = deposit.SubmittedAtUtc.ToString("O"),
+                CreatedBy = ""
+            },
+            deposit.ApartmentId,
+            deposit.PeriodKey)).ToList();
+
+        var periodDepositRows = await db.PaymentDeposits.AsNoTracking()
+            .Where(d => d.BuildingId == buildingId && currentPeriodIds.Contains(d.PeriodId))
+            .Select(d => new { d.Status, d.Amount })
+            .ToListAsync(cancellationToken);
+
+        var totals = (
+            Collected: periodDepositRows.Where(d => d.Status is PaymentDepositStatus.Confirmed or PaymentDepositStatus.Reversed)
+                .Sum(d => d.Status == PaymentDepositStatus.Reversed ? -d.Amount : d.Amount),
+            Expenses: Math.Abs(currentEntries.Where(e => e.EntryKind == LedgerEntryKind.ExpenseAllocation).Sum(e => e.SignedAmount)),
+            Revenues: currentEntries.Where(e => e.EntryKind == LedgerEntryKind.RevenueAllocation).Sum(e => e.SignedAmount),
+            OpenCount: periodDepositRows.Count(d => d.Status == PaymentDepositStatus.Pending),
+            ClosedCount: periodDepositRows.Count(d => d.Status is PaymentDepositStatus.Confirmed or PaymentDepositStatus.Cancelled or PaymentDepositStatus.Reversed),
+            Balance: currentEntries.Sum(e => e.SignedAmount),
+            TotalWallet: balances.Values.Sum());
+
+        return new TargetWalletAdminSnapshot(balances, pending, totals);
+    }
+
     public async Task<TargetWalletSnapshot> GetApartmentAsync(
         string buildingId,
         string apartmentId,
@@ -305,3 +392,10 @@ public sealed record TargetPendingDeposit(
     ReceiptData? Receipt,
     DateTime SubmittedAtUtc,
     string PeriodKey);
+
+public sealed record TargetPendingWalletDeposit(Deposit Deposit, string ApartmentId, string MonthKey);
+
+public sealed record TargetWalletAdminSnapshot(
+    IReadOnlyDictionary<string, decimal> Balances,
+    IReadOnlyList<TargetPendingWalletDeposit> PendingDeposits,
+    (decimal Collected, decimal Expenses, decimal Revenues, int OpenCount, int ClosedCount, decimal Balance, decimal TotalWallet) Totals);
