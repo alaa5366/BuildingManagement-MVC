@@ -454,3 +454,32 @@ body.no-sidebar .auth-content .btn { min-height: 42px; }
   .content-wrapper .ui-qr-card form .form-select { flex: 1 1 100%; }
   .content-wrapper .ui-qr-card form .btn { flex: 1 1 100%; }
 }
+
+
+/* Finance, wallet, reporting and backup pages */
+.content-wrapper .ui-stat-tile {
+  display: flex; flex-direction: column; justify-content: center; gap: 5px;
+  min-width: 0; border: 1px solid var(--ui-border); border-radius: 14px;
+  background: #fff; box-shadow: var(--ui-shadow);
+}
+.content-wrapper .ui-stat-tile > .fw-bold {
+  color: var(--ui-primary); font-size: clamp(1.15rem,1.8vw,1.55rem);
+  line-height: 1.35; font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
+}
+.content-wrapper .ui-stat-tile .text-success { color: #218565 !important; }
+.content-wrapper .ui-stat-tile .text-danger { color: #b94c4c !important; }
+.content-wrapper .ui-panel { min-width: 0; }
+.content-wrapper .ui-panel .table-responsive { box-shadow: none; }
+.content-wrapper .ui-panel .table { min-width: 100%; }
+.content-wrapper .ui-panel > h5,
+.content-wrapper .ui-panel > h4 {
+  color: var(--ui-text); font-weight: 700; margin-bottom: 14px;
+}
+.content-wrapper .ui-panel form .form-label { margin-bottom: 6px; }
+.content-wrapper .ui-form-panel .form-control,
+.content-wrapper .ui-form-panel .form-select { background-color: #fff; }
+.content-wrapper .ui-stat-tile + .ui-stat-tile { height: 100%; }
+@media (max-width: 767.98px) {
+  .content-wrapper .ui-stat-tile { min-height: 78px; padding: 12px !important; }
+  .content-wrapper .ui-panel .table-responsive { margin-inline: -2px; }
+}
