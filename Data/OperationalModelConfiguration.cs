@@ -26,6 +26,8 @@ internal static class OperationalModelConfiguration
                 .HasDatabaseName("IX_AuditEvents_OccurredAt");
             e.HasIndex(x => new { x.ResourceType, x.ResourceReference, x.OccurredAtUtc })
                 .HasDatabaseName("IX_AuditEvents_Resource");
+            e.HasIndex(x => new { x.BuildingId, x.EventCategory, x.ResourceType, x.OccurredAtUtc, x.AuditEventId })
+                .HasDatabaseName("IX_AuditEvents_Building_Category_Resource_Time");
         });
 
         mb.Entity<PresenceSessionEntity>(e =>
