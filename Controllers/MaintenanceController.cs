@@ -186,7 +186,7 @@ public class MaintenanceController : Controller
                     await _targetNotifications.CreateResidentDepositNoticeAsync(
                         building.Id, apartment.Id, "مصروف جديد",
                         $"{catName}: {expense.Amount:0.##} ج.م — {building.Name}",
-                        HttpContext.RequestAborted);
+                        HttpContext.RequestAborted, "expense_new", "💸");
                 }
                 catch (Exception ex)
                 {
