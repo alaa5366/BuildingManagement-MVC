@@ -448,6 +448,9 @@ public sealed class TargetWalletReadService
             from entry in db.LedgerEntries.AsNoTracking()
             join transaction in db.LedgerTransactions.AsNoTracking()
                 on entry.LedgerTransactionId equals transaction.LedgerTransactionId
+            join originalRow in db.LedgerTransactions.AsNoTracking()
+                on transaction.ReversesTransactionId equals (Guid?)originalRow.LedgerTransactionId into originalRows
+            from original in originalRows.DefaultIfEmpty()
             join depositRow in db.PaymentDeposits.AsNoTracking()
                 on (Guid?)transaction.LedgerTransactionId equals depositRow.PostedTransactionId into depositRows
             from deposit in depositRows.DefaultIfEmpty()
@@ -461,6 +464,7 @@ public sealed class TargetWalletReadService
             {
                 entry.LedgerEntryId,
                 entry.EntryKind,
+                OriginalKind = original == null ? (LedgerTransactionKind?)null : original.Kind,
                 entry.SignedAmount,
                 entry.CurrencyCode,
                 entry.Description,
@@ -505,7 +509,7 @@ public sealed class TargetWalletReadService
             var receipt = DeserializeReceipt(entry.ReceiptMetadataJson);
             return new WalletTransactionVm
             {
-                Type = ToLegacyType(entry.EntryKind),
+                Type = ToLegacyType(entry.EntryKind, entry.OriginalKind),
                 Status = entry.DepositStatus == PaymentDepositStatus.Reversed ? "reversed" : "confirmed",
                 Id = entry.LedgerEntryId.ToString("D"),
                 Number = entry.DepositPaymentId is Guid paymentDepositId
@@ -586,7 +590,7 @@ public sealed class TargetWalletReadService
         catch (JsonException) { return null; }
     }
 
-    private static string ToLegacyType(LedgerEntryKind kind) => kind switch
+    private static string ToLegacyType(LedgerEntryKind kind, LedgerTransactionKind? originalKind = null) => kind switch
     {
         LedgerEntryKind.Deposit => "deposit",
         LedgerEntryKind.MonthlyCharge => "monthly_fee_due",
@@ -594,6 +598,8 @@ public sealed class TargetWalletReadService
         LedgerEntryKind.RevenueAllocation => "revenue",
         LedgerEntryKind.WalletAdjustment => "adjustment",
         LedgerEntryKind.OpeningBalance => "carry_over",
+        LedgerEntryKind.Reversal when originalKind == LedgerTransactionKind.Expense => "expense",
+        LedgerEntryKind.Reversal when originalKind == LedgerTransactionKind.Revenue => "revenue",
         LedgerEntryKind.Reversal => "adjustment",
         _ => "adjustment"
     };
