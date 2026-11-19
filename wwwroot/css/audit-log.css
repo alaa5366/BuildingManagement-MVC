@@ -165,3 +165,10 @@
     .kibana-audit .audit-kibana-filter-grid { grid-template-columns:1fr; }
     .kibana-audit .audit-observability-nav > span { margin-inline-start:0; }
 }
+
+.kibana-audit .audit-correlation-cell { min-width:145px; }
+.kibana-audit .audit-correlation-cell a {
+    color:#0876c5; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:.68rem; text-decoration:none; overflow-wrap:anywhere;
+}
+.kibana-audit .audit-correlation-cell a:hover { text-decoration:underline; }
