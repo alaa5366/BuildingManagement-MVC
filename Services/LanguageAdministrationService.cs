@@ -6,12 +6,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
 
+/// <summary>LanguageAdminRow coordinates the corresponding application functionality.</summary>
 public sealed record LanguageAdminRow(string CultureCode, string EnglishName, string NativeName, string Direction, string? FallbackCulture, string? Flag, bool IsEnabled, bool IsDefault, int SortOrder);
+/// <summary>TranslationAdminRow coordinates the corresponding application functionality.</summary>
 public sealed record TranslationAdminRow(string Key, string Category, string SourceGroup, string? Description, string Value, bool IsMissing, int LanguageCount);
+/// <summary>TranslationGroupRow coordinates the corresponding application functionality.</summary>
 public sealed record TranslationGroupRow(string Category, string SourceGroup, int Total, int Missing);
+/// <summary>TranslationImportRow coordinates the corresponding application functionality.</summary>
 public sealed record TranslationImportRow(string Key,string Category,string SourceGroup,string Description,string Culture,string Value);
+/// <summary>LanguageAdminPage coordinates the corresponding application functionality.</summary>
 public sealed record LanguageAdminPage(IReadOnlyList<LanguageAdminRow> Languages, IReadOnlyList<TranslationGroupRow> Groups, IReadOnlyList<TranslationAdminRow> Entries, string? Culture, string? Category, string? Search, bool MissingOnly, int TotalKeys, int MissingCount);
 
+/// <summary>LanguageAdministrationService coordinates the corresponding application functionality.</summary>
 public sealed class LanguageAdministrationService
 {
     private readonly IDbContextFactory<AppDbContext> _factory;
