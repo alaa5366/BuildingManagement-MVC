@@ -179,9 +179,10 @@ public sealed class TargetDepositWorkflowService
         if (period is null || period.Status == FinancialPeriodStatus.Closed)
             throw new InvalidOperationException("The deposit financial period is closed or unavailable.");
 
+        // Pending submissions may be reviewed after their source month ends while
+        // that financial period remains explicitly open. The ledger keeps the
+        // original PeriodId and records the actual posting timestamp separately.
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        if (now < period.StartsAtUtc || now >= period.EndsAtUtc)
-            throw new InvalidOperationException("The deposit cannot be posted outside its financial period.");
 
         var transactionId = Guid.NewGuid();
         var sourceKey = deposit.SourceKey ?? deposit.PaymentDepositId.ToString("D");
@@ -269,9 +270,8 @@ public sealed class TargetDepositWorkflowService
         var period = await db.FinancialPeriods.SingleOrDefaultAsync(
             item => item.PeriodId == deposit.PeriodId && item.BuildingId == deposit.BuildingId,
             cancellationToken);
-        if (period is null || period.Status == FinancialPeriodStatus.Closed ||
-            now < period.StartsAtUtc || now >= period.EndsAtUtc)
-            throw new InvalidOperationException("A deposit can only be edited inside its open financial period.");
+        if (period is null || period.Status == FinancialPeriodStatus.Closed)
+            throw new InvalidOperationException("A deposit can only be edited while its source financial period remains open.");
 
         var oldAmount = deposit.Amount;
         var oldNote = deposit.Note;
