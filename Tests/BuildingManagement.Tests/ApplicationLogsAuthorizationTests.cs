@@ -36,7 +36,7 @@ public sealed class ApplicationLogsAuthorizationTests
         var context = CreateContext(new Claim(ClaimTypes.Role, "admin"));
         var filterContext = CreateFilterContext(context);
 
-        await await new AdminPermissionAttribute(AdminPermissions.ViewApplicationLogs).OnAuthorizationAsync(filterContext);
+        await new AdminPermissionAttribute(AdminPermissions.ViewApplicationLogs).OnAuthorizationAsync(filterContext);
 
         var result = Assert.IsType<ContentResult>(filterContext.Result);
         Assert.Equal(StatusCodes.Status403Forbidden, result.StatusCode);
