@@ -169,6 +169,86 @@ public sealed class AccountManagementServiceTests
             It.IsAny<object?>(), "info"), Times.Once);
     }
 
+
+    [Fact]
+    public async Task ResetManagedAccountPinAsync_AllowsAdminAndRejectsMultiRoleAccounts()
+    {
+        var factory = new TestContextFactory();
+        var hasher = new BcryptPasswordHasher();
+        var now = DateTime.UtcNow;
+        var adminPersonId = Guid.NewGuid();
+        var protectedPersonId = Guid.NewGuid();
+        var adminAccountId = Guid.NewGuid();
+        var protectedAccountId = Guid.NewGuid();
+        await using (var db = await factory.CreateDbContextAsync())
+        {
+            db.Persons.AddRange(
+                new PersonEntity { PersonId = adminPersonId, DisplayName = "Admin", PrimaryPhone = "+201000000444", CreatedAtUtc = now },
+                new PersonEntity { PersonId = protectedPersonId, DisplayName = "Protected", PrimaryPhone = "+201000000445", CreatedAtUtc = now });
+            db.UserAccounts.AddRange(
+                new UserAccountEntity { AccountId = adminAccountId, PersonId = adminPersonId, AccountStatus = 1, SecurityStamp = "admin-before", CreatedAtUtc = now },
+                new UserAccountEntity { AccountId = protectedAccountId, PersonId = protectedPersonId, AccountStatus = 1, SecurityStamp = "protected-before", CreatedAtUtc = now });
+            db.RoleDefinitions.AddRange(
+                new RoleDefinitionEntity { RoleKey = "admin", DisplayName = "Admin", IsActive = true },
+                new RoleDefinitionEntity { RoleKey = "resident", DisplayName = "Resident", IsActive = true },
+                new RoleDefinitionEntity { RoleKey = "superadmin", DisplayName = "SuperAdmin", IsActive = true });
+            db.UserRoleAssignments.AddRange(
+                new UserRoleAssignmentEntity { RoleAssignmentId = Guid.NewGuid(), AccountId = adminAccountId, RoleKey = "admin", ScopeType = 1, ScopeBuildingId = "building-a", ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1) },
+                new UserRoleAssignmentEntity { RoleAssignmentId = Guid.NewGuid(), AccountId = adminAccountId, RoleKey = "admin", ScopeType = 1, ScopeBuildingId = "building-b", ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1) },
+                new UserRoleAssignmentEntity { RoleAssignmentId = Guid.NewGuid(), AccountId = protectedAccountId, RoleKey = "admin", ScopeType = 1, ScopeBuildingId = "building-a", ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1) },
+                new UserRoleAssignmentEntity { RoleAssignmentId = Guid.NewGuid(), AccountId = protectedAccountId, RoleKey = "superadmin", ScopeType = 0, ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1) });
+            await db.SaveChangesAsync();
+        }
+
+        var audit = CreateAuditMock();
+        var service = new AccountManagementService(factory, audit.Object);
+        var result = await service.ResetManagedAccountPinAsync(adminAccountId, "superadmin-actor", hasher);
+        Assert.True(result.Success);
+        Assert.NotNull(result.TemporaryPin);
+        await using (var verify = await factory.CreateDbContextAsync())
+        {
+            var admin = await verify.UserAccounts.SingleAsync(x => x.AccountId == adminAccountId);
+            Assert.True(admin.MustChangePin);
+            Assert.NotEqual("admin-before", admin.SecurityStamp);
+            var credential = await verify.UserCredentials.SingleAsync(x => x.AccountId == adminAccountId && x.RevokedAtUtc == null);
+            Assert.True(hasher.VerifyPin(result.TemporaryPin!, credential.CredentialHash));
+        }
+
+        var rejected = await service.ResetManagedAccountPinAsync(protectedAccountId, "superadmin-actor", hasher);
+        Assert.False(rejected.Success);
+        await using var final = await factory.CreateDbContextAsync();
+        Assert.Empty(await final.UserCredentials.Where(x => x.AccountId == protectedAccountId).ToListAsync());
+        Assert.Equal("protected-before", (await final.UserAccounts.SingleAsync(x => x.AccountId == protectedAccountId)).SecurityStamp);
+        audit.Verify(x => x.LogAsync("identity.admin.pin.reset", null, null, "superadmin-actor", "superadmin",
+            It.IsAny<object?>(), "info"), Times.Once);
+    }
+
+    [Fact]
+    public async Task SetManagedAccountStatusAsync_AllowsAdminWithMultipleBuildingScopes()
+    {
+        var factory = new TestContextFactory();
+        var now = DateTime.UtcNow;
+        var personId = Guid.NewGuid();
+        var accountId = Guid.NewGuid();
+        await using (var db = await factory.CreateDbContextAsync())
+        {
+            db.Persons.Add(new PersonEntity { PersonId = personId, DisplayName = "Admin", PrimaryPhone = "+201000000446", CreatedAtUtc = now });
+            db.UserAccounts.Add(new UserAccountEntity { AccountId = accountId, PersonId = personId, AccountStatus = 1, SecurityStamp = "before", CreatedAtUtc = now });
+            db.RoleDefinitions.Add(new RoleDefinitionEntity { RoleKey = "admin", DisplayName = "Admin", IsActive = true });
+            db.UserRoleAssignments.AddRange(
+                new UserRoleAssignmentEntity { RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "admin", ScopeType = 1, ScopeBuildingId = "building-a", ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1) },
+                new UserRoleAssignmentEntity { RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "admin", ScopeType = 1, ScopeBuildingId = "building-b", ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1) });
+            await db.SaveChangesAsync();
+        }
+        var audit = CreateAuditMock();
+        var result = await new AccountManagementService(factory, audit.Object).SetManagedAccountStatusAsync(accountId, false, "superadmin-actor");
+        Assert.True(result.Success);
+        await using var verify = await factory.CreateDbContextAsync();
+        var account = await verify.UserAccounts.SingleAsync(x => x.AccountId == accountId);
+        Assert.Equal((byte)0, account.AccountStatus);
+        Assert.NotEqual("before", account.SecurityStamp);
+    }
+
     private static Mock<IAuditLogger> CreateAuditMock()
     {
         var audit = new Mock<IAuditLogger>();

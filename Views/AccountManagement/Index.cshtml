@@ -4,6 +4,7 @@
     @if (TempData["Message"] is string accountMessage) { <div class="alert alert-info" role="status">@accountMessage</div> }
     @if (TempData["Error"] is string accountError) { <div class="alert alert-danger" role="alert">@accountError</div> }
     @if (TempData["TemporaryResidentPin"] is string temporaryPin) { <div class="alert alert-warning" role="alert"><strong>PIN مؤقت — يظهر مرة واحدة فقط:</strong> <code class="fs-4">@temporaryPin</code><br />انقله للمستخدم بأمان واطلب منه تغييره عند أول دخول.</div> }
+    @if (TempData["TemporaryManagedAccountPin"] is string temporaryManagedPin) { <div class="alert alert-warning" role="alert"><strong>PIN مؤقت — يظهر مرة واحدة فقط:</strong> <code class="fs-4">@temporaryManagedPin</code><br />انقله للمستخدم بأمان واطلب منه تغييره عند أول دخول.</div> }
     @if (TempData["TemporarySuperAdminPassword"] is string temporaryPassword) { <div class="alert alert-warning" role="alert"><strong>كلمة مرور SuperAdmin الجديدة — تظهر مرة واحدة فقط:</strong> <code class="fs-5">@temporaryPassword</code><br />سلّمها لصاحب الحساب عبر قناة آمنة، واطلب منه تغييرها فورًا.</div> }
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div><h2 class="mb-1">مركز إدارة الحسابات</h2><div class="text-muted">مراجعة حسابات الهوية الموحدة ونطاقات صلاحياتها</div></div>
@@ -38,7 +39,7 @@
         </form>
     </div></div>
     <div class="alert alert-info">
-        المركز يعرض حسابات الهوية الموحدة، ويتيح تفعيل/إيقاف حسابات السكان وإعادة تعيين PIN مؤقت لها. حسابات الإدمن القديمة تُدار من شاشة الإدمن الحالية لحين اكتمال تحويل تسجيل دخولها.
+        المركز يعرض حسابات الهوية الموحدة، ويتيح إدارة حسابات السكان والإدمن المرتبطة بالجداول الجديدة (تفعيل/إيقاف وإصدار PIN مؤقت). حسابات الإدمن القديمة تُدار من شاشة الإدمن الحالية لحين اكتمال ربطها بالهوية الموحدة.
         حسابات SuperAdmin القديمة ظاهرة كمصدر منفصل؛ يمكن إدارة الحسابات المدرجة في قائمة السماح (مع منع إدارة الحساب الحالي وآخر حساب نشط)، دون دمجها مع UserAccounts.
         يظل دخول SuperAdmin بالإيميل وكلمة المرور، ودخول السكان والإدمن العادي بالموبايل وPIN. لا يتم عرض PIN أو password hash.
     </div>
@@ -88,13 +89,13 @@
                         }
                         else { <span class="text-muted small">لا يمكن إدارة حسابك الحالي من هنا</span> }
                     }
-                    else if (!account.IsLegacyAccount && !account.IsArchived && account.Roles == "resident")
+                    else if (!account.IsLegacyAccount && !account.IsArchived && account.Roles is "resident" or "admin")
                     {
                         <div class="d-flex flex-wrap gap-1">
                             @if (account.AccountStatus == 1)
                             {
-                                <form asp-action="SetResidentStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="accountId" value="@account.AccountId" /><input type="hidden" name="activate" value="false" /><button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm(&quot;إيقاف حساب الساكن؟&quot;)">إيقاف</button></form>
-                                <form asp-action="ResetResidentPin" method="post">@Html.AntiForgeryToken()<input type="hidden" name="accountId" value="@account.AccountId" /><button type="submit" class="btn btn-sm btn-outline-primary" onclick="return confirm(&quot;إصدار PIN مؤقت جديد وإلغاء الحالي؟&quot;)">إعادة تعيين PIN</button></form>
+                                <form asp-action="SetManagedAccountStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="accountId" value="@account.AccountId" /><input type="hidden" name="activate" value="false" /><button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm(&quot;إيقاف حساب المستخدم؟&quot;)">إيقاف</button></form>
+                                <form asp-action="ResetManagedAccountPin" method="post">@Html.AntiForgeryToken()<input type="hidden" name="accountId" value="@account.AccountId" /><button type="submit" class="btn btn-sm btn-outline-primary" onclick="return confirm(&quot;إصدار PIN مؤقت جديد وإلغاء الحالي؟&quot;)">إعادة تعيين PIN</button></form>
                             }
                             else if (account.AccountStatus == 0)
                             {

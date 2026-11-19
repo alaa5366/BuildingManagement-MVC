@@ -283,6 +283,82 @@ public sealed class AccountManagementService
         await _audit.LogAsync("identity.resident.pin.reset", userId: actorId, userRole: "superadmin", metadata: new { AccountId = accountId, MustChangePin = true });
         return AccountManagementMutationResult.Ok("تم إصدار PIN مؤقت. اعرضه للمستخدم مرة واحدة واطلب تغييره عند أول دخول.", pin);
     }
+
+    // Admin and resident accounts share mobile/PIN authentication. Only a single distinct
+    // managed role is eligible; multiple building scopes for that same role remain valid.
+    private async Task<string?> GetSoleManagedRoleAsync(AppDbContext db, Guid accountId, DateTime now, CancellationToken ct)
+    {
+        var roles = await (from assignment in db.UserRoleAssignments
+                           join definition in db.RoleDefinitions on assignment.RoleKey equals definition.RoleKey
+                           where assignment.AccountId == accountId && definition.IsActive
+                               && assignment.ValidFromUtc <= now
+                               && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
+                               && assignment.RevokedAtUtc == null
+                           select assignment.RoleKey).Distinct().ToListAsync(ct);
+        return roles.Count == 1 && (roles[0] == "resident" || roles[0] == "admin") ? roles[0] : null;
+    }
+
+    public async Task<AccountManagementMutationResult> SetManagedAccountStatusAsync(
+        Guid accountId, bool activate, string actorId, CancellationToken ct = default)
+    {
+        await using var db = await _factory.CreateDbContextAsync(ct);
+        await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+        var account = await db.UserAccounts.SingleOrDefaultAsync(x => x.AccountId == accountId, ct);
+        if (account is null) return AccountManagementMutationResult.Fail("الحساب غير موجود.");
+        var now = DateTime.UtcNow;
+        var role = await GetSoleManagedRoleAsync(db, accountId, now, ct);
+        if (role is null)
+            return AccountManagementMutationResult.Fail("يمكن إدارة حساب resident أو admin بدور واحد فقط. الحسابات متعددة الأدوار وSuperAdmin محمية.");
+        if (activate && await db.Persons.AnyAsync(x => x.PersonId == account.PersonId && x.IsArchived, ct))
+            return AccountManagementMutationResult.Fail("لا يمكن تفعيل حساب شخص مؤرشف.");
+        if (account.AccountStatus is not (0 or 1))
+            return AccountManagementMutationResult.Fail("الحساب موقوف/معلق بحالة خاصة؛ لا تغيّر حالته من هذه الشاشة.");
+        var next = activate ? (byte)1 : (byte)0;
+        if (account.AccountStatus == next)
+            return AccountManagementMutationResult.Ok("الحساب بالفعل على الحالة المطلوبة.");
+        account.AccountStatus = next;
+        account.SecurityStamp = Guid.NewGuid().ToString("N");
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        await _audit.LogAsync(activate ? $"identity.{role}.account.activated" : $"identity.{role}.account.deactivated",
+            userId: actorId, userRole: "superadmin", metadata: new { AccountId = accountId, Role = role });
+        return AccountManagementMutationResult.Ok(activate ? "تم تفعيل الحساب." : "تم إيقاف الحساب.");
+    }
+
+    public async Task<AccountManagementMutationResult> ResetManagedAccountPinAsync(
+        Guid accountId, string actorId, IPasswordHasher hasher, CancellationToken ct = default)
+    {
+        await using var db = await _factory.CreateDbContextAsync(ct);
+        await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+        var account = await db.UserAccounts.SingleOrDefaultAsync(x => x.AccountId == accountId, ct);
+        if (account is null) return AccountManagementMutationResult.Fail("الحساب غير موجود.");
+        if (await db.Persons.AnyAsync(x => x.PersonId == account.PersonId && x.IsArchived, ct))
+            return AccountManagementMutationResult.Fail("لا يمكن إعادة تعيين PIN لشخص مؤرشف.");
+        var now = DateTime.UtcNow;
+        var role = await GetSoleManagedRoleAsync(db, accountId, now, ct);
+        if (role is null)
+            return AccountManagementMutationResult.Fail("يمكن إعادة تعيين PIN لحساب resident أو admin بدور واحد فقط. الحسابات متعددة الأدوار وSuperAdmin محمية.");
+        if (account.AccountStatus != 1)
+            return AccountManagementMutationResult.Fail("فعّل الحساب أولًا قبل إعادة تعيين PIN.");
+        var pin = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000)
+            .ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var activeCredentials = await db.UserCredentials.Where(x => x.AccountId == accountId
+            && x.CredentialType == 0 && x.RevokedAtUtc == null).ToListAsync(ct);
+        foreach (var credential in activeCredentials) credential.RevokedAtUtc = now;
+        db.UserCredentials.Add(new BuildingManagementMvc.Data.Entities.UserCredentialEntity
+        {
+            CredentialId = Guid.NewGuid(), AccountId = accountId, CredentialType = 0,
+            CredentialHash = hasher.HashPin(pin), HashAlgorithm = "BCrypt.Net-Next", CreatedAtUtc = now
+        });
+        account.MustChangePin = true;
+        account.SecurityStamp = Guid.NewGuid().ToString("N");
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        await _audit.LogAsync($"identity.{role}.pin.reset", userId: actorId, userRole: "superadmin",
+            metadata: new { AccountId = accountId, Role = role, MustChangePin = true });
+        return AccountManagementMutationResult.Ok("تم إصدار PIN مؤقت. اعرضه للمستخدم مرة واحدة واطلب تغييره عند أول دخول.", pin);
+    }
+
 }
 
 public sealed class AccountManagementPage
