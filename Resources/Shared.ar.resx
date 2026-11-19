@@ -4710,4 +4710,7 @@
   <data name="Choose_New_PIN_And_Confirm" xml:space="preserve">
     <value>اختر رقمًا سريًا من 4 إلى 12 رقمًا، مختلفًا عن 1234، ثم أكّده.</value>
   </data>
+  <data name="Phone_Correction_Requests" xml:space="preserve">
+    <value>طلبات تصحيح أرقام الهاتف</value>
+  </data>
 </root>
