@@ -225,3 +225,30 @@ These phases are additive migration steps, not application cutover. Legacy table
 - UserPermissions remain user-scoped legacy permission evidence, not role-level RolePermissions.
 - UID is retained only as a legacy reference; no account/person identity is inferred and no new permission is granted.
 - Permission strings are preserved verbatim; source rows remain unchanged.
+
+
+## 9. Backfill progress — Phases 17–22
+
+| Phase | Legacy source | Target / treatment | Status |
+|---|---|---|---|
+| 17 | Polls / PollOptions / PollVotes | PollLifecycleEvents + legacy evidence | Reconciliation passed |
+| 18 | Dvrs / Cameras | LegacyOperationalRecords | Reconciliation passed |
+| 19 | UserPermissions | LegacyOperationalRecords | Reconciliation passed |
+| 20 | Users / Residents / BuildingAdmins | LegacyOperationalRecords, unresolved identity evidence | Script and migration published; apply pending |
+| 21 | GlobalSettings | GlobalApplicationSettings | Script and migration published; apply pending |
+| 22 | BuildingSettings / FinancialCategories | Existing canonical reference tables | Read-only integrity audit published; run pending |
+
+### Phase 20 — identity profile evidence
+- Profile fields and building/apartment scope are retained for later reviewed identity resolution.
+- PINs, PIN hashes, password hashes, MFA secret ciphertext, and recovery-code material are excluded.
+- No Persons, UserAccounts, credentials, or role assignments are created from unverified identity matches.
+- Resident IsOwner/IsPrimary flags are preserved as legacy facts only; they do not establish legal ownership shares or effective-dated occupancy.
+
+### Phase 21 — global settings
+- Non-secret operational settings are copied exactly to GlobalApplicationSettings.
+- WhatsApp API token and Cloudinary API key are excluded pending proper vault encryption and key-version handling.
+- Source GlobalSettings remains unchanged.
+
+### Phase 22 — canonical reference audit
+- Buildings, BuildingSettings, and FinancialCategories remain shared canonical tables; duplicate copies would split reference identity.
+- The audit checks that settings and financial category rows reference existing buildings. It is read-only.
