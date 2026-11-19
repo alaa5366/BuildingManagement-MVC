@@ -25,6 +25,7 @@ public sealed class SystemHealthController : Controller
         _timeProvider = timeProvider;
     }
 
+    /// <summary>Displays the resident account provisioning report.</summary>
     [HttpGet]
     [EnableRateLimiting("lookup")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
