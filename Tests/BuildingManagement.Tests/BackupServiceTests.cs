@@ -369,4 +369,20 @@ public class BackupServiceTests
         Assert.Contains("residents", collections.Keys);
         Assert.Contains("auditLog", collections.Keys);
     }
+
+    [Fact]
+    public void GetKnownCollections_DoesNotExposeRetiredLegacyCollections()
+    {
+        var collections = BackupService.GetKnownCollections();
+
+        Assert.DoesNotContain("expenses", collections.Keys);
+        Assert.DoesNotContain("revenues", collections.Keys);
+        Assert.DoesNotContain("monthlyApartmentShares", collections.Keys);
+        Assert.DoesNotContain("deposits", collections.Keys);
+        Assert.DoesNotContain("depositEditHistory", collections.Keys);
+        Assert.DoesNotContain("walletAdjustments", collections.Keys);
+        Assert.DoesNotContain("notifications", collections.Keys);
+        Assert.DoesNotContain("pollVotes", collections.Keys);
+        Assert.DoesNotContain("maintenanceRecords", collections.Keys);
+    }
 }
