@@ -163,7 +163,8 @@ public sealed class TargetWalletReadServiceTests
         var periodId = Guid.NewGuid();
         var transactions = new[]
         {
-            (Id: Guid.NewGuid(), Kind: LedgerTransactionKind.Deposit, SourceType: "PaymentDeposit", Key: "deposit"),
+            (Id: Guid.NewGuid(), Kind: LedgerTransactionKind.Deposit, SourceType: "PaymentDeposit", Key: "deposit-net"),
+            (Id: Guid.NewGuid(), Kind: LedgerTransactionKind.Deposit, SourceType: "PaymentDeposit", Key: "deposit-reversed"),
             (Id: Guid.NewGuid(), Kind: LedgerTransactionKind.Reversal, SourceType: "PaymentDepositReversal", Key: "deposit-reversal"),
             (Id: Guid.NewGuid(), Kind: LedgerTransactionKind.Expense, SourceType: "Expense", Key: "expense"),
             (Id: Guid.NewGuid(), Kind: LedgerTransactionKind.Reversal, SourceType: "ExpenseReversal", Key: "expense-reversal"),
@@ -195,13 +196,14 @@ public sealed class TargetWalletReadServiceTests
             var amounts = new[]
             {
                 (transactions[0].Id, LedgerEntryKind.Deposit, 100m),
-                (transactions[1].Id, LedgerEntryKind.Reversal, -40m),
-                (transactions[2].Id, LedgerEntryKind.ExpenseAllocation, -100m),
-                (transactions[3].Id, LedgerEntryKind.Reversal, 100m),
-                (transactions[4].Id, LedgerEntryKind.ExpenseAllocation, -20m),
-                (transactions[5].Id, LedgerEntryKind.RevenueAllocation, 50m),
-                (transactions[6].Id, LedgerEntryKind.Reversal, -50m),
-                (transactions[7].Id, LedgerEntryKind.RevenueAllocation, 30m)
+                (transactions[1].Id, LedgerEntryKind.Deposit, 40m),
+                (transactions[2].Id, LedgerEntryKind.Reversal, -40m),
+                (transactions[3].Id, LedgerEntryKind.ExpenseAllocation, -100m),
+                (transactions[4].Id, LedgerEntryKind.Reversal, 100m),
+                (transactions[5].Id, LedgerEntryKind.ExpenseAllocation, -20m),
+                (transactions[6].Id, LedgerEntryKind.RevenueAllocation, 50m),
+                (transactions[7].Id, LedgerEntryKind.Reversal, -50m),
+                (transactions[8].Id, LedgerEntryKind.RevenueAllocation, 30m)
             };
             seed.LedgerEntries.AddRange(amounts.Select(item => new LedgerEntryEntity
             {
@@ -216,7 +218,7 @@ public sealed class TargetWalletReadServiceTests
         var service = new TargetWalletReadService(new TestContextFactory(options));
         var totals = await service.GetPeriodTotalsAsync("B1", new[] { now.ToString("yyyy-MM") });
 
-        Assert.Equal(60m, totals[now.ToString("yyyy-MM")].Collected);
+        Assert.Equal(100m, totals[now.ToString("yyyy-MM")].Collected);
         Assert.Equal(20m, totals[now.ToString("yyyy-MM")].Expenses);
         Assert.Equal(30m, totals[now.ToString("yyyy-MM")].Revenues);
     }
