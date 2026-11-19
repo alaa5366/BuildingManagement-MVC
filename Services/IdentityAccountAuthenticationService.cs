@@ -443,6 +443,23 @@ public sealed class IdentityAccountAuthenticationService
             return false;
         }
 
+        // Grant only code-catalogued permissions that explicitly support global system scope.
+        // MFA-required operations remain protected by AuthorizationEvaluator step-up checks.
+        var systemPermissions = DefaultAuthorizationPermissionCatalog.SystemGrantablePermissions;
+        var existingPermissionKeys = await db.RolePermissions.AsNoTracking()
+            .Where(item => item.RoleKey == "superadmin")
+            .Select(item => item.PermissionKey).ToListAsync(cancellationToken);
+        foreach (var permission in systemPermissions)
+        {
+            if (!existingPermissionKeys.Contains(permission.Key, StringComparer.Ordinal))
+            {
+                db.RolePermissions.Add(new RolePermissionEntity
+                {
+                    RoleKey = "superadmin", PermissionKey = permission.Key, Effect = 1
+                });
+            }
+        }
+
         var assignmentExists = await db.UserRoleAssignments.AnyAsync(item =>
             item.AccountId == match.Account.AccountId && item.RoleKey == "superadmin"
             && item.ScopeType == 0 && item.ScopeBuildingId == null && item.ScopeApartmentId == null
