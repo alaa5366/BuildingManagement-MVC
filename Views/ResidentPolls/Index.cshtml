@@ -7,7 +7,6 @@
 @model BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Poll>
 @{
     ViewData["Title"] = Loc.T("Polls_3");
-    var apartmentId = (string)ViewBag.ApartmentId;
     var openApts = (int)ViewBag.OpenApartmentCount;
     var routeValuesStr = ViewBag.RouteValues as Dictionary<string, string> ?? new();
 }
