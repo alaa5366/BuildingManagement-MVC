@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace BuildingManagementMvc.Controllers;
 
+/// <summary>RevenuesController coordinates the corresponding application functionality.</summary>
 [Authorize(Roles = "admin")]
 [AdminPermission(AdminPermissions.ManageRevenues)]
 public class RevenuesController : Controller
