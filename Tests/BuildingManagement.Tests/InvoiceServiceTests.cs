@@ -17,6 +17,7 @@ public sealed class InvoiceServiceTests
         var now = DateTime.UtcNow;
         var periodId = Guid.NewGuid();
         var transactionId = Guid.NewGuid();
+        var chargeTransactionId = Guid.NewGuid();
         var depositId = Guid.NewGuid();
 
         await using (var seed = new AppDbContext(options))
@@ -51,11 +52,25 @@ public sealed class InvoiceServiceTests
                 Kind = LedgerTransactionKind.Deposit, Status = LedgerTransactionStatus.Posted,
                 IdempotencyKey = "invoice-deposit", CreatedAtUtc = now, PostedAtUtc = now
             });
+            seed.LedgerEntries.AddRange(
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = transactionId,
+                    PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.Deposit, SignedAmount = 200m, CurrencyCode = "EGP",
+                    EffectiveAtUtc = now, CreatedAtUtc = now
+                });
+            seed.LedgerTransactions.Add(new LedgerTransactionEntity
+            {
+                LedgerTransactionId = chargeTransactionId, PeriodId = periodId, BuildingId = "B1",
+                Kind = LedgerTransactionKind.MonthlyCharge, Status = LedgerTransactionStatus.Posted,
+                IdempotencyKey = "invoice-monthly-charge", CreatedAtUtc = now, PostedAtUtc = now
+            });
             seed.LedgerEntries.Add(new LedgerEntryEntity
             {
-                LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = transactionId,
+                LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = chargeTransactionId,
                 PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
-                EntryKind = LedgerEntryKind.Deposit, SignedAmount = 200m, CurrencyCode = "EGP",
+                EntryKind = LedgerEntryKind.MonthlyCharge, SignedAmount = -125m, CurrencyCode = "EGP",
                 EffectiveAtUtc = now, CreatedAtUtc = now
             });
             seed.PaymentDeposits.Add(new PaymentDepositEntity
@@ -79,7 +94,7 @@ public sealed class InvoiceServiceTests
         Assert.Equal(200m, invoice.Balance);
         Assert.Equal(0m, invoice.PreviousBalance);
         Assert.Equal(200m, invoice.MonthDeposits);
-        Assert.Equal(100m, invoice.MonthFee);
+        Assert.Equal(125m, invoice.MonthFee);
         Assert.Equal("12345", invoice.Payment.AccountNumber);
     }
 
