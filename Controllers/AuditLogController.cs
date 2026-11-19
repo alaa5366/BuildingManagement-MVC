@@ -156,7 +156,9 @@ public class AuditLogController : Controller
     string? actionFilter, string? severity, string? from, string? to)
     {
         if (!HasAuditLogPermission) return Forbid();
-        if ((IsResident && (string.IsNullOrWhiteSpace(CurrentBuildingId) || string.IsNullOrWhiteSpace(CurrentApartmentId))) ||
+        if ((IsResident && (string.IsNullOrWhiteSpace(CurrentBuildingId) ||
+                            string.IsNullOrWhiteSpace(CurrentApartmentId) ||
+                            string.IsNullOrWhiteSpace(User.FindFirstValue(ClaimTypes.NameIdentifier)))) ||
             (IsAdmin && string.IsNullOrWhiteSpace(CurrentBuildingId))) return Forbid();
         string? qBuildingId = null;
         string? qApartmentId = null;
