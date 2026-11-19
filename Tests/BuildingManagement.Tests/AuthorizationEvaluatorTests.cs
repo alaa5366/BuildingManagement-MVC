@@ -133,6 +133,15 @@ public sealed class AuthorizationEvaluatorTests
         await using var db = CreateContext();
         var actor = await SeedAccountWithGrantsAsync(db,
             ("audit-role", AuthorizationEffect.Allow));
+        db.UserTwoFactorSettings.Add(new UserTwoFactorSettingEntity
+        {
+            AccountId = actor.AccountId,
+            IsEnabled = true,
+            SecretCiphertext = System.Text.Encoding.UTF8.GetBytes("test-ciphertext"),
+            KeyVersion = "test",
+            EnrolledAtUtc = NowUtc.AddDays(-1)
+        });
+        await db.SaveChangesAsync();
         var evaluator = new AuthorizationEvaluator(db, new DefaultAuthorizationPermissionCatalog());
 
         var result = await evaluator.EvaluateAsync(
