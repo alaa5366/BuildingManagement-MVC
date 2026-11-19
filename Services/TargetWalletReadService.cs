@@ -92,6 +92,64 @@ public sealed class TargetWalletReadService
             row.PeriodKey)).ToList();
     }
 
+    public async Task<Building?> GetBuildingShellAsync(
+        string buildingId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(buildingId))
+            throw new ArgumentException("Building is required.", nameof(buildingId));
+
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        var source = await db.Buildings.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == buildingId, cancellationToken);
+        if (source is null) return null;
+
+        var floors = await db.Floors.AsNoTracking()
+            .Where(item => item.BuildingId == buildingId)
+            .OrderBy(item => item.SortOrder)
+            .ToListAsync(cancellationToken);
+        var apartments = await db.Apartments.AsNoTracking()
+            .Where(item => item.BuildingId == buildingId)
+            .OrderBy(item => item.Number)
+            .ToListAsync(cancellationToken);
+
+        return new Building
+        {
+            Id = source.Id,
+            BuildingNumber = source.BuildingNumber,
+            Name = source.Name,
+            LogoUrl = source.LogoUrl,
+            AdminWhatsapp = source.AdminWhatsapp,
+            RowVersion = source.RowVersion,
+            FloorsCount = floors.Count,
+            ApartmentsCount = apartments.Count,
+            Floors = floors.Select(item => new Floor
+            {
+                Id = item.Id,
+                Label = item.Label,
+                Order = item.SortOrder
+            }).ToList(),
+            Apartments = apartments.Select(item => new Apartment
+            {
+                Id = item.Id,
+                FloorId = item.FloorId,
+                Number = item.Number,
+                Owner = item.Owner,
+                Phone = item.Phone,
+                MonthlyFee = item.MonthlyFee,
+                Pin = item.Pin,
+                Closed = item.IsClosed,
+                Label = item.Label,
+                Email = item.Email,
+                Notes = item.Notes,
+                OpenDate = item.OpenDate?.ToString("yyyy-MM-dd") ?? "",
+                CloseDate = item.CloseDate?.ToString("yyyy-MM-dd"),
+                Disabled = item.IsDisabled,
+                DisabledReason = item.DisabledReason
+            }).ToList()
+        };
+    }
+
     public async Task<TargetWalletDepositContext?> GetDepositAsync(
         Guid paymentDepositId,
         CancellationToken cancellationToken = default)
