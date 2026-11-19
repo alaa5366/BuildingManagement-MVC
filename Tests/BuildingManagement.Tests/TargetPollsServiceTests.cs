@@ -26,8 +26,8 @@ public sealed class TargetPollsServiceTests
         var entitlement = await verify.PollEligibility.SingleAsync(x =>
             x.BuildingId == "B1" && x.PollId == poll.Id && x.SubjectReference == "A1");
         Assert.NotNull(entitlement.ConsumedAtUtc);
-        Assert.DoesNotContain("A1", System.Text.Encoding.UTF8.GetString(ballot.ChoicePayload), StringComparison.Ordinal);
-        Assert.DoesNotContain(poll.Options[0].Id, System.Text.Encoding.UTF8.GetString(ballot.ChoicePayload), StringComparison.Ordinal);
+        Assert.False(System.Text.Encoding.UTF8.GetString(ballot.ChoicePayload).Contains("A1", StringComparison.Ordinal));
+        Assert.False(System.Text.Encoding.UTF8.GetString(ballot.ChoicePayload).Contains(poll.Options[0].Id, StringComparison.Ordinal));
         Assert.Equal(32, ballot.BallotTokenHash.Length);
         Assert.Empty(await verify.PollVotes.Where(x => x.BuildingId == "B1" && x.PollId == poll.Id).ToListAsync());
 
