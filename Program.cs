@@ -603,6 +603,10 @@ builder.Services.AddScoped<TargetQrService>();
 catch (Exception ex)
 {
     Log.Fatal(ex, "Application terminated unexpectedly");
+    // Keep fatal startup details visible for explicit command-line maintenance operations,
+    // even when the configured Serilog sink is unavailable or buffers output.
+    Console.Error.WriteLine("FATAL: Application terminated unexpectedly.");
+    Console.Error.WriteLine(ex.ToString());
     Environment.ExitCode = 1;
 }
 finally
