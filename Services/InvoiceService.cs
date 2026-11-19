@@ -76,13 +76,22 @@ public sealed class InvoiceService
                 periodIds.Contains(entry.PeriodId) && entry.CurrencyCode == currencyCode &&
                 transaction.BuildingId == buildingId &&
                 transaction.Status == LedgerTransactionStatus.Posted
-            select new { entry.EntryKind, entry.SignedAmount, transaction.SourceType })
+            select new { entry.LedgerTransactionId, entry.EntryKind, entry.SignedAmount })
             .ToListAsync(cancellationToken);
+
+        var reversedDepositTransactionIds = await db.PaymentDeposits.AsNoTracking()
+            .Where(deposit => deposit.BuildingId == buildingId && deposit.ApartmentId == apartmentId &&
+                periodIds.Contains(deposit.PeriodId) && deposit.CurrencyCode == currencyCode &&
+                deposit.Status == PaymentDepositStatus.Reversed &&
+                deposit.ReversalTransactionId.HasValue)
+            .Select(deposit => deposit.ReversalTransactionId!.Value)
+            .ToListAsync(cancellationToken);
+        var reversedDepositIds = reversedDepositTransactionIds.ToHashSet();
 
         var monthDeposits = monthLedgerEntries
             .Where(entry => entry.EntryKind == LedgerEntryKind.Deposit ||
                 entry.EntryKind == LedgerEntryKind.Reversal &&
-                entry.SourceType == "PaymentDepositReversal")
+                reversedDepositIds.Contains(entry.LedgerTransactionId))
             .Sum(entry => entry.SignedAmount);
 
         // Monthly charges are period-specific ledger postings. Never use the
