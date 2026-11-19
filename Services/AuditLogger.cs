@@ -140,8 +140,7 @@ public class AuditLogger : IAuditLogger
         {
             try
             {
-                var parsed = JObject.Parse(e.SafeDetailsJson);
-                metadata = parsed["metadata"]?.ToObject<Dictionary<string, object>>() ?? new Dictionary<string, object>();
+                metadata = JObject.Parse(e.SafeDetailsJson).ToObject<Dictionary<string, object>>();
             }
             catch (JsonException)
             {
@@ -168,12 +167,10 @@ public class AuditLogger : IAuditLogger
     {
         if (metadata == null && string.IsNullOrWhiteSpace(actorRole) &&
             string.IsNullOrWhiteSpace(correlationId)) return null;
-        var envelope = new JObject
-        {
-            ["actorRole"] = actorRole,
-            ["correlationId"] = correlationId,
-            ["metadata"] = metadata == null ? null : JToken.FromObject(metadata)
-        };
+        var token = metadata == null ? new JObject() : JToken.FromObject(metadata);
+        var envelope = token as JObject ?? new JObject { ["value"] = token };
+        envelope["actorRole"] = actorRole;
+        envelope["correlationId"] = correlationId;
         RedactSensitiveValues(envelope);
         return envelope.ToString(Formatting.None);
     }
