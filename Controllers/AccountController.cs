@@ -743,7 +743,11 @@ public class AccountController : Controller
         if (res.ApartmentNumber != null) claims.Add(new Claim("apartmentNumber", res.ApartmentNumber.Value.ToString()));
 
         if (res.Role is "admin" or "superadmin")
+        {
             claims.Add(new Claim("twoFactorVerified", twoFactorVerified ? "true" : "false"));
+            if (twoFactorVerified)
+                claims.Add(new Claim("mfaVerifiedAtUtc", DateTime.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture)));
+        }
 
         if (res.Role is "admin" or "superadmin")
         {
