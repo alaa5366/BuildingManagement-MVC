@@ -82,6 +82,94 @@ internal static class OperationalModelConfiguration
                 .HasDatabaseName("IX_PresenceHeartbeats_Session_Observed");
         });
 
+        mb.Entity<MaintenanceRequestEntity>(e =>
+        {
+            e.ToTable("MaintenanceRequests", t =>
+            {
+                t.HasCheckConstraint("CK_MaintenanceRequests_Status", "[Status] BETWEEN 0 AND 8");
+                t.HasCheckConstraint("CK_MaintenanceRequests_Priority", "[Priority] BETWEEN 0 AND 4");
+            });
+            e.HasKey(x => x.RequestId);
+            e.Property(x => x.RequestId).ValueGeneratedNever();
+            e.Property(x => x.BuildingId).HasMaxLength(64).IsRequired();
+            e.Property(x => x.ApartmentId).HasMaxLength(64);
+            e.Property(x => x.LegacyMaintenanceId).HasMaxLength(128);
+            e.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(4000);
+            e.Property(x => x.Category).HasMaxLength(80);
+            e.Property(x => x.RequestedByReference).HasMaxLength(160);
+            e.Property(x => x.CreatedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(x => x.UpdatedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(x => x.ClosedAtUtc).HasColumnType("datetime2(3)");
+            e.HasIndex(x => new { x.BuildingId, x.CreatedAtUtc }).HasDatabaseName("IX_MaintenanceRequests_Building_Created");
+            e.HasIndex(x => new { x.BuildingId, x.LegacyMaintenanceId }).IsUnique();
+            e.HasMany(x => x.Assignments).WithOne(x => x.Request).HasForeignKey(x => x.RequestId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(x => x.Comments).WithOne(x => x.Request).HasForeignKey(x => x.RequestId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(x => x.Attachments).WithOne(x => x.Request).HasForeignKey(x => x.RequestId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(x => x.StatusEvents).WithOne(x => x.Request).HasForeignKey(x => x.RequestId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(x => x.LedgerLinks).WithOne(x => x.Request).HasForeignKey(x => x.RequestId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        mb.Entity<MaintenanceAssignmentEntity>(e =>
+        {
+            e.ToTable("MaintenanceAssignments");
+            e.HasKey(x => x.AssignmentId);
+            e.Property(x => x.AssignmentId).ValueGeneratedNever();
+            e.Property(x => x.AssigneeReference).HasMaxLength(160).IsRequired();
+            e.Property(x => x.VendorName).HasMaxLength(200);
+            e.Property(x => x.Notes).HasMaxLength(1000);
+            e.Property(x => x.AssignedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(x => x.CompletedAtUtc).HasColumnType("datetime2(3)");
+            e.HasIndex(x => new { x.RequestId, x.AssignedAtUtc });
+        });
+
+        mb.Entity<MaintenanceCommentEntity>(e =>
+        {
+            e.ToTable("MaintenanceComments");
+            e.HasKey(x => x.CommentId);
+            e.Property(x => x.CommentId).ValueGeneratedNever();
+            e.Property(x => x.AuthorReference).HasMaxLength(160);
+            e.Property(x => x.Body).HasMaxLength(4000).IsRequired();
+            e.Property(x => x.CreatedAtUtc).HasColumnType("datetime2(3)");
+            e.HasIndex(x => new { x.RequestId, x.CreatedAtUtc });
+        });
+
+        mb.Entity<MaintenanceAttachmentEntity>(e =>
+        {
+            e.ToTable("MaintenanceAttachments");
+            e.HasKey(x => x.AttachmentId);
+            e.Property(x => x.AttachmentId).ValueGeneratedNever();
+            e.Property(x => x.StorageKey).HasMaxLength(500).IsRequired();
+            e.Property(x => x.FileName).HasMaxLength(260).IsRequired();
+            e.Property(x => x.ContentType).HasMaxLength(120);
+            e.Property(x => x.Sha256).HasColumnType("varbinary(32)");
+            e.Property(x => x.UploadedByReference).HasMaxLength(160);
+            e.Property(x => x.UploadedAtUtc).HasColumnType("datetime2(3)");
+            e.HasIndex(x => new { x.RequestId, x.UploadedAtUtc });
+        });
+
+        mb.Entity<MaintenanceStatusEventEntity>(e =>
+        {
+            e.ToTable("MaintenanceStatusEvents");
+            e.HasKey(x => x.StatusEventId);
+            e.Property(x => x.StatusEventId).ValueGeneratedNever();
+            e.Property(x => x.ActorReference).HasMaxLength(160);
+            e.Property(x => x.Reason).HasMaxLength(1000);
+            e.Property(x => x.OccurredAtUtc).HasColumnType("datetime2(3)");
+            e.HasIndex(x => new { x.RequestId, x.OccurredAtUtc });
+        });
+
+        mb.Entity<MaintenanceLedgerLinkEntity>(e =>
+        {
+            e.ToTable("MaintenanceLedgerLinks");
+            e.HasKey(x => x.LinkId);
+            e.Property(x => x.LinkId).ValueGeneratedNever();
+            e.Property(x => x.CreatedAtUtc).HasColumnType("datetime2(3)");
+            e.HasIndex(x => new { x.RequestId, x.LedgerTransactionId }).IsUnique();
+            e.HasOne<LedgerTransactionEntity>().WithMany()
+                .HasForeignKey(x => x.LedgerTransactionId).OnDelete(DeleteBehavior.NoAction);
+        });
+
         mb.Entity<NotificationMessageEntity>(e =>
         {
             e.ToTable("NotificationMessages");
