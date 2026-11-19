@@ -22,7 +22,6 @@ namespace BuildingManagementMvc.Controllers;
 /// Access: requires one of the roles <c>superadmin</c>.
 /// </remarks>
 [Authorize(Roles = "superadmin")]
-
 public class BackupController : Controller
 {
     private readonly BuildingsService _buildings;
