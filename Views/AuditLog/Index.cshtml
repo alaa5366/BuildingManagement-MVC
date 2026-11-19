@@ -46,7 +46,7 @@
     </header>
 
     <nav class="observability-nav" aria-label="Observability sections">
-        @if (role == "superadmin" || User.HasClaim("perm", "system.logs.view"))
+        @if (User.HasClaim("perm", "system.logs.view"))
         {
             <a asp-controller="ApplicationLogs" asp-action="Index"><i class="bi bi-terminal"></i><span>Application Logs</span><small>Runtime events</small></a>
         }

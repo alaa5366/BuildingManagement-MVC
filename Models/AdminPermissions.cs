@@ -313,7 +313,7 @@ public static class AdminPermissions
             => PermissionCategory.System,
         ManageSettingsGlobal or ManageSettingsBuilding or ManageSettingsOwn
             => PermissionCategory.System,
-        ManageTools or ViewSystemHealth or ManageSync or SecretAccess
+        ManageTools or ManageSync or SecretAccess
             => PermissionCategory.System,
         _ => PermissionCategory.System
     };
