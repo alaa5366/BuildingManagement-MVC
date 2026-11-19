@@ -79,7 +79,11 @@ public sealed class TargetWhatsAppService
             ["phone"] = apartment.Phone ?? "",
             ["setpin_link"] = "",
             ["quick_link"] = "",
-            ["login_url"] = WhatsAppTemplateService.BuildLoginUrl(baseUrl)
+            ["login_url"] = WhatsAppTemplateService.BuildLoginUrl(baseUrl),
+            ["amount"] = "",
+            ["note"] = "",
+            ["share"] = "",
+            ["message"] = ""
         };
         foreach (var pair in extra)
             if (values.ContainsKey(pair.Key)) values[pair.Key] = pair.Value ?? "";
