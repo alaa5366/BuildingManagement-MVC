@@ -4208,4 +4208,8 @@ This operation can take a few seconds.</value>
   <data name="Backup_Collection_maintenanceAssignments" xml:space="preserve"><value>Maintenance assignments</value></data>
   <data name="Backup_Collection_maintenanceComments" xml:space="preserve"><value>Maintenance comments</value></data>
   <data name="Backup_Collection_maintenanceStatusEvents" xml:space="preserve"><value>Maintenance status history</value></data>
+  <data name="Backup_Collection_pollVotingPolicies" xml:space="preserve"><value>Poll voting policies</value></data>
+  <data name="Backup_Collection_pollEligibility" xml:space="preserve"><value>Poll eligibility</value></data>
+  <data name="Backup_Collection_pollBallots" xml:space="preserve"><value>Anonymous poll ballots</value></data>
+  <data name="Backup_Collection_pollLifecycleEvents" xml:space="preserve"><value>Poll lifecycle events</value></data>
 </root>
