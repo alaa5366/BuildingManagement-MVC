@@ -439,6 +439,128 @@ public class BackupServiceTests
         Assert.Contains("residents", collections.Keys);
         Assert.Contains("auditLog", collections.Keys);
         Assert.Contains("savedWhatsAppTemplates", collections.Keys);
+        Assert.Contains("notificationMessages", collections.Keys);
+        Assert.Contains("notificationRecipients", collections.Keys);
+        Assert.Contains("notificationDeliveries", collections.Keys);
+        Assert.Contains("notificationReadStates", collections.Keys);
+        Assert.Contains("notificationPreferences", collections.Keys);
+    }
+
+    [Fact]
+    public async Task NormalizedNotifications_BackupAndRestore_RestoresAllRowsByStableGuid()
+    {
+        var messageId = Guid.NewGuid();
+        var recipientId = Guid.NewGuid();
+        var deliveryId = Guid.NewGuid();
+        var readStateId = Guid.NewGuid();
+        var preferenceId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        _db.NotificationMessages.Add(new NotificationMessageEntity
+        {
+            MessageId = messageId,
+            BuildingId = "backup-notification-building",
+            Title = "Original title",
+            Body = "Original body",
+            Channel = 0,
+            Origin = "deposit",
+            CreatedAtUtc = now,
+            Recipients =
+            {
+                new NotificationRecipientEntity
+                {
+                    RecipientId = recipientId,
+                    RecipientType = 1,
+                    RecipientReference = "APT-1",
+                    ApartmentId = "APT-1",
+                    CreatedAtUtc = now
+                }
+            }
+        });
+        _db.NotificationDeliveries.Add(new NotificationDeliveryEntity
+        {
+            DeliveryId = deliveryId,
+            RecipientId = recipientId,
+            AttemptNumber = 1,
+            Provider = "test-provider",
+            Status = 2,
+            AttemptedAtUtc = now,
+            CompletedAtUtc = now,
+            ProviderReference = "provider-ref-original",
+            SafeErrorCode = "SAFE-001"
+        });
+        _db.NotificationReadStates.Add(new NotificationReadStateEntity
+        {
+            ReadStateId = readStateId,
+            RecipientId = recipientId,
+            ReadAtUtc = now
+        });
+        _db.NotificationPreferences.Add(new NotificationPreferenceEntity
+        {
+            PreferenceId = preferenceId,
+            SubjectType = 1,
+            SubjectReference = "APT-1",
+            Channel = 0,
+            IsEnabled = true,
+            UpdatedAtUtc = now
+        });
+        await _db.SaveChangesAsync();
+
+        var selected = new List<string>
+        {
+            "notificationMessages",
+            "notificationRecipients",
+            "notificationDeliveries",
+            "notificationReadStates",
+            "notificationPreferences"
+        };
+        var (bytes, backup) = await _service.CreateBackupAsync(selected, "backup-notification-test");
+
+        Assert.True(backup.Success, string.Join("; ", backup.Errors));
+        Assert.Equal(5, backup.TotalCollections);
+        Assert.Equal(5, backup.TotalDocuments);
+
+        var message = await _db.NotificationMessages.SingleAsync(x => x.MessageId == messageId);
+        message.Title = "Changed title";
+        message.Body = "Changed body";
+        var delivery = await _db.NotificationDeliveries.SingleAsync(x => x.DeliveryId == deliveryId);
+        delivery.ProviderReference = "provider-ref-changed";
+        var readState = await _db.NotificationReadStates.SingleAsync(x => x.ReadStateId == readStateId);
+        readState.ReadAtUtc = null;
+        var preference = await _db.NotificationPreferences.SingleAsync(x => x.PreferenceId == preferenceId);
+        preference.IsEnabled = false;
+        await _db.SaveChangesAsync();
+
+        var tempPath = Path.Combine(Path.GetTempPath(), $"restore-notifications-{Guid.NewGuid():N}.zip");
+        await File.WriteAllBytesAsync(tempPath, bytes);
+        try
+        {
+            var restored = await _service.RestoreAsync(
+                tempPath, selected, overwrite: true, "backup-notification-test");
+
+            Assert.True(restored.Success, string.Join("; ", restored.Errors));
+            var restoredMessage = await _db.NotificationMessages.SingleAsync(x => x.MessageId == messageId);
+            Assert.Equal("Original title", restoredMessage.Title);
+            Assert.Equal("Original body", restoredMessage.Body);
+
+            var restoredRecipient = await _db.NotificationRecipients.SingleAsync(x => x.RecipientId == recipientId);
+            Assert.Equal(messageId, restoredRecipient.MessageId);
+            Assert.Equal("APT-1", restoredRecipient.ApartmentId);
+
+            var restoredDelivery = await _db.NotificationDeliveries.SingleAsync(x => x.DeliveryId == deliveryId);
+            Assert.Equal("provider-ref-original", restoredDelivery.ProviderReference);
+            Assert.Equal("SAFE-001", restoredDelivery.SafeErrorCode);
+
+            var restoredReadState = await _db.NotificationReadStates.SingleAsync(x => x.ReadStateId == readStateId);
+            Assert.NotNull(restoredReadState.ReadAtUtc);
+
+            var restoredPreference = await _db.NotificationPreferences.SingleAsync(x => x.PreferenceId == preferenceId);
+            Assert.True(restoredPreference.IsEnabled);
+        }
+        finally
+        {
+            if (File.Exists(tempPath)) File.Delete(tempPath);
+        }
     }
 
     [Fact]
