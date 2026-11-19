@@ -307,8 +307,7 @@ public sealed class TargetWalletReadServiceTests
         var snapshot = await service.GetApartmentAsync("B1", "A1");
 
         Assert.Equal(0m, snapshot.Balance);
-        var original = Assert.Single(snapshot.Transactions.Where(item => item.Id != depositId.ToString("D") &&
-            item.Type == "deposit"));
+        var original = Assert.Single(snapshot.Transactions.Where(item => item.Type == "deposit"));
         Assert.Equal("reversed", original.Status);
         Assert.Contains(snapshot.Transactions, item => item.Type == "adjustment" && item.Amount == -90m);
     }
