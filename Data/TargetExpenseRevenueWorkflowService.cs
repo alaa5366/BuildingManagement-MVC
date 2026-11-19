@@ -274,4 +274,124 @@ public sealed class TargetExpenseRevenueWorkflowService
         await tx.CommitAsync(cancellationToken);
         return transactionId;
     }
+    /// <summary>
+    /// Reverses a posted expense or revenue without deleting its source evidence.
+    /// The reversal is recorded in the currently open building period.
+    /// </summary>
+    public async Task<Guid> ReverseAsync(
+        bool isRevenue, string buildingId, string sourceId, string reason,
+        Guid commandId, Guid actorAccountId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(buildingId)) throw new ArgumentException("Building is required.", nameof(buildingId));
+        if (!Guid.TryParseExact(sourceId, "N", out var sourceGuid) &&
+            !Guid.TryParse(sourceId, out sourceGuid))
+            throw new ArgumentException("A valid source transaction id is required.", nameof(sourceId));
+        if (commandId == Guid.Empty || actorAccountId == Guid.Empty)
+            throw new ArgumentException("Command and actor ids are required.");
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+            throw new ArgumentException("A reversal reason of 1 to 500 characters is required.", nameof(reason));
+
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        var sourceType = isRevenue ? "Revenue" : "Expense";
+        var sourceKey = sourceGuid.ToString("D");
+        var sourceRowId = sourceGuid.ToString("N");
+        var original = await db.LedgerTransactions.SingleOrDefaultAsync(x =>
+            x.BuildingId == buildingId && x.SourceSystem == "application" &&
+            x.SourceType == sourceType && x.SourceKey == sourceKey &&
+            x.Kind == (isRevenue ? LedgerTransactionKind.Revenue : LedgerTransactionKind.Expense) &&
+            x.Status == LedgerTransactionStatus.Posted, cancellationToken);
+        if (original is null) throw new InvalidOperationException("The posted finance source was not found.");
+
+        var reversalKey = $"finance:reverse:{sourceType.ToLowerInvariant()}:{sourceKey}";
+        var existing = await db.LedgerTransactions.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.IdempotencyKey == reversalKey, cancellationToken);
+        if (existing is not null)
+        {
+            if (existing.BuildingId != buildingId || existing.ReversesTransactionId != original.LedgerTransactionId ||
+                existing.Status != LedgerTransactionStatus.Posted)
+                throw new InvalidOperationException("A conflicting reversal already exists.");
+            await tx.CommitAsync(cancellationToken);
+            return existing.LedgerTransactionId;
+        }
+
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var activeActor = await (
+            from account in db.UserAccounts.AsNoTracking()
+            join person in db.Persons.AsNoTracking() on account.PersonId equals person.PersonId
+            where account.AccountId == actorAccountId && account.AccountStatus == 1 && !person.IsArchived
+            select account.AccountId).AnyAsync(cancellationToken);
+        if (!activeActor) throw new InvalidOperationException("An active target account is required.");
+        var assignedAdmin = await (
+            from assignment in db.UserRoleAssignments.AsNoTracking()
+            join role in db.RoleDefinitions.AsNoTracking() on assignment.RoleKey equals role.RoleKey
+            where assignment.AccountId == actorAccountId && assignment.RoleKey == "building-admin" &&
+                role.IsActive && assignment.ScopeType == 1 && assignment.ScopeBuildingId == buildingId &&
+                assignment.ScopeApartmentId == null && assignment.ValidFromUtc <= now &&
+                (assignment.ValidToUtc == null || assignment.ValidToUtc > now) && assignment.RevokedAtUtc == null
+            select assignment.RoleAssignmentId).AnyAsync(cancellationToken);
+        if (!assignedAdmin) throw new InvalidOperationException("Only an active building Admin can reverse finance postings.");
+
+        var currentMonth = now.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
+        var period = await db.FinancialPeriods.SingleOrDefaultAsync(
+            x => x.BuildingId == buildingId && x.PeriodKey == currentMonth, cancellationToken);
+        if (period is null || period.Status == FinancialPeriodStatus.Closed ||
+            now < period.StartsAtUtc || now >= period.EndsAtUtc)
+            throw new InvalidOperationException("A reversal requires the current open financial period.");
+
+        var originalEntries = await db.LedgerEntries.AsNoTracking()
+            .Where(x => x.LedgerTransactionId == original.LedgerTransactionId &&
+                        x.BuildingId == buildingId && x.PeriodId == original.PeriodId)
+            .OrderBy(x => x.ApartmentId).ThenBy(x => x.LedgerEntryId)
+            .ToListAsync(cancellationToken);
+        if (originalEntries.Count == 0 || originalEntries.Any(x => x.SignedAmount == 0m))
+            throw new InvalidOperationException("The original ledger entries are incomplete.");
+
+        var reversalId = Guid.NewGuid();
+        db.LedgerTransactions.Add(new LedgerTransactionEntity
+        {
+            LedgerTransactionId = reversalId, PeriodId = period.PeriodId, BuildingId = buildingId,
+            Kind = LedgerTransactionKind.Reversal, Status = LedgerTransactionStatus.Posted,
+            IdempotencyKey = reversalKey, SourceSystem = "application",
+            SourceType = sourceType + "Reversal", SourceKey = sourceKey,
+            ReversesTransactionId = original.LedgerTransactionId, ActorAccountId = actorAccountId,
+            ActorReference = actorAccountId.ToString("D"), Reason = reason.Trim(),
+            CreatedAtUtc = now, PostedAtUtc = now
+        });
+
+        foreach (var entry in originalEntries)
+            db.LedgerEntries.Add(new LedgerEntryEntity
+            {
+                LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = reversalId,
+                PeriodId = period.PeriodId, BuildingId = buildingId, ApartmentId = entry.ApartmentId,
+                EntryKind = LedgerEntryKind.Reversal, SignedAmount = -entry.SignedAmount,
+                CurrencyCode = entry.CurrencyCode, Description = reason.Trim(),
+                EffectiveAtUtc = now, CreatedAtUtc = now
+            });
+
+        db.FinancialSourceLinks.Add(new FinancialSourceLinkEntity
+        {
+            FinancialSourceLinkId = Guid.NewGuid(), SourceSystem = "application",
+            SourceType = sourceType + "Reversal", SourceKey = commandId.ToString("D"),
+            LedgerTransactionId = reversalId, LinkedAtUtc = now
+        });
+        db.AuditEvents.Add(new AuditEventEntity
+        {
+            AuditEventId = Guid.NewGuid(), OccurredAtUtc = now, ActorAccountId = actorAccountId,
+            ActorReference = actorAccountId.ToString("D"), BuildingId = buildingId,
+            EventCategory = "Finance", EventType = sourceType + "Reversed",
+            ResourceType = sourceType, ResourceReference = sourceKey, Outcome = 0,
+            SafeDetailsJson = JsonSerializer.Serialize(new
+            {
+                originalTransactionId = original.LedgerTransactionId,
+                reversalTransactionId = reversalId, reason = reason.Trim(),
+                entryCount = originalEntries.Count
+            })
+        });
+
+        await db.SaveChangesAsync(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return reversalId;
+    }
+
 }
