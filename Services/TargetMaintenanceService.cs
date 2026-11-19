@@ -275,7 +275,7 @@ public sealed class TargetMaintenanceService
                 .Where(x => postedIds.Contains(x.LedgerTransactionId) && x.BuildingId == row.BuildingId)
                 .SumAsync(x => x.SignedAmount < 0 ? -x.SignedAmount : x.SignedAmount, cancellationToken);
         var vendor = row.Assignments.OrderByDescending(x => x.AssignedAtUtc)
-            .Select(x => x.VendorName).FirstOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? "";
+            .Select(x => x.VendorName).FirstOrDefault() ?? "";
         return new MaintenanceRecord
         {
             Id = "mnt-" + row.RequestId.ToString("N"),
