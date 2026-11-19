@@ -209,6 +209,7 @@ public sealed class InvoiceService
             bld = building.BuildingNumber,
             apt = apartment.Number,
             month = monthKey,
+            currency = currencyCode,
             balance = currentSnapshot.Balance
         });
 
