@@ -352,6 +352,8 @@ public class ImpersonationController : Controller
         {
             claims.Add(new Claim("originalRole", "superadmin"));
         }
+        if (isSuperAdmin && !string.IsNullOrWhiteSpace(backup.ImpersonationActorSecurityStamp))
+            claims.Add(new Claim("legacySuperAdminSecurityStamp", backup.ImpersonationActorSecurityStamp));
 
         // ✅ لو لسه في Impersonation (Stack فيه طبقات)، ضيف الـ claim
         if (stillImpersonating)
