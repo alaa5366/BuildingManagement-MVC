@@ -77,7 +77,7 @@ public sealed class TargetWalletReadService
                 Note = "",
                 Status = "pending",
                 CreatedAt = d.SubmittedAtUtc.ToString("O"),
-                CreatedBy = "resident"
+                CreatedBy = ""
             }).ToListAsync(cancellationToken);
 
         var transactions = posted.Select(entry => new WalletTransactionVm
