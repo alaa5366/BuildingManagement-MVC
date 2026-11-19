@@ -64,7 +64,9 @@ public class AuditLogController : Controller
     int page = 1, int pageSize = 50)
     {
         if (!HasAuditLogPermission) return Forbid();
-        if ((IsResident && (string.IsNullOrWhiteSpace(CurrentBuildingId) || string.IsNullOrWhiteSpace(CurrentApartmentId))) ||
+        if ((IsResident && (string.IsNullOrWhiteSpace(CurrentBuildingId) ||
+                            string.IsNullOrWhiteSpace(CurrentApartmentId) ||
+                            string.IsNullOrWhiteSpace(User.FindFirstValue(ClaimTypes.NameIdentifier)))) ||
             (IsAdmin && string.IsNullOrWhiteSpace(CurrentBuildingId))) return Forbid();
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 200);
