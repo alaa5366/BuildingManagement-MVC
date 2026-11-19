@@ -65,7 +65,7 @@ public class ResidentHomeController : Controller
 
         ViewBag.HasData = true;
 
-        var currentMonth = WalletService.CurrentMonthKey();
+        var currentMonth = await _targetWallet.GetCurrentPeriodKeyAsync(building.Id, cancellationToken: HttpContext.RequestAborted);
 
         // ============================================================
         // 1. المالية
