@@ -86,7 +86,16 @@ public class InvoiceController : Controller
     {
         var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
 
-        var data = _invoice.BuildInvoiceData(building, apt, mk);
+        InvoiceData data;
+        try
+        {
+            data = await _invoice.BuildInvoiceDataAsync(
+                building, apt, mk, HttpContext.RequestAborted);
+        }
+        catch (ArgumentException)
+        {
+            return BadRequest("Invalid invoice month.");
+        }
         var pdfBytes = _pdf.Generate(data);
 
         // تسجيل في جدول الـ Audit مباشرة (من غير ما نحفظ العمارة كلها في طلب GET)
