@@ -2026,6 +2026,31 @@ namespace BuildingManagementMvc.Migrations
                         });
                 });
 
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PersonPhoneChangeRequestEntity", b =>
+                {
+                    b.Property<Guid>("RequestId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("ApartmentId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
+                    b.Property<string>("BuildingId").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
+                    b.Property<byte>("Status").ValueGeneratedOnAdd().HasColumnType("tinyint").HasDefaultValue((byte)0);
+                    b.Property<Guid>("PersonId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("PreviousPhone").IsRequired().HasMaxLength(32).HasColumnType("nvarchar(32)");
+                    b.Property<string>("RequestedPhone").IsRequired().HasMaxLength(32).HasColumnType("nvarchar(32)");
+                    b.Property<DateTime>("RequestedAtUtc").ValueGeneratedOnAdd().HasColumnType("datetime2(3)").HasDefaultValueSql("SYSUTCDATETIME()");
+                    b.Property<Guid?>("ReviewedByAccountId").HasColumnType("uniqueidentifier");
+                    b.Property<DateTime?>("ReviewedAtUtc").HasColumnType("datetime2(3)");
+                    b.Property<string>("ReviewReason").HasMaxLength(500).HasColumnType("nvarchar(500)");
+                    b.Property<byte[]>("RowVersion").IsConcurrencyToken().IsRequired().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
+                    b.HasKey("RequestId");
+                    b.HasIndex("PersonId", "Status").HasDatabaseName("IX_PersonPhoneChangeRequests_Person_Status");
+                    b.HasIndex("ReviewedByAccountId");
+                    b.HasIndex("Status", "BuildingId", "RequestedAtUtc").HasDatabaseName("IX_PersonPhoneChangeRequests_Queue");
+                    b.ToTable("PersonPhoneChangeRequests", null, t =>
+                    {
+                        t.HasCheckConstraint("CK_PersonPhoneChangeRequests_Review", "(([Status] = 0 AND [ReviewedAtUtc] IS NULL AND [ReviewedByAccountId] IS NULL) OR ([Status] IN (1,2) AND [ReviewedAtUtc] IS NOT NULL AND [ReviewedByAccountId] IS NOT NULL))");
+                        t.HasCheckConstraint("CK_PersonPhoneChangeRequests_Status", "[Status] IN (0,1,2)");
+                    });
+                });
+
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.PersonEntity", b =>
                 {
                     b.Property<Guid>("PersonId")
