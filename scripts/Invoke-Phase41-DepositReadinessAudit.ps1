@@ -79,7 +79,7 @@ SELECT
     SUM(CASE WHEN Amount<>ROUND(Amount,2) THEN 1 ELSE 0 END) SubCentAmountCount,
     SUM(CASE WHEN NULLIF(LTRIM(RTRIM(MonthKey)),N'') IS NULL OR MonthKey NOT LIKE '[0-9][0-9][0-9][0-9]-[01][0-9]' OR SUBSTRING(MonthKey,6,2) NOT BETWEEN '01' AND '12' THEN 1 ELSE 0 END) InvalidMonthKeyCount,
     SUM(CASE WHEN a.Id IS NULL THEN 1 ELSE 0 END) MissingApartmentCount,
-    SUM(CASE WHEN a.Id IS NOT NULL AND a.BuildingId<>D.BuildingId THEN 1 ELSE 0 END) ApartmentBuildingMismatchCount,
+    SUM(CASE WHEN EXISTS (SELECT 1 FROM dbo.Apartments otherA WHERE otherA.Id=D.ApartmentId AND otherA.BuildingId<>D.BuildingId) THEN 1 ELSE 0 END) ApartmentBuildingMismatchCount,
     SUM(CASE WHEN LOWER(LTRIM(RTRIM(Status)))=N'confirmed' AND (ConfirmedAt IS NULL OR NULLIF(LTRIM(RTRIM(ConfirmedBy)),N'') IS NULL) THEN 1 ELSE 0 END) ConfirmedMissingStampOrActorCount,
     SUM(CASE WHEN LOWER(LTRIM(RTRIM(Status)))=N'confirmed' AND ConfirmedActorResolved=0 THEN 1 ELSE 0 END) ConfirmedActorUnresolvedCount,
     SUM(CASE WHEN LOWER(LTRIM(RTRIM(Status)))=N'cancelled' AND (CancelledAt IS NULL OR NULLIF(LTRIM(RTRIM(CancelledBy)),N'') IS NULL OR NULLIF(LTRIM(RTRIM(CancelledReason)),N'') IS NULL) THEN 1 ELSE 0 END) CancelledMissingStampActorOrReasonCount,
