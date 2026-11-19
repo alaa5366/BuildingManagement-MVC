@@ -187,6 +187,9 @@ public sealed class InvoiceService
         var openCount = building.Apartments.Count(item => !item.Closed && !item.Disabled);
         foreach (var categoryTotal in categoryTotals)
         {
+            var apartmentShare = categoryApartmentShares.GetValueOrDefault(categoryTotal.Key);
+            if (categoryTotal.Value == 0m && apartmentShare == 0m)
+                continue;
             categoryById.TryGetValue(categoryTotal.Key, out var category);
             categoryShares.Add(new CategoryShare
             {
@@ -194,7 +197,7 @@ public sealed class InvoiceService
                 ColorHex = category?.Color ?? "#888888",
                 Total = categoryTotal.Value,
                 AptCount = openCount,
-                Share = categoryApartmentShares.GetValueOrDefault(categoryTotal.Key)
+                Share = apartmentShare
             });
         }
 
