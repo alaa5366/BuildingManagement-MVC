@@ -62,6 +62,8 @@ public sealed class TargetWalletAdjustmentWorkflowService
                 .Select(item => item.PeriodKey)
                 .SingleOrDefaultAsync(cancellationToken);
             if (existing.Kind != LedgerTransactionKind.WalletAdjustment ||
+                existing.Status != LedgerTransactionStatus.Posted ||
+                existing.SourceType != "WalletAdjustment" ||
                 existing.ActorAccountId != actorAccountId || existingPeriodKey != periodKey ||
                 existingEntry is null || existingEntry.BuildingId != buildingId ||
                 existingEntry.ApartmentId != apartmentId ||
