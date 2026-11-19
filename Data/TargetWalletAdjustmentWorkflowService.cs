@@ -123,6 +123,15 @@ public sealed class TargetWalletAdjustmentWorkflowService
             CreatedAtUtc = now,
             PostedAtUtc = now
         });
+        db.FinancialSourceLinks.Add(new FinancialSourceLinkEntity
+        {
+            FinancialSourceLinkId = Guid.NewGuid(),
+            SourceSystem = "application",
+            SourceType = "WalletAdjustment",
+            SourceKey = commandGuid.ToString("D"),
+            LedgerTransactionId = transactionId,
+            LinkedAtUtc = now
+        });
         db.LedgerEntries.Add(new LedgerEntryEntity
         {
             LedgerEntryId = Guid.NewGuid(),
