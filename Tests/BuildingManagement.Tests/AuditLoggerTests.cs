@@ -58,6 +58,7 @@ public class AuditLoggerTests
 
         var entry = Assert.Single(page.Items);
         Assert.Equal("matched", entry.Action);
+        Assert.Equal("trace-123", entry.CorrelationId);
     }
 
     [Fact]
