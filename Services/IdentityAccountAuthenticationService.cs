@@ -39,14 +39,16 @@ public sealed class IdentityAccountAuthenticationService
             : AuthHelpers.NormalizePhone(identifier);
 
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var targetPersonMatchesPhone = false;
         if (!string.IsNullOrEmpty(phone))
         {
             var phonePeople = await db.Persons
-                .Where(person => !person.IsArchived && person.PrimaryPhone != null)
+                .Where(person => person.PrimaryPhone != null)
                 .Select(person => new { person.PersonId, person.PrimaryPhone })
                 .ToListAsync(cancellationToken);
             var phonePersonMatches = phonePeople.Count(person =>
                 string.Equals(AuthHelpers.NormalizePhone(person.PrimaryPhone), phone, StringComparison.Ordinal));
+            targetPersonMatchesPhone = phonePersonMatches == 1;
             if (phonePersonMatches > 1)
                 return AuthResult.Fail("wrong-credentials");
         }
@@ -110,7 +112,10 @@ public sealed class IdentityAccountAuthenticationService
             }
         }
 
-        if (matches.Count == 0) return null;
+        if (matches.Count == 0)
+            return targetPersonMatchesPhone
+                ? AuthResult.Fail("wrong-credentials")
+                : null;
         if (matches.Count != 1) return AuthResult.Fail("wrong-credentials");
 
         var match = matches[0];
