@@ -174,15 +174,37 @@ public sealed class InvoiceService
             .Select(NormalizeSourceKey)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
-        var expenseRows = await db.Expenses.AsNoTracking()
+        // Category metadata is recorded with the target finance posting audit event.
+        // Do not query the retired Expenses table to reconstruct invoice categories.
+        var expenseAuditRows = await db.AuditEvents.AsNoTracking()
             .Where(item => item.BuildingId == buildingId &&
-                (expenseSourceKeys.Contains(item.Id) || normalizedExpenseSourceKeys.Contains(item.Id)))
-            .Select(item => new { item.Id, item.CategoryId })
+                item.EventType == "ExpensePosted" &&
+                expenseSourceKeys.Contains(item.ResourceReference!))
+            .Select(item => new { item.ResourceReference, item.SafeDetailsJson })
             .ToListAsync(cancellationToken);
-        var expenseCategoryBySource = expenseRows
-            .GroupBy(item => NormalizeSourceKey(item.Id), StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.First().CategoryId ?? "",
-                StringComparer.OrdinalIgnoreCase);
+        var expenseCategoryBySource = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var auditRow in expenseAuditRows)
+        {
+            if (string.IsNullOrWhiteSpace(auditRow.ResourceReference) ||
+                string.IsNullOrWhiteSpace(auditRow.SafeDetailsJson))
+                continue;
+            try
+            {
+                using var details = JsonDocument.Parse(auditRow.SafeDetailsJson);
+                if (details.RootElement.TryGetProperty("categoryId", out var categoryElement) &&
+                    categoryElement.ValueKind == JsonValueKind.String)
+                {
+                    var categoryId = categoryElement.GetString();
+                    if (!string.IsNullOrWhiteSpace(categoryId))
+                        expenseCategoryBySource[NormalizeSourceKey(auditRow.ResourceReference)] = categoryId;
+                }
+            }
+            catch (JsonException)
+            {
+                // A malformed/older audit payload leaves the amount in the explicit
+                // unclassified bucket; invoice totals still reconcile to the ledger.
+            }
+        }
 
         var categories = await db.FinancialCategories.AsNoTracking()
             .Where(category => category.BuildingId == buildingId && category.Kind == "expense")
