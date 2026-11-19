@@ -1,4 +1,5 @@
 ﻿using BuildingManagementMvc.Attributes;
+using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -21,6 +22,9 @@ public class WalletController : Controller
 {
     private readonly BuildingsService _buildings;
     private readonly WalletService _wallet;
+    private readonly TargetDepositWorkflowService _depositWorkflow;
+    private readonly TargetWalletReadService _targetWallet;
+    private readonly TargetAccountIdentityResolver _identityResolver;
     private readonly AuditLogService _audit;
     private readonly NotificationsService _notify;
 
@@ -30,11 +34,17 @@ public class WalletController : Controller
     public WalletController(
         BuildingsService buildings,
         WalletService wallet,
+        TargetDepositWorkflowService depositWorkflow,
+        TargetWalletReadService targetWallet,
+        TargetAccountIdentityResolver identityResolver,
         AuditLogService audit,
         NotificationsService notify)
     {
         _buildings = buildings;
         _wallet = wallet;
+        _depositWorkflow = depositWorkflow;
+        _targetWallet = targetWallet;
+        _identityResolver = identityResolver;
         _audit = audit;
         _notify = notify;
     }
@@ -103,88 +113,80 @@ public class WalletController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ConfirmDeposit(string month, string depositId)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
-
-        var d = _wallet.ConfirmDeposit(building, depositId, User.Identity?.Name ?? "admin", month);
-        if (d != null)
+        var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
+        if (!Guid.TryParse(depositId, out var paymentDepositId))
         {
-            // ✅ 1. أعد حساب carryOver من الشهر ده
-            _wallet.RecomputeCarryOverFrom(building, month);
+            TempData["Error"] = "معرّف الدفعة غير صالح.";
+            return RedirectToAction("Index", new { month = mk });
+        }
 
-            // ✅ 2. Audit
-            _audit.Push(building, "deposit_confirm",
-                $"تأكيد دفعة {d.Number} — {d.Amount:0.##} ج.م",
-                "admin", User.Identity?.Name ?? "admin");
+        var actorAccountId = await _identityResolver.ResolveAsync(User, HttpContext.RequestAborted);
+        if (actorAccountId is null)
+        {
+            TempData["Error"] = "تعذر تحديد حساب المسؤول في النظام المستهدف.";
+            return RedirectToAction("Index", new { month = mk });
+        }
 
-            // ✅ 3. إشعار الساكن
-            var apt = building.Apartments.FirstOrDefault(a => a.Id == d.AptId);
-            if (apt != null)
+        try
+        {
+            var transactionId = await _depositWorkflow.ConfirmAsync(
+                paymentDepositId, actorAccountId.Value,
+                User.FindFirstValue(ClaimTypes.NameIdentifier),
+                HttpContext.RequestAborted);
+            if (transactionId is null)
             {
-                _notify.NotifyResidentDepositConfirmed(building, d, apt);
+                TempData["Error"] = "الدفعة غير موجودة.";
+                return RedirectToAction("Index", new { month = mk });
             }
 
-            await _buildings.SaveFullAsync(building);
+            // The target workflow owns the state transition, ledger posting and audit event.
             TempData["Message"] = Loc.T("Deposit_Confirmed_Successfully");
         }
-        else TempData["Error"] = "تعذر تأكيد الدفعة: قد لا تكون معلّقة أو أنها غير موجودة.";
+        catch (ArgumentException ex) { TempData["Error"] = ex.Message; }
+        catch (InvalidOperationException ex) { TempData["Error"] = ex.Message; }
+        catch (Exception) { TempData["Error"] = "تعذر تأكيد الدفعة. لم يتم تعديل الرصيد."; }
 
-        return RedirectToAction("Index", new { month });
+        return RedirectToAction("Index", new { month = mk });
     }
 
-    // ============================================================
-    // ✅ إلغاء دفعة
-    // ============================================================
-    /// <summary>
-    /// Cancels the deposit.
-    /// </summary>
-    /// <remarks>
-    /// HTTP POST.
-    /// </remarks>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> CancelDeposit(string month, string depositId, string? reason)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
-
-        var d = _wallet.CancelDeposit(building, depositId, User.Identity?.Name ?? "admin", reason, month);
-        if (d != null)
+        var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
+        if (!Guid.TryParse(depositId, out var paymentDepositId))
         {
-            // ✅ 1. أعد حساب carryOver من الشهر ده
-            _wallet.RecomputeCarryOverFrom(building, month);
-
-            // ✅ 2. Audit
-            _audit.Push(building, "deposit_cancel",
-                $"إلغاء دفعة {d.Number}" + (string.IsNullOrWhiteSpace(reason) ? "" : $" — {reason}"),
-                "admin", User.Identity?.Name ?? "admin");
-
-            // ✅ 3. إشعار الساكن
-            var apt = building.Apartments.FirstOrDefault(a => a.Id == d.AptId);
-            if (apt != null)
-            {
-                _notify.NotifyResidentDepositCancelled(building, d, apt, reason);
-            }
-
-            await _buildings.SaveFullAsync(building);
-            TempData["Message"] = Loc.T("Deposit_Cancelled_Successfully");
+            TempData["Error"] = "معرّف الدفعة غير صالح.";
+            return RedirectToAction("Index", new { month = mk });
         }
-        else TempData["Error"] = "تعذر إلغاء الدفعة: قد لا تكون معلّقة أو أنها غير موجودة.";
 
-        return RedirectToAction("Index", new { month });
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            TempData["Error"] = "سبب الإلغاء مطلوب لحفظ سجل العملية.";
+            return RedirectToAction("Index", new { month = mk });
+        }
+
+        var actorAccountId = await _identityResolver.ResolveAsync(User, HttpContext.RequestAborted);
+        if (actorAccountId is null)
+        {
+            TempData["Error"] = "تعذر تحديد حساب المسؤول في النظام المستهدف.";
+            return RedirectToAction("Index", new { month = mk });
+        }
+
+        try
+        {
+            var cancelled = await _depositWorkflow.CancelAsync(
+                paymentDepositId, actorAccountId.Value, reason,
+                HttpContext.RequestAborted);
+            TempData[cancelled ? "Message" : "Error"] = cancelled
+                ? Loc.T("Deposit_Cancelled_Successfully")
+                : "الدفعة غير موجودة.";
+        }
+        catch (ArgumentException ex) { TempData["Error"] = ex.Message; }
+        catch (InvalidOperationException ex) { TempData["Error"] = ex.Message; }
+        catch (Exception) { TempData["Error"] = "تعذر إلغاء الدفعة. لم يتم تعديل الرصيد."; }
+
+        return RedirectToAction("Index", new { month = mk });
     }
 
-    // ============================================================
-    // ✅ إضافة تسوية يدوية
-    // ============================================================
-    /// <summary>
-    /// Adds the adjustment.
-    /// </summary>
-    /// <remarks>
-    /// HTTP POST.
-    /// </remarks>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddAdjustment(string month, string aptId, decimal amount, string? reason)
     {
         var building = await _buildings.GetByIdAsync(BuildingId);
