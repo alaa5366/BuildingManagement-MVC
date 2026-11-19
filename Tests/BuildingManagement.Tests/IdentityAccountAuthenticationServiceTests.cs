@@ -88,6 +88,75 @@ public sealed class IdentityAccountAuthenticationServiceTests
         Assert.Equal("wrong-credentials", result.Error);
     }
 
+
+    [Fact]
+    public async Task AuthenticateResidentAsync_UsesAnOlderValidCredentialWhenNewestCredentialIsExpired()
+    {
+        var factory = new TestContextFactory();
+        var hasher = new BcryptPasswordHasher();
+        var accountId = Guid.NewGuid();
+        var personId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        await using (var db = await factory.CreateDbContextAsync())
+        {
+            db.Persons.Add(new PersonEntity
+            {
+                PersonId = personId,
+                DisplayName = "Synthetic Credential Rotation",
+                PrimaryPhone = "+201000000001",
+                CreatedAtUtc = now
+            });
+            db.UserAccounts.Add(new UserAccountEntity
+            {
+                AccountId = accountId,
+                PersonId = personId,
+                AccountStatus = 1,
+                SecurityStamp = "credential-rotation-stamp",
+                CreatedAtUtc = now
+            });
+            db.RoleDefinitions.Add(new RoleDefinitionEntity
+            {
+                RoleKey = "resident", DisplayName = "Resident", IsActive = true
+            });
+            db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            {
+                RoleAssignmentId = Guid.NewGuid(),
+                AccountId = accountId,
+                RoleKey = "resident",
+                ValidFromUtc = now.AddDays(-1),
+                GrantedAtUtc = now.AddDays(-1)
+            });
+            db.UserCredentials.AddRange(
+                new UserCredentialEntity
+                {
+                    CredentialId = Guid.NewGuid(),
+                    AccountId = accountId,
+                    CredentialType = 0,
+                    CredentialHash = hasher.Hash("Still-Valid-Password-42!"),
+                    HashAlgorithm = "BCrypt.Net-Next",
+                    CreatedAtUtc = now.AddDays(-2)
+                },
+                new UserCredentialEntity
+                {
+                    CredentialId = Guid.NewGuid(),
+                    AccountId = accountId,
+                    CredentialType = 0,
+                    CredentialHash = hasher.Hash("Expired-Password-42!"),
+                    HashAlgorithm = "BCrypt.Net-Next",
+                    CreatedAtUtc = now.AddDays(-1),
+                    ExpiresAtUtc = now.AddMinutes(-1)
+                });
+            await db.SaveChangesAsync();
+        }
+
+        var result = await new IdentityAccountAuthenticationService(factory, hasher)
+            .AuthenticateResidentAsync("+201000000001", "Still-Valid-Password-42!");
+
+        Assert.NotNull(result);
+        Assert.True(result.Success);
+        Assert.Equal(accountId.ToString("D"), result.Uid);
+    }
+
     private sealed class TestContextFactory : IDbContextFactory<AppDbContext>
     {
         private readonly DbContextOptions<AppDbContext> _options = new DbContextOptionsBuilder<AppDbContext>()
