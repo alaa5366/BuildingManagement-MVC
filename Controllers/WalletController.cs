@@ -20,7 +20,6 @@ namespace BuildingManagementMvc.Controllers;
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageWallet)]
 public class WalletController : Controller
 {
-    private readonly BuildingsService _buildings;
     private readonly TargetDepositWorkflowService _depositWorkflow;
     private readonly TargetWalletReadService _targetWallet;
     private readonly TargetAccountIdentityResolver _identityResolver;
@@ -32,7 +31,6 @@ public class WalletController : Controller
     /// Initializes a new instance of the <see cref="WalletController"/> class.
     /// </summary>
     public WalletController(
-        BuildingsService buildings,
         TargetDepositWorkflowService depositWorkflow,
         TargetWalletReadService targetWallet,
         TargetAccountIdentityResolver identityResolver,
@@ -40,7 +38,6 @@ public class WalletController : Controller
         TargetNotificationsService targetNotifications,
         Microsoft.Extensions.Logging.ILogger<WalletController> logger)
     {
-        _buildings = buildings;
         _depositWorkflow = depositWorkflow;
         _targetWallet = targetWallet;
         _identityResolver = identityResolver;
@@ -60,7 +57,7 @@ public class WalletController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(string? month, int page = 1, int pageSize = 50)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
+        var building = await _targetWallet.GetBuildingShellAsync(BuildingId, HttpContext.RequestAborted);
         if (building == null) return NotFound();
 
         var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
