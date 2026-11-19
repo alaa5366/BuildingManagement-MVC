@@ -28,6 +28,7 @@ public class DvrService
     }
     /// <summary>Gets the DVR summary for the specified building.</summary>
 
+    /// <summary>Retrieves the DVR summary for a building.</summary>
     public async Task< DvrBuildingSummary?> GetBuildingSummaryAsync(
         string buildingId, CancellationToken cancellationToken = default)
     {
