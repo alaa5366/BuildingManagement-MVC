@@ -27,6 +27,7 @@ internal static class OperationalModelConfiguration
             e.HasIndex(x => new { x.ResourceType, x.ResourceReference, x.OccurredAtUtc })
                 .HasDatabaseName("IX_AuditEvents_Resource");
             e.HasIndex(x => new { x.BuildingId, x.EventCategory, x.ResourceType, x.OccurredAtUtc, x.AuditEventId })
+                .IsDescending(false, false, false, true, true)
                 .HasDatabaseName("IX_AuditEvents_Building_Category_Resource_Time");
         });
 
