@@ -50,6 +50,35 @@ public sealed class TargetWalletReadServiceTests
                     IdempotencyKey = "draft",
                     CreatedAtUtc = DateTime.UtcNow
                 });
+            seed.LedgerEntries.AddRange(
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = transactionId,
+                    PeriodId = previousPeriodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.Deposit, SignedAmount = 120m, CurrencyCode = "EGP",
+                    EffectiveAtUtc = now.AddMonths(-1), CreatedAtUtc = now.AddMonths(-1)
+                },
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = confirmedTransactionId,
+                    PeriodId = currentPeriodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.Deposit, SignedAmount = 40m, CurrencyCode = "EGP",
+                    EffectiveAtUtc = now, CreatedAtUtc = now
+                },
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = reversedTransactionId,
+                    PeriodId = currentPeriodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.Deposit, SignedAmount = 90m, CurrencyCode = "EGP",
+                    EffectiveAtUtc = now, CreatedAtUtc = now
+                },
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = reversalTransactionId,
+                    PeriodId = currentPeriodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.Reversal, SignedAmount = -90m, CurrencyCode = "EGP",
+                    EffectiveAtUtc = now, CreatedAtUtc = now
+                });
             seed.PaymentDeposits.AddRange(
                 new PaymentDepositEntity
                 {
@@ -260,6 +289,9 @@ public sealed class TargetWalletReadServiceTests
         var currentPeriodId = Guid.NewGuid();
         var previousPeriodId = Guid.NewGuid();
         var transactionId = Guid.NewGuid();
+        var confirmedTransactionId = Guid.NewGuid();
+        var reversedTransactionId = Guid.NewGuid();
+        var reversalTransactionId = Guid.NewGuid();
         var pendingId = Guid.NewGuid();
 
         await using (var seed = new AppDbContext(options))
@@ -278,12 +310,32 @@ public sealed class TargetWalletReadServiceTests
                     TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Open,
                     StartsAtUtc = now.AddMonths(-1), EndsAtUtc = now.AddMonths(1), CreatedAtUtc = now.AddMonths(-1)
                 });
-            seed.LedgerTransactions.Add(new LedgerTransactionEntity
-            {
-                LedgerTransactionId = transactionId, PeriodId = previousPeriodId, BuildingId = "B1",
-                Kind = LedgerTransactionKind.Deposit, Status = LedgerTransactionStatus.Posted,
-                IdempotencyKey = "posted", CreatedAtUtc = now.AddMonths(-1), PostedAtUtc = now.AddMonths(-1)
-            });
+            seed.LedgerTransactions.AddRange(
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = transactionId, PeriodId = previousPeriodId, BuildingId = "B1",
+                    Kind = LedgerTransactionKind.Deposit, Status = LedgerTransactionStatus.Posted,
+                    IdempotencyKey = "posted", CreatedAtUtc = now.AddMonths(-1), PostedAtUtc = now.AddMonths(-1)
+                },
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = confirmedTransactionId, PeriodId = currentPeriodId, BuildingId = "B1",
+                    Kind = LedgerTransactionKind.Deposit, Status = LedgerTransactionStatus.Posted,
+                    IdempotencyKey = "confirmed-deposit", CreatedAtUtc = now, PostedAtUtc = now
+                },
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = reversedTransactionId, PeriodId = currentPeriodId, BuildingId = "B1",
+                    Kind = LedgerTransactionKind.Deposit, Status = LedgerTransactionStatus.Posted,
+                    IdempotencyKey = "reversed-deposit", CreatedAtUtc = now, PostedAtUtc = now
+                },
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = reversalTransactionId, PeriodId = currentPeriodId, BuildingId = "B1",
+                    Kind = LedgerTransactionKind.Reversal, Status = LedgerTransactionStatus.Posted,
+                    SourceType = "PaymentDepositReversal", ReversesTransactionId = reversedTransactionId,
+                    IdempotencyKey = "deposit-reversal", CreatedAtUtc = now, PostedAtUtc = now
+                });
             seed.LedgerEntries.Add(new LedgerEntryEntity
             {
                 LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = transactionId,
@@ -309,14 +361,15 @@ public sealed class TargetWalletReadServiceTests
                 new PaymentDepositEntity
                 {
                     PaymentDepositId = Guid.NewGuid(), PeriodId = currentPeriodId, BuildingId = "B1",
-                    ApartmentId = "A1", Amount = 40m, CurrencyCode = "EGP",
-                    Status = PaymentDepositStatus.Confirmed, SubmittedAtUtc = now,
-                    ConfirmedAtUtc = now, SourceSystem = "application"
+                    ApartmentId = "A1", PostedTransactionId = confirmedTransactionId,
+                    Amount = 40m, CurrencyCode = "EGP", Status = PaymentDepositStatus.Confirmed,
+                    SubmittedAtUtc = now, ConfirmedAtUtc = now, SourceSystem = "application"
                 },
                 new PaymentDepositEntity
                 {
                     PaymentDepositId = Guid.NewGuid(), PeriodId = currentPeriodId, BuildingId = "B1",
-                    ApartmentId = "A1", Amount = 90m, CurrencyCode = "EGP",
+                    ApartmentId = "A1", PostedTransactionId = reversedTransactionId,
+                    ReversalTransactionId = reversalTransactionId, Amount = 90m, CurrencyCode = "EGP",
                     Status = PaymentDepositStatus.Reversed, SubmittedAtUtc = now,
                     ConfirmedAtUtc = now, ReversedAtUtc = now, SourceSystem = "application"
                 });
