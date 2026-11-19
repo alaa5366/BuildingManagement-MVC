@@ -16,15 +16,14 @@ namespace BuildingManagementMvc.Controllers;
 [Authorize(Roles = "admin,resident")]
 public class NotificationsController : Controller
 {
-    private readonly BuildingsService _buildings;
-    private readonly NotificationsService _notify;
+    private readonly TargetNotificationsService _notifications;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationsController"/> class.
     /// </summary>
-    public NotificationsController(BuildingsService buildings, NotificationsService notify)
+    public NotificationsController(TargetNotificationsService notifications)
     {
-        _buildings = buildings; _notify = notify;
+        _notifications = notifications;
     }
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
@@ -41,12 +40,10 @@ public class NotificationsController : Controller
         if (string.IsNullOrWhiteSpace(BuildingId) ||
             (User.IsInRole("resident") && string.IsNullOrWhiteSpace(User.FindFirstValue("apartmentId"))))
             return Forbid();
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
-
         var allNotifications = User.IsInRole("admin")
-            ? _notify.GetForAdmin(building, 500)
-            : _notify.GetForResident(building, User.FindFirstValue("apartmentId")!, 500);
+            ? await _notifications.GetForAdminAsync(BuildingId, 500, HttpContext.RequestAborted)
+            : await _notifications.GetForResidentAsync(BuildingId,
+                User.FindFirstValue("apartmentId")!, 500, HttpContext.RequestAborted);
 
         var paged = BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Notification>
             .Create(allNotifications, page, pageSize);
@@ -72,11 +69,10 @@ public class NotificationsController : Controller
         if (string.IsNullOrWhiteSpace(BuildingId) ||
             (User.IsInRole("resident") && string.IsNullOrWhiteSpace(User.FindFirstValue("apartmentId"))))
             return Forbid();
-        var building = await _buildings.GetByIdAsync(BuildingId);
         var recipientType = User.IsInRole("admin") ? "admin" : "resident";
         var recipientId = recipientType == "resident" ? User.FindFirstValue("apartmentId") : null;
-        if (building != null && _notify.MarkRead(building, id, recipientType, recipientId))
-            await _buildings.SaveFullAsync(building);
+        await _notifications.MarkReadAsync(BuildingId, id, recipientType, recipientId,
+            HttpContext.RequestAborted);
 
         return LocalRedirect(string.IsNullOrWhiteSpace(returnUrl) ? Url.Action("Index")! : returnUrl);
     }
@@ -94,13 +90,10 @@ public class NotificationsController : Controller
         if (string.IsNullOrWhiteSpace(BuildingId) ||
             (User.IsInRole("resident") && string.IsNullOrWhiteSpace(User.FindFirstValue("apartmentId"))))
             return Forbid();
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building != null)
-        {
-            if (User.IsInRole("admin")) _notify.MarkAllReadForAdmin(building);
-            else _notify.MarkAllReadForResident(building, User.FindFirstValue("apartmentId")!);
-            await _buildings.SaveFullAsync(building);
-        }
+        var recipientType = User.IsInRole("admin") ? "admin" : "resident";
+        var recipientId = recipientType == "resident" ? User.FindFirstValue("apartmentId") : null;
+        await _notifications.MarkAllReadAsync(BuildingId, recipientType, recipientId,
+            HttpContext.RequestAborted);
         return RedirectToAction("Index");
     }
 }
