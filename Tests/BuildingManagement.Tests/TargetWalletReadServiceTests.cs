@@ -321,6 +321,8 @@ public sealed class TargetWalletReadServiceTests
         var depositId = Guid.NewGuid();
         var originalId = Guid.NewGuid();
         var reversalId = Guid.NewGuid();
+        var expenseId = Guid.NewGuid();
+        var expenseReversalId = Guid.NewGuid();
 
         await using (var seed = new AppDbContext(options))
         {
@@ -355,6 +357,20 @@ public sealed class TargetWalletReadServiceTests
                     Kind = LedgerTransactionKind.Reversal, Status = LedgerTransactionStatus.Posted,
                     IdempotencyKey = "reverse-deposit", ReversesTransactionId = originalId,
                     CreatedAtUtc = now, PostedAtUtc = now
+                },
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = expenseId, PeriodId = periodId, BuildingId = "B1",
+                    Kind = LedgerTransactionKind.Expense, Status = LedgerTransactionStatus.Posted,
+                    SourceType = "Expense", IdempotencyKey = "expense-original",
+                    CreatedAtUtc = now.AddDays(-1), PostedAtUtc = now.AddDays(-1)
+                },
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = expenseReversalId, PeriodId = periodId, BuildingId = "B1",
+                    Kind = LedgerTransactionKind.Reversal, Status = LedgerTransactionStatus.Posted,
+                    SourceType = "ExpenseReversal", IdempotencyKey = "expense-reversal",
+                    ReversesTransactionId = expenseId, CreatedAtUtc = now, PostedAtUtc = now
                 });
             seed.LedgerEntries.AddRange(
                 new LedgerEntryEntity
@@ -370,6 +386,20 @@ public sealed class TargetWalletReadServiceTests
                     PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
                     EntryKind = LedgerEntryKind.Reversal, SignedAmount = -90m,
                     CurrencyCode = "EGP", EffectiveAtUtc = now, CreatedAtUtc = now
+                },
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = expenseId,
+                    PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.ExpenseAllocation, SignedAmount = -40m,
+                    CurrencyCode = "EGP", EffectiveAtUtc = now.AddDays(-1), CreatedAtUtc = now.AddDays(-1)
+                },
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = expenseReversalId,
+                    PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.Reversal, SignedAmount = 40m,
+                    CurrencyCode = "EGP", EffectiveAtUtc = now, CreatedAtUtc = now
                 });
             await seed.SaveChangesAsync();
         }
@@ -381,6 +411,8 @@ public sealed class TargetWalletReadServiceTests
         var original = Assert.Single(snapshot.Transactions.Where(item => item.Type == "deposit"));
         Assert.Equal("reversed", original.Status);
         Assert.Contains(snapshot.Transactions, item => item.Type == "adjustment" && item.Amount == -90m);
+        Assert.Equal(2, snapshot.Transactions.Count(item => item.Type == "expense"));
+        Assert.Equal(0m, snapshot.Transactions.Where(item => item.Type == "expense").Sum(item => item.Amount));
     }
 
     [Fact]
