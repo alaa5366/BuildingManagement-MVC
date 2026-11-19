@@ -143,6 +143,14 @@ public class AppDbContext : DbContext
     /// Gets the poll votes.
     /// </summary>
     public DbSet<PollVoteEntity> PollVotes => Set<PollVoteEntity>();
+    /// <summary>Gets versioned poll voting policies.</summary>
+    public DbSet<PollVotingPolicyEntity> PollVotingPolicies => Set<PollVotingPolicyEntity>();
+    /// <summary>Gets one-time poll eligibility records.</summary>
+    public DbSet<PollEligibilityEntity> PollEligibility => Set<PollEligibilityEntity>();
+    /// <summary>Gets anonymous poll ballots.</summary>
+    public DbSet<PollBallotEntity> PollBallots => Set<PollBallotEntity>();
+    /// <summary>Gets append-only poll lifecycle events.</summary>
+    public DbSet<PollLifecycleEventEntity> PollLifecycleEvents => Set<PollLifecycleEventEntity>();
     /// <summary>
     /// Gets the maintenance records.
     /// </summary>
