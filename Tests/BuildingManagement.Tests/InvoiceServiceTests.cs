@@ -231,6 +231,31 @@ public sealed class InvoiceServiceTests
         Assert.Equal(25m, categoryShare.Total);
         Assert.Equal(25m, categoryShare.Share);
         Assert.Equal("12345", invoice.Payment.AccountNumber);
+        Assert.StartsWith("INV-01-101-", invoice.InvoiceNo);
+        Assert.Equal(6, invoice.InvoiceNo.Split('-').Last().Length);
+
+        // Reprinting in the same month returns the frozen invoice, even if
+        // mutable building profile data changes after the first issuance.
+        await using (var update = new AppDbContext(options))
+        {
+            var buildingRow = await update.Buildings.SingleAsync(item => item.Id == "B1");
+            buildingRow.Name = "Renamed Building";
+            await update.SaveChangesAsync();
+        }
+
+        var reprint = await service.BuildInvoiceDataAsync("B1", "A1", "2026-11");
+        Assert.NotNull(reprint);
+        Assert.Equal(invoice.InvoiceNo, reprint!.InvoiceNo);
+        Assert.Equal(invoice.IssueDate, reprint.IssueDate);
+        Assert.Equal("Target Building", reprint.Building.Name);
+
+        await using var verify = new AppDbContext(options);
+        var issuedRows = await verify.InvoiceIssues
+            .Where(item => item.BuildingId == "B1" && item.ApartmentId == "A1" && item.MonthKey == "2026-11")
+            .ToListAsync();
+        Assert.Single(issuedRows);
+        Assert.NotNull(issuedRows[0].SnapshotJson);
+        Assert.True(issuedRows[0].InvoiceSerial > 0);
     }
 
     [Fact]
