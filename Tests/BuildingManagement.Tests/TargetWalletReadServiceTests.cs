@@ -104,6 +104,33 @@ public sealed class TargetWalletReadServiceTests
 
 
 
+
+    [Fact]
+    public async Task GetCurrentPeriodKeyAsync_UsesActiveBuildingFinancialPeriod()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.FinancialPeriods.Add(new FinancialPeriodEntity
+            {
+                PeriodId = Guid.NewGuid(), BuildingId = "B1", PeriodKey = "2026-11",
+                TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Open,
+                StartsAtUtc = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndsAtUtc = new DateTime(2026, 12, 1, 0, 0, 0, DateTimeKind.Utc),
+                CreatedAtUtc = DateTime.UtcNow
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetWalletReadService(new TestContextFactory(options));
+        var month = await service.GetCurrentPeriodKeyAsync(
+            "B1", new DateTimeOffset(2026, 11, 19, 22, 0, 0, TimeSpan.Zero));
+
+        Assert.Equal("2026-11", month);
+    }
+
     [Fact]
     public async Task GetBuildingShellAsync_UsesTargetBuildingFloorAndApartmentRows()
     {
