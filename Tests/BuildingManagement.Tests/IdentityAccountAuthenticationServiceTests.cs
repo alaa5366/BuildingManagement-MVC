@@ -99,6 +99,62 @@ public sealed class IdentityAccountAuthenticationServiceTests
 
 
     [Fact]
+    public async Task AuthenticateResidentAsync_DoesNotTreatNonPasswordCredentialTypesAsLoginSecrets()
+    {
+        var factory = new TestContextFactory();
+        var hasher = new BcryptPasswordHasher();
+        var accountId = Guid.NewGuid();
+        var personId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        await using (var db = await factory.CreateDbContextAsync())
+        {
+            db.Persons.Add(new PersonEntity
+            {
+                PersonId = personId,
+                DisplayName = "Credential Type Isolation",
+                PrimaryPhone = "+201000000099",
+                CreatedAtUtc = now
+            });
+            db.UserAccounts.Add(new UserAccountEntity
+            {
+                AccountId = accountId,
+                PersonId = personId,
+                AccountStatus = 1,
+                SecurityStamp = "credential-type-stamp",
+                CreatedAtUtc = now
+            });
+            db.RoleDefinitions.Add(new RoleDefinitionEntity
+            {
+                RoleKey = "resident", DisplayName = "Resident", IsActive = true
+            });
+            db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            {
+                RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "resident",
+                ValidFromUtc = now.AddMinutes(-1), GrantedAtUtc = now.AddMinutes(-1)
+            });
+            db.ApartmentOccupancies.Add(new ApartmentOccupancyEntity
+            {
+                OccupancyId = Guid.NewGuid(), BuildingId = "building-1", ApartmentId = "apt-1",
+                PersonId = personId, OccupancyType = 1, IsPrimary = true,
+                ValidFromUtc = now.AddDays(-1), RecordedAtUtc = now.AddDays(-1)
+            });
+            db.UserCredentials.Add(new UserCredentialEntity
+            {
+                CredentialId = Guid.NewGuid(), AccountId = accountId, CredentialType = 1,
+                CredentialHash = hasher.Hash("Not-A-Password-Credential-42!"),
+                HashAlgorithm = "BCrypt.Net-Next", CreatedAtUtc = now.AddMinutes(-1)
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var result = await new IdentityAccountAuthenticationService(factory, hasher)
+            .AuthenticateResidentAsync("+201000000099", "Not-A-Password-Credential-42!");
+
+        Assert.NotNull(result);
+        Assert.False(result.Success);
+    }
+
+    [Fact]
     public async Task AuthenticateResidentAsync_UsesAnOlderValidCredentialWhenNewestCredentialIsExpired()
     {
         var factory = new TestContextFactory();
