@@ -219,6 +219,7 @@ public class AdminAptsController : Controller
         return View("RecoveryQr");
     }
 
+    /// <summary>Cancels a recovery QR code.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CancelRecoveryQr(string aptId)
