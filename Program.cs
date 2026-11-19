@@ -205,6 +205,7 @@ builder.Services.AddScoped<TargetMaintenanceService>();
     builder.Services.AddSingleton<IAuditLogger, AuditLogger>();
     builder.Services.AddSingleton<AuditLogger>();
     builder.Services.AddScoped<AdminManagementService>();
+    builder.Services.AddScoped<PersonPhoneCorrectionService>();
 
     builder.Services.AddSingleton<IEncryptionService, AesEncryptionService>();
     builder.Services.AddSingleton<DvrService>();
