@@ -64,7 +64,7 @@ public class ExpensesController : Controller
             if (actorId is null) return Forbid();
             if (commandId == Guid.Empty) throw new ArgumentException("Invalid submission token.");
             await _financeWorkflow.AddExpenseAsync(buildingId, monthKey, categoryId, note, amount,
-                date, commandId.Value, actorId.Value, HttpContext.RequestAborted);
+                date, commandId, actorId.Value, HttpContext.RequestAborted);
             TempData["Message"] = Loc.T("Expense_Added");
         }
         catch (Exception ex)
