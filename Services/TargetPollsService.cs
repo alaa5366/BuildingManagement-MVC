@@ -15,6 +15,7 @@ public sealed class TargetPollsService
 
     public TargetPollsService(IDbContextFactory<AppDbContext> factory) => _factory = factory;
 
+    /// <summary>Gets a paged list of polls for the requested scope.</summary>
     public async Task<PagedResult<Poll>> GetPageAsync(
         string buildingId, int page, int pageSize, bool activeOnly,
         CancellationToken cancellationToken = default)
@@ -46,6 +47,7 @@ public sealed class TargetPollsService
         };
     }
 
+    /// <summary>Gets a poll and its associated details.</summary>
     public async Task<Poll?> GetAsync(string buildingId, string pollId, CancellationToken cancellationToken = default)
     {
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
@@ -57,6 +59,7 @@ public sealed class TargetPollsService
         return entity is null ? null : Map(entity);
     }
 
+    /// <summary>Creates a poll with the supplied options and schedule.</summary>
     public async Task<Poll> CreateAsync(
         string buildingId, string question, string? description,
         IReadOnlyCollection<string> optionTexts, string? deadline, string createdBy,
@@ -116,6 +119,7 @@ public sealed class TargetPollsService
         return Map(poll);
     }
 
+    /// <summary>Changes whether the specified poll is closed.</summary>
     public async Task<bool> SetClosedAsync(
         string buildingId, string pollId, bool closed, CancellationToken cancellationToken = default)
     {
@@ -128,6 +132,7 @@ public sealed class TargetPollsService
         return true;
     }
 
+    /// <summary>Deletes the specified poll and its dependent records.</summary>
     public async Task<bool> DeleteAsync(string buildingId, string pollId, CancellationToken cancellationToken = default)
     {
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
@@ -149,6 +154,7 @@ public sealed class TargetPollsService
         return true;
     }
 
+    /// <summary>Records a resident vote after validating poll eligibility.</summary>
     public async Task<bool> VoteAsync(
         string buildingId, string pollId, string apartmentId, string optionId,
         CancellationToken cancellationToken = default)
@@ -188,6 +194,7 @@ public sealed class TargetPollsService
         }
     }
 
+    /// <summary>Gets poll participation and result summaries for a building.</summary>
     public async Task<(string Name, int ActiveApartmentCount)?> GetBuildingSummaryAsync(
         string buildingId, CancellationToken cancellationToken = default)
     {
@@ -200,6 +207,7 @@ public sealed class TargetPollsService
         return (name, activeApartments);
     }
 
+    /// <summary>Determines whether an apartment is currently active.</summary>
     public async Task<bool> IsActiveApartmentAsync(
         string buildingId, string apartmentId, CancellationToken cancellationToken = default)
     {
