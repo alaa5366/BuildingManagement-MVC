@@ -1,6 +1,7 @@
 @{
     ViewData["Title"] = "QR مؤقت لاستعادة دخول الساكن";
     var buildingName = (string)ViewBag.BuildingName;
+    var apartmentId = (string)ViewBag.ApartmentId;
     var apartmentNumber = (int)ViewBag.ApartmentNumber;
     var apartmentPhone = (string)ViewBag.ApartmentPhone;
     var quickUrl = (string)ViewBag.QuickUrl;
@@ -51,7 +52,14 @@
         </div>
     </div>
 
-    <a asp-action="Index" class="btn btn-secondary">العودة إلى الشقق</a>
+    <div class="d-flex flex-wrap gap-2">
+        <form method="post" asp-action="CancelRecoveryQr" onsubmit="return confirm('هل تريد إلغاء رمز الاستعادة الحالي فوراً؟');">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="aptId" value="@apartmentId" />
+            <button type="submit" class="btn btn-outline-danger">إلغاء هذا الرمز فوراً</button>
+        </form>
+        <a asp-action="Index" class="btn btn-secondary">العودة إلى الشقق / إعادة الإصدار</a>
+    </div>
 </div>
 
 @section Scripts {
