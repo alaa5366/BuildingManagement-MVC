@@ -157,11 +157,12 @@ public sealed class TwoFactorService
             from setting in db.UserTwoFactorSettings.AsNoTracking()
             join account in db.UserAccounts.AsNoTracking() on setting.AccountId equals account.AccountId
             join assignment in db.UserRoleAssignments.AsNoTracking() on account.AccountId equals assignment.AccountId
+            join role in db.RoleDefinitions.AsNoTracking() on assignment.RoleKey equals role.RoleKey
             join person in db.Persons.AsNoTracking() on account.PersonId equals person.PersonId
             where setting.AccountId == accountId && setting.IsEnabled
                 && account.AccountStatus == 1 && !person.IsArchived
-                && (assignment.RoleKey == "admin" || assignment.RoleKey == "superadmin")
-                && assignment.RevokedAtUtc == null && assignment.ValidFromUtc <= now
+                && (assignment.RoleKey == "building-admin" || assignment.RoleKey == "superadmin")
+                && role.IsActive && assignment.RevokedAtUtc == null && assignment.ValidFromUtc <= now
                 && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
             select setting.AccountId).AnyAsync(cancellationToken);
     }
@@ -178,9 +179,10 @@ public sealed class TwoFactorService
             from account in db.UserAccounts
             join person in db.Persons on account.PersonId equals person.PersonId
             join assignment in db.UserRoleAssignments on account.AccountId equals assignment.AccountId
+            join role in db.RoleDefinitions on assignment.RoleKey equals role.RoleKey
             where account.AccountId == accountId && account.AccountStatus == 1 && !person.IsArchived
-                && (assignment.RoleKey == "admin" || assignment.RoleKey == "superadmin")
-                && assignment.RevokedAtUtc == null && assignment.ValidFromUtc <= now
+                && (assignment.RoleKey == "building-admin" || assignment.RoleKey == "superadmin")
+                && role.IsActive && assignment.RevokedAtUtc == null && assignment.ValidFromUtc <= now
                 && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
             select account.AccountId).AnyAsync(cancellationToken);
         if (!eligible) return null;
@@ -334,9 +336,10 @@ public sealed class TwoFactorService
         await (from account in db.UserAccounts
                join person in db.Persons on account.PersonId equals person.PersonId
                join assignment in db.UserRoleAssignments on account.AccountId equals assignment.AccountId
+               join role in db.RoleDefinitions on assignment.RoleKey equals role.RoleKey
                where account.AccountId == accountId && account.AccountStatus == 1 && !person.IsArchived
-                   && (assignment.RoleKey == "admin" || assignment.RoleKey == "superadmin")
-                   && assignment.RevokedAtUtc == null && assignment.ValidFromUtc <= now
+                   && (assignment.RoleKey == "building-admin" || assignment.RoleKey == "superadmin")
+                   && role.IsActive && assignment.RevokedAtUtc == null && assignment.ValidFromUtc <= now
                    && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
                select assignment.RoleAssignmentId).AnyAsync(cancellationToken);
 
