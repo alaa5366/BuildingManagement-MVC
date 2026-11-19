@@ -368,6 +368,11 @@ public class SessionRevalidator
                 string.IsNullOrWhiteSpace(buildingId) || string.IsNullOrWhiteSpace(apartmentId))
                 return new Result(false, null);
 
+            var hasSuperAdminAssignment = await db.UserRoleAssignments.AsNoTracking()
+                .AnyAsync(assignment => assignment.AccountId == accountId
+                    && assignment.RoleKey == "superadmin" && assignment.RevokedAtUtc == null);
+            if (hasSuperAdminAssignment) return new Result(false, null);
+
             var activeResidentRole = await (
                 from assignment in db.UserRoleAssignments.AsNoTracking()
                 join role in db.RoleDefinitions.AsNoTracking() on assignment.RoleKey equals role.RoleKey
