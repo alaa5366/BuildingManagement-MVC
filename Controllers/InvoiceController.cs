@@ -2,6 +2,7 @@ using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using QRCoder;
 using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
@@ -58,6 +59,51 @@ public class InvoiceController : Controller
 
         var role = isResident ? "resident" : isSuperAdmin ? "superadmin" : "admin";
         return await GenerateInvoiceAsync(buildingId, targetApartmentId, month, role);
+    }
+
+    /// <summary>Displays the QR code for the same immutable monthly invoice.</summary>
+    [HttpGet]
+    public async Task<IActionResult> Qr(string? aptId, string? month)
+    {
+        var buildingId = User.FindFirstValue("buildingId");
+        var isResident = User.IsInRole("resident");
+        var isSuperAdmin = User.IsInRole("superadmin");
+
+        if (string.IsNullOrWhiteSpace(buildingId))
+        {
+            if (!isSuperAdmin || string.IsNullOrWhiteSpace(aptId)) return NotFound();
+            buildingId = await _invoice.FindBuildingIdByApartmentAsync(aptId, HttpContext.RequestAborted);
+            if (string.IsNullOrWhiteSpace(buildingId)) return NotFound();
+        }
+
+        var targetApartmentId = isResident ? User.FindFirstValue("apartmentId") : aptId;
+        if (string.IsNullOrWhiteSpace(targetApartmentId)) return NotFound();
+
+        var monthKey = string.IsNullOrWhiteSpace(month)
+            ? await _invoice.GetCurrentPeriodKeyAsync(buildingId, HttpContext.RequestAborted)
+            : month;
+        var data = await _invoice.BuildInvoiceDataAsync(
+            buildingId, targetApartmentId, monthKey, HttpContext.RequestAborted);
+        if (data is null) return NotFound();
+
+        byte[] qrPng;
+        using (var generator = new QRCodeGenerator())
+        {
+            var qrData = generator.CreateQrCode(data.QrPayload, QRCodeGenerator.ECCLevel.M);
+            qrPng = new PngByteQRCode(qrData).GetGraphic(12);
+        }
+
+        var role = isResident ? "resident" : isSuperAdmin ? "superadmin" : "admin";
+        await _audit.LogAsync(
+            action: "invoice_qr_view",
+            buildingId: data.Building.Id,
+            apartmentId: data.Apt.Id,
+            userId: User.FindFirstValue(ClaimTypes.NameIdentifier),
+            userRole: role,
+            metadata: new { aptNumber = data.Apt.Number, invoiceNo = data.InvoiceNo, monthKey },
+            severity: "info");
+
+        return File(qrPng, "image/png");
     }
 
     private async Task<IActionResult> GenerateInvoiceAsync(
