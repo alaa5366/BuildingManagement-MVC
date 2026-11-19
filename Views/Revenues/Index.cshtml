@@ -35,7 +35,7 @@
             <select name="categoryId" class="form-select" required>
                 @foreach (var c in categories)
                 {
-                    <option value="@c.Id">@c.Name</option>
+                    <option value="@c.Id" disabled="@(!c.Active)">@c.Name@(c.Active ? "" : " (غير نشط)")</option>
                 }
             </select>
         </div>
