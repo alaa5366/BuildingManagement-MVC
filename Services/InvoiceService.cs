@@ -50,9 +50,17 @@ public sealed class InvoiceService
 
         // The unique building/apartment/month key plus a serializable transaction
         // guarantees one issued invoice even when two print requests arrive together.
-        var existingIssue = await db.InvoiceIssues.SingleOrDefaultAsync(issue =>
-            issue.BuildingId == buildingId && issue.ApartmentId == apartmentId &&
-            issue.MonthKey == monthKey, cancellationToken);
+        IQueryable<InvoiceIssueEntity> issueQuery = db.InvoiceIssues;
+        if (db.Database.IsSqlServer())
+        {
+            issueQuery = db.InvoiceIssues.FromSqlInterpolated($"""
+                SELECT * FROM [dbo].[InvoiceIssues] WITH (UPDLOCK, HOLDLOCK)
+                WHERE [BuildingId] = {buildingId}
+                  AND [ApartmentId] = {apartmentId}
+                  AND [MonthKey] = {monthKey}
+                """);
+        }
+        var existingIssue = await issueQuery.SingleOrDefaultAsync(cancellationToken);
         if (!string.IsNullOrWhiteSpace(existingIssue?.SnapshotJson))
         {
             var storedInvoice = JsonSerializer.Deserialize<InvoiceData>(existingIssue.SnapshotJson);
