@@ -34,8 +34,8 @@ public sealed class LedgerPostingService
         string? sourceKey = null,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(buildingId))
-            throw new ArgumentException("Building is required.", nameof(buildingId));
+        if (string.IsNullOrWhiteSpace(buildingId) || buildingId.Length > 64)
+            throw new ArgumentException("Building is required and must not exceed 64 characters.", nameof(buildingId));
         if (string.IsNullOrWhiteSpace(idempotencyKey) || idempotencyKey.Length > 128)
             throw new ArgumentException("A valid idempotency key is required.", nameof(idempotencyKey));
         if (lines is null || lines.Count == 0)
@@ -54,6 +54,10 @@ public sealed class LedgerPostingService
                           string.IsNullOrWhiteSpace(sourceType) ||
                           string.IsNullOrWhiteSpace(sourceKey)))
             throw new ArgumentException("Source system, type and key must be supplied together.");
+        if ((sourceSystem?.Length ?? 0) > 80 || (sourceType?.Length ?? 0) > 80 ||
+            (sourceKey?.Length ?? 0) > 256 || (actorReference?.Length ?? 0) > 128 ||
+            (reason?.Length ?? 0) > 1000)
+            throw new ArgumentException("A source or actor field exceeds its configured storage limit.");
 
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
         await using var tx = await db.Database.BeginTransactionAsync(
@@ -63,9 +67,6 @@ public sealed class LedgerPostingService
             x => x.PeriodId == periodId && x.BuildingId == buildingId, cancellationToken);
         if (period is null)
             throw new InvalidOperationException("The financial period does not belong to this building.");
-        if (period.Status == FinancialPeriodStatus.Closed)
-            throw new InvalidOperationException("A closed financial period cannot accept postings.");
-
         var existing = await db.LedgerTransactions.AsNoTracking()
             .SingleOrDefaultAsync(x => x.IdempotencyKey == idempotencyKey, cancellationToken);
         if (existing is not null)
@@ -75,6 +76,8 @@ public sealed class LedgerPostingService
                 existing.SourceSystem == sourceSystem &&
                 existing.SourceType == sourceType &&
                 existing.SourceKey == sourceKey &&
+                existing.ActorAccountId == actorAccountId &&
+                existing.ActorReference == (string.IsNullOrWhiteSpace(actorReference) ? null : actorReference.Trim()) &&
                 existing.Reason == (string.IsNullOrWhiteSpace(reason) ? null : reason.Trim()))
             {
                 var persistedLines = await db.LedgerEntries.AsNoTracking()
@@ -125,6 +128,9 @@ public sealed class LedgerPostingService
             }
             throw new InvalidOperationException("The idempotency key is already used by a different posting.");
         }
+
+        if (period.Status == FinancialPeriodStatus.Closed)
+            throw new InvalidOperationException("A closed financial period cannot accept postings.");
 
         var apartmentIds = lines.Select(x => x.ApartmentId).Distinct().ToArray();
         var found = await db.Apartments.AsNoTracking()
