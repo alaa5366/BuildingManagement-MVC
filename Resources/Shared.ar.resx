@@ -4714,4 +4714,9 @@
     <value>طلبات تصحيح أرقام الهاتف</value>
   </data>
   <data name="Backup_Collection_savedWhatsAppTemplates" xml:space="preserve"><value>قوالب رسائل واتساب المحفوظة</value></data>
+  <data name="Backup_Collection_notificationMessages" xml:space="preserve"><value>رسائل الإشعارات</value></data>
+  <data name="Backup_Collection_notificationRecipients" xml:space="preserve"><value>مستلمو الإشعارات</value></data>
+  <data name="Backup_Collection_notificationDeliveries" xml:space="preserve"><value>محاولات إرسال الإشعارات</value></data>
+  <data name="Backup_Collection_notificationReadStates" xml:space="preserve"><value>حالات قراءة الإشعارات</value></data>
+  <data name="Backup_Collection_notificationPreferences" xml:space="preserve"><value>تفضيلات الإشعارات</value></data>
 </root>
