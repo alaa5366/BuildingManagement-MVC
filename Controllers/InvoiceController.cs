@@ -86,7 +86,13 @@ public class InvoiceController : Controller
             },
             severity: "info");
 
-        var fileName = $"invoice-{data.Building.BuildingNumber}-apt-{data.Apt.Number}-{monthKey}.pdf";
+        // The issued invoice number is immutable for this apartment and month;
+        // using it as the download name makes reprints visibly traceable to the same invoice.
+        var safeInvoiceNo = System.Text.RegularExpressions.Regex.Replace(
+            data.InvoiceNo ?? string.Empty, @"[^A-Za-z0-9._-]", "_");
+        if (string.IsNullOrWhiteSpace(safeInvoiceNo))
+            safeInvoiceNo = $"invoice-{data.Building.BuildingNumber}-apt-{data.Apt.Number}-{monthKey}";
+        var fileName = $"{safeInvoiceNo}.pdf";
         return File(pdfBytes, "application/pdf", fileName);
     }
 }
