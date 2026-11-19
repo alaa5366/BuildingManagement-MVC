@@ -18,6 +18,7 @@
         ["userId"] = ViewBag.SelectedUserId as string,
         ["actionFilter"] = ViewBag.SelectedAction as string,
         ["severity"] = ViewBag.SelectedSeverity as string,
+        ["correlationId"] = ViewBag.SelectedCorrelationId as string,
         ["from"] = ViewBag.From as string,
         ["to"] = ViewBag.To as string,
         ["pageSize"] = Model.PageSize.ToString()
@@ -31,6 +32,7 @@
         userId = ViewBag.SelectedUserId,
         actionFilter = ViewBag.SelectedAction,
         severity = ViewBag.SelectedSeverity,
+        correlationId = ViewBag.SelectedCorrelationId,
         from = ViewBag.From,
         to = ViewBag.To,
         page,
@@ -84,6 +86,7 @@
                 <div><label class="form-label">@Loc.T("Building")</label><select name="buildingId" class="form-select"><option value="">@Loc.T("All_Buildings")</option>@foreach (var b in buildings){<option value="@b.Id" selected="@(ViewBag.SelectedBuildingId == b.Id)">@b.Name (@b.BuildingNumber)</option>}</select></div>
             }
             <div><label class="form-label">@Loc.T("Action")</label><select name="actionFilter" class="form-select"><option value="">@Loc.T("All")</option>@foreach (var action in knownActions){<option value="@action" selected="@(ViewBag.SelectedAction == action)">@BuildingManagementMvc.Services.AuditLogQueryService.LabelAr(action)</option>}</select></div>
+            <div><label class="form-label">Correlation ID</label><input name="correlationId" value="@ViewBag.SelectedCorrelationId" class="form-control" maxlength="100" autocomplete="off" placeholder="Trace / correlation ID" /></div>
             <div><label class="form-label">@Loc.T("Severity")</label><select name="severity" class="form-select"><option value="">@Loc.T("All")</option><option value="info" selected="@(ViewBag.SelectedSeverity == "info")">@Loc.T("Info")</option><option value="warning" selected="@(ViewBag.SelectedSeverity == "warning")">@Loc.T("Warning")</option><option value="error" selected="@(ViewBag.SelectedSeverity == "error")">@Loc.T("Error")</option><option value="critical" selected="@(ViewBag.SelectedSeverity == "critical")">@Loc.T("Critical")</option></select></div>
             @if (canFilterApartment){<div><label class="form-label">@Loc.T("Apartment")</label><input name="apartmentId" value="@ViewBag.SelectedApartmentId" class="form-control" placeholder="@Loc.T("Optional")" /></div>}
             @if (canFilterUser){<div><label class="form-label">@Loc.T("User")</label><input name="userId" value="@ViewBag.SelectedUserId" class="form-control" maxlength="160" autocomplete="off" /></div>}
@@ -97,7 +100,7 @@
     <section class="log-results-panel audit-kibana-results">
         <div class="log-results-heading d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div><span class="log-section-kicker">EVENT STREAM</span><h2 class="h5 mb-0">@Loc.T("Log_2")</h2><p>Immutable business events · newest first</p></div>
-            <a asp-action="ExportCsv" asp-route-buildingId="@ViewBag.SelectedBuildingId" asp-route-apartmentId="@ViewBag.SelectedApartmentId" asp-route-userId="@ViewBag.SelectedUserId" asp-route-actionFilter="@ViewBag.SelectedAction" asp-route-severity="@ViewBag.SelectedSeverity" asp-route-from="@ViewBag.From" asp-route-to="@ViewBag.To" class="btn btn-outline-success btn-sm"><i class="bi bi-download"></i> @Loc.T("Export_CSV")</a>
+            <a asp-action="ExportCsv" asp-route-buildingId="@ViewBag.SelectedBuildingId" asp-route-apartmentId="@ViewBag.SelectedApartmentId" asp-route-userId="@ViewBag.SelectedUserId" asp-route-actionFilter="@ViewBag.SelectedAction" asp-route-severity="@ViewBag.SelectedSeverity" asp-route-correlationId="@ViewBag.SelectedCorrelationId" asp-route-from="@ViewBag.From" asp-route-to="@ViewBag.To" class="btn btn-outline-success btn-sm"><i class="bi bi-download"></i> @Loc.T("Export_CSV")</a>
         </div>
         <div class="log-level-summary">
             <span class="level-summary-item"><i class="level-dot dot-info"></i>@Loc.T("Info") <strong>@infoCount</strong></span>
