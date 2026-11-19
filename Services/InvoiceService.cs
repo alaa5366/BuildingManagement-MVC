@@ -219,6 +219,7 @@ public sealed class InvoiceService
             Building = building,
             Apt = apartment,
             Floor = floor,
+            CurrencyCode = currencyCode,
             Balance = currentSnapshot.Balance,
             PreviousBalance = previousSnapshot.Balance,
             MonthDeposits = monthDeposits,
