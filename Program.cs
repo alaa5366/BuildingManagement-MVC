@@ -248,8 +248,10 @@ builder.Services.AddScoped<TargetQrService>();
         {
             CookieName = CookieRequestCultureProvider.DefaultCookieName
         });
+        options.RequestCultureProviders.Add(new CustomRequestCultureProvider(_ =>
+            Task.FromResult<ProviderCultureResult?>(new ProviderCultureResult(LanguageAdministrationService.GetDefaultCulture()))));
 
-        // Culture selection is explicit through the validated language cookie; untrusted query/header cultures are ignored.
+        // Culture selection is explicit through the validated language cookie and the current database default.
     });
 
     builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
