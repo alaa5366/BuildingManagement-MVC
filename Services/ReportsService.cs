@@ -41,6 +41,9 @@ public sealed class ReportsService
         return shifted.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
     }
 
+    public Task<string> GetCurrentPeriodKeyAsync(string buildingId, CancellationToken cancellationToken = default) =>
+        _wallet.GetCurrentPeriodKeyAsync(buildingId, cancellationToken: cancellationToken);
+
     public async Task<ReportsVm> BuildReportAsync(
         Building building,
         string range,
