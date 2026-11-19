@@ -41,6 +41,10 @@ public class Poll
     /// Gets or sets a value indicating whether it is closed.
     /// </summary>
     public bool Closed { get; set; }
+    /// <summary>Gets or sets the aggregate number of valid anonymous ballots.</summary>
+    public int TotalVotes { get; set; }
+    /// <summary>Gets or sets whether the current resident has consumed their voting entitlement.</summary>
+    public bool HasVoted { get; set; }
 }
 
 /// <summary>
@@ -56,4 +60,6 @@ public class PollOption
     /// Gets or sets the text.
     /// </summary>
     public string Text { get; set; } = "";
+    /// <summary>Gets or sets the aggregate number of ballots for this option.</summary>
+    public int VoteCount { get; set; }
 }
