@@ -53,7 +53,7 @@ public sealed class ResidentAccountProvisioningService
         var occupancySet = occupiedPersonIds.ToHashSet();
         var phoneCounts = people
             .Select(x => new { x.PersonId, Normalized = AuthHelpers.NormalizePhone(x.PrimaryPhone) })
-            .Where(x => !string.IsNullOrWhiteSpace(x.Normalized))
+            .Where(x => IsPlausibleE164(x.Normalized))
             .GroupBy(x => x.Normalized!, StringComparer.Ordinal)
             .ToDictionary(x => x.Key, x => x.Count(), StringComparer.Ordinal);
 
@@ -79,7 +79,7 @@ public sealed class ResidentAccountProvisioningService
                 status = "MissingPhone";
                 reason = "No primary phone number";
             }
-            else if (string.IsNullOrWhiteSpace(normalizedPhone))
+            else if (!IsPlausibleE164(normalizedPhone))
             {
                 status = "InvalidPhone";
                 reason = "Primary phone cannot be normalized";
@@ -179,6 +179,10 @@ public sealed class ResidentAccountProvisioningService
         return result;
     }
 
+    private static bool IsPlausibleE164(string value) =>
+        value.Length is >= 9 and <= 16 && value[0] == '+' &&
+        value.Skip(1).All(char.IsDigit) && value[1] != '0';
+
     private async Task<bool> TryProvisionPersonAsync(Guid personId, CancellationToken cancellationToken)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
@@ -197,7 +201,7 @@ public sealed class ResidentAccountProvisioningService
             }
 
             var normalizedPhone = AuthHelpers.NormalizePhone(person.PrimaryPhone);
-            if (string.IsNullOrWhiteSpace(normalizedPhone))
+            if (!IsPlausibleE164(normalizedPhone))
             {
                 await transaction.RollbackAsync(cancellationToken);
                 return false;
