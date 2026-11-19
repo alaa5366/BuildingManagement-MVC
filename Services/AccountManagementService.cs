@@ -73,6 +73,11 @@ public sealed class AccountManagementService
                 row.RoleContexts = string.Join(" | ", assignments.Select(x =>
                     $"{x.RoleKey}: {(x.ScopeType switch { 0 => "النظام", 1 => $"عمارة {x.ScopeBuildingId ?? "—"}", 2 => $"عمارة {x.ScopeBuildingId ?? "—"} / شقة {x.ScopeApartmentId ?? "—"}", 3 => "شخصي", _ => "نطاق غير معروف" })}").Distinct());
                 row.ActiveRoleCount = assignments.Count;
+                if (assignments.Any(x => x.RoleKey == "superadmin"))
+                {
+                    row.Phone = null;
+                    row.IsDuplicatePhone = false;
+                }
             }
             else
             {
