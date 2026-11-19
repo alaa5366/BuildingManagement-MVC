@@ -80,6 +80,11 @@
             <div><span class="log-section-kicker">DISCOVER</span><h2><i class="bi bi-funnel"></i> @Loc.T("Search")</h2></div>
             <a asp-controller="AuditLog" asp-action="Index" class="log-reset-link"><i class="bi bi-arrow-counterclockwise"></i> @Loc.T("Reset")</a>
         </div>
+        <div class="observability-time-presets" aria-label="Quick time ranges">
+            <span><i class="bi bi-clock-history"></i> Time range</span>
+            <a asp-action="Index" asp-route-from="@DateTime.UtcNow.AddDays(-7).ToString("yyyy-MM-dd")" asp-route-to="@DateTime.UtcNow.ToString("yyyy-MM-dd")" asp-route-buildingId="@ViewBag.SelectedBuildingId" asp-route-apartmentId="@ViewBag.SelectedApartmentId" asp-route-userId="@ViewBag.SelectedUserId" asp-route-actionFilter="@ViewBag.SelectedAction" asp-route-severity="@ViewBag.SelectedSeverity" asp-route-pageSize="@Model.PageSize">Last 7 days</a>
+            <a asp-action="Index" asp-route-from="@DateTime.UtcNow.AddDays(-30).ToString("yyyy-MM-dd")" asp-route-to="@DateTime.UtcNow.ToString("yyyy-MM-dd")" asp-route-buildingId="@ViewBag.SelectedBuildingId" asp-route-apartmentId="@ViewBag.SelectedApartmentId" asp-route-userId="@ViewBag.SelectedUserId" asp-route-actionFilter="@ViewBag.SelectedAction" asp-route-severity="@ViewBag.SelectedSeverity" asp-route-pageSize="@Model.PageSize">Last 30 days</a>
+        </div>
         <form method="get" asp-controller="AuditLog" asp-action="Index" class="audit-kibana-filter-grid">
             @if (canFilterBuilding && buildings.Count > 0)
             {
