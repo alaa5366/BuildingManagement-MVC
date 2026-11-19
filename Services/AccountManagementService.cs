@@ -10,6 +10,7 @@ public sealed class AccountManagementService
     private readonly IAuditLogger _audit;
     public AccountManagementService(IDbContextFactory<AppDbContext> factory, IAuditLogger audit) { _factory = factory; _audit = audit; }
 
+    /// <summary>Retrieves a paginated view of localization languages or translations.</summary>
     public async Task<AccountManagementPage> GetPageAsync(string? search, string? role, string? status,
         int page, int pageSize, CancellationToken ct = default)
     {
@@ -132,6 +133,7 @@ public sealed class AccountManagementService
             Rows = result.Skip((page - 1) * pageSize).Take(pageSize).ToList()
         };
     }
+    /// <summary>Updates the status of a legacy super-admin account.</summary>
     public async Task<AccountManagementMutationResult> SetLegacySuperAdminStatusAsync(
         string legacyUserId, bool activate, string actorId, CancellationToken ct = default)
     {
@@ -174,6 +176,7 @@ public sealed class AccountManagementService
         return AccountManagementMutationResult.Ok(activate ? "تم تفعيل حساب SuperAdmin." : "تم إيقاف حساب SuperAdmin.");
     }
 
+    /// <summary>Resets the password for a legacy super-admin account.</summary>
     public async Task<AccountManagementMutationResult> ResetLegacySuperAdminPasswordAsync(
         string legacyUserId, string actorId, IPasswordHasher hasher, CancellationToken ct = default)
     {
@@ -203,6 +206,7 @@ public sealed class AccountManagementService
         return AccountManagementMutationResult.Ok("تم تغيير كلمة المرور. اعرضها للمستخدم مرة واحدة واطلب منه تحديثها فور تسجيل الدخول.", password: temporaryPassword);
     }
 
+    /// <summary>Updates the status of a resident account.</summary>
     public async Task<AccountManagementMutationResult> SetResidentStatusAsync(Guid accountId, bool activate, string actorId, CancellationToken ct = default)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
@@ -241,6 +245,7 @@ public sealed class AccountManagementService
         return AccountManagementMutationResult.Ok(activate ? "تم تفعيل حساب الساكن." : "تم إيقاف حساب الساكن.");
     }
 
+    /// <summary>Resets the PIN for a resident account.</summary>
     public async Task<AccountManagementMutationResult> ResetResidentPinAsync(Guid accountId, string actorId, IPasswordHasher hasher, CancellationToken ct = default)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
@@ -298,6 +303,7 @@ public sealed class AccountManagementService
         return roles.Count == 1 && (roles[0] == "resident" || roles[0] == "admin") ? roles[0] : null;
     }
 
+    /// <summary>Updates the status of a managed account.</summary>
     public async Task<AccountManagementMutationResult> SetManagedAccountStatusAsync(
         Guid accountId, bool activate, string actorId, CancellationToken ct = default)
     {
@@ -325,6 +331,7 @@ public sealed class AccountManagementService
         return AccountManagementMutationResult.Ok(activate ? "تم تفعيل الحساب." : "تم إيقاف الحساب.");
     }
 
+    /// <summary>Resets the PIN for a managed account.</summary>
     public async Task<AccountManagementMutationResult> ResetManagedAccountPinAsync(
         Guid accountId, string actorId, IPasswordHasher hasher, CancellationToken ct = default)
     {
@@ -406,7 +413,9 @@ public sealed class AccountManagementRow
 /// <summary>AccountManagementMutationResult coordinates the corresponding application functionality.</summary>
 public sealed record AccountManagementMutationResult(bool Success, string Message, string? TemporaryPin = null, string? TemporaryPassword = null)
 {
+    /// <summary>Creates a failed account-management operation result.</summary>
     public static AccountManagementMutationResult Fail(string message) => new(false, message);
+    /// <summary>Creates a successful account-management operation result.</summary>
     public static AccountManagementMutationResult Ok(string message, string? pin = null, string? password = null) =>
         new(true, message, pin, password);
 }
