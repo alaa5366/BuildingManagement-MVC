@@ -178,6 +178,13 @@
                                     <i class="bi bi-qr-code" aria-hidden="true"></i>
                                     QR
                                 </a>
+                                <a asp-controller="Invoice" asp-action="WhatsApp"
+                                   asp-route-aptId="@apt.Id" asp-route-month="@month"
+                                   class="btn btn-sm btn-success"
+                                   title="إرسال إشعار الفاتورة عبر واتساب">
+                                    <i class="bi bi-whatsapp" aria-hidden="true"></i>
+                                    WhatsApp
+                                </a>
                             </div>
                         </td>
                         <td class="@(balance < 0 ? "text-danger" : "text-success") fw-bold">@balance.ToString("0.##")</td>
