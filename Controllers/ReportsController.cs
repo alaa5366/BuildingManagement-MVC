@@ -49,7 +49,7 @@ public class ReportsController : Controller
         if (building is null) return NotFound();
 
         var selectedRange = string.IsNullOrWhiteSpace(range) ? "6m" : range;
-        var currentMonth = WalletService.CurrentMonthKey();
+        var currentMonth = await _reports.GetCurrentPeriodKeyAsync(BuildingId, HttpContext.RequestAborted);
         var vm = await _reports.BuildReportAsync(
             building, selectedRange, currentMonth, HttpContext.RequestAborted);
         return View(vm);
@@ -63,7 +63,7 @@ public class ReportsController : Controller
         if (building is null) return NotFound();
 
         var selectedRange = string.IsNullOrWhiteSpace(range) ? "6m" : range;
-        var currentMonth = WalletService.CurrentMonthKey();
+        var currentMonth = await _reports.GetCurrentPeriodKeyAsync(BuildingId, HttpContext.RequestAborted);
         var vm = await _reports.BuildReportAsync(
             building, selectedRange, currentMonth, HttpContext.RequestAborted);
 
