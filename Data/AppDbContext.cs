@@ -16,7 +16,7 @@ public class AppDbContext : DbContext
     /// </summary>
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-    private void EnsureAuditLogIsAppendOnly()
+    private void EnsureAppendOnlyAndPostedFinanceIsImmutable()
     {
         ChangeTracker.DetectChanges();
         if (ChangeTracker.Entries<AuditLogEntity>()
@@ -27,6 +27,15 @@ public class AppDbContext : DbContext
             throw new InvalidOperationException(
                 "Business audit events are append-only and cannot be updated or deleted by the application.");
         }
+
+        if (ChangeTracker.Entries<LedgerEntryEntity>()
+            .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Ledger entries are immutable; corrections require reversal transactions.");
+
+        if (ChangeTracker.Entries<LedgerTransactionEntity>()
+            .Any(entry => (entry.State is EntityState.Modified or EntityState.Deleted) &&
+                          entry.Property(x => x.Status).OriginalValue == LedgerTransactionStatus.Posted))
+            throw new InvalidOperationException("Posted ledger transactions are immutable; corrections require reversal transactions.");
     }
 
     /// <summary>
