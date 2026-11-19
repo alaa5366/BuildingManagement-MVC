@@ -98,7 +98,7 @@
                         <td>@r.Note</td>
                         <td>@r.Amount.ToString("0.##")</td>
                         <td>
-                            <form method="post" asp-action="Delete" onsubmit="return confirm('@Loc.Js("Reverse_The_Revenue")');">
+                            <form method="post" asp-action="Delete" onsubmit="return confirm('هل تريد عكس هذا القيد؟');">
                                 <input type="hidden" name="month" value="@month" />
                                 <input type="hidden" name="id" value="@r.Id" />
                                 <button class="btn btn-sm btn-outline-danger">@عكس القيد</button>
