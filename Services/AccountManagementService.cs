@@ -65,6 +65,7 @@ public sealed class AccountManagementService
 
         foreach (var row in rows)
         {
+            if (row.IsLegacyAccount) continue;
             if (byAccount.TryGetValue(row.AccountId, out var assignments))
             {
                 row.Roles = string.Join(", ", assignments.Select(x => x.RoleKey).Distinct().OrderBy(x => x));
