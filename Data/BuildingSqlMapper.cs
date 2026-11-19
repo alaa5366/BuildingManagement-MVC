@@ -19,6 +19,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
@@ -143,12 +144,14 @@ public static class BuildingSqlMapper
         var maint = await db.MaintenanceRecords.AsNoTracking().Where(x => x.BuildingId == id).ToListAsync(ct);
         var admins = await db.BuildingAdmins.AsNoTracking().Where(x => x.BuildingId == id)
             .Select(x => x.AdminUid).ToListAsync(ct);
-        // Only aggregate-originated audit rows are rehydrated into the Building aggregate.
-        // Direct IAuditLogger rows (SourceId == null) are queried independently and must not be re-appended on every SaveFullAsync.
-        var audit = await db.AuditLog.AsNoTracking().Where(x => x.BuildingId == id && x.SourceId != null)
-            .OrderByDescending(x => x.Ts).ThenByDescending(x => x.AuditId)
+        // Aggregate audit entries live in the append-only target audit stream.
+        // Direct business audit events use a different category and are not folded back into this snapshot.
+        var audit = await db.AuditEvents.AsNoTracking()
+            .Where(x => x.BuildingId == id && x.EventCategory == "BuildingAggregate" &&
+                        x.ResourceType == "BuildingAuditEntry" && x.ResourceReference != null)
+            .OrderByDescending(x => x.OccurredAtUtc).ThenByDescending(x => x.AuditEventId)
             .Take(AuditCap).ToListAsync(ct);
-        audit.Reverse(); // الأقدم الأول، زي AuditLogService.Push
+        audit.Reverse(); // oldest first, matching the aggregate snapshot order
 
         var b = new Building
         {
@@ -232,19 +235,24 @@ public static class BuildingSqlMapper
                     AddedToExpense = m.AddedToExpense,
                     AddedToExpenseAt = FormatTs(m.AddedToExpenseAt)
                 }).ToList(),
-            AuditLog = audit.Select(a => new AuditLogEntry
+            AuditLog = audit.Select(a =>
             {
-                Id = a.SourceId ?? a.AuditId.ToString(Inv),
-                Ts = FormatTs(a.Ts) ?? "",
-                Action = a.Action,
-                Label = a.Label,
-                Actor = a.Actor,
-                ActorRole = a.ActorRole,
-                Details = a.Details,
-                Month = a.MonthKey,
-                BuildingNumber = a.BuildingNumber,
-                AptNumber = a.AptNumber,
-                Severity = a.Severity
+                using var payload = JsonDocument.Parse(string.IsNullOrWhiteSpace(a.SafeDetailsJson) ? "{}" : a.SafeDetailsJson);
+                var root = payload.RootElement;
+                return new AuditLogEntry
+                {
+                    Id = a.ResourceReference!,
+                    Ts = FormatTs(a.OccurredAtUtc) ?? "",
+                    Action = a.EventType,
+                    Label = JsonString(root, "label"),
+                    Actor = a.ActorReference ?? "",
+                    ActorRole = JsonString(root, "actorRole"),
+                    Details = JsonString(root, "details"),
+                    Month = JsonString(root, "month"),
+                    BuildingNumber = JsonNullableString(root, "buildingNumber"),
+                    AptNumber = JsonNullableInt(root, "aptNumber"),
+                    Severity = AuditSeverity(a.Outcome)
+                };
             }).ToList()
         };
 
@@ -745,24 +753,36 @@ public static class BuildingSqlMapper
         Sync(db, await db.MaintenanceRecords.Where(x => x.BuildingId == bid).ToListAsync(ct),
             maint, x => x.Id, warn, "maintenance");
 
-        // ---------------- 11) سجل المراجعة: Append-only ----------------
-        var knownAudit = (await db.AuditLog.Where(x => x.BuildingId == bid && x.SourceId != null)
-                .Select(x => x.SourceId!).ToListAsync(ct)).ToHashSet();
+        // ---------------- 11) Aggregate audit: append-only target events ----------------
+        var knownAudit = (await db.AuditEvents
+                .Where(x => x.BuildingId == bid && x.EventCategory == "BuildingAggregate" &&
+                            x.ResourceType == "BuildingAuditEntry" && x.ResourceReference != null)
+                .Select(x => x.ResourceReference!).ToListAsync(ct)).ToHashSet(StringComparer.Ordinal);
         foreach (var e in src.AuditLog ?? new())
         {
             var key = AuditKey(e);
             if (!knownAudit.Add(key)) continue;
-            db.AuditLog.Add(new AuditLogEntity
+            var severity = string.IsNullOrWhiteSpace(e.Severity) ? "info" : e.Severity;
+            db.AuditEvents.Add(new AuditEventEntity
             {
-                SourceId = key, BuildingId = bid, Ts = ParseTs(e.Ts) ?? NowSec(),
-                Action = Cut(e.Action, 100), Label = Cut(e.Label, 300), Actor = Cut(e.Actor, 200),
-                ActorRole = Cut(e.ActorRole, 20), Details = e.Details ?? "", MonthKey = Cut(e.Month, 7),
-                BuildingNumber = e.BuildingNumber == null ? null : Cut(e.BuildingNumber, 50),
-                AptNumber = e.AptNumber,
-                ApartmentId = e.AptNumber.HasValue
-                    ? src.Apartments?.FirstOrDefault(a => a.Number == e.AptNumber.Value)?.Id
-                    : null,
-                Severity = string.IsNullOrWhiteSpace(e.Severity) ? "info" : e.Severity
+                AuditEventId = Guid.NewGuid(),
+                OccurredAtUtc = ParseTs(e.Ts) ?? NowSec(),
+                ActorReference = Cut(e.Actor, 160),
+                BuildingId = bid,
+                EventCategory = "BuildingAggregate",
+                EventType = Cut(e.Action, 120),
+                ResourceType = "BuildingAuditEntry",
+                ResourceReference = key,
+                Outcome = AuditOutcome(severity),
+                SafeDetailsJson = JsonSerializer.Serialize(new
+                {
+                    label = Cut(e.Label, 300),
+                    actorRole = Cut(e.ActorRole, 20),
+                    details = e.Details ?? "",
+                    month = Cut(e.Month, 7),
+                    buildingNumber = e.BuildingNumber == null ? null : Cut(e.BuildingNumber, 50),
+                    aptNumber = e.AptNumber
+                })
             });
         }
 
@@ -771,6 +791,36 @@ public static class BuildingSqlMapper
         src.RowVersion = be.RowVersion.ToArray();
         return warn;
     }
+
+    private static string? JsonString(JsonElement root, string name)
+    {
+        if (!root.TryGetProperty(name, out var value) || value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+            return null;
+        return value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString();
+    }
+
+    private static string? JsonNullableString(JsonElement root, string name) => JsonString(root, name);
+
+    private static int? JsonNullableInt(JsonElement root, string name) =>
+        root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var parsed)
+            ? parsed
+            : null;
+
+    private static string AuditSeverity(byte outcome) => outcome switch
+    {
+        1 => "warning",
+        2 => "error",
+        3 => "critical",
+        _ => "info"
+    };
+
+    private static byte AuditOutcome(string? severity) => severity?.Trim().ToLowerInvariant() switch
+    {
+        "warning" or "warn" => 1,
+        "error" => 2,
+        "critical" or "fatal" => 3,
+        _ => 0
+    };
 
     internal static void MarkAggregateWrite(AppDbContext db, BuildingEntity building)
     {
