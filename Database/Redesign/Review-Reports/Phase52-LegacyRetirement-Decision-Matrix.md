@@ -118,7 +118,8 @@ Observed results:
 - [x] Classified the 32 legacy tables listed in the current source inventory.
 - [x] Explicitly protected foundational property tables and EF migration metadata.
 - [x] Restricted future destructive scope to `BuildingManagement_RestoreTest`.
-- [ ] Confirm current Phase 51 live database dependency report from the user's local restored instance.
+- [x] Confirmed Phase 51 live database dependency report: 32 source tables, 97 target tables, 6,489 broad repository text references, and 45 target FK relationships.
+- [x] Added Phase 53 refined source-reference audit to separate runtime code from tests, documentation/schema snapshots, and generated migrations; this avoids treating all 6,489 broad text matches as runtime blockers.
 - [ ] Complete and accept every owning module's application cutover.
 - [ ] Generate and review the final one-batch DROP script with an explicit allowlist.
 - [ ] Execute the batch on `BuildingManagement_RestoreTest` only and retain before/after evidence.
