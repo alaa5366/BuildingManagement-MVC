@@ -82,6 +82,7 @@ SELECT e.BuildingId,e.MonthKey,2,COUNT(*),SUM(e.Amount),
  CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONVERT(varbinary(max),CONCAT(N'legacy.finance.expense-ledger.v1|',e.BuildingId,N'|',e.MonthKey))),1,16)),
  admin.AccountId
 FROM dbo.Expenses e
+WHERE e.MonthKey IN(N'2026-09',N'2026-10')
 CROSS APPLY(SELECT TOP(1) a.AccountId FROM dbo.UserRoleAssignments a
  WHERE a.RoleKey=N'building-admin' AND a.ScopeType=1 AND a.ScopeBuildingId=e.BuildingId
  AND a.ScopeApartmentId IS NULL AND a.RevokedAtUtc IS NULL
@@ -96,6 +97,7 @@ SELECT r.BuildingId,r.MonthKey,3,COUNT(*),SUM(r.Amount),
  CONVERT(uniqueidentifier,SUBSTRING(HASHBYTES('SHA2_256',CONVERT(varbinary(max),CONCAT(N'legacy.finance.revenue-ledger.v1|',r.BuildingId,N'|',r.MonthKey))),1,16)),
  admin.AccountId
 FROM dbo.Revenues r
+WHERE r.MonthKey IN(N'2026-09',N'2026-10')
 CROSS APPLY(SELECT TOP(1) a.AccountId FROM dbo.UserRoleAssignments a
  WHERE a.RoleKey=N'building-admin' AND a.ScopeType=1 AND a.ScopeBuildingId=r.BuildingId
  AND a.ScopeApartmentId IS NULL AND a.RevokedAtUtc IS NULL
@@ -110,10 +112,10 @@ CREATE TABLE #Shares(
 );
 INSERT #Shares
 SELECT BuildingId,MonthKey,2,COUNT(*),SUM(ExpenseShare)
-FROM dbo.MonthlyApartmentShares GROUP BY BuildingId,MonthKey
+FROM dbo.MonthlyApartmentShares WHERE MonthKey IN(N'2026-09',N'2026-10') GROUP BY BuildingId,MonthKey
 UNION ALL
 SELECT BuildingId,MonthKey,3,COUNT(*),SUM(RevenueShare)
-FROM dbo.MonthlyApartmentShares GROUP BY BuildingId,MonthKey;
+FROM dbo.MonthlyApartmentShares WHERE MonthKey IN(N'2026-09',N'2026-10') GROUP BY BuildingId,MonthKey;
 
 IF EXISTS(
  SELECT 1 FROM #Ops o LEFT JOIN #Shares s
@@ -228,9 +230,12 @@ SELECT
  (SELECT COUNT(*) FROM dbo.Expenses) ExpenseSourceRows,
  (SELECT COUNT(*) FROM dbo.Revenues) RevenueSourceRows,
  (SELECT COUNT(*) FROM dbo.MonthlyApartmentShares) MonthlyShareSourceRows,
- (SELECT COUNT(*) FROM dbo.FinancialSourceLinks l WHERE l.SourceSystem=N'BuildingManagement.Legacy' AND l.SourceType=N'Expenses') LinkedExpenseRows,
- (SELECT COUNT(*) FROM dbo.FinancialSourceLinks l WHERE l.SourceSystem=N'BuildingManagement.Legacy' AND l.SourceType=N'Revenues') LinkedRevenueRows,
- (SELECT COUNT(*) FROM dbo.LedgerEntries le JOIN #Ops o ON o.TransactionId=le.LedgerTransactionId) CreatedShareLedgerEntries;
+ (SELECT COUNT(*) FROM dbo.FinancialSourceLinks l WHERE l.SourceSystem=N'BuildingManagement.Legacy' AND l.SourceType=N'Expenses' AND EXISTS(SELECT 1 FROM dbo.Expenses e WHERE e.MonthKey IN(N'2026-09',N'2026-10') AND l.SourceKey=CONCAT(e.BuildingId,N'|',e.Id))) LinkedExpenseRows,
+ (SELECT COUNT(*) FROM dbo.FinancialSourceLinks l WHERE l.SourceSystem=N'BuildingManagement.Legacy' AND l.SourceType=N'Revenues' AND EXISTS(SELECT 1 FROM dbo.Revenues r WHERE r.MonthKey IN(N'2026-09',N'2026-10') AND l.SourceKey=CONCAT(r.BuildingId,N'|',r.Id))) LinkedRevenueRows,
+ (SELECT COUNT(*) FROM dbo.LedgerEntries le JOIN #Ops o ON o.TransactionId=le.LedgerTransactionId) CreatedShareLedgerEntries,
+ (SELECT COUNT(*) FROM dbo.Expenses WHERE MonthKey NOT IN(N'2026-09',N'2026-10')) OutOfScopeExpenses,
+ (SELECT COUNT(*) FROM dbo.Revenues WHERE MonthKey NOT IN(N'2026-09',N'2026-10')) OutOfScopeRevenues,
+ (SELECT COUNT(*) FROM dbo.MonthlyApartmentShares WHERE MonthKey NOT IN(N'2026-09',N'2026-10')) OutOfScopeShareRows;
 "@
     $cmd=New-Command $c $sql
     $p=$cmd.Parameters.Add('@Apply',[System.Data.SqlDbType]::Bit); $p.Value=[bool]$Apply
@@ -245,15 +250,17 @@ SELECT
         Log ("{0}: Building={1}; Month={2}; source rows={3}; source amount={4}; apartment share rows={5}; allocated={6}; variance={7}" -f $kind,$r.BuildingId,$r.MonthKey,$r.SourceRows,$r.SourceAmount,$r.ShareRows,$r.AllocatedAmount,$r.DifferenceAmount)
     }
     foreach($r in $ds.Tables[1].Rows) {
-        Log ("Source expenses={0}; revenues={1}; monthly shares={2}; linked expenses={3}; linked revenues={4}; share ledger entries={5}" -f $r.ExpenseSourceRows,$r.RevenueSourceRows,$r.MonthlyShareSourceRows,$r.LinkedExpenseRows,$r.LinkedRevenueRows,$r.CreatedShareLedgerEntries)
-        if($Apply -and ([int]$r.LinkedExpenseRows -ne [int]$r.ExpenseSourceRows -or [int]$r.LinkedRevenueRows -ne [int]$r.RevenueSourceRows)) {
+        Log ("All source rows: expenses={0}; revenues={1}; monthly shares={2}" -f $r.ExpenseSourceRows,$r.RevenueSourceRows,$r.MonthlyShareSourceRows)
+        Log ("September/October links: expenses={0}; revenues={1}; share ledger entries={2}" -f $r.LinkedExpenseRows,$r.LinkedRevenueRows,$r.CreatedShareLedgerEntries)
+        Log ("Outside posting scope (retained in immutable evidence): expenses={0}; revenues={1}; monthly shares={2}" -f $r.OutOfScopeExpenses,$r.OutOfScopeRevenues,$r.OutOfScopeShareRows)
+        if($Apply -and ([int]$r.LinkedExpenseRows -ne [int]($r.ExpenseSourceRows-$r.OutOfScopeExpenses) -or [int]$r.LinkedRevenueRows -ne [int]($r.RevenueSourceRows-$r.OutOfScopeRevenues))) {
             throw 'Phase44 post-cutover source-link reconciliation failed.'
         }
     }
     Log 'Allocation policy: use original MonthlyApartmentShares only; no historical reallocation or invented apartment attribution.'
     Log 'Variance policy: preserve the registered +0.22 expense and +0.04 revenue rounding variances without balancing entries.'
     Log 'Actor policy: exactly one active building-scoped Admin per building; SuperAdmin is never selected.'
-    Log 'Wallet adjustments in November remain evidence-only; no out-of-scope wallet posting is performed.'
+    Log 'Only September/October 2026 are posted. Other dated source rows remain preserved in Phase29 immutable evidence for a separate non-posting archive/reconciliation phase.'
     if(-not $Apply) { Log 'DRY RUN: no target rows were changed. Review the report, then rerun with -Apply.' }
     else { Log 'PHASE44 APPLY AND RECONCILIATION COMPLETED.' }
 }
@@ -269,7 +276,7 @@ finally {
       '- Expense shares reduce wallet balances; revenue shares increase wallet balances.',
       '- Registered legacy rounding variances are preserved and are never assigned to apartments or balanced with invented entries.',
       '- Source rows and Phase29 evidence are never updated or deleted.',
-      '- September/October 2026 are the only permitted posting periods.',
+      '- September/October 2026 are the only permitted posting periods; all other source rows remain preserved as immutable evidence and are not posted.',
       '- Deterministic IDs and idempotency keys make reruns safe.')
     Set-Content -LiteralPath $report -Value ($lines -join [Environment]::NewLine) -Encoding UTF8
     Write-Host "Report: $report"
