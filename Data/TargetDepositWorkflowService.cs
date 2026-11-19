@@ -230,6 +230,62 @@ public sealed class TargetDepositWorkflowService
         return transactionId;
     }
 
+
+    public async Task<bool> UpdatePendingAsync(
+        Guid paymentDepositId,
+        Guid actorAccountId,
+        decimal amount,
+        string? note,
+        string reason,
+        CancellationToken cancellationToken = default)
+    {
+        if (paymentDepositId == Guid.Empty) throw new ArgumentException("Deposit id is required.", nameof(paymentDepositId));
+        if (actorAccountId == Guid.Empty) throw new ArgumentException("An authenticated actor is required.", nameof(actorAccountId));
+        if (amount <= 0 || decimal.Round(amount, 4, MidpointRounding.AwayFromZero) != amount)
+            throw new ArgumentOutOfRangeException(nameof(amount), "Deposit amount must be positive and precise to at most four decimal places.");
+        if (note?.Length > 1000) throw new ArgumentException("Deposit note cannot exceed 1000 characters.", nameof(note));
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+            throw new ArgumentException("An edit reason of 1 to 500 characters is required.", nameof(reason));
+
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        var deposit = await db.PaymentDeposits.SingleOrDefaultAsync(
+            item => item.PaymentDepositId == paymentDepositId, cancellationToken);
+        if (deposit is null) return false;
+        if (deposit.Status != PaymentDepositStatus.Pending)
+            throw new InvalidOperationException("Only a pending deposit can be edited.");
+
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var actorIsActive = await (
+            from account in db.UserAccounts.AsNoTracking()
+            join person in db.Persons.AsNoTracking() on account.PersonId equals person.PersonId
+            where account.AccountId == actorAccountId && account.AccountStatus == 1 && !person.IsArchived
+            select account.AccountId).AnyAsync(cancellationToken);
+        if (!actorIsActive)
+            throw new InvalidOperationException("An active target account is required to edit a deposit.");
+        if (!await HasFinanceManagementRoleAsync(db, actorAccountId, deposit.BuildingId, now, cancellationToken))
+            throw new InvalidOperationException("The actor has no active finance-management assignment for this building.");
+
+        var period = await db.FinancialPeriods.SingleOrDefaultAsync(
+            item => item.PeriodId == deposit.PeriodId && item.BuildingId == deposit.BuildingId,
+            cancellationToken);
+        if (period is null || period.Status == FinancialPeriodStatus.Closed ||
+            now < period.StartsAtUtc || now >= period.EndsAtUtc)
+            throw new InvalidOperationException("A deposit can only be edited inside its open financial period.");
+
+        var oldAmount = deposit.Amount;
+        var oldNote = deposit.Note;
+        var normalizedNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+        deposit.Amount = amount;
+        deposit.Note = normalizedNote;
+        db.AuditEvents.Add(CreateAuditEvent(
+            deposit.BuildingId, actorAccountId, "PaymentDepositUpdated", deposit.PaymentDepositId, now,
+            new { oldAmount, newAmount = amount, oldNote, newNote = normalizedNote, reason = reason.Trim() }));
+        await db.SaveChangesAsync(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return true;
+    }
+
     public async Task<Guid?> ReverseConfirmedAsync(
         Guid paymentDepositId,
         Guid actorAccountId,
