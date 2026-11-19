@@ -9,15 +9,15 @@ namespace BuildingManagementMvc.Services;
 /// </summary>
 public class BuildingMapService
 {
-    private readonly WalletService _wallet;
+    private readonly TargetWalletReadService _targetWallet;
     private readonly PresenceService _presence;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BuildingMapService"/> class.
     /// </summary>
-    public BuildingMapService(WalletService wallet, PresenceService presence)
+    public BuildingMapService(TargetWalletReadService targetWallet, PresenceService presence)
     {
-        _wallet = wallet;
+        _targetWallet = targetWallet;
         _presence = presence;
     }
 
@@ -34,6 +34,12 @@ public class BuildingMapService
 
         // 1. جيب الـ Presence للعمارة
         var presenceMap = await _presence.GetByBuildingAsync(building.Id);
+        var walletSnapshot = await _targetWallet.GetAdminSnapshotAsync(
+            building.Id, currentMonth);
+        var pendingCounts = walletSnapshot.PendingDeposits
+            .Where(item => item.MonthKey == currentMonth)
+            .GroupBy(item => item.ApartmentId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
 
         // 2. إحصائيات عامة
         var stats = new MapStatsVm
@@ -60,7 +66,10 @@ public class BuildingMapService
 
             foreach (var apt in apts)
             {
-                var card = BuildApartmentCard(building, apt, currentMonth, presenceMap);
+                var card = BuildApartmentCard(
+                    building, apt, currentMonth, presenceMap,
+                    walletSnapshot.Balances.GetValueOrDefault(apt.Id),
+                    pendingCounts.GetValueOrDefault(apt.Id));
 
                 floorVm.Apartments.Add(card);
 
@@ -86,17 +95,10 @@ public class BuildingMapService
         Building building,
         Apartment apt,
         string currentMonth,
-        Dictionary<string, Presence> presenceMap)
+        Dictionary<string, Presence> presenceMap,
+        decimal balance,
+        int pending)
     {
-        // الرصيد
-        var balance = _wallet.ComputeWalletBalance(building, apt.Id, currentMonth);
-
-        // الدفعات المعلقة
-        var pending = 0;
-        if (building.Months.TryGetValue(currentMonth, out var m))
-        {
-            pending = m.Deposits.Count(d => d.AptId == apt.Id && d.Status == "pending");
-        }
 
         var card = new ApartmentCardVm
         {
@@ -223,35 +225,53 @@ public class BuildingMapService
             CurrentMonth = currentMonth
         };
 
-        // الرصيد
-        vm.Balance = _wallet.ComputeWalletBalance(building, apt.Id, currentMonth);
+        // Financial values and deposit history come from the canonical ledger.
+        var walletSnapshot = await _targetWallet.GetApartmentAsync(
+            building.Id, apt.Id, currentMonth, currentMonth);
+        vm.Balance = walletSnapshot.Balance;
 
-        // الدفعات
-        if (building.Months.TryGetValue(currentMonth, out var m))
-        {
-            var aptDeposits = m.Deposits.Where(d => d.AptId == apt.Id).ToList();
+        var monthDeposits = walletSnapshot.Transactions
+            .Where(item => item.Type == "deposit" &&
+                item.CreatedAt.StartsWith(currentMonth, StringComparison.Ordinal))
+            .ToList();
+        var pendingDeposits = walletSnapshot.PendingDeposits;
+        vm.PendingDepositsCount = pendingDeposits.Count;
+        vm.ConfirmedDepositsCount = monthDeposits.Count(item => item.Status == "confirmed");
+        vm.TotalCollectedThisMonth = monthDeposits
+            .Where(item => item.Status == "confirmed")
+            .Sum(item => item.Amount);
 
-            vm.PendingDepositsCount = aptDeposits.Count(d => d.Status == "pending");
-            vm.ConfirmedDepositsCount = aptDeposits.Count(d => d.Status == "confirmed");
-            vm.TotalCollectedThisMonth = aptDeposits
-                .Where(d => d.Status == "confirmed")
-                .Sum(d => d.Amount);
-
-            // آخر 3 دفعات
-            vm.RecentDeposits = aptDeposits
-                .OrderByDescending(d => d.CreatedAt)
-                .Take(3)
-                .Select(d => new RecentDepositVm
+        vm.RecentDeposits = monthDeposits
+            .Select(item => new
+            {
+                item.CreatedAt,
+                Deposit = new RecentDepositVm
                 {
-                    Id = d.Id,
-                    Number = d.Number,
-                    Amount = d.Amount,
-                    Status = d.Status,
-                    Note = d.Note,
-                    DateText = FormatDate(d.CreatedAt)
-                })
-                .ToList();
-        }
+                    Id = item.Id,
+                    Number = item.Number,
+                    Amount = item.Amount,
+                    Status = item.Status,
+                    Note = item.Note,
+                    DateText = FormatDate(item.CreatedAt)
+                }
+            })
+            .Concat(pendingDeposits.Select(item => new
+            {
+                CreatedAt = item.CreatedAt,
+                Deposit = new RecentDepositVm
+                {
+                    Id = item.Id,
+                    Number = item.Number,
+                    Amount = item.Amount,
+                    Status = item.Status,
+                    Note = item.Note,
+                    DateText = FormatDate(item.CreatedAt)
+                }
+            }))
+            .OrderByDescending(item => item.CreatedAt, StringComparer.Ordinal)
+            .Take(3)
+            .Select(item => item.Deposit)
+            .ToList();
 
         // Presence
         var presenceMap = await _presence.GetByBuildingAsync(building.Id);
