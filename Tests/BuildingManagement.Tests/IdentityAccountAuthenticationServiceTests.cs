@@ -393,6 +393,17 @@ public sealed class IdentityAccountAuthenticationServiceTests
         Assert.Empty(await verify.UserCredentials.ToListAsync());
     }
 
+    [Theory]
+    [InlineData("01000000077", "+201000000077")]
+    [InlineData("٠١٠٠٠٠٠٠٠٧٧", "+201000000077")]
+    [InlineData("+20 10-0000-0077", "+201000000077")]
+    [InlineData("00201000000077", "+201000000077")]
+    public void NormalizePhone_ConvertsEquivalentEgyptianNumberFormatsToOneCanonicalValue(
+        string input, string expected)
+    {
+        Assert.Equal(expected, AuthHelpers.NormalizePhone(input));
+    }
+
     private sealed class TestContextFactory : IDbContextFactory<AppDbContext>
     {
         private readonly DbContextOptions<AppDbContext> _options = new DbContextOptionsBuilder<AppDbContext>()
