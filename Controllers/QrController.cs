@@ -81,7 +81,7 @@ public class QrController : Controller
 
         Response.Headers.CacheControl = "no-store, no-cache, max-age=0";
         Response.Headers.Pragma = "no-cache";
-        Response.Headers.ReferrerPolicy = "no-referrer";
+        Response.Headers["Referrer-Policy"] = "no-referrer";
 
         var baseUrl = $"{Request.Scheme}://{Request.Host}";
         ViewBag.Link = $"{baseUrl}/QrAccess/Enter?token={token}";
