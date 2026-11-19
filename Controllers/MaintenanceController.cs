@@ -231,10 +231,6 @@ public class MaintenanceController : Controller
             record.AddedToExpenseAt = DateTime.UtcNow.ToString("O");
             await _buildings.SaveFullAsync(building);
 
-            await _audit.LogAsync("maint_add_expense", BuildingId,
-                userId: actorAccountId.Value.ToString("D"), userRole: "admin",
-                metadata: new { maintenanceId = record.Id, categoryId = category.Id, amount = record.Cost });
-
             foreach (var apartment in building.Apartments.Where(item => !item.Closed))
             {
                 try
