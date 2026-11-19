@@ -40,7 +40,7 @@ public sealed class IdentityAccountAuthenticationService
             from account in db.UserAccounts
             join person in db.Persons on account.PersonId equals person.PersonId
             where account.NormalizedEmail == email ||
-                  (!string.IsNullOrEmpty(phone) && person.PrimaryPhone == phone)
+                  (!string.IsNullOrEmpty(phone) && (person.PrimaryPhone == phone || person.Whatsapp == phone))
             select new { Account = account, Person = person })
             .Take(2)
             .ToListAsync(cancellationToken);
@@ -73,6 +73,7 @@ public sealed class IdentityAccountAuthenticationService
         // credential. Credential material is opaque: the submitted value is never trimmed.
         var credentials = await db.UserCredentials.AsNoTracking()
             .Where(item => item.AccountId == match.Account.AccountId
+                && item.CredentialType == 0
                 && item.RevokedAtUtc == null
                 && (item.ExpiresAtUtc == null || item.ExpiresAtUtc > now))
             .OrderByDescending(item => item.CreatedAtUtc)
@@ -96,6 +97,9 @@ public sealed class IdentityAccountAuthenticationService
             .ThenByDescending(item => item.ValidFromUtc)
             .Select(item => new { item.BuildingId, item.ApartmentId })
             .FirstOrDefaultAsync(cancellationToken);
+
+        if (occupancy == null)
+            return AuthResult.Fail("wrong-credentials");
 
         match.Account.LastLoginAtUtc = now;
         await db.SaveChangesAsync(cancellationToken);
