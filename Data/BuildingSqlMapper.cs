@@ -760,7 +760,7 @@ public static class BuildingSqlMapper
                 {
                     label = Cut(e.Label, 300),
                     actorRole = Cut(e.ActorRole, 20),
-                    details = e.Details ?? "",
+                    details = RedactAuditDetails(e.Details),
                     month = Cut(e.Month, 7),
                     buildingNumber = e.BuildingNumber == null ? null : Cut(e.BuildingNumber, 50),
                     aptNumber = e.AptNumber
@@ -794,6 +794,15 @@ public static class BuildingSqlMapper
             AptNumber = JsonNullableInt(root, "aptNumber"),
             Severity = AuditSeverity(auditEvent.Outcome)
         };
+    }
+
+    private static string RedactAuditDetails(string? details)
+    {
+        if (string.IsNullOrEmpty(details)) return "";
+        return Regex.Replace(
+            details,
+            @"(?i)(password|secret|token|credential|pin|recovery(?:code|codes)?)(\\s*[:=]\\s*)(?:""[^""]*""|'[^']*'|[^,\\s;]+)",
+            "$1$2[REDACTED]");
     }
 
     private static string? JsonString(JsonElement root, string name)
