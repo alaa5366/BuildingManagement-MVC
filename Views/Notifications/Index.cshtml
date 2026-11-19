@@ -55,6 +55,10 @@ else
             <div class="flex-grow-1">
                 <div class="fw-bold">@n.Title</div>
                 <div class="text-muted small">@n.Body</div>
+                @if (string.Equals(n.Type, "whatsapp-draft", StringComparison.OrdinalIgnoreCase))
+                {
+                    <span class="badge bg-warning text-dark mt-1">WhatsApp: مسودة جاهزة — الإرسال غير مؤكد</span>
+                }
                 <div class="text-muted small">🕐 @n.Ts.Substring(0, Math.Min(16, n.Ts.Length)).Replace("T", " ")</div>
             </div>
             @if (!n.Read)
