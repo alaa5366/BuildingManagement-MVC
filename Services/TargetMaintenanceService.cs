@@ -101,8 +101,13 @@ public sealed class TargetMaintenanceService
         var row = await db.MaintenanceRecords.FirstOrDefaultAsync(
             x => x.BuildingId == buildingId && x.Id == id, cancellationToken);
         if (row is null) return null;
-        if (row.AddedToExpense && row.Cost != cost)
-            throw new InvalidOperationException("A maintenance record already posted to expenses cannot have its cost changed.");
+        if (row.AddedToExpense &&
+            (row.Cost != cost ||
+             row.MaintenanceDate != maintenanceDate ||
+             !string.Equals(row.Title, title.Trim(), StringComparison.Ordinal) ||
+             !string.Equals(row.Vendor, vendor?.Trim() ?? "", StringComparison.Ordinal)))
+            throw new InvalidOperationException(
+                "A maintenance record posted to expenses cannot change its title, date, vendor or cost.");
 
         row.Title = title.Trim();
         row.Description = description?.Trim() ?? "";
