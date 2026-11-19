@@ -30,7 +30,7 @@ public sealed class TargetExpenseRevenueWorkflowServiceTests
         Assert.Equal(-10.01m, await verify.LedgerEntries.SumAsync(x => x.SignedAmount));
         Assert.Equal(3, await verify.FinancialAllocationLines.CountAsync());
         Assert.Equal(10.01m, await verify.FinancialAllocationLines.SumAsync(x => x.AllocatedAmount));
-        Assert.Single(await verify.Expenses.ToListAsync());
+        Assert.Empty(await verify.Expenses.ToListAsync());
         Assert.Single(await verify.FinancialSourceLinks.ToListAsync());
         Assert.Contains(await verify.AuditEvents.ToListAsync(), x => x.EventType == "ExpensePosted");
         var reversalId = await service.ReverseAsync(false, "B1", commandId.ToString("N"),
@@ -61,7 +61,7 @@ public sealed class TargetExpenseRevenueWorkflowServiceTests
         await using var verify = factory.CreateDbContext();
         Assert.Single(await verify.LedgerTransactions.ToListAsync());
         Assert.Equal(7.50m, await verify.LedgerEntries.SumAsync(x => x.SignedAmount));
-        Assert.Single(await verify.Revenues.ToListAsync());
+        Assert.Empty(await verify.Revenues.ToListAsync());
     }
 
     private static async Task<(TestContextFactory Factory, Guid PeriodId, Guid ActorId)> SeedAsync()
