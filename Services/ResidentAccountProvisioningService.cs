@@ -296,6 +296,7 @@ public sealed class ResidentAccountProvisioningService
     }
 }
 
+/// <summary>Represents ResidentAccountProvisioningReport, used by the resident account administration workflow.</summary>
 public sealed class ResidentAccountProvisioningReport
 {
     public int TotalPersons { get; init; }
@@ -315,6 +316,7 @@ public sealed class ResidentAccountProvisioningReport
     public List<ResidentAccountProvisioningRow> Rows { get; init; } = new();
 }
 
+/// <summary>Represents ResidentAccountProvisioningRow, used by the resident account administration workflow.</summary>
 public sealed record ResidentAccountProvisioningRow(
     Guid PersonId,
     string DisplayName,
@@ -322,6 +324,7 @@ public sealed record ResidentAccountProvisioningRow(
     string Status,
     string Reason);
 
+/// <summary>Represents ResidentAccountProvisioningBatchResult, used by the resident account administration workflow.</summary>
 public sealed class ResidentAccountProvisioningBatchResult
 {
     public int Requested { get; set; }
