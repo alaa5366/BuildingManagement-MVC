@@ -22,7 +22,7 @@ public sealed class TargetFinanceReadService
 
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
         var categories = await db.FinancialCategories.AsNoTracking()
-            .Where(x => x.BuildingId == buildingId && x.Kind == kind && x.IsActive)
+            .Where(x => x.BuildingId == buildingId && x.Kind == kind)
             .OrderBy(x => x.SortOrder).ThenBy(x => x.Name)
             .Select(x => new FinancialCategory { Id = x.Id, Name = x.Name, Color = x.Color, Active = x.IsActive, Order = x.SortOrder })
             .ToListAsync(cancellationToken);
