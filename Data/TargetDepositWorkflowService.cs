@@ -22,6 +22,7 @@ public sealed class TargetDepositWorkflowService
         _timeProvider = timeProvider;
     }
 
+    /// <summary>Creates a pending deposit submission for the specified resident and period.</summary>
     public async Task<Guid> CreatePendingAsync(
         string buildingId,
         string apartmentId,
@@ -129,6 +130,7 @@ public sealed class TargetDepositWorkflowService
         return id;
     }
 
+    /// <summary>Confirms a pending deposit and posts the corresponding financial records.</summary>
     public async Task<Guid?> ConfirmAsync(
         Guid paymentDepositId,
         Guid actorAccountId,
@@ -232,6 +234,7 @@ public sealed class TargetDepositWorkflowService
     }
 
 
+    /// <summary>Updates the details of a pending deposit submission.</summary>
     public async Task<bool> UpdatePendingAsync(
         Guid paymentDepositId,
         Guid actorAccountId,
@@ -287,6 +290,7 @@ public sealed class TargetDepositWorkflowService
         return true;
     }
 
+    /// <summary>Reverses a previously confirmed deposit using a compensating transaction.</summary>
     public async Task<Guid?> ReverseConfirmedAsync(
         Guid paymentDepositId,
         Guid actorAccountId,
@@ -403,6 +407,7 @@ public sealed class TargetDepositWorkflowService
         return reversalId;
     }
 
+    /// <summary>Cancels a pending deposit submission with the supplied reason.</summary>
     public async Task<bool> CancelAsync(
         Guid paymentDepositId,
         Guid actorAccountId,
