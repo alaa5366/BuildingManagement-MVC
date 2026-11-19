@@ -22,9 +22,7 @@ public sealed class PhoneCorrectionController : Controller
     public async Task<IActionResult> Request(string previousPhone, string requestedPhone, string buildingId, string apartmentId)
     {
         var accepted = await _service.SubmitAsync(previousPhone, requestedPhone, buildingId, apartmentId);
-        ViewBag.Message = accepted
-            ? "تم استلام الطلب. ستراجعه إدارة العمارة بعد التحقق من الهوية."
-            : "تعذر إرسال الطلب. راجع البيانات أو تواصل مع إدارة العمارة للتحقق يدويًا.";
+        ViewBag.Message = "إذا كانت البيانات صحيحة وتنطبق عليها شروط المراجعة، فسيظهر الطلب لإدارة العمارة للتحقق من هويتك. لا يتم تغيير الرقم تلقائيًا.";
         return View();
     }
 
