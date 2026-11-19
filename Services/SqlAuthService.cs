@@ -266,7 +266,7 @@ public class SqlAuthService
 
         _log.LogDebug("[SqlAuth] SuperAdmin sign-in succeeded");
 
-        return AuthResult.Ok(
+        var result = AuthResult.Ok(
             uid: superAdmin.Uid,
             role: "superadmin",
             email: email,
@@ -274,6 +274,9 @@ public class SqlAuthService
                 ? "Super Admin" : superAdmin.Name,
             buildingIds: new List<string>(),
             permissions: superAdmin.Permissions.Select(p => p.Permission).Distinct(StringComparer.Ordinal).ToList());
+        result.SecurityStamp = (superAdmin.UpdatedAt ?? superAdmin.CreatedAt ?? DateTime.MinValue)
+            .Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return result;
     }
 
     // ═══════════════════════════════════════════════════════════
