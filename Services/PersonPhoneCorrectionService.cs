@@ -124,6 +124,7 @@ public sealed class PersonPhoneCorrectionService
     }
 }
 
+/// <summary>PhoneCorrectionQueueItem coordinates the corresponding application functionality.</summary>
 public sealed class PhoneCorrectionQueueItem
 {
     public Guid RequestId { get; set; }
