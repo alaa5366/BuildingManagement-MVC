@@ -9,26 +9,20 @@ namespace BuildingManagement.Tests;
 public sealed class TargetMaintenanceServiceTests
 {
     [Fact]
-    public async Task AddAndGetPageAsync_UsesBuildingScopedTargetRecords()
+    public async Task AddAndGetPageAsync_UsesNormalizedBuildingScopedRequests()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
-            .Options;
+        var options = CreateOptions();
         await using (var seed = new AppDbContext(options))
         {
-            seed.Buildings.AddRange(
-                new BuildingEntity { Id = "B1", BuildingNumber = "1", Name = "One" },
-                new BuildingEntity { Id = "B2", BuildingNumber = "2", Name = "Two" });
+            seed.Buildings.AddRange(Building("B1"), Building("B2"));
             await seed.SaveChangesAsync();
         }
 
         var service = new TargetMaintenanceService(new TestContextFactory(options));
-        var first = await service.AddAsync(
-            "B1", "Pump repair", "Basement pump", "2026-11-18", 250m,
-            "Vendor A", "open", "admin");
-        await service.AddAsync(
-            "B2", "Other building repair", null, "2026-11-18", 500m,
-            null, "done", "admin");
+        var first = await service.AddAsync("B1", "Pump repair", "Basement pump",
+            "2026-11-18", 0m, "Vendor A", "open", "admin");
+        await service.AddAsync("B2", "Other building repair", null,
+            "2026-11-18", 0m, null, "done", "admin");
 
         var page = await service.GetPageAsync("B1", 1, 50);
 
@@ -36,115 +30,171 @@ public sealed class TargetMaintenanceServiceTests
         Assert.Equal(first.Id, page.Items[0].Id);
         Assert.Equal("Pump repair", page.Items[0].Title);
         Assert.StartsWith("mnt-", first.Id);
-    }
-
-    [Fact]
-    public async Task UpdateAndDeleteAsync_ProtectMaintenanceAlreadyPostedToFinance()
-    {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
-            .Options;
-        await using (var seed = new AppDbContext(options))
-        {
-            seed.Buildings.Add(new BuildingEntity { Id = "B1", BuildingNumber = "1", Name = "One" });
-            seed.MaintenanceRecords.Add(new MaintenanceRecordEntity
-            {
-                BuildingId = "B1", Id = "mnt-" + Guid.NewGuid().ToString("N"),
-                Title = "Posted repair", MaintenanceDate = new DateOnly(2026, 11, 1),
-                Cost = 100m, Status = "done", AddedToExpense = true
-            });
-            await seed.SaveChangesAsync();
-        }
-
-        var service = new TargetMaintenanceService(new TestContextFactory(options));
         await using var verify = new AppDbContext(options);
-        var recordId = await verify.MaintenanceRecords.Select(item => item.Id).SingleAsync();
-
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            service.UpdateAsync("B1", recordId, "Changed", null, "2026-11-02",
-                200m, null, "done"));
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            service.UpdateAsync("B1", recordId, "Posted repair", null, "2026-11-01",
-                100m, null, "cancelled"));
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            service.DeleteAsync("B1", recordId));
+        Assert.Equal(2, await verify.MaintenanceRequests.CountAsync());
+        Assert.Empty(await verify.MaintenanceRecords.ToListAsync());
+        var request = await verify.MaintenanceRequests.Include(x => x.StatusEvents)
+            .Include(x => x.Assignments).SingleAsync(x => x.BuildingId == "B1");
+        Assert.Single(request.StatusEvents);
+        Assert.Equal("Vendor A", Assert.Single(request.Assignments).VendorName);
     }
 
-
     [Fact]
-    public async Task UpdateAndDeleteAsync_ProtectSourceWhenLedgerPostingExistsButFlagIsStale()
+    public async Task AddAsync_RejectsCostThatCannotBePersistedOutsideTheLedger()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
-            .Options;
-        var sourceId = Guid.NewGuid();
-        var maintenanceId = "mnt-" + sourceId.ToString("N");
-        var periodId = Guid.NewGuid();
+        var options = CreateOptions();
         await using (var seed = new AppDbContext(options))
         {
-            seed.Buildings.Add(new BuildingEntity { Id = "B1", BuildingNumber = "1", Name = "One" });
-            seed.FinancialPeriods.Add(new FinancialPeriodEntity
+            seed.Buildings.Add(Building("B1"));
+            await seed.SaveChangesAsync();
+        }
+        var service = new TargetMaintenanceService(new TestContextFactory(options));
+        await Assert.ThrowsAsync<ArgumentException>(() => service.AddAsync(
+            "B1", "Repair", null, "2026-11-18", 100m, null, "open", "admin"));
+        await using var verify = new AppDbContext(options);
+        Assert.Empty(await verify.MaintenanceRequests.ToListAsync());
+    }
+
+    [Fact]
+    public async Task UpdateAndDeleteAsync_ProtectRequestLinkedToPostedLedgerTransaction()
+    {
+        var options = CreateOptions();
+        var requestId = Guid.NewGuid();
+        var transactionId = Guid.NewGuid();
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.Buildings.Add(Building("B1"));
+            seed.FinancialPeriods.Add(Period("B1"));
+            seed.LedgerTransactions.Add(PostedExpense("B1", transactionId, requestId.ToString("D")));
+            seed.MaintenanceRequests.Add(Request("B1", requestId));
+            seed.MaintenanceLedgerLinks.Add(new MaintenanceLedgerLinkEntity
             {
-                PeriodId = periodId, BuildingId = "B1", PeriodKey = "2026-11",
-                TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Open,
-                StartsAtUtc = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
-                EndsAtUtc = new DateTime(2026, 12, 1, 0, 0, 0, DateTimeKind.Utc),
-                CreatedAtUtc = DateTime.UtcNow
-            });
-            seed.MaintenanceRecords.Add(new MaintenanceRecordEntity
-            {
-                BuildingId = "B1", Id = maintenanceId, Title = "Posted repair",
-                MaintenanceDate = new DateOnly(2026, 11, 1), Cost = 100m,
-                Status = "done", AddedToExpense = false
-            });
-            seed.LedgerTransactions.Add(new LedgerTransactionEntity
-            {
-                LedgerTransactionId = Guid.NewGuid(), PeriodId = periodId, BuildingId = "B1",
-                Kind = LedgerTransactionKind.Expense, Status = LedgerTransactionStatus.Posted,
-                SourceType = "Expense", SourceKey = sourceId.ToString("D"),
-                IdempotencyKey = "maintenance-posted-expense",
-                CreatedAtUtc = DateTime.UtcNow, PostedAtUtc = DateTime.UtcNow
+                LinkId = Guid.NewGuid(), RequestId = requestId,
+                LedgerTransactionId = transactionId, LinkType = 1, CreatedAtUtc = DateTime.UtcNow
             });
             await seed.SaveChangesAsync();
         }
 
         var service = new TargetMaintenanceService(new TestContextFactory(options));
+        var id = "mnt-" + requestId.ToString("N");
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            service.UpdateAsync("B1", maintenanceId, "Changed", null, "2026-11-02",
-                200m, null, "done"));
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            service.DeleteAsync("B1", maintenanceId));
+            service.UpdateAsync("B1", id, "Changed", null, "2026-11-02", 0m, null, "done"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.DeleteAsync("B1", id));
     }
 
     [Fact]
-    public async Task MarkAddedToExpenseAsync_UpdatesOnlyTheMatchingBuildingRecord()
+    public async Task UpdateAndDeleteAsync_ProtectPostedExpenseEvenWhenMaintenanceLinkIsMissing()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
-            .Options;
-        var id = "mnt-" + Guid.NewGuid().ToString("N");
+        var options = CreateOptions();
+        var requestId = Guid.NewGuid();
         await using (var seed = new AppDbContext(options))
         {
-            seed.Buildings.AddRange(
-                new BuildingEntity { Id = "B1", BuildingNumber = "1", Name = "One" },
-                new BuildingEntity { Id = "B2", BuildingNumber = "2", Name = "Two" });
-            seed.MaintenanceRecords.Add(new MaintenanceRecordEntity
+            seed.Buildings.Add(Building("B1"));
+            seed.FinancialPeriods.Add(Period("B1"));
+            seed.LedgerTransactions.Add(PostedExpense("B1", Guid.NewGuid(), requestId.ToString("D")));
+            seed.MaintenanceRequests.Add(Request("B1", requestId));
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetMaintenanceService(new TestContextFactory(options));
+        var id = "mnt-" + requestId.ToString("N");
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.UpdateAsync("B1", id, "Changed", null, "2026-11-02", 0m, null, "done"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.DeleteAsync("B1", id));
+    }
+
+    [Fact]
+    public async Task MarkAddedToExpenseAsync_CreatesNormalizedLedgerLinkAndDerivesCost()
+    {
+        var options = CreateOptions();
+        var requestId = Guid.NewGuid();
+        var transactionId = Guid.NewGuid();
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.Buildings.Add(Building("B1"));
+            seed.FinancialPeriods.Add(Period("B1"));
+            seed.MaintenanceRequests.Add(Request("B1", requestId));
+            seed.LedgerTransactions.Add(PostedExpense("B1", transactionId, requestId.ToString("D")));
+            seed.LedgerEntries.Add(new LedgerEntryEntity
             {
-                BuildingId = "B1", Id = id, Title = "Repair",
-                MaintenanceDate = new DateOnly(2026, 11, 18), Cost = 50m
+                LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = transactionId,
+                PeriodId = PeriodId, BuildingId = "B1", ApartmentId = "A1",
+                EntryKind = LedgerEntryKind.ExpenseAllocation, SignedAmount = -50m,
+                CurrencyCode = "EGP", EffectiveAtUtc = DateTime.UtcNow, CreatedAtUtc = DateTime.UtcNow
             });
             await seed.SaveChangesAsync();
         }
 
         var service = new TargetMaintenanceService(new TestContextFactory(options));
+        var id = "mnt-" + requestId.ToString("N");
         Assert.False(await service.MarkAddedToExpenseAsync("B2", id));
         Assert.True(await service.MarkAddedToExpenseAsync("B1", id));
-
+        var record = await service.GetAsync("B1", id);
+        Assert.NotNull(record);
+        Assert.True(record!.AddedToExpense);
+        Assert.Equal(50m, record.Cost);
         await using var verify = new AppDbContext(options);
-        var record = await verify.MaintenanceRecords.SingleAsync();
-        Assert.True(record.AddedToExpense);
-        Assert.NotNull(record.AddedToExpenseAt);
+        Assert.Single(await verify.MaintenanceLedgerLinks.ToListAsync());
+        Assert.Empty(await verify.MaintenanceRecords.ToListAsync());
     }
+
+    [Fact]
+    public async Task DeleteAsync_RejectsRequestsWithStoredAttachments()
+    {
+        var options = CreateOptions();
+        var requestId = Guid.NewGuid();
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.Buildings.Add(Building("B1"));
+            seed.MaintenanceRequests.Add(Request("B1", requestId));
+            seed.MaintenanceAttachments.Add(new MaintenanceAttachmentEntity
+            {
+                AttachmentId = Guid.NewGuid(), RequestId = requestId,
+                StorageKey = "maintenance/file", FileName = "invoice.pdf",
+                SizeBytes = 10, UploadedAtUtc = DateTime.UtcNow
+            });
+            await seed.SaveChangesAsync();
+        }
+        var service = new TargetMaintenanceService(new TestContextFactory(options));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.DeleteAsync("B1", "mnt-" + requestId.ToString("N")));
+    }
+
+    private static readonly Guid PeriodId = Guid.NewGuid();
+
+    private static DbContextOptions<AppDbContext> CreateOptions() =>
+        new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N")).Options;
+
+    private static BuildingEntity Building(string id) => new()
+    {
+        Id = id, BuildingNumber = id, Name = id
+    };
+
+    private static FinancialPeriodEntity Period(string buildingId) => new()
+    {
+        PeriodId = PeriodId, BuildingId = buildingId, PeriodKey = "2026-11",
+        TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Open,
+        StartsAtUtc = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+        EndsAtUtc = new DateTime(2026, 12, 1, 0, 0, 0, DateTimeKind.Utc),
+        CreatedAtUtc = DateTime.UtcNow
+    };
+
+    private static MaintenanceRequestEntity Request(string buildingId, Guid requestId) => new()
+    {
+        RequestId = requestId, BuildingId = buildingId, Title = "Repair",
+        Description = "Test request", Status = 2, Priority = 2,
+        RequestedByReference = "admin", CreatedAtUtc = DateTime.UtcNow
+    };
+
+    private static LedgerTransactionEntity PostedExpense(string buildingId, Guid transactionId, string sourceKey) => new()
+    {
+        LedgerTransactionId = transactionId, PeriodId = PeriodId, BuildingId = buildingId,
+        Kind = LedgerTransactionKind.Expense, Status = LedgerTransactionStatus.Posted,
+        SourceType = "Expense", SourceKey = sourceKey,
+        IdempotencyKey = "maintenance-expense-" + transactionId.ToString("N"),
+        CreatedAtUtc = DateTime.UtcNow, PostedAtUtc = DateTime.UtcNow
+    };
 
     private sealed class TestContextFactory(DbContextOptions<AppDbContext> options)
         : IDbContextFactory<AppDbContext>
