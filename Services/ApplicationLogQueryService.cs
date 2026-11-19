@@ -52,7 +52,7 @@ public sealed class ApplicationLogQueryService
         @"(?<![\d.])(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?![\d.])",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex HttpRequestEvent = new(
-        @"^HTTP (?<method>[A-Z]+) (?<path>\\S+) responded (?<status>\\d{3}) in (?<elapsed>\\d+(?:\\.\\d+)?) ms$",
+        @"^HTTP (?<method>[A-Z]+) (?<path>\S+) responded (?<status>\d{3}) in (?<elapsed>\d+(?:\.\d+)?) ms$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex ExceptionStart = new(
         @"^\s*(?:[A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*)?(?:Exception|Error|Fault)(?:\s*\([^)]*\))?:",
