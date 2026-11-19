@@ -1,3 +1,4 @@
+using System.Text.Json;
 using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
@@ -76,6 +77,41 @@ public sealed class TargetFinanceReadService
         var entriesByTransaction = entries.GroupBy(x => x.LedgerTransactionId)
             .ToDictionary(x => x.Key, x => x.ToList());
 
+        var sourceKeys = relevant.Select(transaction =>
+        {
+            if (transaction.Kind == LedgerTransactionKind.Reversal &&
+                transaction.ReversesTransactionId.HasValue &&
+                originalById.TryGetValue(transaction.ReversesTransactionId.Value, out var original))
+                return original.SourceKey;
+            return transaction.SourceKey;
+        }).Where(key => !string.IsNullOrWhiteSpace(key)).Distinct().ToList();
+        var auditRows = sourceKeys.Count == 0
+            ? new List<AuditEventEntity>()
+            : await db.AuditEvents.AsNoTracking()
+                .Where(x => x.BuildingId == buildingId &&
+                    x.EventType == (kind == "expense" ? "ExpensePosted" : "RevenuePosted") &&
+                    sourceKeys.Contains(x.ResourceReference!))
+                .ToListAsync(cancellationToken);
+        var categoryBySource = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var audit in auditRows)
+        {
+            if (string.IsNullOrWhiteSpace(audit.ResourceReference) ||
+                string.IsNullOrWhiteSpace(audit.SafeDetailsJson))
+                continue;
+            try
+            {
+                using var details = JsonDocument.Parse(audit.SafeDetailsJson);
+                if (details.RootElement.TryGetProperty("categoryId", out var categoryElement) &&
+                    categoryElement.ValueKind == JsonValueKind.String &&
+                    !string.IsNullOrWhiteSpace(categoryElement.GetString()))
+                    categoryBySource[NormalizeSourceKey(audit.ResourceReference)] = categoryElement.GetString()!;
+            }
+            catch (JsonException)
+            {
+                // Older or malformed metadata remains explicitly unclassified.
+            }
+        }
+
         var expenses = new List<Expense>();
         var revenues = new List<Revenue>();
         foreach (var transaction in relevant)
@@ -95,15 +131,20 @@ public sealed class TargetFinanceReadService
             var date = transactionEntries.Min(x => x.EffectiveAtUtc).ToString(
                 "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
             var note = transaction.Reason ?? string.Empty;
-            var id = transaction.SourceKey ?? transaction.LedgerTransactionId.ToString("N");
+            var sourceKey = transaction.Kind == LedgerTransactionKind.Reversal &&
+                transaction.ReversesTransactionId.HasValue &&
+                originalById.TryGetValue(transaction.ReversesTransactionId.Value, out var sourceTransaction)
+                    ? sourceTransaction.SourceKey
+                    : transaction.SourceKey;
+            var id = sourceKey ?? transaction.LedgerTransactionId.ToString("N");
+            var categoryId = sourceKey is not null
+                ? categoryBySource.GetValueOrDefault(NormalizeSourceKey(sourceKey)) ?? ""
+                : "";
 
-            // Category identity is not stored on the target ledger transaction or its
-            // entries. Keep the row explicitly unclassified instead of querying a retired
-            // Expenses/Revenues table or fabricating a category association.
             if (kind == "expense")
-                expenses.Add(new Expense { Id = id, CategoryId = "", Note = note, Amount = amount, Date = date });
+                expenses.Add(new Expense { Id = id, CategoryId = categoryId, Note = note, Amount = amount, Date = date });
             else
-                revenues.Add(new Revenue { Id = id, CategoryId = "", Note = note, Amount = amount, Date = date });
+                revenues.Add(new Revenue { Id = id, CategoryId = categoryId, Note = note, Amount = amount, Date = date });
         }
 
         expenses = expenses.OrderByDescending(x => x.Date, StringComparer.Ordinal)
