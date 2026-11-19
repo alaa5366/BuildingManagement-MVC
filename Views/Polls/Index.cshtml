@@ -91,7 +91,10 @@ else
                     {
                         <form method="post" asp-action="Close"><input type="hidden" name="id" value="@poll.Id" /><button class="btn btn-sm btn-outline-secondary">@Loc.T("Close")</button></form>
                     }
-                    <form method="post" asp-action="Delete" onsubmit="return confirm('@Loc.Js("Delete_The_Poll")');"><input type="hidden" name="id" value="@poll.Id" /><button class="btn btn-sm btn-outline-danger">@Loc.T("Delete_2")</button></form>
+                    @if (total == 0)
+                    {
+                        <form method="post" asp-action="Delete" onsubmit="return confirm('@Loc.Js("Delete_The_Poll")');"><input type="hidden" name="id" value="@poll.Id" /><button class="btn btn-sm btn-outline-danger">@Loc.T("Delete_2")</button></form>
+                    }
                 </div>
             </div>
             <div class="mt-2">
@@ -105,6 +108,10 @@ else
                     </div>
                 }
             </div>
+            @if (total > 0)
+            {
+                <div class="text-muted small mt-2">لا يمكن حذف استطلاع بدأ التصويت عليه؛ يمكن إغلاقه والاحتفاظ بنتائجه.</div>
+            }
             <div class="text-muted small mt-2">@Loc.T("Total_Votes_N_N", total, openApts)</div>
         </div>
     }
