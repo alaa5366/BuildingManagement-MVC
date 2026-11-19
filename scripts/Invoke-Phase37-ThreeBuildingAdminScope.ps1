@@ -277,6 +277,11 @@ COMMIT;
         }
         catch {
             try { $transaction.Rollback() } catch {}
+            if ($_.Exception -is [System.Data.SqlClient.SqlException]) {
+                foreach ($sqlError in $_.Exception.Errors) {
+                    Log ("SQL ERROR Number={0}; State={1}; Line={2}; Procedure={3}; Message={4}" -f $sqlError.Number,$sqlError.State,$sqlError.LineNumber,$sqlError.Procedure,$sqlError.Message)
+                }
+            }
             throw
         }
     }
