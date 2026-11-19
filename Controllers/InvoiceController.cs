@@ -106,6 +106,56 @@ public class InvoiceController : Controller
         return File(qrPng, "image/png");
     }
 
+    /// <summary>Opens a prefilled WhatsApp message so the building administrator can notify the resident about the issued invoice.</summary>
+    [HttpGet]
+    public async Task<IActionResult> WhatsApp(string aptId, string? month)
+    {
+        if (!User.IsInRole("admin") && !User.IsInRole("superadmin"))
+            return Forbid();
+        if (string.IsNullOrWhiteSpace(aptId))
+            return NotFound();
+
+        var buildingId = User.FindFirstValue("buildingId");
+        if (string.IsNullOrWhiteSpace(buildingId))
+        {
+            if (!User.IsInRole("superadmin")) return NotFound();
+            buildingId = await _invoice.FindBuildingIdByApartmentAsync(aptId, HttpContext.RequestAborted);
+            if (string.IsNullOrWhiteSpace(buildingId)) return NotFound();
+        }
+
+        var monthKey = string.IsNullOrWhiteSpace(month)
+            ? await _invoice.GetCurrentPeriodKeyAsync(buildingId, HttpContext.RequestAborted)
+            : month;
+        var data = await _invoice.BuildInvoiceDataAsync(
+            buildingId, aptId, monthKey, HttpContext.RequestAborted);
+        if (data is null) return NotFound();
+
+        var phone = AuthHelpers.NormalizePhone(data.Apt.Phone);
+        if (string.IsNullOrWhiteSpace(phone))
+            return BadRequest("لا يوجد رقم هاتف مسجل لهذه الشقة.");
+
+        var loginUrl = Url.Action("UnifiedLogin", "Account", values: null, protocol: Request.Scheme)!;
+        var message =
+            $"مرحباً {data.Apt.Owner}،\n" +
+            $"فاتورة العمارة {data.Building.Name} — الشقة رقم {data.Apt.Number}\n" +
+            $"الشهر: {data.MonthLabelText}\n" +
+            $"رقم الفاتورة: {data.InvoiceNo}\n\n" +
+            $"للاطلاع على الفاتورة PDF، سجّل الدخول بحساب الساكن من الرابط التالي:\n{loginUrl}\n\n" +
+            "هذه رسالة إشعار فقط؛ لا تشارك بيانات الدخول مع أي شخص.";
+        var waLink = WhatsAppTemplateService.BuildWaLink(phone, message);
+
+        await _audit.LogAsync(
+            action: "invoice_whatsapp_draft",
+            buildingId: data.Building.Id,
+            apartmentId: data.Apt.Id,
+            userId: User.FindFirstValue(ClaimTypes.NameIdentifier),
+            userRole: User.IsInRole("superadmin") ? "superadmin" : "admin",
+            metadata: new { aptNumber = data.Apt.Number, invoiceNo = data.InvoiceNo, monthKey, phoneSuffix = phone.Length > 4 ? phone[^4..] : phone },
+            severity: "info");
+
+        return Redirect(waLink);
+    }
+
     private async Task<IActionResult> GenerateInvoiceAsync(
         string buildingId, string apartmentId, string? month, string role)
     {
