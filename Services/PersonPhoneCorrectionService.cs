@@ -16,11 +16,15 @@ public sealed class PersonPhoneCorrectionService
         _audit = audit;
     }
 
+    private static bool IsPlausibleE164(string value)
+        => value.Length is >= 9 and <= 16 && value[0] == '+' &&
+           value.Skip(1).All(char.IsDigit) && value[1] != '0';
+
     public async Task<bool> SubmitAsync(string previousPhone, string requestedPhone, string buildingId, string apartmentId)
     {
         var oldPhone = AuthHelpers.NormalizePhone(previousPhone);
         var newPhone = AuthHelpers.NormalizePhone(requestedPhone);
-        if (string.IsNullOrWhiteSpace(oldPhone) || string.IsNullOrWhiteSpace(newPhone) ||
+        if (!IsPlausibleE164(oldPhone) || !IsPlausibleE164(newPhone) ||
             oldPhone == newPhone || string.IsNullOrWhiteSpace(buildingId) || string.IsNullOrWhiteSpace(apartmentId))
             return false;
 
@@ -82,6 +86,12 @@ public sealed class PersonPhoneCorrectionService
         {
             var person = await db.Persons.SingleOrDefaultAsync(p => p.PersonId == request.PersonId && !p.IsArchived);
             if (person == null || AuthHelpers.NormalizePhone(person.PrimaryPhone) != request.PreviousPhone)
+                return false;
+            var stillOccupiesApartment = await db.ApartmentOccupancies.AnyAsync(o =>
+                o.PersonId == person.PersonId && o.BuildingId == request.BuildingId &&
+                o.ApartmentId == request.ApartmentId && o.ValidFromUtc <= now &&
+                (o.ValidToUtc == null || o.ValidToUtc > now));
+            if (!stillOccupiesApartment || !IsPlausibleE164(request.RequestedPhone))
                 return false;
             var collision = await db.Persons.Where(p => p.PersonId != request.PersonId && p.PrimaryPhone != null)
                 .ToListAsync();
