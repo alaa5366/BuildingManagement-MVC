@@ -294,13 +294,21 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        // Configured SuperAdmin e-mails must use the dedicated SuperAdmin authentication
-        // path below. The resident identity lookup can find the same e-mail in UserAccounts,
-        // reject its SuperAdmin role as a resident, and prematurely block the correct flow.
-        AuthResult? identityResult = null;
-        if (!SqlAuthService.IsSuperAdminEmail(identifier))
-            identityResult = await _identityAuth.AuthenticateResidentAsync(identifier, credential);
+        // Allow-listed SuperAdmin accounts authenticate exclusively against the target identity schema.
+        if (SqlAuthService.IsSuperAdminEmail(identifier))
+        {
+            var superAdminResult = await _identityAuth.AuthenticateSuperAdminAsync(identifier, credential);
+            if (!superAdminResult.Success)
+            {
+                _throttle.RegisterFailure(throttleKey, ClientIp);
+                ViewBag.Error = Loc.T("Invalid_Login_Details");
+                return View(vm);
+            }
 
+            return await CompleteSignInAsync(superAdminResult, throttleKey);
+        }
+
+        var identityResult = await _identityAuth.AuthenticateResidentAsync(identifier, credential);
         if (identityResult != null)
         {
             if (!identityResult.Success)
