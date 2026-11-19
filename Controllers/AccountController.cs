@@ -262,7 +262,8 @@ public class AccountController : Controller
         if (!ModelState.IsValid) return View(vm);
 
         var identifier = vm.Identifier.Trim();
-        var credential = vm.Credential.Trim();
+        // Credentials are opaque secrets: never trim or normalize passwords/PINs.
+        var credential = vm.Credential;
 
         var throttleKey = AcctKey(identifier);
         if (_throttle.IsLocked(throttleKey, ClientIp))
