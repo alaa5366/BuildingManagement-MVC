@@ -41,6 +41,20 @@ public class SessionRevalidatorRoleRoutingTests
         Assert.True(IsSuperAdminPrincipal(new ClaimsPrincipal(identity)));
     }
 
+
+    [Fact]
+    public void SuperAdminSecurityStamp_ChangesWhenCredentialOrAccountStateChanges()
+    {
+        var updatedAt = new DateTime(2026, 11, 19, 8, 0, 0, DateTimeKind.Utc);
+        var original = SqlAuthService.CreateSuperAdminSecurityStamp("bcrypt-hash-a", updatedAt, true, false);
+        var changedPassword = SqlAuthService.CreateSuperAdminSecurityStamp("bcrypt-hash-b", updatedAt, true, false);
+        var changedStatus = SqlAuthService.CreateSuperAdminSecurityStamp("bcrypt-hash-a", updatedAt, false, true);
+
+        Assert.NotEqual(original, changedPassword);
+        Assert.NotEqual(original, changedStatus);
+        Assert.DoesNotContain("bcrypt-hash-a", original, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void OriginalSuperAdminClaim_RoutesToSuperAdminValidation()
     {
