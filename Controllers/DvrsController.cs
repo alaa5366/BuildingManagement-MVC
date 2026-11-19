@@ -215,7 +215,7 @@ public class DvrsController : Controller
         var registered = await _mediamtx.AddOrUpdatePathAsync(pathName, rtspUrl);
         if (!registered)
         {
-            await _dvrs.DeleteCameraAsync(camId);
+            await _dvrs.DeleteCameraAsync(camId, dvrId);
             TempData["Error"] = "تعذر تسجيل البث في MediaMTX؛ لم يتم الاحتفاظ بالكاميرا.";
             return RedirectToAction(nameof(Details), new { id = dvrId });
         }
@@ -240,13 +240,16 @@ public class DvrsController : Controller
         if (dvr == null) return NotFound();
         if (!await CanManageAsync(dvr.BuildingId)) return Forbid();
 
+        // A caller may not delete a camera belonging to a different DVR/building.
+        if (!dvr.Cameras.Any(camera => camera.Id == cameraId)) return NotFound();
+
         // Remove the MediaMTX path first. If the media server is unavailable, retain the SQL record for retry.
         if (!await _mediamtx.DeletePathAsync($"cam_{cameraId}"))
         {
             TempData["Error"] = "تعذر حذف مسار البث من MediaMTX؛ لم يتم حذف سجل الكاميرا.";
             return RedirectToAction(nameof(Details), new { id = dvrId });
         }
-        await _dvrs.DeleteCameraAsync(cameraId);
+        if (!await _dvrs.DeleteCameraAsync(cameraId, dvrId)) return NotFound();
 
         TempData["Success"] = Loc.T("Camera_Deleted_Successfully");
         return RedirectToAction(nameof(Details), new { id = dvrId });
