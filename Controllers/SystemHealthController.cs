@@ -1,9 +1,7 @@
 using System.Diagnostics;
 using BuildingManagementMvc.Attributes;
 using BuildingManagementMvc.Models;
-using BuildingManagementMvc.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
