@@ -65,6 +65,7 @@ public class AuditEntryDoc
     /// Gets or sets the user role.
     /// </summary>
     public string? UserRole { get; set; }
+    public string? CorrelationId { get; set; }
     /// <summary>
     /// Gets or sets the severity.
     /// </summary>
