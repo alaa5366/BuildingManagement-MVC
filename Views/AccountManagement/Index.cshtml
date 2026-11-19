@@ -1,7 +1,9 @@
 @model BuildingManagementMvc.Services.AccountManagementPage
 @{ViewData["Title"]="مركز إدارة الحسابات";}
 <div class="container-fluid py-3" dir="rtl">
- <div class="d-flex justify-content-between align-items-center mb-3"><div><h2>مركز إدارة الحسابات</h2><div class="text-muted">حسابات الهوية الجديدة</div></div><a asp-controller="ResidentAccountProvisioning" asp-action="Index" class="btn btn-outline-primary">تجهيز حسابات السكان</a></div>
+ <div class="d-flex justify-content-between align-items-center mb-3"><div><h2>مركز إدارة الحسابات</h2><div class="text-muted">حسابات الهوية الجديدة</div></div><a asp-controller="ResidentAccountProvisioning" asp-action="Index" class="btn btn-outline-primary">تجهيز حسابات السكان</a>
+        <a asp-controller="Admins" asp-action="Index" class="btn btn-outline-secondary">إدارة الإدمن القديم</a>
+        <a asp-controller="AdminResidents" asp-action="Index" class="btn btn-outline-secondary">إدارة السكان القديمة</a></div>
  <div class="row g-3 mb-3">
   <div class="col-md-3"><div class="card card-body"><span>إجمالي الحسابات</span><strong class="fs-3">@Model.TotalAccounts</strong></div></div>
   <div class="col-md-3"><div class="card card-body"><span>نشطة</span><strong class="fs-3 text-success">@Model.ActiveAccounts</strong></div></div>
