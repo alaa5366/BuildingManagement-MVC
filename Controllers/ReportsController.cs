@@ -57,7 +57,7 @@ public class ReportsController : Controller
         var building = vm.Building;
 
         var sb = new StringBuilder();
-        sb.Append('\\uFEFF');
+        sb.Append('\uFEFF');
         void Row(params string[] cells) => sb.AppendLine(string.Join(",", cells.Select(CsvExportSafety.Cell)));
 
         Row(Loc.T("Report_N_N", building.Name, building.BuildingNumber));
