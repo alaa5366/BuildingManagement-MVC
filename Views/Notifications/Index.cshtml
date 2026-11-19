@@ -19,6 +19,7 @@
     @if (Model.Items.Any(n => !n.Read))
     {
         <form method="post" asp-action="MarkAllRead">
+            @Html.AntiForgeryToken()
             <button class="btn btn-sm btn-outline-secondary">@Loc.T("Mark_All_As_Read")</button>
         </form>
     }
@@ -59,6 +60,7 @@ else
             @if (!n.Read)
             {
                 <form method="post" asp-action="MarkRead">
+                    @Html.AntiForgeryToken()
                     <input type="hidden" name="id" value="@n.Id" />
                     <button class="btn btn-sm btn-outline-secondary">@Loc.T("Mark_As_Read")</button>
                 </form>
