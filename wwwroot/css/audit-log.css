@@ -1,129 +1,5 @@
-/* Scoped enterprise styling for the business audit trail. */
-.audit-log-page {
-    --audit-ink: #1d334d;
-    --audit-muted: #66788d;
-    --audit-border: #e1e8f0;
-    color: var(--audit-ink);
-    padding-bottom: 2rem;
-}
-.audit-log-page .audit-log-header {
-    gap: 1rem;
-    padding: 1.35rem 1.5rem;
-    border: 1px solid #dce7f2;
-    border-radius: 15px;
-    background: linear-gradient(115deg, #fff 0%, #f4f8fc 100%);
-    box-shadow: 0 5px 20px rgba(30, 60, 90, .045);
-}
-.audit-log-page .audit-log-header h2 {
-    margin: 0;
-    color: #1d3a5c;
-    font-size: clamp(1.25rem, 2vw, 1.7rem);
-    font-weight: 800;
-}
-.audit-log-page .audit-log-header h2 small {
-    display: block;
-    margin-top: .35rem;
-    font-size: .78rem;
-    font-weight: 500;
-}
-.audit-log-page .audit-log-header > div:last-child {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    gap: .65rem;
-}
-.audit-log-page .audit-log-header .badge {
-    padding: .55rem .75rem;
-    border-radius: 8px;
-    font-size: .8rem;
-}
-.audit-log-page .audit-log-header .btn {
-    border-radius: 8px;
-    font-weight: 700;
-}
-.audit-log-page .audit-log-filter-panel,
-.audit-log-page .audit-log-table-wrap {
-    border: 1px solid var(--audit-border);
-    border-radius: 12px;
-    box-shadow: 0 4px 16px rgba(30, 60, 90, .035);
-}
-.audit-log-page .audit-log-filter-panel .card-body { padding: 1.15rem; }
-.audit-log-page .form-label {
-    color: #53677e;
-    font-weight: 700;
-}
-.audit-log-page .form-control,
-.audit-log-page .form-select {
-    border-color: #d9e3ed;
-    border-radius: 8px;
-}
-.audit-log-page .form-control:focus,
-.audit-log-page .form-select:focus {
-    border-color: #4b9bd5;
-    box-shadow: 0 0 0 3px rgba(0, 120, 212, .1);
-}
-.audit-log-page .audit-log-table-wrap {
-    overflow: hidden;
-    background: #fff;
-}
-.audit-log-page .audit-log-table { margin-bottom: 0; }
-.audit-log-page .audit-log-table thead th {
-    padding: .8rem .75rem;
-    border-bottom: 0;
-    background: #203b59;
-    color: #fff;
-    font-size: .76rem;
-    font-weight: 700;
-    white-space: nowrap;
-}
-.audit-log-page .audit-log-table tbody td {
-    padding: .75rem;
-    border-color: #edf1f5;
-    color: #344b63;
-    vertical-align: middle;
-}
-.audit-log-page .audit-log-table tbody tr:hover { background: #f5f9fd; }
-.audit-log-page .audit-log-table code { color: #60748a; font-size: .72rem; }
-.audit-log-page pre {
-    border: 1px solid #e2e9f0;
-    border-radius: 8px;
-    color: #344b63;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-}
-.audit-log-page .pagination { margin-block: .75rem; }
-.audit-log-page .page-link { border-radius: 7px; }
-@media (max-width: 767.98px) {
-    .audit-log-page .audit-log-header {
-        align-items: flex-start !important;
-        flex-direction: column;
-    }
-    .audit-log-page .audit-log-header > div:last-child {
-        justify-content: flex-start;
-    }
-    .audit-log-page .audit-log-filter-panel .card-body { padding: .85rem; }
-    .audit-log-page .audit-log-table { min-width: 850px; }
-}
-
-
-/* Unified Kibana-inspired shell shared with the application log explorer. */
-.kibana-audit { --audit-ink:#1d334d; }
-.kibana-audit .audit-observability-nav {
-    display:flex; align-items:center; gap:.35rem; flex-wrap:wrap; margin:1rem 0;
-    padding:.45rem; border:1px solid #dfe7ef; border-radius:11px; background:#fff;
-}
-.kibana-audit .audit-observability-nav a,
-.kibana-audit .audit-observability-nav > span {
-    display:inline-flex; align-items:center; gap:.5rem; padding:.65rem .9rem;
-    border-radius:8px; color:#5c7086; font-size:.8rem; font-weight:750; text-decoration:none;
-}
-.kibana-audit .audit-observability-nav a:hover { background:#f1f6fb; color:#176da8; }
-.kibana-audit .audit-observability-nav a.active {
-    color:#075f9d; background:#eaf4fc; box-shadow:inset 0 0 0 1px #d4e8f8;
-}
-.kibana-audit .audit-observability-nav > span { margin-inline-start:auto; color:#91a0af; }
-.kibana-audit .audit-observability-nav small { font-size:.65rem; font-weight:500; }
+/* Audit stream refinements layered on the shared observability design system. */
+.kibana-audit { --audit-ink:#1d334d; color:var(--audit-ink); padding-bottom:2rem; }
 .kibana-audit .audit-kpi-grid { margin-block:1rem; }
 .kibana-audit .audit-kibana-filter,
 .kibana-audit .audit-kibana-results {
@@ -144,7 +20,7 @@
 }
 .kibana-audit .audit-filter-submit { display:flex; }
 .kibana-audit .audit-kibana-results { margin-top:1rem; }
-.kibana-audit .audit-kibana-table { min-width:900px; }
+.kibana-audit .audit-kibana-table { min-width:1050px; }
 .kibana-audit .audit-kibana-table thead th {
     padding:.8rem .9rem; background:#f6f9fc; color:#6b7f94; border-bottom:1px solid #e5ebf1;
     font-size:.67rem; font-weight:850; letter-spacing:.045em;
@@ -157,18 +33,16 @@
 .kibana-audit .log-results-heading { padding:1.1rem 1.35rem .9rem; }
 .kibana-audit .log-level-summary { background:#fbfcfe; }
 .kibana-audit .log-pagination { border-top:1px solid #e8edf2; }
-@media(max-width:1100px) {
-    .kibana-audit .audit-kibana-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
-}
-@media(max-width:650px) {
-    .kibana-audit .audit-kibana-filter { padding:.9rem; }
-    .kibana-audit .audit-kibana-filter-grid { grid-template-columns:1fr; }
-    .kibana-audit .audit-observability-nav > span { margin-inline-start:0; }
-}
-
 .kibana-audit .audit-correlation-cell { min-width:145px; }
 .kibana-audit .audit-correlation-cell a {
     color:#0876c5; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
     font-size:.68rem; text-decoration:none; overflow-wrap:anywhere;
 }
 .kibana-audit .audit-correlation-cell a:hover { text-decoration:underline; }
+@media(max-width:1100px) {
+    .kibana-audit .audit-kibana-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:650px) {
+    .kibana-audit .audit-kibana-filter { padding:.9rem; }
+    .kibana-audit .audit-kibana-filter-grid { grid-template-columns:1fr; }
+}
