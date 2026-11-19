@@ -114,10 +114,23 @@ public class ResidentHomeController : Controller
         // ============================================================
         // 5. الدفعات المعلقة (آخر 3)
         // ============================================================
-        var pendingDeposits = walletSnapshot.PendingDeposits
-            .Where(d => d.CreatedAt.StartsWith(currentMonth, StringComparison.Ordinal))
-            .OrderByDescending(d => d.CreatedAt)
+        var pendingDeposits = (await _targetWallet.GetPendingForBuildingAsync(
+                building.Id, HttpContext.RequestAborted))
+            .Where(item => item.ApartmentId == apt.Id && item.PeriodKey == currentMonth)
+            .OrderByDescending(item => item.SubmittedAtUtc)
             .Take(3)
+            .Select(item => new Deposit
+            {
+                Id = item.PaymentDepositId.ToString("D"),
+                Number = item.PaymentDepositId.ToString("N")[..8].ToUpperInvariant(),
+                AptId = item.ApartmentId,
+                Amount = item.Amount,
+                Note = item.Note,
+                Receipt = item.Receipt,
+                Status = "pending",
+                CreatedAt = item.SubmittedAtUtc.ToString("O"),
+                CreatedBy = ""
+            })
             .ToList();
 
         // ============================================================
