@@ -32,7 +32,7 @@ try {
     $target=Open-Checked $TargetConnectionString 'BuildingManagement_RestoreTest'
     $sourceTables=Query $source @"
 SELECT s.name SchemaName,t.name TableName,
-       SUM(ps.row_count) RowCount
+       SUM(ps.row_count) AS TotalRows
 FROM sys.tables t JOIN sys.schemas s ON s.schema_id=t.schema_id
 JOIN sys.dm_db_partition_stats ps ON ps.object_id=t.object_id AND ps.index_id IN (0,1)
 WHERE t.is_ms_shipped=0
@@ -64,7 +64,7 @@ GROUP BY SourceTable;
         $name="$($s.SchemaName).$($s.TableName)"
         if(-not $targetNames.ContainsKey($name)) {
             $blockers.Add("$name is absent from target; source data is not represented by a same-name target table.")
-            $tableResults.Add([pscustomobject]@{Table=$name;SourceRows=[long]$s.RowCount;TargetRows=0;MapRows=0;Status='TARGET_TABLE_MISSING'})
+            $tableResults.Add([pscustomobject]@{Table=$name;SourceRows=[long]$s.TotalRows;TargetRows=0;MapRows=0;Status='TARGET_TABLE_MISSING'})
             continue
         }
         $t=$targetNames[$name]
@@ -84,7 +84,7 @@ GROUP BY SourceTable;
             $blockers.Add("$name has migration-map entries with missing target keys or target tables.")
         }
         if($status -eq 'READY_FOR_REVIEW'){$legacyToDrop.Add($name)}
-        $tableResults.Add([pscustomobject]@{Table=$name;SourceRows=[long]$s.RowCount;TargetRows=[long]$t.RowCount;MapRows=$mapRows;Status=$status})
+        $tableResults.Add([pscustomobject]@{Table=$name;SourceRows=[long]$s.RowCount;TargetRows=[long]$t.TotalRows;MapRows=$mapRows;Status=$status})
     }
     # Build FK check using a temporary table populated from the exact source-table inventory.
     $legacyValues=($sourceTables.Rows | Where-Object { $_.TableName -ne '__EFMigrationsHistory' } | ForEach-Object { "(N'$($_.SchemaName.Replace("'","''"))',N'$($_.TableName.Replace("'","''"))')" }) -join ','
