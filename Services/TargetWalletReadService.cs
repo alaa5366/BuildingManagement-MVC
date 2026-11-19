@@ -161,6 +161,26 @@ public sealed class TargetWalletReadService
         };
     }
 
+    public async Task<string?> FindBuildingIdByApartmentAsync(
+        string apartmentId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(apartmentId) || apartmentId.Length > 64)
+            throw new ArgumentException("A valid apartment id is required.", nameof(apartmentId));
+
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        var buildingIds = await db.Apartments.AsNoTracking()
+            .Where(apartment => apartment.Id == apartmentId)
+            .Select(apartment => apartment.BuildingId)
+            .Distinct()
+            .Take(2)
+            .ToListAsync(cancellationToken);
+
+        // Apartment ids are building-scoped; never guess when more than one
+        // building contains the supplied id.
+        return buildingIds.Count == 1 ? buildingIds[0] : null;
+    }
+
     public async Task<TargetWalletAdminSnapshot> GetAdminSnapshotAsync(
         string buildingId,
         string month,
