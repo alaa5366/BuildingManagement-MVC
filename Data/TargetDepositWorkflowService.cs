@@ -30,8 +30,17 @@ public sealed class TargetDepositWorkflowService
         decimal amount,
         string currencyCode = "EGP",
         string? sourceKey = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? note = null,
+        string? receiptMetadataJson = null)
     {
+        if (note?.Length > 1000) throw new ArgumentException("Deposit note cannot exceed 1000 characters.", nameof(note));
+        if (receiptMetadataJson is { Length: > 8000 }) throw new ArgumentException("Receipt metadata is too large.", nameof(receiptMetadataJson));
+        if (!string.IsNullOrWhiteSpace(receiptMetadataJson))
+        {
+            try { using var receiptDocument = JsonDocument.Parse(receiptMetadataJson); }
+            catch (JsonException ex) { throw new ArgumentException("Receipt metadata must be valid JSON.", nameof(receiptMetadataJson), ex); }
+        }
         if (actorAccountId == Guid.Empty) throw new ArgumentException("An authenticated actor is required.", nameof(actorAccountId));
         if (string.IsNullOrWhiteSpace(buildingId) || buildingId.Length > 64)
             throw new ArgumentException("A valid building is required.", nameof(buildingId));
@@ -100,6 +109,8 @@ public sealed class TargetDepositWorkflowService
             CurrencyCode = currencyCode.ToUpperInvariant(),
             Status = PaymentDepositStatus.Pending,
             SubmittedAtUtc = now,
+            Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
+            ReceiptMetadataJson = string.IsNullOrWhiteSpace(receiptMetadataJson) ? null : receiptMetadataJson,
             SourceSystem = "application",
             SourceKey = sourceKey
         });
