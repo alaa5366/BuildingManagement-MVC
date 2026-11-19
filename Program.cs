@@ -420,6 +420,19 @@ builder.Services.AddScoped<TargetQrService>();
     // variables and are never written to configuration, logs, or source control.
     if (args.Contains("--bootstrap-superadmins", StringComparer.OrdinalIgnoreCase))
     {
+        var connectionBuilder = new System.Data.Common.DbConnectionStringBuilder
+        {
+            ConnectionString = ConfigSecrets.Require(app.Configuration, "ConnectionStrings:Default")
+        };
+        var databaseName = connectionBuilder.TryGetValue("Initial Catalog", out var initialCatalog)
+            ? Convert.ToString(initialCatalog, CultureInfo.InvariantCulture)
+            : connectionBuilder.TryGetValue("Database", out var database)
+                ? Convert.ToString(database, CultureInfo.InvariantCulture)
+                : null;
+        if (!string.Equals(databaseName, "BuildingManagement_RestoreTest", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(
+                "SuperAdmin bootstrap is restricted to the BuildingManagement_RestoreTest database.");
+
         var hotmailPassword = Environment.GetEnvironmentVariable("BM_SUPERADMIN_HOTMAIL_PASSWORD");
         var gmailPassword = Environment.GetEnvironmentVariable("BM_SUPERADMIN_GMAIL_PASSWORD");
         if (string.IsNullOrWhiteSpace(hotmailPassword) || hotmailPassword.Length < 14 ||
