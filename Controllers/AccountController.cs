@@ -185,7 +185,8 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        var res = await _sqlAuth.SignInAdminAsync(vm.BuildingId, vm.Phone, vm.Pin);
+        var res = await _identityAuth.AuthenticateAdminAsync(vm.Phone, vm.Pin, vm.BuildingId);
+        res ??= await _sqlAuth.SignInAdminAsync(vm.BuildingId, vm.Phone, vm.Pin);
 
         if (!res.Success)
         {
@@ -449,6 +450,7 @@ public class AccountController : Controller
         HttpContext.Session.SetString("resident_pin_change_account", result.Uid!);
         HttpContext.Session.SetString("resident_pin_change_stamp", result.SecurityStamp ?? "");
         HttpContext.Session.SetString("resident_pin_change_identifier", identifier);
+        HttpContext.Session.SetString("resident_pin_change_role", result.Role ?? "resident");
         if (!string.IsNullOrWhiteSpace(buildingId))
             HttpContext.Session.SetString("resident_pin_change_building", buildingId);
         if (!string.IsNullOrWhiteSpace(apartmentId))
@@ -500,7 +502,10 @@ public class AccountController : Controller
             return RedirectToAction(nameof(UnifiedLogin));
         }
 
-        var result = await _identityAuth.AuthenticateResidentAsync(identifier, vm.NewPin, buildingId, apartmentId);
+        var pinChangeRole = HttpContext.Session.GetString("resident_pin_change_role") ?? "resident";
+        var result = pinChangeRole == "admin"
+            ? await _identityAuth.AuthenticateAdminAsync(identifier, vm.NewPin, buildingId ?? "", HttpContext.RequestAborted)
+            : await _identityAuth.AuthenticateResidentAsync(identifier, vm.NewPin, buildingId, apartmentId);
         if (result == null || !result.Success || result.MustChangePin)
         {
             HttpContext.Session.Clear();
@@ -508,8 +513,7 @@ public class AccountController : Controller
             return RedirectToAction(nameof(UnifiedLogin));
         }
 
-        await SignInCookieAsync(result);
-        return RedirectToAction("Index", "ResidentHome");
+        return await CompleteSignInAsync(result, AcctKey(identifier));
     }
 
     private bool HasValidPinChangeChallenge()
