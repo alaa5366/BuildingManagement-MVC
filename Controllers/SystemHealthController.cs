@@ -46,6 +46,9 @@ public sealed class SystemHealthController : Controller
                 }).ToList()
         };
 
+        ViewBag.CanViewAuditTrail = User.IsInRole("superadmin") ||
+            User.HasClaim("perm", AdminPermissions.ViewAuditLogBuilding);
+
         return View(model);
     }
 }
