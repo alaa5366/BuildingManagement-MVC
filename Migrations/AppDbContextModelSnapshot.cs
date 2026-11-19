@@ -1194,9 +1194,6 @@ namespace BuildingManagementMvc.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
-                    b.Property<Guid>("InvoiceIssueId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("InvoiceNo")
                         .HasMaxLength(160)
                         .HasColumnType("nvarchar(160)");
@@ -1219,10 +1216,6 @@ namespace BuildingManagementMvc.Migrations
                     b.HasIndex("BuildingId", "ApartmentId", "MonthKey")
                         .IsUnique()
                         .HasDatabaseName("UX_InvoiceIssues_Apartment_Month");
-
-                    b.HasIndex("InvoiceIssueId")
-                        .IsUnique()
-                        .HasDatabaseName("UX_InvoiceIssues_Id");
 
                     b.HasIndex("InvoiceNo")
                         .IsUnique()
