@@ -76,17 +76,10 @@ public sealed class TargetExpenseRevenueWorkflowService
             .SingleOrDefaultAsync(x => x.IdempotencyKey == idempotencyKey, cancellationToken);
         if (existing is not null)
         {
-            var sameSource = isRevenue
-                ? await db.Revenues.AsNoTracking().SingleOrDefaultAsync(x => x.BuildingId == buildingId && x.Id == commandId.ToString("N"), cancellationToken)
-                : null;
-            var sameExpense = !isRevenue
-                ? await db.Expenses.AsNoTracking().SingleOrDefaultAsync(x => x.BuildingId == buildingId && x.Id == commandId.ToString("N"), cancellationToken)
-                : null;
-            var samePayload = isRevenue
-                ? sameSource is not null && sameSource.MonthKey == monthKey && sameSource.CategoryId == categoryId &&
-                  sameSource.Amount == amount && sameSource.Note == note.Trim() && sameSource.RevenueDate == effectiveDate
-                : sameExpense is not null && sameExpense.MonthKey == monthKey && sameExpense.CategoryId == categoryId &&
-                  sameExpense.Amount == amount && sameExpense.Note == note.Trim() && sameExpense.ExpenseDate == effectiveDate;
+            var samePayload = await IsSamePostedPayloadAsync(
+                db, existing, buildingId, sourceType, sourceKey, isRevenue,
+                monthKey, categoryId, amount, description: note.Trim(), effectiveDate,
+                cancellationToken);
             if (existing.BuildingId != buildingId || existing.Kind != (isRevenue ? LedgerTransactionKind.Revenue : LedgerTransactionKind.Expense) ||
                 existing.Status != LedgerTransactionStatus.Posted || existing.SourceSystem != "application" ||
                 existing.SourceType != sourceType || existing.SourceKey != sourceKey || !samePayload)
@@ -235,25 +228,6 @@ public sealed class TargetExpenseRevenueWorkflowService
             });
         }
 
-        if (isRevenue)
-        {
-            db.Revenues.Add(new RevenueEntity
-            {
-                BuildingId = buildingId, Id = sourceId, MonthKey = monthKey,
-                CategoryId = categoryId, CategoryKind = "revenue", Note = description,
-                Amount = amount, RevenueDate = effectiveDate
-            });
-        }
-        else
-        {
-            db.Expenses.Add(new ExpenseEntity
-            {
-                BuildingId = buildingId, Id = sourceId, MonthKey = monthKey,
-                CategoryId = categoryId, CategoryKind = "expense", Note = description,
-                Amount = amount, ExpenseDate = effectiveDate
-            });
-        }
-
         db.FinancialSourceLinks.Add(new FinancialSourceLinkEntity
         {
             FinancialSourceLinkId = Guid.NewGuid(),
@@ -288,6 +262,78 @@ public sealed class TargetExpenseRevenueWorkflowService
         await tx.CommitAsync(cancellationToken);
         return transactionId;
     }
+    private static async Task<bool> IsSamePostedPayloadAsync(
+        AppDbContext db,
+        LedgerTransactionEntity existing,
+        string buildingId,
+        string sourceType,
+        string sourceKey,
+        bool isRevenue,
+        string monthKey,
+        string categoryId,
+        decimal amount,
+        string description,
+        DateOnly effectiveDate,
+        CancellationToken cancellationToken)
+    {
+        var expectedEventType = isRevenue ? "RevenuePosted" : "ExpensePosted";
+        var audit = await db.AuditEvents.AsNoTracking().SingleOrDefaultAsync(x =>
+            x.BuildingId == buildingId && x.EventCategory == "Finance" &&
+            x.EventType == expectedEventType && x.ResourceType == sourceType &&
+            x.ResourceReference == sourceKey, cancellationToken);
+        if (audit is null || string.IsNullOrWhiteSpace(audit.SafeDetailsJson))
+            return false;
+
+        string? storedCategory;
+        string? storedMonth;
+        decimal storedAmount;
+        try
+        {
+            using var document = JsonDocument.Parse(audit.SafeDetailsJson);
+            var root = document.RootElement;
+            if (!root.TryGetProperty("categoryId", out var category) ||
+                category.ValueKind != JsonValueKind.String ||
+                !root.TryGetProperty("monthKey", out var month) ||
+                month.ValueKind != JsonValueKind.String ||
+                !root.TryGetProperty("amount", out var value) ||
+                !value.TryGetDecimal(out storedAmount))
+                return false;
+            storedCategory = category.GetString();
+            storedMonth = month.GetString();
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+
+        if (!string.Equals(storedCategory, categoryId, StringComparison.Ordinal) ||
+            !string.Equals(storedMonth, monthKey, StringComparison.Ordinal) ||
+            storedAmount != amount ||
+            !string.Equals(existing.Reason, description, StringComparison.Ordinal))
+            return false;
+
+        var period = await db.FinancialPeriods.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.BuildingId == buildingId &&
+                x.PeriodId == existing.PeriodId && x.PeriodKey == monthKey, cancellationToken);
+        if (period is null) return false;
+
+        TimeZoneInfo zone;
+        try { zone = TimeZoneInfo.FindSystemTimeZoneById(period.TimeZoneId); }
+        catch (TimeZoneNotFoundException) { return false; }
+        var local = DateTime.SpecifyKind(effectiveDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Unspecified);
+        if (zone.IsInvalidTime(local)) return false;
+        var expectedUtc = TimeZoneInfo.ConvertTimeToUtc(local, zone);
+        var entries = await db.LedgerEntries.AsNoTracking()
+            .Where(x => x.BuildingId == buildingId &&
+                x.LedgerTransactionId == existing.LedgerTransactionId)
+            .ToListAsync(cancellationToken);
+        if (entries.Count == 0 || entries.Any(x => x.EffectiveAtUtc != expectedUtc))
+            return false;
+
+        var storedTotal = entries.Sum(x => isRevenue ? x.SignedAmount : -x.SignedAmount);
+        return storedTotal == amount;
+    }
+
     /// <summary>
     /// Reverses a posted expense or revenue without deleting its source evidence.
     /// The reversal is recorded in the currently open building period.
