@@ -35,13 +35,19 @@ public sealed class LanguageAdministrationService
             while (!string.IsNullOrWhiteSpace(current) && visited.Add(current))
             {
                 if (_runtime.TryGetValue(current, out var values) && values.TryGetValue(key, out var value)) return value;
+                try
+                {
+                    var parent = CultureInfo.GetCultureInfo(current).Parent.Name;
+                    if (!string.IsNullOrWhiteSpace(parent) && !visited.Contains(parent)) { current = parent; continue; }
+                }
+                catch (CultureNotFoundException) { }
                 current = _fallbacks.GetValueOrDefault(current);
             }
             return _runtime.TryGetValue(_defaultCulture, out var defaults) && defaults.TryGetValue(key, out var fallbackValue) ? fallbackValue : null;
         }
     }
 
-    public static string GetDirection(string culture) { lock (CacheLock) return _directions.GetValueOrDefault(culture, culture.StartsWith("ar", StringComparison.OrdinalIgnoreCase) ? "RTL" : "LTR"); }
+    public static string GetDirection(string culture) { lock (CacheLock) { if (_directions.TryGetValue(culture,out var direction)) return direction; try { var parent=CultureInfo.GetCultureInfo(culture).Parent.Name; if (_directions.TryGetValue(parent,out direction)) return direction; } catch (CultureNotFoundException) { } return culture.StartsWith("ar", StringComparison.OrdinalIgnoreCase) ? "RTL" : "LTR"; } }
 
     public async Task RefreshRuntimeAsync(CancellationToken ct = default)
     {
