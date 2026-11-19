@@ -67,7 +67,10 @@ public class BackupService
         ["notificationRecipients"] = Loc.T("Backup_Collection_notificationRecipients"),
         ["notificationDeliveries"] = Loc.T("Backup_Collection_notificationDeliveries"),
         ["notificationReadStates"] = Loc.T("Backup_Collection_notificationReadStates"),
-        ["notificationPreferences"] = Loc.T("Backup_Collection_notificationPreferences")
+        ["notificationPreferences"] = Loc.T("Backup_Collection_notificationPreferences"),
+        ["languages"] = Loc.T("Backup_Collection_languages"),
+        ["translationEntries"] = Loc.T("Backup_Collection_translationEntries"),
+        ["translationValues"] = Loc.T("Backup_Collection_translationValues")
     };
 
     /// <summary>
@@ -154,6 +157,9 @@ public class BackupService
                     "notificationDeliveries" => await db.NotificationDeliveries.CountAsync(),
                     "notificationReadStates" => await db.NotificationReadStates.CountAsync(),
                     "notificationPreferences" => await db.NotificationPreferences.CountAsync(),
+                    "languages" => await db.Languages.CountAsync(),
+                    "translationEntries" => await db.TranslationEntries.CountAsync(),
+                    "translationValues" => await db.TranslationValues.CountAsync(),
                     _ => 0
                 };
             }
@@ -410,6 +416,18 @@ By: {userId}
                 foreach (var preference in await db.NotificationPreferences.AsNoTracking().ToListAsync())
                     result.Add(ToDict(preference.PreferenceId.ToString("D"), preference));
                 break;
+            case "languages":
+                foreach (var language in await db.Languages.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(language.CultureCode, language));
+                break;
+            case "translationEntries":
+                foreach (var entry in await db.TranslationEntries.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(entry.Key, entry));
+                break;
+            case "translationValues":
+                foreach (var value in await db.TranslationValues.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(EncodeTranslationValueId(value.Key, value.CultureCode), value));
+                break;
         }
 
         return result;
@@ -543,7 +561,10 @@ By: {userId}
             "notificationRecipients",
             "notificationDeliveries",
             "notificationReadStates",
-            "notificationPreferences"
+            "notificationPreferences",
+            "languages",
+            "translationEntries",
+            "translationValues"
         };
 
         // نحتفظ فقط بالجداول اللي المستخدم اختارها
@@ -1139,6 +1160,51 @@ By: {userId}
                     return true;
                 }
 
+            case "languages":
+                {
+                    var existing = await db.Languages.FirstOrDefaultAsync(x => x.CultureCode == id);
+                    if (existing != null && !overwrite) return false;
+                    var entity = JsonSerializer.Deserialize<Data.Entities.LanguageEntity>(
+                        data.GetRawText(), RestoreJsonOptions);
+                    if (entity == null || !string.Equals(entity.CultureCode, id, StringComparison.Ordinal))
+                        return false;
+                    ApplyOrAdd(db, db.Languages, existing, entity);
+                    return true;
+                }
+
+            case "translationEntries":
+                {
+                    var existing = await db.TranslationEntries.FirstOrDefaultAsync(x => x.Key == id);
+                    if (existing != null && !overwrite) return false;
+                    var entity = JsonSerializer.Deserialize<Data.Entities.TranslationEntryEntity>(
+                        data.GetRawText(), RestoreJsonOptions);
+                    if (entity == null || !string.Equals(entity.Key, id, StringComparison.Ordinal))
+                        return false;
+                    entity.RowVersion = [];
+                    ApplyOrAdd(db, db.TranslationEntries, existing, entity);
+                    if (existing != null)
+                        db.Entry(existing).Property(x => x.RowVersion).IsModified = false;
+                    return true;
+                }
+
+            case "translationValues":
+                {
+                    var parts = DecodeTranslationValueId(id);
+                    if (parts == null) return false;
+                    var (key, cultureCode) = parts.Value;
+                    var existing = await db.TranslationValues.FirstOrDefaultAsync(
+                        x => x.Key == key && x.CultureCode == cultureCode);
+                    if (existing != null && !overwrite) return false;
+                    var entity = JsonSerializer.Deserialize<Data.Entities.TranslationValueEntity>(
+                        data.GetRawText(), RestoreJsonOptions);
+                    if (entity == null ||
+                        !string.Equals(entity.Key, key, StringComparison.Ordinal) ||
+                        !string.Equals(entity.CultureCode, cultureCode, StringComparison.Ordinal))
+                        return false;
+                    ApplyOrAdd(db, db.TranslationValues, existing, entity);
+                    return true;
+                }
+
             default:
                 // collection غير معروفة → نتخطاها
                 return false;
@@ -1270,6 +1336,28 @@ By: {userId}
     {
         if (existing != null) db.Entry(existing).CurrentValues.SetValues(entity);
         else set.Add(entity);
+    }
+
+    private static string EncodeTranslationValueId(string key, string cultureCode) =>
+        $"{Convert.ToBase64String(Encoding.UTF8.GetBytes(key))}.{Convert.ToBase64String(Encoding.UTF8.GetBytes(cultureCode))}";
+
+    private static (string Key, string CultureCode)? DecodeTranslationValueId(string id)
+    {
+        var separator = id.IndexOf('.');
+        if (separator <= 0 || separator == id.Length - 1 || id.IndexOf('.', separator + 1) >= 0)
+            return null;
+        try
+        {
+            var key = Encoding.UTF8.GetString(Convert.FromBase64String(id[..separator]));
+            var cultureCode = Encoding.UTF8.GetString(Convert.FromBase64String(id[(separator + 1)..]));
+            return string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(cultureCode)
+                ? null
+                : (key, cultureCode);
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
     }
 
     /// <summary>
