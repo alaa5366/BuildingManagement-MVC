@@ -278,6 +278,8 @@ public class QrSecurityService
                  x.DeviceFingerprint == deviceFingerprint))
             .ExecuteUpdateAsync(s => s
                 .SetProperty(x => x.UseCount, x => x.UseCount + 1)
+                .SetProperty(x => x.FirstUsedAt,
+                    x => string.IsNullOrEmpty(x.FirstUsedAt) ? now : x.FirstUsedAt)
                 .SetProperty(x => x.LastUsedAt, now)
                 .SetProperty(x => x.DeviceFingerprint,
                     x => string.IsNullOrEmpty(x.DeviceFingerprint)
@@ -319,6 +321,8 @@ public class QrSecurityService
                      x.DeviceFingerprint == deviceFingerprint))
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(x => x.UseCount, x => x.UseCount + 1)
+                    .SetProperty(x => x.FirstUsedAt,
+                        x => string.IsNullOrEmpty(x.FirstUsedAt) ? now : x.FirstUsedAt)
                     .SetProperty(x => x.LastUsedAt, now)
                     .SetProperty(x => x.DeviceFingerprint,
                         x => string.IsNullOrEmpty(x.DeviceFingerprint)
