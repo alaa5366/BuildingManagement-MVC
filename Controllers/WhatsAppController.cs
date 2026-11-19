@@ -5,61 +5,68 @@ using Microsoft.AspNetCore.Mvc;
 using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
-// ============================================================
-//  WhatsAppController	رسائل WhatsApp (من قوالب)
-// ============================================================
-/// <summary>
-/// Builds WhatsApp message drafts (welcome, reminders, payment notices) from templates for apartments.
-/// </summary>
-/// <remarks>
-/// Access: requires one of the roles <c>admin</c>.
-/// </remarks>
+
 [Authorize(Roles = "admin")]
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.UseWhatsApp)]
 public class WhatsAppController : Controller
 {
-    private readonly BuildingsService _buildings;
-    private readonly WhatsAppTemplateService _templates;
+    private readonly TargetWhatsAppService _whatsApp;
+    private readonly TargetNotificationsService _notifications;
+    private readonly IAuditLogger _auditLogger;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="WhatsAppController"/> class.
-    /// </summary>
-    public WhatsAppController(BuildingsService buildings, WhatsAppTemplateService templates)
+    public WhatsAppController(
+        TargetWhatsAppService whatsApp,
+        TargetNotificationsService notifications,
+        IAuditLogger auditLogger)
     {
-        _buildings = buildings; _templates = templates;
+        _whatsApp = whatsApp;
+        _notifications = notifications;
+        _auditLogger = auditLogger;
     }
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
 
-    /// <summary>
-    /// Shows the main page of the whats app screen.
-    /// </summary>
-    /// <remarks>
-    /// HTTP GET.
-    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
-        ViewBag.Building = building;
+        var model = await _whatsApp.GetIndexAsync(BuildingId, HttpContext.RequestAborted);
+        if (model is null) return NotFound();
         ViewBag.Templates = WhatsAppTemplateService.Templates;
-        return View();
+        return View(model);
     }
 
-    /// <summary>
-    /// Handles the generate form submission of the whats app screen.
-    /// </summary>
-    /// <remarks>
-    /// HTTP POST.
-    /// </remarks>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Generate(string aptId, string templateId, string? amount, string? note, string? share, string? message)
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveTemplate(string name, string message, Guid? id)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        var apt = building?.Apartments.FirstOrDefault(a => a.Id == aptId);
-        if (building == null || apt == null) return NotFound();
+        if (User.HasClaim("impersonated", "true")) return Forbid();
+        try
+        {
+            await _whatsApp.SaveTemplateAsync(
+                BuildingId, name, message,
+                User.FindFirstValue(ClaimTypes.NameIdentifier), id,
+                HttpContext.RequestAborted);
+            TempData["Success"] = "تم حفظ قالب الرسالة.";
+        }
+        catch (ArgumentException ex) { TempData["Error"] = ex.Message; }
+        catch (InvalidOperationException ex) { TempData["Error"] = ex.Message; }
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteTemplate(Guid id)
+    {
+        if (User.HasClaim("impersonated", "true")) return Forbid();
+        var deleted = await _whatsApp.DeleteTemplateAsync(BuildingId, id, HttpContext.RequestAborted);
+        TempData[deleted ? "Success" : "Error"] = deleted ? "تم حذف القالب." : "القالب غير موجود.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Generate(
+        string aptId, string templateId, string? amount, string? note,
+        string? share, string? message)
+    {
+        if (User.HasClaim("impersonated", "true")) return Forbid();
 
         var extra = new Dictionary<string, string>
         {
@@ -69,13 +76,53 @@ public class WhatsAppController : Controller
             ["message"] = message ?? ""
         };
 
-        var text = _templates.Render(templateId, building, apt, extra);
-        var link = WhatsAppTemplateService.BuildWaLink(apt.Phone, text);
+        try
+        {
+            var baseUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}";
+            var result = await _whatsApp.GenerateAsync(
+                BuildingId, aptId, templateId, extra, baseUrl, HttpContext.RequestAborted);
+            if (result is null) return NotFound();
 
-        ViewBag.Building = building;
-        ViewBag.Apt = apt;
-        ViewBag.Message = text;
-        ViewBag.Link = link;
-        return View("Result");
+            // Publish the same content to the resident's in-app inbox. WhatsApp remains
+            // a user-confirmed wa.me draft; the browser cannot truthfully confirm delivery.
+            var templateName = result.TemplateName;
+            // Welcome messages contain bearer links (SetPin / QuickLogin). Never persist
+            // those secrets in the in-app notification table.
+            var notificationBody = string.Equals(templateId, "welcome", StringComparison.Ordinal)
+                ? $"تم تجهيز رسالة الترحيب للشقة رقم {result.ApartmentNumber}. افتح WhatsApp لإرسالها مباشرة إلى رقم الساكن؛ الروابط المؤقتة لا تُحفظ داخل صندوق الإشعارات."
+                : result.Message.Length <= 1000
+                    ? result.Message
+                    : result.Message[..997] + "...";
+            await _notifications.CreateResidentNotificationAsync(
+                BuildingId, aptId, templateName, notificationBody,
+                "whatsapp-draft", "📲", HttpContext.RequestAborted);
+
+            await _auditLogger.LogAsync(
+                action: "notification.whatsapp_draft_created",
+                buildingId: BuildingId,
+                apartmentId: aptId,
+                userId: User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "",
+                userRole: "admin",
+                metadata: new
+                {
+                    channel = "whatsapp",
+                    deliveryStatus = "draft_ready",
+                    inAppStatus = "published",
+                    apartmentNumber = result.ApartmentNumber,
+                    template = templateId
+                },
+                severity: "info");
+
+            return View("Result", result);
+        }
+        catch (ArgumentException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        return RedirectToAction(nameof(Index));
     }
 }

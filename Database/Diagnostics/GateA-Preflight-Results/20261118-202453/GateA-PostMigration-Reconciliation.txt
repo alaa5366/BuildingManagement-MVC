@@ -1,0 +1,36 @@
+Changed database context to 'BuildingManagement_RestoreTest'.
+DatabaseName,ServerName,CheckedAtUtc
+------------,----------,------------
+BuildingManagement_RestoreTest,ZOS-AAM\LOCALDB#D33C7E97,2026-11-18 18:24:53.847
+
+(1 rows affected)
+ExpectedTableCount,PresentTableCount
+------------------,-----------------
+13,13
+
+(1 rows affected)
+MissingTable
+------------
+
+(0 rows affected)
+MigrationId,ProductVersion
+-----------,--------------
+20261118182110_Phase06_IdentityAuthorizationFoundation,8.0.10
+
+(1 rows affected)
+ConstraintName,is_disabled,is_not_trusted
+--------------,-----------,--------------
+CK_ApartmentAccessGrants_BoundedUrgentAccess,0,0
+CK_ApartmentAccessGrants_GrantType,0,0
+CK_ApartmentAccessGrants_PermissionSet,0,0
+CK_ApartmentAccessGrants_Reason,0,0
+CK_ApartmentOwnerships_CompletenessStatus,0,0
+CK_ApartmentOwnerships_CompletenessVerification,0,0
+CK_ApartmentOwnerships_Evidence,0,0
+CK_LegacyIdentityMap_ResolvedReview,0,0
+
+(8 rows affected)
+ForeignKeyName,is_disabled,is_not_trusted
+--------------,-----------,--------------
+
+(0 rows affected)

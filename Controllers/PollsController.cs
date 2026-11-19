@@ -5,142 +5,74 @@ using Microsoft.AspNetCore.Mvc;
 using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
-// ============================================================
-//  PollsController	إدارة التصويتات
-// ============================================================
-/// <summary>
-/// Admin side of polls: create, close, reopen, delete and view results.
-/// </summary>
-/// <remarks>
-/// Access: requires one of the roles <c>admin</c>.
-/// </remarks>
+
 [Authorize(Roles = "admin")]
 [AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManagePolls)]
 public class PollsController : Controller
 {
-    private readonly BuildingsService _buildings;
-    private readonly PollsService _polls;
-    private readonly AuditLogService _audit;
+    private readonly TargetPollsService _polls;
+    private readonly ILogger<PollsController> _logger;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PollsController"/> class.
-    /// </summary>
-    public PollsController(BuildingsService buildings, PollsService polls, AuditLogService audit)
+    public PollsController(TargetPollsService polls, ILogger<PollsController> logger)
     {
-        _buildings = buildings; _polls = polls; _audit = audit;
+        _polls = polls;
+        _logger = logger;
     }
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
 
-    /// <summary>
-    /// Shows the main page of the polls screen.
-    /// </summary>
-    /// <remarks>
-    /// HTTP GET.
-    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Index(int page = 1, int pageSize = 50)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
+        var summary = await _polls.GetBuildingSummaryAsync(BuildingId, HttpContext.RequestAborted);
+        if (summary is null) return NotFound();
 
-        var allPolls = _polls.GetPolls(building);
-        var paged = BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Poll>
-            .Create(allPolls, page, pageSize);
-
-        ViewBag.Building = building;
-        ViewBag.RouteValues = new Dictionary<string, string?>
-        {
-            ["pageSize"] = pageSize.ToString()
-        };
-
+        var paged = await _polls.GetPageAsync(BuildingId, page, pageSize, activeOnly: false, HttpContext.RequestAborted);
+        ViewBag.BuildingName = summary.Value.Name;
+        ViewBag.OpenApartmentCount = summary.Value.ActiveApartmentCount;
+        ViewBag.RouteValues = new Dictionary<string, string?> { ["pageSize"] = paged.PageSize.ToString() };
         return View(paged);
     }
 
-    /// <summary>
-    /// Handles the create form submission of the polls screen.
-    /// </summary>
-    /// <remarks>
-    /// HTTP POST.
-    /// </remarks>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(string question, string? description, string? deadline, List<string> options)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
-
-        var validOptions = (options ?? new()).Where(o => !string.IsNullOrWhiteSpace(o)).ToList();
-        if (string.IsNullOrWhiteSpace(question) || validOptions.Count < 2)
+        try
         {
-            TempData["Error"] = Loc.T("A_Question_And_At_Least_Two");
-            return RedirectToAction("Index");
+            var poll = await _polls.CreateAsync(BuildingId, question, description, options ?? new(),
+                deadline, User.Identity?.Name ?? "admin", HttpContext.RequestAborted);
+            _logger.LogInformation("Poll {PollId} created for building {BuildingId} by {Actor}.",
+                poll.Id, BuildingId, User.Identity?.Name);
+            TempData["Message"] = Loc.T("Poll_Published");
         }
-
-        var poll = _polls.CreatePoll(building, question.Trim(), description, validOptions, deadline, User.Identity?.Name ?? "admin");
-        _audit.Push(building, "poll_create", poll.Question, "admin", User.Identity?.Name ?? "admin");
-        await _buildings.SaveFullAsync(building);
-        TempData["Message"] = Loc.T("Poll_Published");
-        return RedirectToAction("Index");
+        catch (ArgumentException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        return RedirectToAction(nameof(Index));
     }
 
-    /// <summary>
-    /// Handles the close form submission of the polls screen.
-    /// </summary>
-    /// <remarks>
-    /// HTTP POST.
-    /// </remarks>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Close(string id)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
-        if (_polls.SetClosed(building, id, true))
-        {
-            _audit.Push(building, "poll_close", id, "admin", User.Identity?.Name ?? "admin");
-            await _buildings.SaveFullAsync(building);
-        }
-        return RedirectToAction("Index");
+        if (await _polls.SetClosedAsync(BuildingId, id, true, HttpContext.RequestAborted))
+            _logger.LogInformation("Poll {PollId} closed for building {BuildingId}.", id, BuildingId);
+        return RedirectToAction(nameof(Index));
     }
 
-    /// <summary>
-    /// Handles the reopen form submission of the polls screen.
-    /// </summary>
-    /// <remarks>
-    /// HTTP POST.
-    /// </remarks>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Reopen(string id)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
-        if (_polls.SetClosed(building, id, false))
-        {
-            _audit.Push(building, "poll_reopen", id, "admin", User.Identity?.Name ?? "admin");
-            await _buildings.SaveFullAsync(building);
-        }
-        return RedirectToAction("Index");
+        if (await _polls.SetClosedAsync(BuildingId, id, false, HttpContext.RequestAborted))
+            _logger.LogInformation("Poll {PollId} reopened for building {BuildingId}.", id, BuildingId);
+        return RedirectToAction(nameof(Index));
     }
 
-    /// <summary>
-    /// Handles the delete form submission of the polls screen.
-    /// </summary>
-    /// <remarks>
-    /// HTTP POST.
-    /// </remarks>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string id)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
-        if (_polls.Delete(building, id))
-        {
-            _audit.Push(building, "poll_delete", id, "admin", User.Identity?.Name ?? "admin");
-            await _buildings.SaveFullAsync(building);
-        }
-        return RedirectToAction("Index");
+        if (await _polls.DeleteAsync(BuildingId, id, HttpContext.RequestAborted))
+            _logger.LogInformation("Poll {PollId} deleted for building {BuildingId}.", id, BuildingId);
+        return RedirectToAction(nameof(Index));
     }
 }

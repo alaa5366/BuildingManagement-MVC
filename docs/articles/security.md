@@ -9,8 +9,8 @@ This page records the decisions behind the security code so they survive comment
 
 ## Sign-in
 
-* PINs and passwords are BCrypt hashes. Plain-text comparison is off (`Auth:AllowLegacyPlainPins` is an emergency switch). On startup, plain-text PINs are hashed and obsolete plain-text columns are cleared.
-* `LoginThrottle` locks an account after 5 failures and an IP address after 20, for 15 minutes. Account keys are normalized (so `0100…` and `+20100…` share one counter) and hashed. Counters are mirrored to the `LoginThrottle` table so restarts do not reset them.
+* PINs and passwords are expected to use BCrypt verifiers. Startup does not rewrite credentials or clear legacy PIN columns. Legacy credential reconciliation must run only through a separately reviewed, checkpointed migration; do not assume that restoring an old backup will automatically hash its PINs.
+* `LoginThrottle` locks an account after 5 failures and an IP address after 20, for 15 minutes. Account keys are normalized and hashed. Counters are currently in-process only and reset on application restart; durable persistence is intentionally disabled until an EF-managed schema and integration tests are in place.
 * `X-Forwarded-For` is trusted only from the proxies listed in `Proxy:KnownProxies`. Without that setting only `X-Forwarded-Proto` is honored. Behind a reverse proxy, set it, otherwise every user shares the proxy's IP address.
 * Error messages for wrong phone, wrong PIN and unknown account are identical, and a dummy hash is computed for unknown accounts so timing does not reveal them.
 * Admin and super admin sessions last 12 hours and do not slide; resident sessions last 7 days. Residents are re-validated against the database.
@@ -38,7 +38,7 @@ This page records the decisions behind the security code so they survive comment
 * Detailed exceptions are written to server logs; browser responses use generic restore errors.
 * Scheduled-backup settings are validated server-side (frequency/day/hour, known collections, and retention 1–30); rotation clamps retention defensively so invalid stored values cannot purge every scheduled backup.
 * Identity columns (audit log, deposit edit history) get new values on restore; the audit log is append-only.
-* Restoring an old backup that still holds plain-text PINs: the startup migration hashes them at the next start, so those users can sign in again after a restart.
+* Restoring an old backup that still holds plain-text PINs does not trigger automatic credential mutation. Validate and reconcile legacy credentials through the controlled migration/enrollment process before restoring normal sign-in.
 
 ## Request hardening
 
@@ -71,5 +71,5 @@ Every controller action must have `[Authorize]` or `[AllowAnonymous]`. `Controll
 * TOTP uses RFC 6238, six digits, a 30-second period, and a ±1 time-step clock-skew window. An accepted time-step cannot be replayed.
 * When enabled, admin/super-admin sign-in does not issue the authentication cookie until the second factor succeeds. The pending sign-in is server-side session state with a five-minute expiry. The challenge is rate limited and protected by anti-forgery validation.
 * Administrator sessions carry an explicit second-factor verification claim. Session revalidation rejects pre-enrollment cookies after the database reports 2FA enabled (within the existing two-minute admin revalidation cache); super-admin checks are performed against the database on cookie validation. The original actor's verification state is preserved and rechecked during impersonation and restoration.
-* Two-factor authentication is opt-in in this release to avoid locking out existing administrators before a managed enrollment rollout. A mandatory policy must be explicitly approved and communicated before deployment.
+* The current implementation still challenges only accounts that have already enabled TOTP. The approved target policy requires mandatory MFA for Admin and SuperAdmin; enrollment, recovery, bootstrap, and enforcement are implementation work still required before the target is complete.
 * The migration `20261117130000_AddUserTwoFactor` adds the required columns to `Users`. Apply it to TEST and validate before any production planning; no production database was changed by this branch.

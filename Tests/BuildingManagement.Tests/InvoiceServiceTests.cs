@@ -1,209 +1,291 @@
-﻿using BuildingManagementMvc.Models;
+using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Services;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace BuildingManagement.Tests;
 
-public class InvoiceServiceTests
+public sealed class InvoiceServiceTests
 {
-    private readonly WalletService _wallet = new();
-    private readonly InvoiceService _service;
-
-    public InvoiceServiceTests()
-    {
-        _service = new InvoiceService(_wallet);
-    }
-
-    private static Building CreateBuildingWithApt()
-    {
-        var b = new Building
-        {
-            Name = "Test Tower",
-            BuildingNumber = "BLD-001",
-            PaymentInfo = new PaymentInfo { Label = "Instapay", AccountNumber = "123" }
-        };
-        b.Floors.Add(new Floor { Id = "f1", Label = "Floor 1", Order = 0 });
-        b.Apartments.Add(new Apartment
-        {
-            Id = "a1",
-            FloorId = "f1",
-            Number = 1,
-            Owner = "Ali",
-            Phone = "0100",
-            MonthlyFee = 100
-        });
-        return b;
-    }
-
-    // ================================================================
-    // BuildInvoiceData — الأساسيات
-    // ================================================================
-
     [Fact]
-    public void BuildInvoiceData_ValidInput_ReturnsPopulatedData()
+    public async Task BuildInvoiceDataAsync_UsesTargetLedgerDepositsAndApartmentScope()
     {
-        var b = CreateBuildingWithApt();
-        var apt = b.Apartments[0];
-        _wallet.EnsureMonth(b, "2025-01");
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        var now = DateTime.UtcNow;
+        var priorPeriodId = Guid.NewGuid();
+        var periodId = Guid.NewGuid();
+        var priorDepositTransactionId = Guid.NewGuid();
+        var priorDepositReversalId = Guid.NewGuid();
+        var transactionId = Guid.NewGuid();
+        var chargeTransactionId = Guid.NewGuid();
+        var expenseTransactionId = Guid.NewGuid();
+        var expenseReversalId = Guid.NewGuid();
+        var expenseSourceId = Guid.NewGuid();
+        var activeExpenseTransactionId = Guid.NewGuid();
+        var activeExpenseSourceId = Guid.NewGuid();
+        var depositId = Guid.NewGuid();
 
-        var invoice = _service.BuildInvoiceData(b, apt, "2025-01");
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.Buildings.Add(new BuildingEntity
+            {
+                Id = "B1", Name = "Target Building", BuildingNumber = "01",
+                PaymentLabel = "Bank", PaymentAccountNumber = "12345",
+                PaymentPhone = "201000000000", PaymentNotes = "Transfer note"
+            });
+            seed.BuildingSettings.Add(new BuildingSettingsEntity { BuildingId = "B1", Currency = "EGP" });
+            seed.Floors.Add(new FloorEntity
+            {
+                BuildingId = "B1", Id = "F1", Label = "First Floor", SortOrder = 1
+            });
+            seed.Apartments.Add(new ApartmentEntity
+            {
+                BuildingId = "B1", Id = "A1", FloorId = "F1", Number = 101,
+                MonthlyFee = 100m, IsClosed = false, IsDisabled = false
+            });
+
+            seed.FinancialPeriods.Add(new FinancialPeriodEntity
+            {
+                PeriodId = priorPeriodId, BuildingId = "B1", PeriodKey = "2026-10",
+                TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Closed,
+                StartsAtUtc = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndsAtUtc = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+                CreatedAtUtc = now
+            });
+            seed.FinancialPeriods.Add(new FinancialPeriodEntity
+            {
+                PeriodId = periodId, BuildingId = "B1", PeriodKey = "2026-11",
+                TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Open,
+                StartsAtUtc = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndsAtUtc = new DateTime(2026, 12, 1, 0, 0, 0, DateTimeKind.Utc),
+                CreatedAtUtc = now
+            });
+            seed.LedgerTransactions.AddRange(
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = priorDepositTransactionId, PeriodId = priorPeriodId, BuildingId = "B1",
+                    Kind = LedgerTransactionKind.Deposit, Status = LedgerTransactionStatus.Posted,
+                    IdempotencyKey = "invoice-prior-deposit", CreatedAtUtc = now, PostedAtUtc = now
+                },
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = priorDepositReversalId, PeriodId = periodId, BuildingId = "B1",
+                    Kind = LedgerTransactionKind.Reversal, Status = LedgerTransactionStatus.Posted,
+                    IdempotencyKey = "invoice-prior-deposit-reversal",
+                    ReversesTransactionId = priorDepositTransactionId,
+                    CreatedAtUtc = now, PostedAtUtc = now
+                });
+            seed.LedgerEntries.AddRange(
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = priorDepositTransactionId,
+                    PeriodId = priorPeriodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.Deposit, SignedAmount = 50m, CurrencyCode = "EGP",
+                    EffectiveAtUtc = new DateTime(2026, 10, 15, 0, 0, 0, DateTimeKind.Utc),
+                    CreatedAtUtc = now
+                },
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = priorDepositReversalId,
+                    PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.Reversal, SignedAmount = -50m, CurrencyCode = "EGP",
+                    EffectiveAtUtc = now, CreatedAtUtc = now
+                });
+            seed.PaymentDeposits.Add(new PaymentDepositEntity
+            {
+                PaymentDepositId = Guid.NewGuid(), PeriodId = priorPeriodId, BuildingId = "B1",
+                ApartmentId = "A1", PostedTransactionId = priorDepositTransactionId,
+                ReversalTransactionId = priorDepositReversalId, Amount = 50m,
+                CurrencyCode = "EGP", Status = PaymentDepositStatus.Reversed,
+                SubmittedAtUtc = now, ConfirmedAtUtc = now, ReversedAtUtc = now,
+                SourceSystem = "application"
+            });
+            seed.LedgerTransactions.Add(new LedgerTransactionEntity
+            {
+                LedgerTransactionId = transactionId, PeriodId = periodId, BuildingId = "B1",
+                Kind = LedgerTransactionKind.Deposit, Status = LedgerTransactionStatus.Posted,
+                IdempotencyKey = "invoice-deposit", CreatedAtUtc = now, PostedAtUtc = now
+            });
+            seed.LedgerEntries.AddRange(
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = transactionId,
+                    PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.Deposit, SignedAmount = 200m, CurrencyCode = "EGP",
+                    EffectiveAtUtc = now, CreatedAtUtc = now
+                });
+            seed.LedgerTransactions.Add(new LedgerTransactionEntity
+            {
+                LedgerTransactionId = chargeTransactionId, PeriodId = periodId, BuildingId = "B1",
+                Kind = LedgerTransactionKind.MonthlyCharge, Status = LedgerTransactionStatus.Posted,
+                IdempotencyKey = "invoice-monthly-charge", CreatedAtUtc = now, PostedAtUtc = now
+            });
+            seed.LedgerEntries.Add(new LedgerEntryEntity
+            {
+                LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = chargeTransactionId,
+                PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
+                EntryKind = LedgerEntryKind.MonthlyCharge, SignedAmount = -125m, CurrencyCode = "EGP",
+                EffectiveAtUtc = now, CreatedAtUtc = now
+            });
+            seed.LedgerTransactions.AddRange(
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = expenseTransactionId, PeriodId = periodId, BuildingId = "B1",
+                    Kind = LedgerTransactionKind.Expense, Status = LedgerTransactionStatus.Posted,
+                    IdempotencyKey = "invoice-expense", SourceSystem = "application",
+                    SourceType = "Expense", SourceKey = expenseSourceId.ToString("D"),
+                    CreatedAtUtc = now, PostedAtUtc = now
+                },
+                new LedgerTransactionEntity
+                {
+                    LedgerTransactionId = expenseReversalId, PeriodId = periodId, BuildingId = "B1",
+                    Kind = LedgerTransactionKind.Reversal, Status = LedgerTransactionStatus.Posted,
+                    IdempotencyKey = "invoice-expense-reversal", SourceSystem = "application",
+                    SourceType = "ExpenseReversal", SourceKey = Guid.NewGuid().ToString("D"),
+                    ReversesTransactionId = expenseTransactionId,
+                    CreatedAtUtc = now, PostedAtUtc = now
+                });
+            seed.LedgerTransactions.Add(new LedgerTransactionEntity
+            {
+                LedgerTransactionId = activeExpenseTransactionId, PeriodId = periodId, BuildingId = "B1",
+                Kind = LedgerTransactionKind.Expense, Status = LedgerTransactionStatus.Posted,
+                IdempotencyKey = "invoice-active-expense", SourceSystem = "application",
+                SourceType = "Expense", SourceKey = activeExpenseSourceId.ToString("D"),
+                CreatedAtUtc = now, PostedAtUtc = now
+            });
+            seed.LedgerEntries.AddRange(
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = expenseTransactionId,
+                    PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.ExpenseAllocation, SignedAmount = -40m,
+                    CurrencyCode = "EGP", EffectiveAtUtc = now, CreatedAtUtc = now
+                },
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = expenseReversalId,
+                    PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.Reversal, SignedAmount = 40m,
+                    CurrencyCode = "EGP", EffectiveAtUtc = now, CreatedAtUtc = now
+                },
+                new LedgerEntryEntity
+                {
+                    LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = activeExpenseTransactionId,
+                    PeriodId = periodId, BuildingId = "B1", ApartmentId = "A1",
+                    EntryKind = LedgerEntryKind.ExpenseAllocation, SignedAmount = -25m,
+                    CurrencyCode = "EGP", EffectiveAtUtc = now, CreatedAtUtc = now
+                });
+            seed.FinancialCategories.AddRange(
+                new FinancialCategoryEntity
+                {
+                    BuildingId = "B1", Id = "CAT1", Kind = "expense", Name = "Maintenance",
+                    Color = "#123456", IsActive = true
+                },
+                new FinancialCategoryEntity
+                {
+                    BuildingId = "B1", Id = "CAT2", Kind = "expense", Name = "Cleaning",
+                    Color = "#654321", IsActive = true
+                });
+            seed.Expenses.Add(new ExpenseEntity
+            {
+                BuildingId = "B1", Id = expenseSourceId.ToString("N"), MonthKey = "2026-11",
+                CategoryId = "CAT1", CategoryKind = "expense", Note = "Reversed maintenance",
+                Amount = 40m, ExpenseDate = new DateOnly(2026, 11, 10)
+            });
+            seed.Expenses.Add(new ExpenseEntity
+            {
+                BuildingId = "B1", Id = activeExpenseSourceId.ToString("N"), MonthKey = "2026-11",
+                CategoryId = "CAT2", CategoryKind = "expense", Note = "Cleaning",
+                Amount = 25m, ExpenseDate = new DateOnly(2026, 11, 12)
+            });
+            seed.PaymentDeposits.Add(new PaymentDepositEntity
+            {
+                PaymentDepositId = depositId, PeriodId = periodId, BuildingId = "B1",
+                ApartmentId = "A1", PostedTransactionId = transactionId, Amount = 200m,
+                CurrencyCode = "EGP", Status = PaymentDepositStatus.Confirmed,
+                SubmittedAtUtc = now, ConfirmedAtUtc = now, SourceSystem = "application"
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var factory = new TestContextFactory(options);
+        var wallet = new TargetWalletReadService(factory);
+        var service = new InvoiceService(factory, wallet);
+        var invoice = await service.BuildInvoiceDataAsync("B1", "A1", "2026-11");
 
         Assert.NotNull(invoice);
-        Assert.Equal("BLD-001", invoice.Building.BuildingNumber);
-        Assert.Equal(1, invoice.Apt.Number);
-        Assert.Equal("2025-01", invoice.MonthKey);
-        Assert.NotNull(invoice.InvoiceNo);
-        Assert.Contains("INV-BLD-001-1-202501", invoice.InvoiceNo);
+        Assert.Equal("Target Building", invoice!.Building.Name);
+        Assert.Equal("EGP", invoice.CurrencyCode);
+        Assert.Equal(101, invoice.Apt.Number);
+        Assert.Equal(50m, invoice.Balance);
+        Assert.Equal(50m, invoice.PreviousBalance);
+        Assert.Equal(150m, invoice.MonthDeposits);
+        Assert.Equal(125m, invoice.MonthFee);
+        Assert.Equal(25m, invoice.MonthExpensesShare);
+        var categoryShare = Assert.Single(invoice.CategoryShares);
+        Assert.Equal("Cleaning", categoryShare.Name);
+        Assert.Equal(1, categoryShare.AptCount);
+        Assert.Equal(25m, categoryShare.Total);
+        Assert.Equal(25m, categoryShare.Share);
+        Assert.Equal("12345", invoice.Payment.AccountNumber);
+        Assert.StartsWith("INV-01-101-", invoice.InvoiceNo);
+        var invoiceNumberParts = invoice.InvoiceNo.Split('-');
+        Assert.Equal(5, invoiceNumberParts.Length);
+        Assert.Equal(8, invoiceNumberParts[3].Length); // Original print date: yyyyMMdd.
+        Assert.Equal(6, invoiceNumberParts[4].Length); // Stable sequential serial.
+
+        // Reprinting in the same month returns the frozen invoice, even if
+        // mutable building profile data changes after the first issuance.
+        await using (var update = new AppDbContext(options))
+        {
+            var buildingRow = await update.Buildings.SingleAsync(item => item.Id == "B1");
+            buildingRow.Name = "Renamed Building";
+            await update.SaveChangesAsync();
+        }
+
+        var reprint = await service.BuildInvoiceDataAsync("B1", "A1", "2026-11");
+        Assert.NotNull(reprint);
+        Assert.Equal(invoice.InvoiceNo, reprint!.InvoiceNo);
+        Assert.Equal(invoice.IssueDate, reprint.IssueDate);
+        Assert.Equal("Target Building", reprint.Building.Name);
+
+        await using var verify = new AppDbContext(options);
+        var issuedRows = await verify.InvoiceIssues
+            .Where(item => item.BuildingId == "B1" && item.ApartmentId == "A1" && item.MonthKey == "2026-11")
+            .ToListAsync();
+        Assert.Single(issuedRows);
+        Assert.NotNull(issuedRows[0].SnapshotJson);
+        Assert.True(issuedRows[0].InvoiceSerial > 0);
     }
 
     [Fact]
-    public void BuildInvoiceData_InvoiceNoHasRandomSuffix()
+    public async Task FindBuildingIdByApartmentAsync_ReturnsNullWhenApartmentIdIsAmbiguous()
     {
-        var b = CreateBuildingWithApt();
-        var apt = b.Apartments[0];
-        _wallet.EnsureMonth(b, "2025-01");
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.Apartments.AddRange(
+                new ApartmentEntity { BuildingId = "B1", Id = "A1", FloorId = "F1", Number = 1 },
+                new ApartmentEntity { BuildingId = "B2", Id = "A1", FloorId = "F1", Number = 1 });
+            await seed.SaveChangesAsync();
+        }
 
-        var inv1 = _service.BuildInvoiceData(b, apt, "2025-01");
-        var inv2 = _service.BuildInvoiceData(b, apt, "2025-01");
-
-        // عشان فيه random suffix، لازم يكونوا مختلفين
-        Assert.NotEqual(inv1.InvoiceNo, inv2.InvoiceNo);
+        var service = new InvoiceService(
+            new TestContextFactory(options),
+            new TargetWalletReadService(new TestContextFactory(options)));
+        Assert.Null(await service.FindBuildingIdByApartmentAsync("A1"));
     }
 
-    // ================================================================
-    // BuildInvoiceData — الحسابات
-    // ================================================================
-
-    [Fact]
-    public void BuildInvoiceData_CalculatesBalance()
+    private sealed class TestContextFactory(DbContextOptions<AppDbContext> options)
+        : IDbContextFactory<AppDbContext>
     {
-        var b = CreateBuildingWithApt();
-        var apt = b.Apartments[0];
-        var m = _wallet.EnsureMonth(b, "2025-01");
-        m.Deposits.Add(new Deposit { Id = "d1", AptId = "a1", Amount = 500, Status = "confirmed" });
-
-        var invoice = _service.BuildInvoiceData(b, apt, "2025-01");
-
-        // 500 (deposit) - 100 (fee) = 400
-        Assert.Equal(400, invoice.Balance);
-    }
-
-    [Fact]
-    public void BuildInvoiceData_WithExpenses_CalculatesShares()
-    {
-        var b = CreateBuildingWithApt();
-        b.ExpenseCategories.Add(new FinancialCategory { Id = "water", Name = "Water", Color = "#4A90D9" });
-        var apt = b.Apartments[0];
-        var m = _wallet.EnsureMonth(b, "2025-01");
-        m.Expenses.Add(new Expense { Id = "e1", CategoryId = "water", Amount = 300 });
-
-        var invoice = _service.BuildInvoiceData(b, apt, "2025-01");
-
-        Assert.NotEmpty(invoice.CategoryShares);
-        var waterShare = invoice.CategoryShares.FirstOrDefault(c => c.Name == "Water");
-        Assert.NotNull(waterShare);
-        Assert.Equal(300, waterShare.Total);
-        Assert.Equal(300, waterShare.Share); // شقة واحدة بس
-    }
-
-    [Fact]
-    public void BuildInvoiceData_WithMultipleApartments_DividesExpenses()
-    {
-        var b = CreateBuildingWithApt();
-        b.Apartments.Add(new Apartment { Id = "a2", FloorId = "f1", Number = 2 });
-        b.ExpenseCategories.Add(new FinancialCategory { Id = "water", Name = "Water", Color = "#4A90D9" });
-        var apt = b.Apartments[0];
-        var m = _wallet.EnsureMonth(b, "2025-01");
-        m.Expenses.Add(new Expense { Id = "e1", CategoryId = "water", Amount = 300 });
-
-        var invoice = _service.BuildInvoiceData(b, apt, "2025-01");
-
-        var waterShare = invoice.CategoryShares.FirstOrDefault(c => c.Name == "Water");
-        Assert.NotNull(waterShare);
-        Assert.Equal(300, waterShare.Total);
-        Assert.Equal(2, waterShare.AptCount);
-        Assert.Equal(150, waterShare.Share); // 300 / 2
-    }
-
-    [Fact]
-    public void BuildInvoiceData_WithCarryOver_SetsPreviousBalance()
-    {
-        var b = CreateBuildingWithApt();
-        var apt = b.Apartments[0];
-        var m = _wallet.EnsureMonth(b, "2025-01");
-        m.CarryOver["a1"] = 200;
-
-        var invoice = _service.BuildInvoiceData(b, apt, "2025-01");
-
-        Assert.Equal(200, invoice.PreviousBalance);
-    }
-
-    [Fact]
-    public void BuildInvoiceData_WithRevenueDistribution_IncludesIt()
-    {
-        var b = CreateBuildingWithApt();
-        var apt = b.Apartments[0];
-        var m = _wallet.EnsureMonth(b, "2025-01");
-        m.RevenueDistribution["a1"] = 150;
-
-        var invoice = _service.BuildInvoiceData(b, apt, "2025-01");
-
-        Assert.Equal(150, invoice.MonthRevenuesShare);
-    }
-
-    [Fact]
-    public void BuildInvoiceData_WithMonthlyFee_IncludesIt()
-    {
-        var b = CreateBuildingWithApt();
-        var apt = b.Apartments[0];
-        _wallet.EnsureMonth(b, "2025-01");
-
-        var invoice = _service.BuildInvoiceData(b, apt, "2025-01");
-
-        Assert.Equal(100, invoice.MonthFee);
-    }
-
-    // ================================================================
-    // BuildInvoiceData — QR & Metadata
-    // ================================================================
-
-    [Fact]
-    public void BuildInvoiceData_HasQrPayload()
-    {
-        var b = CreateBuildingWithApt();
-        var apt = b.Apartments[0];
-        _wallet.EnsureMonth(b, "2025-01");
-
-        var invoice = _service.BuildInvoiceData(b, apt, "2025-01");
-
-        Assert.NotNull(invoice.QrPayload);
-        Assert.Contains("BLD-001", invoice.QrPayload);
-        Assert.Contains("2025-01", invoice.QrPayload);
-    }
-
-    [Fact]
-    public void BuildInvoiceData_HasPaymentInfo()
-    {
-        var b = CreateBuildingWithApt();
-        var apt = b.Apartments[0];
-        _wallet.EnsureMonth(b, "2025-01");
-
-        var invoice = _service.BuildInvoiceData(b, apt, "2025-01");
-
-        Assert.Equal("Instapay", invoice.Payment.Label);
-        Assert.Equal("123", invoice.Payment.AccountNumber);
-    }
-
-    [Fact]
-    public void BuildInvoiceData_MonthLabelIsPopulated()
-    {
-        var b = CreateBuildingWithApt();
-        var apt = b.Apartments[0];
-        _wallet.EnsureMonth(b, "2025-01");
-
-        var invoice = _service.BuildInvoiceData(b, apt, "2025-01");
-
-        Assert.NotNull(invoice.MonthLabelText);
-        Assert.NotEmpty(invoice.MonthLabelText);
+        public AppDbContext CreateDbContext() => new(options);
+        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new AppDbContext(options));
     }
 }

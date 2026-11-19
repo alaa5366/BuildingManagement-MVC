@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
+using BuildingManagementMvc.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Controllers;
 // ============================================================
@@ -15,10 +17,8 @@ namespace BuildingManagementMvc.Controllers;
 [AllowAnonymous]
 public class LanguageController : Controller
 {
-    private static readonly HashSet<string> SupportedLanguages = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "ar", "en", "fr", "de"
-    };
+    private readonly IDbContextFactory<AppDbContext> _factory;
+    public LanguageController(IDbContextFactory<AppDbContext> factory) => _factory = factory;
 
     /// <summary>
     /// Sets the language data.
@@ -27,9 +27,10 @@ public class LanguageController : Controller
     /// HTTP GET.
     /// </remarks>
     [HttpGet]
-    public IActionResult Set(string lang, string? returnUrl)
+    public async Task<IActionResult> Set(string lang, string? returnUrl, CancellationToken ct)
     {
-        var value = SupportedLanguages.Contains(lang) ? lang.ToLowerInvariant() : "ar";
+        await using var db = await _factory.CreateDbContextAsync(ct);
+        var value = await db.Languages.AsNoTracking().AnyAsync(x => x.CultureCode == lang && x.IsEnabled, ct) ? lang.ToLowerInvariant() : "ar";
 
         var cookieValue = CookieRequestCultureProvider.MakeCookieValue(
             new RequestCulture(value));

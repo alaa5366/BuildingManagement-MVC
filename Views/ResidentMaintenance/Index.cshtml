@@ -14,7 +14,7 @@
 <h3 class="mb-3">@Loc.T("Maintenance_Log")</h3>
 
 <div class="row mb-3 text-center g-2">
-    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">@Loc.T("Open_2")</div><div class="fw-bold">@Model.Count(m => m.Status == "open")</div></div></div>
+    <div class="col"><div class="ui-stat-tile p-3"><div class="text-muted small">@Loc.T("Open_2")</div><div class="fw-bold">@Model.Count(m => m.Status == "open")</div></div></div>
     <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">@Loc.T("In_Progress_2")</div><div class="fw-bold">@Model.Count(m => m.Status == "inprogress")</div></div></div>
     <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">@Loc.T("Done_2")</div><div class="fw-bold">@Model.Count(m => m.Status == "done")</div></div></div>
     @if (totalCost > 0)
@@ -31,7 +31,7 @@ else
 {
     foreach (var m in Model)
     {
-        <div class="bg-white rounded shadow-sm p-3 mb-2">
+        <div class="ui-record-card p-3 mb-2">
             <div class="fw-bold">@m.Title</div>
             <div class="text-muted small">📅 @m.Date @(string.IsNullOrEmpty(m.Vendor) ? "" : "· 👤 " + m.Vendor)</div>
             @if (!string.IsNullOrEmpty(m.Description))

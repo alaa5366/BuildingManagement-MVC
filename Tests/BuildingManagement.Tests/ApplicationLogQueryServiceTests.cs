@@ -184,6 +184,83 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
         Assert.Single(result.Items);
     }
 
+    [Fact]
+    public async Task QueryPageAsync_FiltersByComponentTypeUsingExplicitSourceContext()
+    {
+        WriteLog(
+            "2026-11-17 10:00:00.000 +00:00 [ERR] Controller failure {\"SourceContext\":\"BuildingManagementMvc.Controllers.BuildingsController\"}",
+            "2026-11-17 10:01:00.000 +00:00 [ERR] Service failure {\"SourceContext\":\"BuildingManagementMvc.Services.PresenceService\"}",
+            "2026-11-17 10:02:00.000 +00:00 [ERR] Database failure {\"SourceContext\":\"Microsoft.EntityFrameworkCore.Database.Command\"}",
+            "2026-11-17 10:03:00.000 +00:00 [ERR] Unknown source {}");
+
+        var controllers = await CreateService().QueryPageAsync(new ApplicationLogQuery
+        {
+            ComponentType = "Controller"
+        });
+        var services = await CreateService().QueryPageAsync(new ApplicationLogQuery
+        {
+            ComponentType = "Service"
+        });
+        var databases = await CreateService().QueryPageAsync(new ApplicationLogQuery
+        {
+            ComponentType = "Database"
+        });
+        var other = await CreateService().QueryPageAsync(new ApplicationLogQuery
+        {
+            ComponentType = "Other"
+        });
+
+        var controller = Assert.Single(controllers.Items);
+        Assert.Equal("BuildingManagementMvc.Controllers.BuildingsController", controller.SourceContext);
+        Assert.Equal("BuildingsController", controller.ComponentName);
+        Assert.Equal("Controller", controller.ComponentType);
+        Assert.Equal("PresenceService", Assert.Single(services.Items).ComponentName);
+        Assert.Equal("Microsoft.EntityFrameworkCore.Database.Command", Assert.Single(databases.Items).SourceContext);
+        Assert.Equal("Unknown source", Assert.Single(other.Items).Message);
+    }
+
+    [Fact]
+    public async Task QueryPageAsync_ExtractsHttpStatusAndResponseLatency()
+    {
+        WriteLog(
+            "2026-11-17 10:00:00.000 +00:00 [INF] HTTP GET /AuditLog responded 200 in 12.3456 ms {\"SourceContext\":\"Serilog.AspNetCore.RequestLoggingMiddleware\",\"CorrelationId\":\"request-42\"}");
+
+        var item = Assert.Single((await CreateService().QueryPageAsync(new ApplicationLogQuery())).Items);
+
+        Assert.Equal("GET", item.HttpMethod);
+        Assert.Equal("/AuditLog", item.RequestPath);
+        Assert.Equal(200, item.HttpStatusCode);
+        Assert.Equal(12.3456, item.DurationMs);
+        Assert.Equal("request-42", item.CorrelationId);
+    }
+
+
+    [Fact]
+    public async Task QueryPageAsync_FiltersHttpEventsByStatusAndLatency()
+    {
+        WriteLog(
+            "2026-11-17 10:00:00.000 +00:00 [INF] HTTP GET /fast responded 200 in 8.5 ms {}",
+            "2026-11-17 10:00:01.000 +00:00 [WRN] HTTP GET /slow responded 200 in 850.0 ms {}",
+            "2026-11-17 10:00:02.000 +00:00 [ERR] HTTP POST /failed responded 500 in 120.0 ms {}");
+
+        var slowSuccess = await CreateService().QueryPageAsync(new ApplicationLogQuery
+        {
+            HttpStatusCode = 200,
+            MinDurationMs = 100
+        });
+        var serverErrors = await CreateService().QueryPageAsync(new ApplicationLogQuery
+        {
+            HttpStatusCode = 500,
+            MinDurationMs = 100,
+            MaxDurationMs = 200
+        });
+
+        Assert.Equal("/slow", Assert.Single(slowSuccess.Items).RequestPath);
+        Assert.Equal("/failed", Assert.Single(serverErrors.Items).RequestPath);
+        Assert.Equal(1, slowSuccess.TotalItems);
+        Assert.Equal(1, serverErrors.TotalItems);
+    }
+
     private ApplicationLogQueryService CreateService() =>
         new(new TestHostEnvironment { ContentRootPath = _root },
             NullLogger<ApplicationLogQueryService>.Instance);

@@ -7,7 +7,7 @@
 @model List<BuildingManagementMvc.Data.Entities.CameraEntity>
 @{
     ViewData["Title"] = Loc.T("Live_Cameras");
-    var building = ViewBag.Building as BuildingManagementMvc.Models.Building;
+    var buildingName = ViewBag.BuildingName as string;
     var buildingId = ViewBag.BuildingId as string;
 
     // ✅ زرار الرجوع حسب الدور
@@ -34,7 +34,7 @@
                 @Loc.T("Live_Cameras")
             </h3>
             <p class="text-muted mb-0">
-                @building?.Name
+                @buildingName
                 <span class="badge bg-secondary">@Model.Count @Loc.T("Cameras_Count")</span>
             </p>
         </div>
@@ -56,7 +56,7 @@
             @foreach (var cam in Model)
             {
                 <div class="col-md-6 col-lg-4">
-                    <div class="card shadow-sm h-100">
+                    <div class="card ui-camera-card shadow-sm h-100">
                         <div class="card-header bg-dark text-white d-flex justify-content-between">
                             <span>
                                 <i class="bi bi-camera-video"></i>

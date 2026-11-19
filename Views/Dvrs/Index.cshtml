@@ -7,7 +7,8 @@
 @model List<BuildingManagementMvc.Data.Entities.DvrEntity>
 @{
     ViewData["Title"] = Loc.T("DVRs");
-    var building = ViewBag.Building as BuildingManagementMvc.Models.Building;
+    var buildingName = ViewBag.BuildingName as string;
+    var buildingNumber = ViewBag.BuildingNumber as string;
     var buildingId = ViewBag.BuildingId as string;
 }
 
@@ -20,7 +21,7 @@
                 @Loc.T("DVRs")
             </h3>
             <p class="text-muted mb-0">
-                @building?.Name — @building?.BuildingNumber
+                @buildingName — @buildingNumber
             </p>
         </div>
         <div class="d-flex gap-2">
@@ -59,7 +60,7 @@
             @foreach (var dvr in Model)
             {
                 <div class="col-md-6 col-lg-4">
-                    <div class="card shadow-sm h-100">
+                    <div class="card ui-device-card shadow-sm h-100">
                         <div class="card-header @(dvr.IsActive ? "bg-success" : "bg-secondary") text-white">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>

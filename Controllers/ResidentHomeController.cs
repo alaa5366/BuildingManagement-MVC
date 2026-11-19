@@ -17,27 +17,24 @@ namespace BuildingManagementMvc.Controllers;
 [Authorize(Roles = "resident")]
 public class ResidentHomeController : Controller
 {
-    private readonly BuildingsService _buildings;
-    private readonly WalletService _wallet;
-    private readonly PollsService _polls;
-    private readonly MaintenanceService _maint;
-    private readonly NotificationsService _notify;
+    private readonly TargetWalletReadService _targetWallet;
+    private readonly TargetPollsService _targetPolls;
+    private readonly TargetMaintenanceService _targetMaintenance;
+    private readonly TargetNotificationsService _targetNotifications;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ResidentHomeController"/> class.
     /// </summary>
     public ResidentHomeController(
-        BuildingsService buildings,
-        WalletService wallet,
-        PollsService polls,
-        MaintenanceService maint,
-        NotificationsService notify)
+        TargetWalletReadService targetWallet,
+        TargetPollsService targetPolls,
+        TargetMaintenanceService targetMaintenance,
+        TargetNotificationsService targetNotifications)
     {
-        _buildings = buildings;
-        _wallet = wallet;
-        _polls = polls;
-        _maint = maint;
-        _notify = notify;
+        _targetWallet = targetWallet;
+        _targetPolls = targetPolls;
+        _targetMaintenance = targetMaintenance;
+        _targetNotifications = targetNotifications;
     }
 
     /// <summary>
@@ -47,19 +44,12 @@ public class ResidentHomeController : Controller
     {
         var buildingId = User.FindFirstValue("buildingId");
         var aptId = User.FindFirstValue("apartmentId");
-        var aptNumber = User.FindFirstValue("apartmentNumber");
 
-        var building = buildingId == null ? null : await _buildings.GetByIdAsync(buildingId);
-
-        Apartment? apt = null;
-        if (building != null)
-        {
-            if (!string.IsNullOrWhiteSpace(aptId))
-                apt = building.Apartments.FirstOrDefault(a => a.Id == aptId);
-
-            if (apt == null && !string.IsNullOrWhiteSpace(aptNumber))
-                apt = building.Apartments.FirstOrDefault(a => a.Number.ToString() == aptNumber);
-        }
+        var building = string.IsNullOrWhiteSpace(buildingId) || string.IsNullOrWhiteSpace(aptId)
+            ? null
+            : await _targetWallet.GetBuildingShellAsync(
+                buildingId, aptId, HttpContext.RequestAborted);
+        var apt = building?.Apartments.SingleOrDefault(apartment => apartment.Id == aptId);
 
         ViewBag.Building = building;
 
@@ -71,41 +61,43 @@ public class ResidentHomeController : Controller
 
         ViewBag.HasData = true;
 
-        var currentMonth = WalletService.CurrentMonthKey();
+        var currentMonth = await _targetWallet.GetCurrentPeriodKeyAsync(building.Id, cancellationToken: HttpContext.RequestAborted);
 
         // ============================================================
         // 1. المالية
         // ============================================================
-        var balance = _wallet.ComputeWalletBalance(building, apt.Id, currentMonth);
+        var walletSnapshot = await _targetWallet.GetApartmentAsync(
+            building.Id, apt.Id, null, currentMonth, cancellationToken: HttpContext.RequestAborted);
+        var monthWalletSnapshot = await _targetWallet.GetApartmentAsync(
+            building.Id, apt.Id, currentMonth, currentMonth, cancellationToken: HttpContext.RequestAborted);
+        var balance = walletSnapshot.Balance;
 
         // ============================================================
         // 2. كل الحركات (لحساب الإحصائيات)
         // ============================================================
-        var allTx = _wallet.GetUnifiedTransactions(building, apt.Id, currentMonth);
+        var allTx = walletSnapshot.Transactions.ToList();
+        var currentMonthTx = monthWalletSnapshot.Transactions.ToList();
 
         // ============================================================
         // 3. الإحصائيات — مدفوع الشهر ده فقط
         // ============================================================
-        var paidThisMonth = allTx
-            .Where(t => t.Type == "deposit"
-                     && t.Status == "confirmed"
-                     && !string.IsNullOrEmpty(t.CreatedAt)
-                     && t.CreatedAt.StartsWith(currentMonth, StringComparison.Ordinal))
+        var paidThisMonth = currentMonthTx
+            .Where(t => t.Type == "deposit" && t.Status == "confirmed")
             .Sum(t => t.Amount);
 
         var totalPaidAllTime = allTx
             .Where(t => t.Type == "deposit" && t.Status == "confirmed")
             .Sum(t => t.Amount);
 
-        var totalExpenses = Math.Abs(allTx
+        var totalExpenses = -allTx
             .Where(t => t.Type == "expense")
-            .Sum(t => t.Amount));
+            .Sum(t => t.Amount);
 
         var totalRevenue = allTx
             .Where(t => t.Type == "revenue")
             .Sum(t => t.Amount);
 
-        var monthsCount = building.Months?.Count ?? 0;
+        var monthsCount = await _targetWallet.GetFinancialPeriodCountAsync(building.Id, HttpContext.RequestAborted);
 
         // ============================================================
         // 4. آخر 5 حركات (بدون carry_over)
@@ -119,46 +111,54 @@ public class ResidentHomeController : Controller
         // ============================================================
         // 5. الدفعات المعلقة (آخر 3)
         // ============================================================
-        var pendingDeposits = _wallet.GetApartmentDeposits(building, apt.Id, currentMonth)
-            .Where(d => d.Status == "pending")
-            .OrderByDescending(d => d.CreatedAt)
+        var pendingDeposits = (await _targetWallet.GetPendingForBuildingAsync(
+                building.Id, HttpContext.RequestAborted))
+            .Where(item => item.ApartmentId == apt.Id && item.PeriodKey == currentMonth)
+            .OrderByDescending(item => item.SubmittedAtUtc)
             .Take(3)
+            .Select(item => new Deposit
+            {
+                Id = item.PaymentDepositId.ToString("D"),
+                Number = item.PaymentDepositId.ToString("N")[..8].ToUpperInvariant(),
+                AptId = item.ApartmentId,
+                Amount = item.Amount,
+                Note = item.Note,
+                Receipt = item.Receipt,
+                Status = "pending",
+                CreatedAt = item.SubmittedAtUtc.ToString("O"),
+                CreatedBy = ""
+            })
             .ToList();
 
         // ============================================================
         // 6. التصويتات النشطة (آخر 3)
         // ============================================================
-        var activePolls = _polls.GetPolls(building)
-            .Where(p => PollsService.IsPollActive(p))
-            .Take(3)
-            .ToList();
+        var activePolls = (await _targetPolls.GetPageAsync(
+                building.Id, 1, 3, activeOnly: true, HttpContext.RequestAborted))
+            .Items;
 
         // ============================================================
         // 7. آخر 3 إشعارات + unread
         // ============================================================
-        var notifications = _notify.GetForResident(building, apt.Id, 3)
-            .OrderByDescending(n => n.Ts)
-            .Take(3)
-            .ToList();
-
-        var unreadCount = _notify.UnreadCountForResident(building, apt.Id);
+        var allNotifications = await _targetNotifications.GetForResidentAsync(
+            building.Id, apt.Id, 100, HttpContext.RequestAborted);
+        var notifications = allNotifications.Take(3).ToList();
+        var unreadCount = await _targetNotifications.GetUnreadCountForResidentAsync(
+            building.Id, apt.Id, HttpContext.RequestAborted);
 
         // ============================================================
         // 8. آخر 3 صيانة
         // ============================================================
-        var maintenance = _maint.GetLog(building)
-            .Where(m => m.Status != "cancelled")
+        var maintenance = (await _targetMaintenance.GetResidentLogAsync(
+                building.Id, HttpContext.RequestAborted))
             .Take(3)
             .ToList();
 
         // ============================================================
         // 9. آخر دفعة (للـ Hero) — الشهر الحالي فقط
         // ============================================================
-        var lastConfirmedDeposit = allTx
-            .Where(t => t.Type == "deposit"
-                     && t.Status == "confirmed"
-                     && !string.IsNullOrEmpty(t.CreatedAt)
-                     && t.CreatedAt.StartsWith(currentMonth, StringComparison.Ordinal))
+        var lastConfirmedDeposit = currentMonthTx
+            .Where(t => t.Type == "deposit" && t.Status == "confirmed")
             .OrderByDescending(t => t.CreatedAt)
             .FirstOrDefault();
 
@@ -174,9 +174,9 @@ public class ResidentHomeController : Controller
         // ============================================================
         // 11. أقدم إشعار غير مقروء
         // ============================================================
-        var oldestUnread = _notify.GetForResident(building, apt.Id, 100)
-            .Where(n => !n.Read)
-            .OrderBy(n => n.Ts)
+        var oldestUnread = allNotifications
+            .Where(notification => !notification.Read)
+            .OrderBy(notification => notification.Ts, StringComparer.Ordinal)
             .FirstOrDefault();
 
         var unreadDays = 0;

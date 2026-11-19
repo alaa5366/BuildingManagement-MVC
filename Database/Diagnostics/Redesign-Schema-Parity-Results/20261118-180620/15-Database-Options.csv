@@ -1,0 +1,2 @@
+﻿"DatabaseName","CompatibilityLevel","CollationName","RecoveryModel","ReadCommittedSnapshotOn","SnapshotIsolationState","AutoCloseOn","AutoShrinkOn","QueryStoreOn"
+"BuildingManagement_RestoreTest","170","SQL_Latin1_General_CP1_CI_AS","SIMPLE","True","OFF","True","False","True"

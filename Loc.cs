@@ -24,6 +24,8 @@ public static class Loc
     {
         try
         {
+            var dynamicValue = BuildingManagementMvc.Services.LanguageAdministrationService.GetRuntime(key, CultureInfo.CurrentUICulture.Name);
+            if (!string.IsNullOrWhiteSpace(dynamicValue)) return dynamicValue;
             return Rm.GetString(key, CultureInfo.CurrentUICulture) ?? key;
         }
         catch (MissingManifestResourceException)

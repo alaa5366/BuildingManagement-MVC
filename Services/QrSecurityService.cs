@@ -151,6 +151,9 @@ public class QrSecurityService
         var usage = await db.QrUsages.AsNoTracking()
             .FirstOrDefaultAsync(x => x.TokenId == payload.TokenId);
 
+        if (string.Equals(payload.Purpose, "recovery", StringComparison.OrdinalIgnoreCase) && usage == null)
+            return QuickTokenValidation.Fail(Loc.T("Invalid_Token"));
+
         if (usage != null)
         {
             if (payload.OneTime && usage.UseCount >= 1)
@@ -166,6 +169,85 @@ public class QrSecurityService
         }
 
         return QuickTokenValidation.Ok(payload);
+    }
+
+    private static string RecoveryRegistryId(string buildingId, string apartmentId)
+    {
+        var key = Encoding.UTF8.GetBytes(buildingId + "|" + apartmentId);
+        return "recovery:" + Convert.ToHexString(SHA256.HashData(key)).ToLowerInvariant();
+    }
+
+    /// <summary>Registers the current recovery token and atomically replaces any earlier token for the same apartment.</summary>
+    public async Task RegisterRecoveryTokenAsync(string token, string buildingId, string apartmentId,
+        CancellationToken cancellationToken = default)
+    {
+        var payload = JsonSerializer.Deserialize<QuickTokenPayload>(OpenQuick(token.StartsWith("v2.", StringComparison.Ordinal) ? token[3..] : token))
+            ?? throw new InvalidOperationException("Invalid recovery QR payload.");
+        if (!string.Equals(payload.Purpose, "recovery", StringComparison.Ordinal) ||
+            !string.Equals(payload.BuildingId, buildingId, StringComparison.Ordinal) ||
+            !string.Equals(payload.AptId, apartmentId, StringComparison.Ordinal) ||
+            string.IsNullOrWhiteSpace(payload.TokenId))
+            throw new InvalidOperationException("Recovery QR scope validation failed.");
+
+        await using var db = await _sqlFactory.CreateDbContextAsync(cancellationToken);
+        var registryId = RecoveryRegistryId(buildingId, apartmentId);
+        var now = DateTime.UtcNow;
+
+        // Replace an existing apartment registry entry with one atomic update.
+        // Any previously issued token immediately stops matching TokenId.
+        var updated = await db.QrUsages
+            .Where(x => x.Id == registryId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(x => x.TokenId, payload.TokenId)
+                .SetProperty(x => x.UseCount, 0)
+                .SetProperty(x => x.FirstUsedAt, string.Empty)
+                .SetProperty(x => x.LastUsedAt, string.Empty)
+                .SetProperty(x => x.DeviceFingerprint, (string?)null), cancellationToken);
+        if (updated == 1) return;
+
+        // First issuance: insert the apartment registry row. If another admin
+        // issued concurrently, its unique-key insert wins; replace that row.
+        db.QrUsages.Add(new QrUsageEntity
+        {
+            Id = registryId,
+            TokenId = payload.TokenId,
+            UseCount = 0,
+            FirstUsedAt = string.Empty,
+            LastUsedAt = string.Empty,
+            DeviceFingerprint = null,
+            CreatedAt = now
+        });
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            db.ChangeTracker.Clear();
+            var replaced = await db.QrUsages
+                .Where(x => x.Id == registryId)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(x => x.TokenId, payload.TokenId)
+                    .SetProperty(x => x.UseCount, 0)
+                    .SetProperty(x => x.FirstUsedAt, string.Empty)
+                    .SetProperty(x => x.LastUsedAt, string.Empty)
+                    .SetProperty(x => x.DeviceFingerprint, (string?)null), cancellationToken);
+            if (replaced != 1) throw;
+        }
+    }
+
+    /// <summary>Revokes the currently registered recovery token. Reissuing replaces its token id.</summary>
+    public async Task<bool> RevokeRecoveryTokenAsync(string buildingId, string apartmentId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var db = await _sqlFactory.CreateDbContextAsync(cancellationToken);
+        var registryId = RecoveryRegistryId(buildingId, apartmentId);
+        var now = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+        var changed = await db.QrUsages.Where(x => x.Id == registryId && x.UseCount == 0)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(x => x.UseCount, 1)
+                .SetProperty(x => x.LastUsedAt, now), cancellationToken);
+        return changed == 1;
     }
 
     /// <summary>
@@ -190,11 +272,27 @@ public class QrSecurityService
         await using var db = await _sqlFactory.CreateDbContextAsync();
 
         var updated = await db.QrUsages
-            .Where(x => x.TokenId == p.TokenId && x.UseCount < limit)
+            .Where(x => x.TokenId == p.TokenId && x.UseCount < limit &&
+                (string.IsNullOrEmpty(deviceFingerprint) ||
+                 string.IsNullOrEmpty(x.DeviceFingerprint) ||
+                 x.DeviceFingerprint == deviceFingerprint))
             .ExecuteUpdateAsync(s => s
                 .SetProperty(x => x.UseCount, x => x.UseCount + 1)
-                .SetProperty(x => x.LastUsedAt, now));
+                .SetProperty(x => x.FirstUsedAt,
+                    x => string.IsNullOrEmpty(x.FirstUsedAt) ? now : x.FirstUsedAt)
+                .SetProperty(x => x.LastUsedAt, now)
+                .SetProperty(x => x.DeviceFingerprint,
+                    x => string.IsNullOrEmpty(x.DeviceFingerprint)
+                        ? deviceFingerprint
+                        : x.DeviceFingerprint));
         if (updated == 1) return true;
+
+        // Recovery tokens must already exist in the apartment-scoped registry.
+        // Never create a fallback usage row for them: a token can be validated,
+        // then revoked/reissued before this consume call. Creating a new row here
+        // would resurrect that stale token after its registry entry was replaced.
+        if (string.Equals(p.Purpose, "recovery", StringComparison.OrdinalIgnoreCase))
+            return false;
 
         if (await db.QrUsages.AnyAsync(x => x.TokenId == p.TokenId)) return false;
 
@@ -217,10 +315,19 @@ public class QrSecurityService
         {
             db.ChangeTracker.Clear();
             updated = await db.QrUsages
-                .Where(x => x.TokenId == p.TokenId && x.UseCount < limit)
+                .Where(x => x.TokenId == p.TokenId && x.UseCount < limit &&
+                    (string.IsNullOrEmpty(deviceFingerprint) ||
+                     string.IsNullOrEmpty(x.DeviceFingerprint) ||
+                     x.DeviceFingerprint == deviceFingerprint))
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(x => x.UseCount, x => x.UseCount + 1)
-                    .SetProperty(x => x.LastUsedAt, now));
+                    .SetProperty(x => x.FirstUsedAt,
+                        x => string.IsNullOrEmpty(x.FirstUsedAt) ? now : x.FirstUsedAt)
+                    .SetProperty(x => x.LastUsedAt, now)
+                    .SetProperty(x => x.DeviceFingerprint,
+                        x => string.IsNullOrEmpty(x.DeviceFingerprint)
+                            ? deviceFingerprint
+                            : x.DeviceFingerprint));
             return updated == 1;
         }
     }

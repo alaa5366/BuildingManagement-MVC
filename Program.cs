@@ -133,6 +133,24 @@ try
         o.UseSqlServer(sqlConn, sqlOptions =>
             sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
 
+    builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+    builder.Services.AddSingleton<IAuthorizationPermissionCatalog, DefaultAuthorizationPermissionCatalog>();
+    builder.Services.AddScoped<AuthorizationEvaluator>();
+    builder.Services.AddScoped<ApartmentOwnershipService>();
+    builder.Services.AddScoped<ApartmentAccessGrantService>();
+    builder.Services.AddScoped<LegacyIdentityMappingService>();
+    builder.Services.AddScoped<LedgerPostingService>();
+builder.Services.AddScoped<TargetWalletReadService>();
+builder.Services.AddScoped<TargetWalletAdjustmentWorkflowService>();
+builder.Services.AddScoped<TargetDepositWorkflowService>();
+builder.Services.AddScoped<TargetExpenseRevenueWorkflowService>();
+builder.Services.AddScoped<TargetFinanceReadService>();
+builder.Services.AddScoped<TargetAccountIdentityResolver>();
+builder.Services.AddScoped<TargetPollsService>();
+builder.Services.AddScoped<TargetMaintenanceService>();
+builder.Services.AddScoped<TargetWhatsAppService>();
+builder.Services.AddScoped<TargetQrService>();
+
     // ✅ Health Checks (فحص صحة الداتابيز)
     builder.Services.AddHealthChecks()
         .AddDbContextCheck<AppDbContext>("Database", tags: new[] { "ready" });
@@ -150,8 +168,8 @@ try
     builder.Services.AddSingleton<ExpensesService>();
     builder.Services.AddSingleton<RevenuesService>();
     builder.Services.AddSingleton<AuditLogService>();
-    builder.Services.AddSingleton<ReportsService>();
-    builder.Services.AddSingleton<InvoiceService>();
+    builder.Services.AddScoped<ReportsService>();
+    builder.Services.AddScoped<InvoiceService>();
     builder.Services.AddSingleton<InvoicePdfService>();
     builder.Services.AddSingleton<OcrService>();
     builder.Services.AddSingleton<TransactionParser>();
@@ -166,13 +184,11 @@ try
     builder.Services.AddSingleton<QrCodePdfService>();
     builder.Services.AddSingleton<QrGeneratorService>();
     builder.Services.AddSingleton<QrTokenStoreService>();
-    builder.Services.AddSingleton<PollsService>();
-    builder.Services.AddSingleton<MaintenanceService>();
-    builder.Services.AddSingleton<NotificationsService>();
-    builder.Services.AddSingleton<WhatsAppTemplateService>();
+    builder.Services.AddScoped<TargetNotificationsService>();
     builder.Services.AddScoped<ImpersonationService>();
 
     builder.Services.AddScoped<SettingsService>();
+    builder.Services.AddSingleton<LanguageAdministrationService>();
 
     builder.Services.AddSingleton<PresenceService>();
     builder.Services.AddScoped<BuildingMapService>();
@@ -188,6 +204,9 @@ try
     builder.Services.AddSingleton<IAuditLogger, AuditLogger>();
     builder.Services.AddSingleton<AuditLogger>();
     builder.Services.AddScoped<AdminManagementService>();
+    builder.Services.AddScoped<PersonPhoneCorrectionService>();
+    builder.Services.AddScoped<ResidentAccountProvisioningService>();
+    builder.Services.AddScoped<AccountManagementService>();
 
     builder.Services.AddSingleton<IEncryptionService, AesEncryptionService>();
     builder.Services.AddSingleton<DvrService>();
@@ -196,8 +215,8 @@ try
     builder.Services.AddDistributedMemoryCache();
 
     builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
+    builder.Services.AddScoped<IdentityAccountAuthenticationService>();
     builder.Services.AddSingleton<ResidentsService>();
-    builder.Services.AddScoped<PinMigrationService>();
 
     builder.Services.AddSession(options =>
     {
@@ -213,13 +232,11 @@ try
 
     builder.Services.Configure<RequestLocalizationOptions>(options =>
     {
-        var supportedCultures = new[]
-        {
-            new CultureInfo("ar"),
-            new CultureInfo("en"),
-            new CultureInfo("fr"),
-            new CultureInfo("de")
-        };
+        // Enabled languages are selected from the database; register valid .NET cultures so adding a language does not require redeployment.
+        var supportedCultures = CultureInfo.GetCultures(CultureTypes.AllCultures)
+            .Where(c => !string.IsNullOrWhiteSpace(c.Name))
+            .DistinctBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
 
         options.DefaultRequestCulture = new RequestCulture("ar");
         options.SupportedCultures = supportedCultures;
@@ -231,9 +248,10 @@ try
         {
             CookieName = CookieRequestCultureProvider.DefaultCookieName
         });
+        options.RequestCultureProviders.Add(new CustomRequestCultureProvider(_ =>
+            Task.FromResult<ProviderCultureResult?>(new ProviderCultureResult(LanguageAdministrationService.GetDefaultCulture()))));
 
-        options.RequestCultureProviders.Add(new QueryStringRequestCultureProvider());
-        options.RequestCultureProviders.Add(new AcceptLanguageHeaderRequestCultureProvider());
+        // Culture selection is explicit through the validated language cookie and the current database default.
     });
 
     builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -357,6 +375,7 @@ try
     builder.Services.Configure<KeyManagementOptions>(o => o.XmlEncryptor = new AesGcmXmlEncryptor(dpKeyHolder.Key));
 
     var app = builder.Build();
+    await app.Services.GetRequiredService<LanguageAdministrationService>().RefreshRuntimeAsync();
 
     if (app.Environment.IsDevelopment())
     {
@@ -400,19 +419,9 @@ try
 
     BackupFileProtector.Initialize(encryptionSecret);
 
-    try
-    {
-        using var migrationScope = app.Services.CreateScope();
-        var pinMigration = migrationScope.ServiceProvider.GetRequiredService<PinMigrationService>();
-        var (mUsers, mResidents, mCleared) = await pinMigration.MigrateLegacySecretsAsync();
-        Log.Information("Legacy secret migration completed. Users={MigratedUsers}, Residents={MigratedResidents}, BuildingAdminPinsCleared={BuildingAdminPinsCleared}", mUsers, mResidents, mCleared);
-    }
-    catch (Exception ex)
-    {
-        Log.Error(ex, "Legacy secret migration failed during startup");
-    }
-
-    await app.Services.GetRequiredService<LoginThrottle>().InitializeAsync();
+    // Startup must never rewrite credentials or create/clean operational tables.
+    // Legacy PIN reconciliation is handled only by an explicit, checkpointed migration.
+    // Login throttling currently uses bounded in-memory counters only; no startup SQL is executed.
 
     // ============================================================
     // Middleware

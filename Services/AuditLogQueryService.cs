@@ -28,9 +28,10 @@ public class AuditLogQueryService
         string? severity = null,
         DateTime? from = null,
         DateTime? to = null,
-        int limit = 500)
+        int limit = 500,
+        string? correlationId = null)
     {
-        return _audit.QueryAsync(buildingId, apartmentId, userId, from, to, action, severity, limit);
+        return _audit.QueryAsync(buildingId, apartmentId, userId, from, to, action, severity, limit, correlationId);
     }
     /// <summary>
     /// يستعلم عن صفحة من سجلات التدقيق من مصدر البيانات.
@@ -47,8 +48,8 @@ public class AuditLogQueryService
     /// <returns>صفحة من سجلات التدقيق.</returns>
     public Task<BuildingManagementMvc.Models.PagedResult<AuditEntryDoc>> QueryPageAsync(
         string? buildingId, string? apartmentId, string? userId, string? action, string? severity,
-        DateTime? from, DateTime? to, int page, int pageSize)
-        => _audit.QueryPageAsync(buildingId, apartmentId, userId, from, to, action, severity, page, pageSize);
+        DateTime? from, DateTime? to, int page, int pageSize, string? correlationId = null)
+        => _audit.QueryPageAsync(buildingId, apartmentId, userId, from, to, action, severity, page, pageSize, correlationId);
 
     // ============================================================
     // Known Actions
@@ -70,6 +71,9 @@ public class AuditLogQueryService
 
         // Deposits
         "deposit_create", "deposit_confirm", "deposit_cancel", "deposit_update",
+        "PaymentDepositSubmitted", "PaymentDepositConfirmed", "PaymentDepositCancelled",
+        "PaymentDepositReversed", "PaymentDepositUpdated", "WalletAdjustmentPosted",
+        "ExpensePosted", "RevenuePosted", "ExpenseReversed", "RevenueReversed",
 
         // Expenses / Revenues
         "expense_add", "expense_delete", "revenue_add", "revenue_delete",
@@ -132,6 +136,16 @@ public class AuditLogQueryService
         "deposit_confirm" => Loc.T("Confirm_Payment"),
         "deposit_cancel" => Loc.T("Cancel_Payment"),
         "deposit_update" => Loc.T("Edit_Payment_2"),
+        "PaymentDepositSubmitted" => "تقديم دفعة جديدة",
+        "PaymentDepositConfirmed" => "تأكيد دفعة",
+        "PaymentDepositCancelled" => "إلغاء دفعة",
+        "PaymentDepositReversed" => "عكس دفعة مؤكدة",
+        "PaymentDepositUpdated" => "تعديل دفعة معلقة",
+        "WalletAdjustmentPosted" => "تسجيل تسوية بالمحفظة",
+        "ExpensePosted" => "تسجيل مصروف",
+        "RevenuePosted" => "تسجيل إيراد",
+        "ExpenseReversed" => "عكس مصروف",
+        "RevenueReversed" => "عكس إيراد",
         "expense_add" => Loc.T("Add_Expense_2"),
         "expense_delete" => Loc.T("Delete_Expense"),
         "revenue_add" => Loc.T("Add_Revenue_2"),
@@ -171,6 +185,7 @@ public class AuditLogQueryService
     public static string SeverityBadgeClass(string severity) => severity switch
     {
         "critical" => "bg-danger",
+        "error" => "bg-danger",
         "warning" => "bg-warning text-dark",
         "info" => "bg-info text-dark",
         _ => "bg-secondary"
@@ -182,6 +197,7 @@ public class AuditLogQueryService
     public static string SeverityLabelAr(string severity) => severity switch
     {
         "critical" => Loc.T("Critical"),
+        "error" => Loc.T("Error"),
         "warning" => Loc.T("Warning"),
         "info" => Loc.T("Info"),
         _ => severity

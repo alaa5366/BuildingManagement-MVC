@@ -1,17 +1,17 @@
 namespace BuildingManagementMvc.Models;
 
-// بيانات فاتورة المحفظة (features/invoice.js) — بتتحسب وقت الطلب، مش بتتخزن
+// بيانات الفاتورة الشهرية — يتم حفظ أول إصدار وإعادة استخدام نفس النسخة عند إعادة الطباعة.
 /// <summary>
 /// All data needed to render an invoice.
 /// </summary>
 public class InvoiceData
 {
     /// <summary>
-    /// Gets or sets the invoice no.
+    /// Gets or sets the stable invoice number for the apartment and month.
     /// </summary>
     public string InvoiceNo { get; set; } = "";
     /// <summary>
-    /// Gets or sets the issue date.
+    /// Gets or sets the original issue date, retained on every reprint.
     /// </summary>
     public string IssueDate { get; set; } = "";
     /// <summary>
@@ -26,6 +26,10 @@ public class InvoiceData
     /// Gets or sets the floor.
     /// </summary>
     public Floor? Floor { get; set; }
+    /// <summary>
+    /// Gets or sets the ISO currency code used by the building.
+    /// </summary>
+    public string CurrencyCode { get; set; } = "EGP";
     /// <summary>
     /// Gets or sets the balance.
     /// </summary>

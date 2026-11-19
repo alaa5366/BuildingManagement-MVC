@@ -4659,4 +4659,58 @@
   <data name="No_Log_Events_Found" xml:space="preserve"><value>لا توجد سجلات مطابقة لمعايير البحث.</value></data>
   <data name="Invalid_Date_Range" xml:space="preserve"><value>تاريخ البداية يجب ألا يتجاوز تاريخ النهاية.</value></data>
   <data name="Message" xml:space="preserve"><value>الرسالة</value></data>
+
+  <data name="Log_Center_Eyebrow" xml:space="preserve"><value>مركز مراقبة سجلات التطبيق</value></data>
+  <data name="Log_Center_Subtitle" xml:space="preserve"><value>راقب نشاط التطبيق، وتتبّع الأخطاء، وافحص الأحداث المرتبطة ببعضها.</value></data>
+  <data name="Log_Overview" xml:space="preserve"><value>نظرة عامة على السجلات</value></data>
+  <data name="Log_Total_Matching" xml:space="preserve"><value>إجمالي الأحداث المطابقة</value></data>
+  <data name="Log_Visible_On_Page" xml:space="preserve"><value>الأحداث المعروضة</value></data>
+  <data name="Log_Current_Page" xml:space="preserve"><value>في الصفحة الحالية</value></data>
+  <data name="Log_Errors_On_Page" xml:space="preserve"><value>الأخطاء في الصفحة</value></data>
+  <data name="Log_Error_Fatal" xml:space="preserve"><value>خطأ / خطأ جسيم</value></data>
+  <data name="Log_Exceptions_On_Page" xml:space="preserve"><value>الاستثناءات في الصفحة</value></data>
+  <data name="Log_With_Exception" xml:space="preserve"><value>أحداث تحتوي على استثناء</value></data>
+  <data name="Log_Sources_On_Page" xml:space="preserve"><value>المصادر في الصفحة</value></data>
+  <data name="Log_Distinct_Sources" xml:space="preserve"><value>مصادر مختلفة</value></data>
+  <data name="Log_Explore" xml:space="preserve"><value>استكشاف</value></data>
+  <data name="Log_Search_Anything" xml:space="preserve"><value>البحث في السجلات</value></data>
+  <data name="Log_Search_Placeholder" xml:space="preserve"><value>ابحث في الرسائل أو الاستثناءات أو التفاصيل...</value></data>
+  <data name="Log_Source_Placeholder" xml:space="preserve"><value>اسم الـ Namespace أو المكوّن</value></data>
+  <data name="Log_Advanced_Filters" xml:space="preserve"><value>فلاتر متقدمة</value></data>
+  <data name="Log_Activity" xml:space="preserve"><value>النشاط</value></data>
+  <data name="Log_Results" xml:space="preserve"><value>أحداث السجل</value></data>
+  <data name="Log_Results_Description" xml:space="preserve"><value>أحداث التطبيق المنقحة والمطابقة لمعايير البحث.</value></data>
+  <data name="Log_Warnings" xml:space="preserve"><value>تحذيرات</value></data>
+  <data name="Log_Information" xml:space="preserve"><value>معلومات</value></data>
+  <data name="Log_Current_Page_Only" xml:space="preserve"><value>الأعداد المعروضة تخص الصفحة الحالية فقط</value></data>
+  <data name="Log_UTC_Time" xml:space="preserve"><value>التوقيت (UTC)</value></data>
+  <data name="Log_Empty_Title" xml:space="preserve"><value>لا توجد أحداث لعرضها</value></data>
+  <data name="Log_Clear_Filters" xml:space="preserve"><value>مسح الفلاتر</value></data>
+  <data name="Log_Inspect" xml:space="preserve"><value>فحص التفاصيل</value></data>
+  <data name="Log_Filter_By_Correlation" xml:space="preserve"><value>البحث عن كل الأحداث المرتبطة بهذا المعرّف</value></data>
+  <data name="Log_Of" xml:space="preserve"><value>من</value></data>
+
+  <data name="Resident_Change_PIN" xml:space="preserve">
+    <value>تغيير الرقم السري</value>
+  </data>
+  <data name="Temporary_PIN_Replace_Notice" xml:space="preserve">
+    <value>يجب تغيير الرقم السري المؤقت قبل المتابعة.</value>
+  </data>
+
+
+  <data name="PIN_4_12_Digits" xml:space="preserve">
+    <value>استخدم رقمًا سريًا من 4 إلى 12 رقمًا.</value>
+  </data>
+  <data name="Temporary_PIN_1234_Not_Allowed" xml:space="preserve">
+    <value>لا يمكن استخدام الرقم المؤقت 1234 مرة أخرى.</value>
+  </data>
+  <data name="Save_New_PIN" xml:space="preserve">
+    <value>حفظ الرقم السري الجديد</value>
+  </data>
+  <data name="Choose_New_PIN_And_Confirm" xml:space="preserve">
+    <value>اختر رقمًا سريًا من 4 إلى 12 رقمًا، مختلفًا عن 1234، ثم أكّده.</value>
+  </data>
+  <data name="Phone_Correction_Requests" xml:space="preserve">
+    <value>طلبات تصحيح أرقام الهاتف</value>
+  </data>
 </root>

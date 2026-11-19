@@ -6,123 +6,403 @@
     var fromValue = query.FromUtc?.ToString("yyyy-MM-dd") ?? "";
     var toValue = query.ToUtc?.ToString("yyyy-MM-dd") ?? "";
     var levels = new[] { "Verbose", "Debug", "Information", "Warning", "Error", "Fatal" };
+    var visibleItems = result.Items;
+    var exceptionCount = visibleItems.Count(x => x.HasException);
+    var sourceCount = visibleItems.Select(x => x.SourceContext)
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Distinct(StringComparer.OrdinalIgnoreCase).Count();
+    var errorCount = visibleItems.Count(x => x.Level is "Error" or "Fatal");
+    var warningCount = visibleItems.Count(x => x.Level == "Warning");
+    var informationCount = visibleItems.Count(x => x.Level == "Information");
+    var durations = visibleItems.Where(x => x.DurationMs.HasValue)
+        .Select(x => x.DurationMs!.Value).OrderBy(x => x).ToArray();
+    var averageDuration = durations.Length == 0 ? 0 : durations.Average();
+    var p95Duration = durations.Length == 0 ? 0 : durations[Math.Clamp((int)Math.Ceiling(durations.Length * .95) - 1, 0, durations.Length - 1)];
+    var slowRequestCount = durations.Count(x => x >= 1000);
+    var isArabic = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ar";
 }
-<div class="container-fluid">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-        <div>
-            <h2 class="mb-1"><i class="bi bi-file-earmark-text me-2"></i>@Loc.T("Application_Logs")</h2>
-            <div class="text-muted small">@Loc.T("Application_Logs_Description")</div>
+@section Styles {
+    <link rel="stylesheet" href="~/css/observability.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/application-logs.css" asp-append-version="true" />
+}
+
+<div class="container-fluid log-center">
+    <header class="log-hero">
+        <div class="log-hero-copy">
+            <div class="log-eyebrow"><i class="bi bi-activity"></i> @Loc.T("Log_Center_Eyebrow")</div>
+            <h1>@Loc.T("Application_Logs")</h1>
+            <p>@Loc.T("Log_Center_Subtitle")</p>
+            <div class="log-hero-note">
+                <i class="bi bi-shield-check"></i>
+                <span>@Loc.T("Log_Dates_Are_UTC_And_Redacted")</span>
+            </div>
         </div>
-        <span class="badge bg-secondary">@result.TotalItems.ToString("N0") @Loc.T("Events")</span>
-    </div>
+        <div class="log-hero-art" aria-hidden="true">
+            <div class="log-orbit log-orbit-one"></div>
+            <div class="log-orbit log-orbit-two"></div>
+            <div class="log-hero-icon"><i class="bi bi-terminal"></i></div>
+            <span class="log-art-dot log-art-dot-one"></span>
+            <span class="log-art-dot log-art-dot-two"></span>
+        </div>
+        <div class="log-hero-total">
+            <span>@Loc.T("Log_Total_Matching")</span>
+            <strong>@result.TotalItems.ToString("N0")</strong>
+            <small>@Loc.T("Events")</small>
+        </div>
+    </header>
+
+    <nav class="observability-nav" aria-label="Observability sections">
+        <a class="active" asp-controller="ApplicationLogs" asp-action="Index"><i class="bi bi-terminal"></i><span>Application Logs</span><small>Runtime events</small></a>
+        @if (ViewBag.CanViewAuditTrail as bool? == true)
+        {
+            <a asp-controller="AuditLog" asp-action="Index"><i class="bi bi-shield-check"></i><span>Audit Trail</span><small>Business activity</small></a>
+        }
+        <a asp-controller="SystemHealth" asp-action="Index"><i class="bi bi-heart-pulse"></i><span>System Health</span><small>Readiness checks</small></a>
+    </nav>
 
     @if (!ViewData.ModelState.IsValid)
     {
-        <div class="alert alert-warning">@Loc.T("Invalid_Date_Range")</div>
+        <div class="alert alert-warning log-validation" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>@Loc.T("Invalid_Date_Range")
+        </div>
     }
 
-    <form method="get" asp-controller="ApplicationLogs" asp-action="Index" class="card card-body mb-4">
-        <div class="row g-3">
-            <div class="col-12 col-md-4 col-xl-3">
-                <label class="form-label" for="search">@Loc.T("Search")</label>
-                <input class="form-control" id="search" name="search" value="@query.Search" maxlength="200" />
+    <section class="log-metrics" aria-label="@Loc.T("Log_Overview")">
+        <article class="log-metric-card metric-blue">
+            <div class="log-metric-top">
+                <span class="log-metric-icon"><i class="bi bi-list-ul"></i></span>
+                <span class="log-metric-caption">@Loc.T("Log_Visible_On_Page")</span>
             </div>
-            <div class="col-12 col-md-4 col-xl-3">
-                <label class="form-label" for="correlationId">@Loc.T("Correlation_ID")</label>
-                <input class="form-control font-monospace" id="correlationId" name="correlationId" value="@query.CorrelationId" maxlength="100" />
+            <strong>@visibleItems.Count.ToString("N0")</strong>
+            <small>@Loc.T("Log_Current_Page")</small>
+        </article>
+        <article class="log-metric-card metric-red">
+            <div class="log-metric-top">
+                <span class="log-metric-icon"><i class="bi bi-exclamation-octagon"></i></span>
+                <span class="log-metric-caption">@Loc.T("Log_Errors_On_Page")</span>
             </div>
-            <div class="col-12 col-md-4 col-xl-3">
-                <label class="form-label" for="source">@Loc.T("Source_Context")</label>
-                <input class="form-control" id="source" name="source" value="@query.Source" maxlength="200" />
+            <strong>@errorCount.ToString("N0")</strong>
+            <small>@Loc.T("Log_Error_Fatal")</small>
+        </article>
+        <article class="log-metric-card metric-amber">
+            <div class="log-metric-top">
+                <span class="log-metric-icon"><i class="bi bi-exclamation-triangle"></i></span>
+                <span class="log-metric-caption">@Loc.T("Log_Exceptions_On_Page")</span>
             </div>
-            <div class="col-12 col-md-4 col-xl-3">
-                <label class="form-label" for="level">@Loc.T("Level")</label>
-                <select class="form-select" id="level" name="level">
-                    <option value="">@Loc.T("All_Levels")</option>
-                    @foreach (var item in levels)
-                    {
-                        <option value="@item" selected="@(string.Equals(query.Level, item, StringComparison.OrdinalIgnoreCase))">@item</option>
-                    }
-                </select>
+            <strong>@exceptionCount.ToString("N0")</strong>
+            <small>@Loc.T("Log_With_Exception")</small>
+        </article>
+        <article class="log-metric-card metric-teal">
+            <div class="log-metric-top">
+                <span class="log-metric-icon"><i class="bi bi-diagram-3"></i></span>
+                <span class="log-metric-caption">@Loc.T("Log_Sources_On_Page")</span>
             </div>
-            <div class="col-6 col-md-3 col-xl-2">
-                <label class="form-label" for="from">@Loc.T("From_Date_UTC")</label>
-                <input class="form-control" type="date" id="from" name="from" value="@fromValue" />
+            <strong>@sourceCount.ToString("N0")</strong>
+            <small>@Loc.T("Log_Distinct_Sources")</small>
+        </article>
+        <article class="log-metric-card metric-blue">
+            <div class="log-metric-top">
+                <span class="log-metric-icon"><i class="bi bi-stopwatch"></i></span>
+                <span class="log-metric-caption">@(isArabic ? "متوسط زمن الاستجابة" : "Average response")</span>
             </div>
-            <div class="col-6 col-md-3 col-xl-2">
-                <label class="form-label" for="to">@Loc.T("To_Date_UTC")</label>
-                <input class="form-control" type="date" id="to" name="to" value="@toValue" />
+            <strong>@averageDuration.ToString("N1") ms</strong>
+            <small>@durations.Length @(isArabic ? "طلب HTTP في الصفحة" : "HTTP requests on this page")</small>
+        </article>
+        <article class="log-metric-card metric-amber">
+            <div class="log-metric-top">
+                <span class="log-metric-icon"><i class="bi bi-speedometer2"></i></span>
+                <span class="log-metric-caption">P95 response time</span>
             </div>
-            <div class="col-12 col-md-3 col-xl-3">
-                <label class="form-label" for="hasException">@Loc.T("Exception")</label>
-                <select class="form-select" id="hasException" name="hasException">
-                    <option value="">@Loc.T("All_Events")</option>
-                    <option value="true" selected="@(query.HasException == true)">@Loc.T("With_Exception")</option>
-                    <option value="false" selected="@(query.HasException == false)">@Loc.T("Without_Exception")</option>
-                </select>
+            <strong>@p95Duration.ToString("N1") ms</strong>
+            <small>@(isArabic ? "المئين 95 للطلبات الظاهرة" : "95th percentile of visible requests")</small>
+        </article>
+        <article class="log-metric-card metric-red">
+            <div class="log-metric-top">
+                <span class="log-metric-icon"><i class="bi bi-hourglass-split"></i></span>
+                <span class="log-metric-caption">@(isArabic ? "طلبات بطيئة" : "Slow requests")</span>
             </div>
-            <div class="col-12 col-md-3 col-xl-2 d-flex align-items-end gap-2">
-                <input type="hidden" name="pageSize" value="@result.PageSize" />
-                <button type="submit" class="btn btn-primary flex-grow-1"><i class="bi bi-search me-1"></i>@Loc.T("Search")</button>
-                <a asp-controller="ApplicationLogs" asp-action="Index" class="btn btn-outline-secondary" title="@Loc.T("Reset")"><i class="bi bi-arrow-counterclockwise"></i></a>
+            <strong>@slowRequestCount.ToString("N0")</strong>
+            <small>≥ 1,000 ms · @(isArabic ? "في الصفحة الحالية" : "current page only")</small>
+        </article>
+    </section>
+
+    <section class="log-filter-panel">
+        <div class="log-section-heading">
+            <div>
+                <span class="log-section-kicker">@Loc.T("Log_Explore")</span>
+                <h2><i class="bi bi-funnel"></i> @Loc.T("Search")</h2>
+            </div>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <a asp-controller="ApplicationLogs" asp-action="ExportCsv"
+                   asp-route-from="@fromValue" asp-route-to="@toValue" asp-route-level="@query.Level"
+                   asp-route-search="@query.Search" asp-route-correlationId="@query.CorrelationId"
+                   asp-route-source="@query.Source" asp-route-componentType="@query.ComponentType"
+                   asp-route-hasException="@query.HasException" asp-route-httpStatusCode="@query.HttpStatusCode"
+                   asp-route-minDurationMs="@query.MinDurationMs" asp-route-maxDurationMs="@query.MaxDurationMs"
+                   asp-route-page="@result.CurrentPage" asp-route-pageSize="@result.PageSize"
+                   class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-download"></i> @(isArabic ? "تصدير الصفحة الحالية CSV" : "Export current page CSV")
+                </a>
+                <a asp-controller="ApplicationLogs" asp-action="Index" class="log-reset-link">
+                    <i class="bi bi-arrow-counterclockwise"></i> @Loc.T("Reset")
+                </a>
             </div>
         </div>
-        <div class="small text-muted mt-3">@Loc.T("Log_Dates_Are_UTC_And_Redacted")</div>
-    </form>
 
-    <div class="card">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+        <div class="observability-time-presets" aria-label="Quick time ranges">
+            <span><i class="bi bi-clock-history"></i> Time range</span>
+            <a asp-action="Index" asp-route-from="@DateTime.UtcNow.AddDays(-1).ToString("yyyy-MM-dd")" asp-route-to="@DateTime.UtcNow.ToString("yyyy-MM-dd")" asp-route-level="@query.Level" asp-route-search="@query.Search" asp-route-pageSize="@result.PageSize">Today & yesterday</a>
+            <a asp-action="Index" asp-route-from="@DateTime.UtcNow.AddDays(-7).ToString("yyyy-MM-dd")" asp-route-to="@DateTime.UtcNow.ToString("yyyy-MM-dd")" asp-route-level="@query.Level" asp-route-search="@query.Search" asp-route-pageSize="@result.PageSize">Last 7 days</a>
+            <a asp-action="Index" asp-route-from="@DateTime.UtcNow.AddDays(-30).ToString("yyyy-MM-dd")" asp-route-to="@DateTime.UtcNow.ToString("yyyy-MM-dd")" asp-route-level="@query.Level" asp-route-search="@query.Search" asp-route-pageSize="@result.PageSize">Last 30 days</a>
+        </div>
+
+        <form method="get" asp-controller="ApplicationLogs" asp-action="Index" class="log-filter-form">
+            <div class="log-filter-main">
+                <div class="log-field log-search-field">
+                    <label for="search">@Loc.T("Log_Search_Anything")</label>
+                    <div class="log-input-wrap">
+                        <i class="bi bi-search"></i>
+                        <input class="form-control" id="search" name="search" value="@query.Search"
+                               maxlength="200" placeholder="@Loc.T("Log_Search_Placeholder")" />
+                    </div>
+                </div>
+                <div class="log-field">
+                    <label for="level">@Loc.T("Level")</label>
+                    <select class="form-select" id="level" name="level">
+                        <option value="">@Loc.T("All_Levels")</option>
+                        @foreach (var item in levels)
+                        {
+                            <option value="@item" selected="@(string.Equals(query.Level, item, StringComparison.OrdinalIgnoreCase))">@item</option>
+                        }
+                    </select>
+                </div>
+                <div class="log-field">
+                    <label for="from">@Loc.T("From_Date_UTC")</label>
+                    <input class="form-control" type="date" id="from" name="from" value="@fromValue" />
+                </div>
+                <div class="log-field">
+                    <label for="to">@Loc.T("To_Date_UTC")</label>
+                    <input class="form-control" type="date" id="to" name="to" value="@toValue" />
+                </div>
+                <input type="hidden" name="pageSize" value="@result.PageSize" />
+                <div class="log-filter-actions">
+                    <button type="submit" class="btn log-search-button">
+                        <i class="bi bi-search"></i> @Loc.T("Search")
+                    </button>
+                </div>
+            </div>
+
+            <details class="log-advanced-filters" open="@( !string.IsNullOrWhiteSpace(query.Source) || !string.IsNullOrWhiteSpace(query.CorrelationId) || !string.IsNullOrWhiteSpace(query.ComponentType) || query.HasException.HasValue || query.HttpStatusCode.HasValue || query.MinDurationMs.HasValue || query.MaxDurationMs.HasValue )">
+                <summary><i class="bi bi-sliders"></i> @Loc.T("Log_Advanced_Filters")</summary>
+                <div class="log-advanced-grid">
+                    <div class="log-field">
+                        <label for="componentType">@(isArabic ? "نوع المكوّن" : "Component type")</label>
+                        <select class="form-select" id="componentType" name="componentType">
+                            <option value="">@(isArabic ? "كل المكونات" : "All components")</option>
+                            <option value="Controller" selected="@(query.ComponentType == "Controller")">Controller</option>
+                            <option value="Service" selected="@(query.ComponentType == "Service")">Service</option>
+                            <option value="View" selected="@(query.ComponentType == "View")">View</option>
+                            <option value="Middleware" selected="@(query.ComponentType == "Middleware")">Middleware</option>
+                            <option value="Repository" selected="@(query.ComponentType == "Repository")">Repository / Data</option>
+                            <option value="Database" selected="@(query.ComponentType == "Database")">Database</option>
+                            <option value="BackgroundJob" selected="@(query.ComponentType == "BackgroundJob")">Background Job</option>
+                            <option value="ExternalDependency" selected="@(query.ComponentType == "ExternalDependency")">External Dependency</option>
+                            <option value="Other" selected="@(query.ComponentType == "Other")">@(isArabic ? "أخرى / غير محدد" : "Other / unknown")</option>
+                        </select>
+                        <small class="text-muted">@(isArabic ? "يُصنّف حسب SourceContext المسجل؛ السجلات التي لا تحتوي على مصدر واضح تظهر ضمن أخرى." : "Classified from recorded SourceContext; events without clear source metadata appear under Other.")</small>
+                    </div>
+                    <div class="log-field">
+                        <label for="source">@Loc.T("Source_Context")</label>
+                        <input class="form-control" id="source" name="source" value="@query.Source" maxlength="200"
+                               placeholder="@Loc.T("Log_Source_Placeholder")" />
+                    </div>
+                    <div class="log-field">
+                        <label for="correlationId">@Loc.T("Correlation_ID")</label>
+                        <input class="form-control font-monospace" id="correlationId" name="correlationId"
+                               value="@query.CorrelationId" maxlength="100" placeholder="Correlation ID" />
+                    </div>
+                    <div class="log-field">
+                        <label for="httpStatusCode">@(isArabic ? "كود HTTP" : "HTTP status")</label>
+                        <select class="form-select" id="httpStatusCode" name="httpStatusCode">
+                            <option value="">@(isArabic ? "كل الحالات" : "All statuses")</option>
+                            @foreach (var status in new[] { 200, 201, 204, 301, 302, 400, 401, 403, 404, 409, 422, 429, 500, 502, 503 })
+                            {
+                                <option value="@status" selected="@(query.HttpStatusCode == status)">@status</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="log-field">
+                        <label for="minDurationMs">@(isArabic ? "أقل زمن استجابة (ms)" : "Min duration (ms)")</label>
+                        <input class="form-control" type="number" min="0" max="3600000" step="0.1" id="minDurationMs" name="minDurationMs" value="@query.MinDurationMs" />
+                    </div>
+                    <div class="log-field">
+                        <label for="maxDurationMs">@(isArabic ? "أقصى زمن استجابة (ms)" : "Max duration (ms)")</label>
+                        <input class="form-control" type="number" min="0" max="3600000" step="0.1" id="maxDurationMs" name="maxDurationMs" value="@query.MaxDurationMs" />
+                    </div>
+                    <div class="log-field">
+                        <label for="hasException">@Loc.T("Exception")</label>
+                        <select class="form-select" id="hasException" name="hasException">
+                            <option value="">@Loc.T("All_Events")</option>
+                            <option value="true" selected="@(query.HasException == true)">@Loc.T("With_Exception")</option>
+                            <option value="false" selected="@(query.HasException == false)">@Loc.T("Without_Exception")</option>
+                        </select>
+                    </div>
+                </div>
+            </details>
+        </form>
+    </section>
+
+    <section class="log-results-panel">
+        <div class="log-results-heading">
+            <div>
+                <span class="log-section-kicker">@Loc.T("Log_Activity")</span>
+                <h2><i class="bi bi-card-list"></i> @Loc.T("Log_Results")</h2>
+                <p>@Loc.T("Log_Results_Description")</p>
+            </div>
+            <div class="log-result-count">
+                <strong>@result.FirstItemIndex–@result.LastItemIndex</strong>
+                <span>/ @result.TotalItems.ToString("N0")</span>
+            </div>
+        </div>
+
+        <div class="log-level-summary">
+            <span class="level-summary-item"><i class="level-dot dot-error"></i>@Loc.T("Log_Error_Fatal") <strong>@errorCount</strong></span>
+            <span class="level-summary-item"><i class="level-dot dot-warning"></i>@Loc.T("Log_Warnings") <strong>@warningCount</strong></span>
+            <span class="level-summary-item"><i class="level-dot dot-info"></i>@Loc.T("Log_Information") <strong>@informationCount</strong></span>
+            <span class="level-summary-note">@Loc.T("Log_Current_Page_Only")</span>
+        </div>
+
+        <div class="table-responsive log-table-wrap">
+            <table class="table log-table align-middle mb-0">
+                <thead>
                     <tr>
-                        <th class="text-nowrap">@Loc.T("Date") (UTC)</th>
+                        <th class="log-time-column">@Loc.T("Log_UTC_Time")</th>
                         <th>@Loc.T("Level")</th>
-                        <th>@Loc.T("Message")</th>
+                        <th>HTTP / Duration</th>
+                        <th class="log-message-column">@Loc.T("Message")</th>
                         <th>@Loc.T("Source_Context")</th>
                         <th>@Loc.T("Correlation_ID")</th>
                         <th>@Loc.T("Details")</th>
                     </tr>
                 </thead>
                 <tbody>
-                @if (result.Items.Count == 0)
+                @if (visibleItems.Count == 0)
                 {
-                    <tr><td colspan="6" class="text-center text-muted py-5">@Loc.T("No_Log_Events_Found")</td></tr>
+                    <tr>
+                        <td colspan="7">
+                            <div class="log-empty-state">
+                                <span class="log-empty-icon"><i class="bi bi-search"></i></span>
+                                <strong>@Loc.T("Log_Empty_Title")</strong>
+                                <p>@Loc.T("No_Log_Events_Found")</p>
+                                <a asp-controller="ApplicationLogs" asp-action="Index" class="btn btn-sm btn-outline-primary">@Loc.T("Log_Clear_Filters")</a>
+                            </div>
+                        </td>
+                    </tr>
                 }
                 else
                 {
-                    @foreach (var item in result.Items)
+                    @foreach (var item in visibleItems)
                     {
                         var levelClass = item.Level switch
                         {
-                            "Fatal" or "Error" => "bg-danger",
-                            "Warning" => "bg-warning text-dark",
-                            "Information" => "bg-info text-dark",
-                            _ => "bg-secondary"
+                            "Fatal" => "log-level-fatal",
+                            "Error" => "log-level-error",
+                            "Warning" => "log-level-warning",
+                            "Information" => "log-level-information",
+                            "Debug" => "log-level-debug",
+                            _ => "log-level-muted"
+                        };
+                        var levelIcon = item.Level switch
+                        {
+                            "Fatal" or "Error" => "bi-exclamation-octagon-fill",
+                            "Warning" => "bi-exclamation-triangle-fill",
+                            "Information" => "bi-info-circle-fill",
+                            "Debug" => "bi-bug-fill",
+                            _ => "bi-circle-fill"
                         };
                         <tr>
-                            <td class="text-nowrap small">@item.Timestamp.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss.fff")</td>
-                            <td><span class="badge @levelClass">@item.Level</span></td>
-                            <td class="text-break">@item.Message</td>
-                            <td class="small text-break">@item.SourceContext</td>
-                            <td class="small font-monospace text-break">@item.CorrelationId</td>
-                            <td>
+                            <td class="log-time-cell">
+                                <span>@item.Timestamp.UtcDateTime.ToString("yyyy-MM-dd")</span>
+                                <strong>@item.Timestamp.UtcDateTime.ToString("HH:mm:ss.fff")</strong>
+                                <small>UTC</small>
+                            </td>
+                            <td><span class="log-level-badge @levelClass"><i class="bi @levelIcon"></i>@item.Level</span></td>
+                            <td class="log-http-cell">
+                                @if (item.HttpStatusCode.HasValue)
+                                {
+                                    var statusClass = item.HttpStatusCode.Value >= 500 ? "http-status-error" : item.HttpStatusCode.Value >= 400 ? "http-status-warning" : "http-status-ok";
+                                    <span class="http-status @statusClass">@item.HttpStatusCode</span>
+                                    <small class="d-block text-muted">@item.HttpMethod @item.RequestPath</small>
+                                    <strong class="http-duration">@item.DurationMs?.ToString("N2") ms</strong>
+                                }
+                                else { <span class="text-muted">—</span> }
+                            </td>
+                            <td class="log-message-cell">
+                                <div>@item.Message</div>
+                                @if (item.HasException)
+                                {
+                                    <span class="log-exception-hint"><i class="bi bi-exclamation-circle"></i> @Loc.T("Exception")</span>
+                                }
+                            </td>
+                            <td class="log-source-cell">
+                                <small class="log-component-kind">@item.ComponentType</small>
+                                @if (!string.IsNullOrWhiteSpace(item.SourceContext))
+                                {
+                                    <a asp-action="Index" asp-route-source="@item.SourceContext"
+                                       asp-route-level="@query.Level" asp-route-from="@fromValue" asp-route-to="@toValue"
+                                       asp-route-search="@query.Search" asp-route-correlationId="@query.CorrelationId"
+                                       asp-route-componentType="@query.ComponentType" asp-route-hasException="@query.HasException"
+                                       asp-route-httpStatusCode="@query.HttpStatusCode" asp-route-minDurationMs="@query.MinDurationMs" asp-route-maxDurationMs="@query.MaxDurationMs"
+                                       asp-route-pageSize="@result.PageSize" class="log-source-filter"
+                                       title="Filter by this source">@item.SourceContext <i class="bi bi-funnel"></i></a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td class="log-correlation-cell">
+                                @if (!string.IsNullOrWhiteSpace(item.CorrelationId))
+                                {
+                                    <a asp-action="Index" asp-route-correlationId="@item.CorrelationId"
+                                       asp-route-level="@query.Level" asp-route-from="@fromValue" asp-route-to="@toValue"
+                                       asp-route-search="@query.Search" asp-route-source="@query.Source"
+                                       asp-route-componentType="@query.ComponentType" asp-route-hasException="@query.HasException"
+                                       asp-route-pageSize="@result.PageSize"
+                                       class="log-correlation-link" title="@Loc.T("Log_Filter_By_Correlation")">
+                                        @item.CorrelationId <i class="bi bi-arrow-up-left"></i>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td class="log-details-cell">
                                 @if (item.HasException || !string.IsNullOrWhiteSpace(item.Details))
                                 {
-                                    <details>
-                                        <summary class="@(item.HasException ? "text-danger" : "text-primary")">
-                                            @(item.HasException ? Loc.T("Exception") : Loc.T("Details"))
-                                        </summary>
+                                    <details class="log-event-details">
+                                        <summary><i class="bi bi-braces"></i> @Loc.T("Log_Inspect")</summary>
                                         @if (!string.IsNullOrWhiteSpace(item.Details))
                                         {
-                                            <pre class="small text-wrap mt-2 mb-0">@item.Details</pre>
+                                            <div class="log-detail-block">
+                                                <span>@Loc.T("Details")</span>
+                                                <pre>@item.Details</pre>
+                                            </div>
                                         }
                                         @if (item.HasException)
                                         {
-                                            <pre class="small text-wrap mt-2 mb-0">@item.Exception</pre>
+                                            <div class="log-detail-block log-exception-block">
+                                                <span>@Loc.T("Exception")</span>
+                                                <pre>@item.Exception</pre>
+                                            </div>
                                         }
                                     </details>
                                 }
-                                else { <span class="text-muted">—</span> }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
                             </td>
                         </tr>
                     }
@@ -130,27 +410,30 @@
                 </tbody>
             </table>
         </div>
-        <div class="card-footer d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <span class="small text-muted">@result.FirstItemIndex–@result.LastItemIndex / @result.TotalItems.ToString("N0")</span>
+
+        <footer class="log-pagination">
+            <span class="log-pagination-caption">@result.FirstItemIndex–@result.LastItemIndex @Loc.T("Log_Of") @result.TotalItems.ToString("N0")</span>
             <nav aria-label="Log pages">
-                <ul class="pagination pagination-sm mb-0">
+                <ul class="pagination mb-0">
                     <li class="page-item @(!result.HasPrevious ? "disabled" : "")">
                         <a class="page-link" asp-action="Index" asp-route-from="@fromValue" asp-route-to="@toValue"
                            asp-route-level="@query.Level" asp-route-search="@query.Search"
                            asp-route-correlationId="@query.CorrelationId" asp-route-source="@query.Source"
-                           asp-route-hasException="@query.HasException" asp-route-page="@(result.CurrentPage - 1)"
-                           asp-route-pageSize="@result.PageSize">@Loc.T("Previous")</a>
+                           asp-route-componentType="@query.ComponentType" asp-route-hasException="@query.HasException"
+                           asp-route-httpStatusCode="@query.HttpStatusCode" asp-route-minDurationMs="@query.MinDurationMs" asp-route-maxDurationMs="@query.MaxDurationMs" asp-route-page="@(result.CurrentPage - 1)"
+                           asp-route-pageSize="@result.PageSize"><i class="bi bi-chevron-right"></i> @Loc.T("Previous")</a>
                     </li>
                     <li class="page-item disabled"><span class="page-link">@result.CurrentPage / @Math.Max(1, result.TotalPages)</span></li>
                     <li class="page-item @(!result.HasNext || result.CurrentPage >= 100 ? "disabled" : "")">
                         <a class="page-link" asp-action="Index" asp-route-from="@fromValue" asp-route-to="@toValue"
                            asp-route-level="@query.Level" asp-route-search="@query.Search"
                            asp-route-correlationId="@query.CorrelationId" asp-route-source="@query.Source"
-                           asp-route-hasException="@query.HasException" asp-route-page="@(result.CurrentPage + 1)"
-                           asp-route-pageSize="@result.PageSize">@Loc.T("Next")</a>
+                           asp-route-componentType="@query.ComponentType" asp-route-hasException="@query.HasException"
+                           asp-route-httpStatusCode="@query.HttpStatusCode" asp-route-minDurationMs="@query.MinDurationMs" asp-route-maxDurationMs="@query.MaxDurationMs" asp-route-page="@(result.CurrentPage + 1)"
+                           asp-route-pageSize="@result.PageSize">@Loc.T("Next") <i class="bi bi-chevron-left"></i></a>
                     </li>
                 </ul>
             </nav>
-        </div>
-    </div>
+        </footer>
+    </section>
 </div>

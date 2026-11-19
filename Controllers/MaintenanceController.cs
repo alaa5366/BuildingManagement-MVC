@@ -1,175 +1,258 @@
-﻿using BuildingManagementMvc.Attributes;
 using System.Security.Claims;
+using BuildingManagementMvc.Attributes;
+using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Models;
+using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using BuildingManagementMvc.Services;
 
 namespace BuildingManagementMvc.Controllers;
-// ============================================================
-//  MaintenanceController	سجل الصيانة
-// ============================================================
-/// <summary>
-/// Admin maintenance log: create, update status, delete and convert a record's cost into an expense.
-/// </summary>
-/// <remarks>
-/// Access: requires one of the roles <c>admin</c>.
-/// </remarks>
+
 [Authorize(Roles = "admin")]
-[AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageMaintenance)]
+[AdminPermission(AdminPermissions.ManageMaintenance)]
 public class MaintenanceController : Controller
 {
-    private readonly BuildingsService _buildings;
-    private readonly MaintenanceService _maint;
-    private readonly AuditLogService _audit;
-    private readonly NotificationsService _notify;
+    private readonly TargetMaintenanceService _maintenance;
+    private readonly TargetFinanceReadService _targetFinance;
+    private readonly TargetExpenseRevenueWorkflowService _financeWorkflow;
+    private readonly TargetAccountIdentityResolver _identityResolver;
+    private readonly TargetNotificationsService _notifications;
+    private readonly IAuditLogger _audit;
+    private readonly ILogger<MaintenanceController> _logger;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MaintenanceController"/> class.
-    /// </summary>
-    public MaintenanceController(BuildingsService buildings, MaintenanceService maint, AuditLogService audit, NotificationsService notify)
+    public MaintenanceController(
+        TargetMaintenanceService maintenance,
+        TargetFinanceReadService targetFinance,
+        TargetExpenseRevenueWorkflowService financeWorkflow,
+        TargetAccountIdentityResolver identityResolver,
+        TargetNotificationsService notifications,
+        IAuditLogger audit,
+        ILogger<MaintenanceController> logger)
     {
-        _buildings = buildings; _maint = maint; _audit = audit; _notify = notify;
+        _maintenance = maintenance;
+        _targetFinance = targetFinance;
+        _financeWorkflow = financeWorkflow;
+        _identityResolver = identityResolver;
+        _notifications = notifications;
+        _audit = audit;
+        _logger = logger;
     }
 
-    private string BuildingId => User.FindFirstValue("buildingId")!;
+    private string BuildingId => User.FindFirstValue("buildingId") ?? "";
 
-    /// <summary>
-    /// Shows the main page of the maintenance screen.
-    /// </summary>
-    /// <remarks>
-    /// HTTP GET.
-    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Index(int page = 1, int pageSize = 50)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
+        if (string.IsNullOrWhiteSpace(BuildingId)) return Forbid();
+        var buildingName = await _maintenance.GetBuildingNameAsync(BuildingId, HttpContext.RequestAborted);
+        if (buildingName is null) return NotFound();
 
-        var allRecords = _maint.GetLog(building);
-        var pagedRecords = BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.MaintenanceRecord>
-            .Create(allRecords, page, pageSize);
-
-        ViewBag.Building = building;
-        ViewBag.RouteValues = new Dictionary<string, string?>
-        {
-            ["pageSize"] = pageSize.ToString()
-        };
-
-        return View(pagedRecords);
+        var records = await _maintenance.GetPageAsync(
+            BuildingId, page, pageSize, HttpContext.RequestAborted);
+        ViewBag.BuildingName = buildingName;
+        ViewBag.RouteValues = new Dictionary<string, string?> { ["pageSize"] = records.PageSize.ToString() };
+        return View(records);
     }
 
-    /// <summary>
-    /// Handles the add form submission of the maintenance screen.
-    /// </summary>
-    /// <remarks>
-    /// HTTP POST.
-    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Add(string title, string? description, string date, decimal cost, string? vendor, string status)
+    public async Task<IActionResult> Add(
+        string title, string? description, string date, decimal cost, string? vendor, string status)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
-
-        if (string.IsNullOrWhiteSpace(title) || cost < 0 ||
-            !DateTime.TryParse(date, System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.AssumeUniversal, out _) ||
-            (!string.IsNullOrWhiteSpace(status) &&
-             !new[] { "open", "inprogress", "done", "cancelled" }.Contains(status.Trim().ToLowerInvariant())))
+        if (string.IsNullOrWhiteSpace(BuildingId)) return Forbid();
+        try
         {
-            TempData["Error"] = "يرجى إدخال عنوان وتاريخ صحيحين وتكلفة غير سالبة.";
-            return RedirectToAction("Index");
-        }
-
-        if (!string.IsNullOrWhiteSpace(title))
-        {
-            var rec = _maint.Add(building, title.Trim(), description, date, cost, vendor, status, User.Identity?.Name ?? "admin");
-            _audit.Push(building, "maint_add", rec.Title, "admin", User.Identity?.Name ?? "admin");
-            await _buildings.SaveFullAsync(building);
+            var record = await _maintenance.AddAsync(
+                BuildingId, title, description, date, cost, vendor, status,
+                User.Identity?.Name ?? "admin", HttpContext.RequestAborted);
+            await _audit.LogAsync(
+                action: "maintenance.added",
+                buildingId: BuildingId,
+                userId: User.Identity?.Name ?? "admin",
+                userRole: "admin",
+                metadata: new { record.Id, record.Title, record.Cost, record.Date },
+                severity: "info");
             TempData["Message"] = Loc.T("Maintenance_Record_Added");
         }
+        catch (ArgumentException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Target maintenance record creation failed for building {BuildingId}.", BuildingId);
+            TempData["Error"] = "تعذر حفظ سجل الصيانة.";
+        }
 
-        return RedirectToAction("Index");
+        return RedirectToAction(nameof(Index));
     }
 
-    /// <summary>
-    /// Handles the update form submission of the maintenance screen.
-    /// </summary>
-    /// <remarks>
-    /// HTTP POST.
-    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Update(string id, string title, string? description, string date, decimal cost, string? vendor, string status)
+    public async Task<IActionResult> Update(
+        string id, string title, string? description, string date,
+        decimal cost, string? vendor, string status)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
-
-        if (string.IsNullOrWhiteSpace(title) || cost < 0 ||
-            !DateTime.TryParse(date, System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.AssumeUniversal, out _) ||
-            !new[] { "open", "inprogress", "done", "cancelled" }.Contains((status ?? "").Trim().ToLowerInvariant()))
+        if (string.IsNullOrWhiteSpace(BuildingId)) return Forbid();
+        try
         {
-            TempData["Error"] = "يرجى إدخال عنوان وتاريخ صحيحين وتكلفة غير سالبة.";
-            return RedirectToAction("Index");
+            var record = await _maintenance.UpdateAsync(
+                BuildingId, id, title, description, date, cost, vendor, status,
+                HttpContext.RequestAborted);
+            if (record is null) return NotFound();
+
+            await _audit.LogAsync(
+                action: "maintenance.updated",
+                buildingId: BuildingId,
+                userId: User.Identity?.Name ?? "admin",
+                userRole: "admin",
+                metadata: new { record.Id, record.Title, record.Cost, record.Date, record.Status },
+                severity: "info");
+            TempData["Message"] = "تم تحديث سجل الصيانة.";
         }
-        status = Request.Form["status"].ToString() ?? "Pending";
-        var rec = _maint.Update(building, id, title, description, date, cost, vendor, status);
-        if (rec != null)
+        catch (ArgumentException ex)
         {
-            _audit.Push(building, "maint_update", rec.Title, "admin", User.Identity?.Name ?? "admin");
-            await _buildings.SaveFullAsync(building);
+            TempData["Error"] = ex.Message;
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Target maintenance update failed for {MaintenanceId}.", id);
+            TempData["Error"] = "تعذر تحديث سجل الصيانة.";
         }
 
-        return RedirectToAction("Index");
+        return RedirectToAction(nameof(Index));
     }
 
-    /// <summary>
-    /// Handles the delete form submission of the maintenance screen.
-    /// </summary>
-    /// <remarks>
-    /// HTTP POST.
-    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string id)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
-
-        if (_maint.Delete(building, id))
+        if (string.IsNullOrWhiteSpace(BuildingId)) return Forbid();
+        try
         {
-            _audit.Push(building, "maint_delete", id, "admin", User.Identity?.Name ?? "admin");
-            await _buildings.SaveFullAsync(building);
+            var deleted = await _maintenance.DeleteAsync(BuildingId, id, HttpContext.RequestAborted);
+            if (!deleted) return NotFound();
+
+            await _audit.LogAsync(
+                action: "maintenance.deleted",
+                buildingId: BuildingId,
+                userId: User.Identity?.Name ?? "admin",
+                userRole: "admin",
+                metadata: new { maintenanceId = id },
+                severity: "warning");
+            TempData["Message"] = "تم حذف سجل الصيانة.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Target maintenance delete failed for {MaintenanceId}.", id);
+            TempData["Error"] = "تعذر حذف سجل الصيانة.";
         }
 
-        return RedirectToAction("Index");
+        return RedirectToAction(nameof(Index));
     }
 
-    /// <summary>
-    /// Adds the to expenses.
-    /// </summary>
-    /// <remarks>
-    /// HTTP POST.
-    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddToExpenses(string id, string? month)
+    public async Task<IActionResult> AddToExpenses(string id)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
-
-        var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
-        var expense = _maint.AddCostToExpenses(building, id, mk, User.Identity?.Name ?? "admin");
-        if (expense != null)
+        if (string.IsNullOrWhiteSpace(BuildingId)) return Forbid();
+        var record = await _maintenance.GetAsync(BuildingId, id, HttpContext.RequestAborted);
+        if (record is null) return NotFound();
+        if (record.AddedToExpense || record.Cost <= 0 ||
+            string.Equals(record.Status, "cancelled", StringComparison.OrdinalIgnoreCase))
         {
-            _audit.Push(building, "maint_add_expense", $"{expense.Note} — {expense.Amount:0.##}", "admin", User.Identity?.Name ?? "admin");
-            var catName = building.ExpenseCategories.FirstOrDefault(c => c.Id == expense.CategoryId)?.Name ?? expense.CategoryId;
-            _notify.NotifyResidentsNewExpense(building, catName, expense.Amount);
-            await _buildings.SaveFullAsync(building);
-            TempData["Message"] = Loc.T("Cost_Added_To_Expenses");
+            TempData["Error"] = "سجل الصيانة غير موجود أو تمت إضافته للمصروفات بالفعل.";
+            return RedirectToAction(nameof(Index));
         }
 
-        return RedirectToAction("Index");
+        var sourceCommand = id.StartsWith("mnt-", StringComparison.OrdinalIgnoreCase) ? id[4..] : id;
+        if (!Guid.TryParse(sourceCommand, out var commandId) || commandId == Guid.Empty)
+        {
+            TempData["Error"] = "معرّف سجل الصيانة غير صالح لتسجيل العملية المالية.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var actorAccountId = await _identityResolver.ResolveAsync(User, HttpContext.RequestAborted);
+        if (actorAccountId is null) return Forbid();
+
+        var expenseDate = record.Date;
+        var monthKey = expenseDate.Length >= 7 ? expenseDate[..7] : "";
+        try
+        {
+            var financeMonth = await _targetFinance.GetMonthAsync(
+                BuildingId, monthKey, "expense", HttpContext.RequestAborted);
+            var category = financeMonth.Categories.FirstOrDefault(item => item.Active &&
+                    (item.Name.Contains("صيانة", StringComparison.OrdinalIgnoreCase) ||
+                     item.Name.Contains("maintenance", StringComparison.OrdinalIgnoreCase)))
+                ?? financeMonth.Categories.FirstOrDefault(item => item.Active && item.Id == "other")
+                ?? financeMonth.Categories.FirstOrDefault(item => item.Active);
+            if (category is null)
+            {
+                TempData["Error"] = "لا توجد فئة مصروفات نشطة لتسجيل تكلفة الصيانة.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var note = "🔧 " + record.Title +
+                (string.IsNullOrWhiteSpace(record.Vendor) ? "" : $" — {record.Vendor}");
+            await _financeWorkflow.AddExpenseAsync(
+                BuildingId, monthKey, category.Id, note, record.Cost, expenseDate,
+                commandId, actorAccountId.Value, HttpContext.RequestAborted);
+
+            if (!await _maintenance.MarkAddedToExpenseAsync(BuildingId, id, HttpContext.RequestAborted))
+                throw new InvalidOperationException("The maintenance expense was posted but its source status could not be updated.");
+
+            await _audit.LogAsync(
+                action: "maintenance.posted_to_expenses",
+                buildingId: BuildingId,
+                userId: User.Identity?.Name ?? "admin",
+                userRole: "admin",
+                metadata: new { record.Id, record.Cost, monthKey, categoryId = category.Id },
+                severity: "info");
+
+            var apartmentIds = await _maintenance.GetActiveApartmentIdsAsync(
+                BuildingId, HttpContext.RequestAborted);
+            var buildingName = await _maintenance.GetBuildingNameAsync(BuildingId, HttpContext.RequestAborted) ?? "";
+            foreach (var apartmentId in apartmentIds)
+            {
+                try
+                {
+                    await _notifications.CreateResidentDepositNoticeAsync(
+                        BuildingId, apartmentId, "مصروف صيانة جديد",
+                        $"{category.Name}: {record.Cost:0.##} — {buildingName}",
+                        HttpContext.RequestAborted, "expense_new", "💸");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Maintenance expense notification failed for building {BuildingId}, apartment {ApartmentId}.",
+                        BuildingId, apartmentId);
+                }
+            }
+
+            TempData["Message"] = Loc.T("Cost_Added_To_Expenses");
+        }
+        catch (ArgumentException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unable to post maintenance cost {MaintenanceId} to target finance.", id);
+            TempData["Error"] = "تعذر إضافة تكلفة الصيانة إلى المصروفات.";
+        }
+
+        return RedirectToAction(nameof(Index));
     }
 }

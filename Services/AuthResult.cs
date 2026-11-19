@@ -40,10 +40,20 @@ public class AuthResult
     /// Gets or sets the display name.
     /// </summary>
     public string? Name { get; set; }
+    /// <summary>Canonical phone identifier for resident PIN-change continuation.</summary>
+    public string? Phone { get; set; }
+    /// <summary>Marks a principal issued from the target identity schema.</summary>
+    public bool UsesTargetIdentity { get; set; }
+    /// <summary>Requires replacement of a temporary initial resident PIN before access is granted.</summary>
+    public bool MustChangePin { get; set; }
+    /// <summary>Target account security stamp for session revalidation.</summary>
+    public string? SecurityStamp { get; set; }
     /// <summary>
     /// Gets or sets the building IDs.
     /// </summary>
     public List<string> BuildingIds { get; set; } = new();
+    /// <summary>Explicit permission keys loaded from the authoritative account grant store.</summary>
+    public List<string> Permissions { get; set; } = new();
     /// <summary>
     /// Gets or sets the identifier of the apartment.
     /// </summary>
@@ -63,7 +73,8 @@ public class AuthResult
         string name,
         List<string> buildingIds,
         string? aptId = null,
-        int? aptNumber = null) => new()
+        int? aptNumber = null,
+        List<string>? permissions = null) => new()
         {
             Success = true,
             Uid = uid,
@@ -71,6 +82,7 @@ public class AuthResult
             Email = email,
             Name = name,
             BuildingIds = buildingIds,
+            Permissions = permissions ?? new List<string>(),
             ApartmentId = aptId,
             ApartmentNumber = aptNumber
         };

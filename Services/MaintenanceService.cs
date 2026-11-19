@@ -8,12 +8,6 @@ namespace BuildingManagementMvc.Services;
 /// </summary>
 public class MaintenanceService
 {
-    private readonly WalletService _wallet;
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MaintenanceService"/> class.
-    /// </summary>
-    public MaintenanceService(WalletService wallet) => _wallet = wallet;
-
     /// <summary>
     /// Gets the log.
     /// </summary>
@@ -82,38 +76,5 @@ public class MaintenanceService
         var before = building.MaintenanceLog.Count;
         building.MaintenanceLog = building.MaintenanceLog.Where(r => r.Id != id).ToList();
         return before != building.MaintenanceLog.Count;
-    }
-
-    // إضافة تكلفة الصيانة كمصروف على الشهر الحالي وإعادة حساب التوزيع
-    /// <summary>
-    /// Adds the cost to expenses.
-    /// </summary>
-    public Expense? AddCostToExpenses(Building building, string id, string monthKey, string createdBy)
-    {
-        var record = building.MaintenanceLog.FirstOrDefault(r => r.Id == id);
-        if (record == null || record.AddedToExpense || record.Cost <= 0) return null;
-
-        var m = _wallet.GetOrCreateMonth(building, monthKey);
-
-        var cat = building.ExpenseCategories.FirstOrDefault(c => c.Name.Contains("صيانة") || c.Name.ToLower().Contains("maintenance"))
-            ?? building.ExpenseCategories.FirstOrDefault(c => c.Id == "other")
-            ?? building.ExpenseCategories.FirstOrDefault();
-
-        var expense = new Expense
-        {
-            Id = Guid.NewGuid().ToString("N"),
-            CategoryId = cat?.Id ?? "other",
-            Note = "🔧 " + record.Title + (string.IsNullOrWhiteSpace(record.Vendor) ? "" : $" — {record.Vendor}"),
-            Amount = record.Cost,
-            Date = string.IsNullOrWhiteSpace(record.Date) ? DateTime.UtcNow.ToString("yyyy-MM-dd") : record.Date
-        };
-        m.Expenses.Add(expense);
-
-        record.AddedToExpense = true;
-        record.AddedToExpenseAt = DateTime.UtcNow.ToString("o");
-
-        _wallet.RecalculateDistribution(building, monthKey);
-
-        return expense;
     }
 }

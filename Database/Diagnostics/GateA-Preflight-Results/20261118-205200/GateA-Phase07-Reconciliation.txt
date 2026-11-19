@@ -1,0 +1,14 @@
+Target: (localdb)\MSSQLLocalDB / BuildingManagement_RestoreTest
+Migration: 20261118184850_Phase07_OwnershipRecordProvenance
+Backup: C:\Users\alaa5\AppData\Local\Temp\BuildingManagement_RestoreTest_Phase07-pre-20261118-204900.bak
+Backup bytes: 13,230,080
+Backup: COPY_ONLY, CHECKSUM; RESTORE VERIFYONLY passed.
+
+Reconciliation:
+- Exact target database confirmed.
+- Phase07 migration history row present.
+- ApartmentOwnerships.RecordSource: tinyint NOT NULL, default 0.
+- CK_ApartmentOwnerships_RecordActor: enabled, trusted.
+- CK_ApartmentOwnerships_RecordSource: enabled, trusted.
+- ApartmentOwnerships row count: 0.
+- EF reports no pending model changes.

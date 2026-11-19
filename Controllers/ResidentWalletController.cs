@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.Text.Json;
+using BuildingManagementMvc.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using BuildingManagementMvc.Services;
@@ -18,16 +20,21 @@ namespace BuildingManagementMvc.Controllers;
 [Authorize(Roles = "resident")]
 public class ResidentWalletController : Controller
 {
-    private readonly BuildingsService _buildings;
-    private readonly WalletService _wallet;
-    private readonly AuditLogService _audit;
+    private readonly TargetWalletReadService _targetWallet;
+    private readonly TargetDepositWorkflowService _depositWorkflow;
+    private readonly TargetAccountIdentityResolver _identityResolver;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ResidentWalletController"/> class.
     /// </summary>
-    public ResidentWalletController(BuildingsService buildings, WalletService wallet, AuditLogService audit)
+    public ResidentWalletController(
+        TargetWalletReadService targetWallet,
+        TargetDepositWorkflowService depositWorkflow,
+        TargetAccountIdentityResolver identityResolver)
     {
-        _buildings = buildings; _wallet = wallet; _audit = audit;
+        _targetWallet = targetWallet;
+        _depositWorkflow = depositWorkflow;
+        _identityResolver = identityResolver;
     }
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
@@ -50,15 +57,17 @@ public class ResidentWalletController : Controller
         int page = 1,
         int pageSize = 50)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
+        var building = await _targetWallet.GetBuildingShellAsync(BuildingId, ApartmentId, HttpContext.RequestAborted);
         if (building == null) return NotFound();
 
         var apt = building.Apartments.FirstOrDefault(a => a.Id == ApartmentId);
         if (apt == null) return NotFound();
 
-        var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
+        var mk = string.IsNullOrWhiteSpace(month)
+            ? await _targetWallet.GetCurrentPeriodKeyAsync(BuildingId, cancellationToken: HttpContext.RequestAborted)
+            : month;
 
-        var vm = BuildViewModel(building, apt, mk, allMonths, fromMonth, toMonth,
+        var vm = await BuildViewModelAsync(building, apt, mk, allMonths, fromMonth, toMonth,
             typeFilter, statusFilter, page, pageSize);
 
         // ✅ AJAX — ارجع Partial بس
@@ -75,7 +84,7 @@ public class ResidentWalletController : Controller
         ViewBag.ToMonth = toMonth;
         ViewBag.TypeFilter = typeFilter;
         ViewBag.StatusFilter = statusFilter;
-        ViewBag.Balance = _wallet.ComputeWalletBalance(building, apt.Id, mk);
+        ViewBag.Balance = vm.Balance;
         ViewBag.Transactions = vm.Statement.Transactions;
         ViewBag.PendingDeposits = vm.PendingDeposits;
         ViewBag.RouteValues = vm.Statement.RouteValues;
@@ -86,59 +95,48 @@ public class ResidentWalletController : Controller
     // ============================================================
     // ✅ Helper: بناء ViewModel
     // ============================================================
-    private (StatementPartialViewModels Statement, PagedResult<Deposit> PendingDeposits) BuildViewModel(
+    private async Task<(StatementPartialViewModels Statement, PagedResult<Deposit> PendingDeposits, decimal Balance)> BuildViewModelAsync(
         Building building, Apartment apt, string mk,
         bool allMonths, string? fromMonth, string? toMonth,
         string? typeFilter, string? statusFilter,
         int page, int pageSize)
     {
-        List<WalletTransactionVm> allTxs;
+        var snapshot = await _targetWallet.GetApartmentAsync(
+            BuildingId,
+            apt.Id,
+            allMonths ? fromMonth : mk,
+            allMonths ? toMonth : mk);
 
-        if (allMonths)
+        var allTxs = snapshot.Transactions.ToList();
+        if (!string.IsNullOrWhiteSpace(typeFilter))
         {
-            allTxs = _wallet.GetAllTransactions(
-                building, apt.Id,
-                fromMonth, toMonth,
-                typeFilter, statusFilter);
-        }
-        else
-        {
-            allTxs = _wallet.GetUnifiedTransactions(building, apt.Id, mk);
+            var selectedTypes = typeFilter
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(t => t.Trim().ToLowerInvariant())
+                .ToList();
 
-            if (!string.IsNullOrWhiteSpace(typeFilter))
+            if (!selectedTypes.Contains("all") && selectedTypes.Count > 0)
             {
-                var selectedTypes = typeFilter
-                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(t => t.Trim().ToLowerInvariant())
-                    .ToList();
-
-                if (!selectedTypes.Contains("all") && selectedTypes.Count > 0)
-                {
-                    allTxs = allTxs.Where(t =>
-                        (selectedTypes.Contains("deposits") && t.Type == "deposit") ||
-                        (selectedTypes.Contains("expenses") && t.Type == "expense") ||
-                        (selectedTypes.Contains("revenues") && t.Type == "revenue") ||
-                        (selectedTypes.Contains("carry_over") && t.Type == "carry_over") ||
-                        (selectedTypes.Contains("adjustments") && t.Type == "adjustment") ||
-                        (selectedTypes.Contains("monthly_fee") &&
-                            (t.Type == "monthly_fee_due" || t.Type == "monthly_fee_credit")) ||
-                        (selectedTypes.Contains("success") && t.Status == "confirmed") ||
-                        (selectedTypes.Contains("failed") && t.Status == "cancelled") ||
-                        (selectedTypes.Contains("pending") && t.Status == "pending")
-                    ).ToList();
-                }
-            }
-
-            if (!string.IsNullOrWhiteSpace(statusFilter))
-            {
-                allTxs = allTxs.Where(t => t.Status == statusFilter).ToList();
+                allTxs = allTxs.Where(t =>
+                    (selectedTypes.Contains("deposits") && t.Type == "deposit") ||
+                    (selectedTypes.Contains("expenses") && t.Type == "expense") ||
+                    (selectedTypes.Contains("revenues") && t.Type == "revenue") ||
+                    (selectedTypes.Contains("carry_over") && t.Type == "carry_over") ||
+                    (selectedTypes.Contains("adjustments") && t.Type == "adjustment") ||
+                    (selectedTypes.Contains("monthly_fee") &&
+                        (t.Type == "monthly_fee_due" || t.Type == "monthly_fee_credit")) ||
+                    (selectedTypes.Contains("success") && t.Status == "confirmed") ||
+                    (selectedTypes.Contains("failed") && t.Status == "cancelled") ||
+                    (selectedTypes.Contains("pending") && t.Status == "pending")
+                ).ToList();
             }
         }
+
+        if (!string.IsNullOrWhiteSpace(statusFilter))
+            allTxs = allTxs.Where(t => string.Equals(t.Status, statusFilter, StringComparison.OrdinalIgnoreCase)).ToList();
 
         var pagedTxs = PagedResult<WalletTransactionVm>.Create(allTxs, page, pageSize);
-
-        var pendingList = _wallet.GetApartmentDeposits(building, apt.Id, mk)
-            .Where(d => d.Status == "pending").ToList();
+        var pendingList = snapshot.PendingDeposits.ToList();
         var pagedPending = PagedResult<Deposit>.Create(pendingList, 1, pageSize);
 
         var statementVm = new StatementPartialViewModels
@@ -148,7 +146,7 @@ public class ResidentWalletController : Controller
             RouteValues = new Dictionary<string, string?>
             {
                 ["month"] = mk,
-                ["allMonths"] = allMonths.ToString().ToLower(),
+                ["allMonths"] = allMonths.ToString().ToLowerInvariant(),
                 ["fromMonth"] = fromMonth,
                 ["toMonth"] = toMonth,
                 ["typeFilter"] = typeFilter,
@@ -157,7 +155,7 @@ public class ResidentWalletController : Controller
             }
         };
 
-        return (statementVm, pagedPending);
+        return (statementVm, pagedPending, snapshot.Balance);
     }
 
     // ============================================================
@@ -174,45 +172,113 @@ public class ResidentWalletController : Controller
     [RequestSizeLimit(15 * 1024 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = 15 * 1024 * 1024)]
     public async Task<IActionResult> CreateDeposit(string month, decimal amount, string? note,
-        IFormFile? receiptImage,
+        Guid commandId, IFormFile? receiptImage,
         [FromServices] CloudinaryService cloudinary)
     {
-        var building = await _buildings.GetByIdAsync(BuildingId);
+        var building = await _targetWallet.GetBuildingShellAsync(BuildingId, ApartmentId, HttpContext.RequestAborted);
         if (building == null) return NotFound();
         var apt = building.Apartments.FirstOrDefault(a => a.Id == ApartmentId);
         if (apt == null) return NotFound();
 
-        var mk = string.IsNullOrWhiteSpace(month) ? WalletService.CurrentMonthKey() : month;
-
-        if (amount > 0)
+        var mk = string.IsNullOrWhiteSpace(month)
+            ? await _targetWallet.GetCurrentPeriodKeyAsync(BuildingId, cancellationToken: HttpContext.RequestAborted)
+            : month;
+        if (!DateOnly.TryParseExact(mk + "-01", "yyyy-MM-dd",
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out _))
         {
-            ReceiptData? receipt = null;
-            if (receiptImage != null && receiptImage.Length > 0)
-            {
-                using var stream = receiptImage.OpenReadStream();
-                if (!ImageSniffer.IsAllowedImage(stream))
-                {
-                    TempData["Error"] = Loc.T("Invalid_Image_File");
-                    return RedirectToAction("Index", new { month = mk });
-                }
+            TempData["Error"] = "الفترة المالية غير صالحة.";
+            return RedirectToAction("Index");
+        }
+        if (commandId == Guid.Empty)
+        {
+            TempData["Error"] = "انتهت صلاحية نموذج الإيداع. حدّث الصفحة وحاول مرة أخرى.";
+            return RedirectToAction("Index", new { month = mk });
+        }
+        if (string.IsNullOrWhiteSpace(note) == false && note.Length > 1000)
+        {
+            TempData["Error"] = "الملاحظة يجب ألا تتجاوز 1000 حرف.";
+            return RedirectToAction("Index", new { month = mk });
+        }
+        if (amount <= 0)
+        {
+            TempData["Error"] = "يجب إدخال مبلغ أكبر من صفر.";
+            return RedirectToAction("Index", new { month = mk });
+        }
+        if (amount > 999999999999999m || decimal.Round(amount, 4, MidpointRounding.AwayFromZero) != amount)
+        {
+            TempData["Error"] = "قيمة المبلغ غير صالحة.";
+            return RedirectToAction("Index", new { month = mk });
+        }
 
-                receipt = await cloudinary.UploadReceiptAsync(
-                    stream,
-                    receiptImage.FileName,
-                    building.Id,
-                    apt.Id);
+        var actorAccountId = await _identityResolver.ResolveAsync(User, HttpContext.RequestAborted);
+        if (actorAccountId is null)
+        {
+            TempData["Error"] = "تعذر ربط حسابك بهوية النظام الجديدة. لم يتم تسجيل الدفعة.";
+            return RedirectToAction("Index", new { month = mk });
+        }
+
+        var submissionContext = await _targetWallet.GetSubmissionContextAsync(
+            BuildingId, mk, HttpContext.RequestAborted);
+        if (submissionContext is null)
+        {
+            TempData["Error"] = "لا توجد فترة مالية مستهدفة لهذا الشهر.";
+            return RedirectToAction("Index", new { month = mk });
+        }
+
+        ReceiptData? receipt = null;
+        if (receiptImage != null && receiptImage.Length > 0)
+        {
+            if (receiptImage.Length > 12 * 1024 * 1024)
+            {
+                TempData["Error"] = "حجم صورة الإيصال أكبر من الحد المسموح.";
+                return RedirectToAction("Index", new { month = mk });
             }
 
-            var d = _wallet.CreateDeposit(building, apt.Id, amount, note, "resident", mk, receipt);
+            using var stream = receiptImage.OpenReadStream();
+            if (!ImageSniffer.IsAllowedImage(stream))
+            {
+                TempData["Error"] = Loc.T("Invalid_Image_File");
+                return RedirectToAction("Index", new { month = mk });
+            }
 
-            var auditDetails = $"دفعة جديدة {d.Number} — {amount:0.##} ج.م";
-            if (receipt != null) auditDetails += " (مع صورة إيصال)";
+            receipt = await cloudinary.UploadReceiptAsync(
+                stream, receiptImage.FileName, building.Id, apt.Id);
+            if (receipt is null || !receipt.Success || string.IsNullOrWhiteSpace(receipt.Url) ||
+                string.IsNullOrWhiteSpace(receipt.Path))
+            {
+                TempData["Error"] = "تعذر رفع صورة الإيصال. لم يتم تسجيل الدفعة.";
+                return RedirectToAction("Index", new { month = mk });
+            }
+        }
 
-            _audit.Push(building, "deposit_create", auditDetails, "resident",
-                User.Identity?.Name ?? "resident", apt.Number.ToString());
+        try
+        {
+            await _depositWorkflow.CreatePendingAsync(
+                BuildingId,
+                ApartmentId,
+                submissionContext.PeriodId,
+                actorAccountId.Value,
+                amount,
+                submissionContext.CurrencyCode,
+                commandId.ToString("N"),
+                HttpContext.RequestAborted,
+                note,
+                receipt is null ? null : JsonSerializer.Serialize(receipt));
 
-            await _buildings.SaveFullAsync(building);
             TempData["Message"] = Loc.T("The_Payment_Was_Submitted_Awaiting_Admin");
+        }
+        catch (ArgumentException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        catch (Exception)
+        {
+            TempData["Error"] = "تعذر تسجيل الدفعة. لم يتم تغيير رصيد المحفظة.";
         }
 
         return RedirectToAction("Index", new { month = mk });

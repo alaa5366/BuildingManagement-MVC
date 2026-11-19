@@ -6,13 +6,7 @@ namespace BuildingManagement.Tests;
 
 public class MaintenanceServiceTests
 {
-    private readonly WalletService _wallet = new();
-    private readonly MaintenanceService _service;
-
-    public MaintenanceServiceTests()
-    {
-        _service = new MaintenanceService(_wallet);
-    }
+    private readonly MaintenanceService _service = new();
 
     private static Building CreateBuilding()
     {
@@ -106,61 +100,5 @@ public class MaintenanceServiceTests
     {
         var b = CreateBuilding();
         Assert.False(_service.Delete(b, "ghost"));
-    }
-
-    // ================================================================
-    // AddCostToExpenses
-    // ================================================================
-
-    [Fact]
-    public void AddCostToExpenses_ValidRecord_CreatesExpenseAndMarksAsAdded()
-    {
-        var b = CreateBuilding();
-        b.ExpenseCategories.Add(new FinancialCategory { Id = "other", Name = "Other", Active = true });
-        var record = _service.Add(b, "Fix", null, "2025-01-15", 500, "ABC", "open", "admin");
-
-        var expense = _service.AddCostToExpenses(b, record.Id, "2025-01", "admin");
-
-        Assert.NotNull(expense);
-        Assert.Equal(500, expense.Amount);
-        Assert.Contains("Fix", expense.Note);
-        Assert.True(record.AddedToExpense);
-        Assert.NotNull(record.AddedToExpenseAt);
-        Assert.Single(b.Months["2025-01"].Expenses);
-    }
-
-    [Fact]
-    public void AddCostToExpenses_AlreadyAdded_ReturnsNull()
-    {
-        var b = CreateBuilding();
-        b.ExpenseCategories.Add(new FinancialCategory { Id = "other", Name = "Other" });
-        var record = _service.Add(b, "Fix", null, "2025-01-15", 500, null, "open", "admin");
-        _service.AddCostToExpenses(b, record.Id, "2025-01", "admin");
-
-        var result = _service.AddCostToExpenses(b, record.Id, "2025-01", "admin");
-
-        Assert.Null(result);
-        Assert.Single(b.Months["2025-01"].Expenses); // مفيش تكرار
-    }
-
-    [Fact]
-    public void AddCostToExpenses_NonExistingRecord_ReturnsNull()
-    {
-        var b = CreateBuilding();
-        Assert.Null(_service.AddCostToExpenses(b, "ghost", "2025-01", "admin"));
-    }
-
-    [Fact]
-    public void AddCostToExpenses_RecalculatesDistribution()
-    {
-        var b = CreateBuilding();
-        b.ExpenseCategories.Add(new FinancialCategory { Id = "other", Name = "Other" });
-        var record = _service.Add(b, "Fix", null, "2025-01-15", 500, null, "open", "admin");
-        _service.AddCostToExpenses(b, record.Id, "2025-01", "admin");
-
-        // 500 / 2 = 250 لكل شقة
-        var m = b.Months["2025-01"];
-        Assert.Equal(250, m.Distribution["a1"]);
-        Assert.Equal(250, m.Distribution["a2"]);
     }
 }

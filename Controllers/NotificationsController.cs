@@ -1,106 +1,153 @@
-﻿using BuildingManagementMvc.Services;
+using BuildingManagementMvc.Models;
+using BuildingManagementMvc.Attributes;
+using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
-// ============================================================
-//  NotificationsController	الإشعارات
-// ============================================================
-/// <summary>
-/// In-app notification list for the signed-in user (mark as read, mark all as read).
-/// </summary>
-/// <remarks>
-/// Access: requires one of the roles <c>admin,resident</c>.
-/// </remarks>
+
 [Authorize(Roles = "admin,resident")]
 public class NotificationsController : Controller
 {
-    private readonly BuildingsService _buildings;
-    private readonly NotificationsService _notify;
+    private readonly TargetNotificationsService _notifications;
+    private readonly TargetWhatsAppService _whatsApp;
+    private readonly IAuditLogger _auditLogger;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="NotificationsController"/> class.
-    /// </summary>
-    public NotificationsController(BuildingsService buildings, NotificationsService notify)
+    public NotificationsController(
+        TargetNotificationsService notifications,
+        TargetWhatsAppService whatsApp,
+        IAuditLogger auditLogger)
     {
-        _buildings = buildings; _notify = notify;
+        _notifications = notifications;
+        _whatsApp = whatsApp;
+        _auditLogger = auditLogger;
     }
 
-    private string BuildingId => User.FindFirstValue("buildingId")!;
+    private string? BuildingId => User.FindFirstValue("buildingId");
+    private string? ApartmentId => User.FindFirstValue("apartmentId");
+    private string RecipientType => User.IsInRole("admin") ? "admin" : "resident";
 
-    /// <summary>
-    /// Shows the main page of the notifications screen.
-    /// </summary>
-    /// <remarks>
-    /// HTTP GET.
-    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> Index(int page = 1, int pageSize = 50)
     {
         if (string.IsNullOrWhiteSpace(BuildingId) ||
-            (User.IsInRole("resident") && string.IsNullOrWhiteSpace(User.FindFirstValue("apartmentId"))))
+            (RecipientType == "resident" && string.IsNullOrWhiteSpace(ApartmentId)))
             return Forbid();
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building == null) return NotFound();
 
-        var allNotifications = User.IsInRole("admin")
-            ? _notify.GetForAdmin(building, 500)
-            : _notify.GetForResident(building, User.FindFirstValue("apartmentId")!, 500);
-
-        var paged = BuildingManagementMvc.Models.PagedResult<BuildingManagementMvc.Models.Notification>
-            .Create(allNotifications, page, pageSize);
-
+        var paged = RecipientType == "admin"
+            ? await _notifications.GetPageForAdminAsync(
+                BuildingId, page, pageSize, HttpContext.RequestAborted)
+            : await _notifications.GetPageForResidentAsync(
+                BuildingId, ApartmentId!, page, pageSize, HttpContext.RequestAborted);
         ViewBag.RouteValues = new Dictionary<string, string?>
         {
-            ["pageSize"] = pageSize.ToString()
+            ["pageSize"] = paged.PageSize.ToString()
         };
-
         return View(paged);
     }
 
-    /// <summary>
-    /// Marks the read.
-    /// </summary>
-    /// <remarks>
-    /// HTTP POST.
-    /// </remarks>
+    [HttpGet]
+    [AdminPermission(AdminPermissions.UseWhatsApp)]
+    public async Task<IActionResult> Compose()
+    {
+        if (!User.IsInRole("admin") || string.IsNullOrWhiteSpace(BuildingId)) return Forbid();
+        var model = await _whatsApp.GetIndexAsync(BuildingId, HttpContext.RequestAborted);
+        if (model is null) return NotFound();
+        return View(model);
+    }
+
+    [HttpPost]
+    [AdminPermission(AdminPermissions.UseWhatsApp)]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Publish(string aptId, string title, string body)
+    {
+        if (!User.IsInRole("admin") || string.IsNullOrWhiteSpace(BuildingId) ||
+            User.HasClaim("impersonated", "true"))
+            return Forbid();
+        if (string.IsNullOrWhiteSpace(title) || title.Length > 200 ||
+            string.IsNullOrWhiteSpace(body) || body.Length > 800 ||
+            body.Contains("token=", StringComparison.OrdinalIgnoreCase) ||
+            body.Contains("/Account/QuickLogin", StringComparison.OrdinalIgnoreCase) ||
+            body.Contains("/Account/SetPin", StringComparison.OrdinalIgnoreCase))
+        {
+            TempData["Error"] = "العنوان مطلوب (حتى 200 حرف) ونص الإشعار مطلوب (حتى 800 حرف)، ولا يُسمح بإضافة روابط دخول أو رموز مؤقتة.";
+            return RedirectToAction(nameof(Compose));
+        }
+
+        try
+        {
+            var baseUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}";
+            var result = await _whatsApp.GenerateAsync(
+                BuildingId, aptId, "general", new Dictionary<string, string> { ["message"] = body.Trim() },
+                baseUrl, HttpContext.RequestAborted);
+            if (result is null) return NotFound();
+
+            await _notifications.CreateResidentNotificationAsync(
+                BuildingId, aptId, title.Trim(), body.Trim(), "whatsapp-draft", "📲", HttpContext.RequestAborted);
+
+            // wa.me only prepares a user-confirmed draft; record that exact outcome
+            // without ever claiming that WhatsApp sent or delivered the message.
+            await _auditLogger.LogAsync(
+                action: "notification.whatsapp_draft_created",
+                buildingId: BuildingId,
+                apartmentId: aptId,
+                userId: User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "",
+                userRole: "admin",
+                metadata: new
+                {
+                    channel = "whatsapp",
+                    deliveryStatus = "draft_ready",
+                    inAppStatus = "published",
+                    apartmentNumber = result.ApartmentNumber,
+                    template = "general"
+                },
+                severity: "info");
+
+            return View("~/Views/WhatsApp/Result.cshtml", result);
+        }
+        catch (ArgumentException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        return RedirectToAction(nameof(Compose));
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> MarkRead(string id, string? returnUrl)
     {
         if (string.IsNullOrWhiteSpace(BuildingId) ||
-            (User.IsInRole("resident") && string.IsNullOrWhiteSpace(User.FindFirstValue("apartmentId"))))
+            (RecipientType == "resident" && string.IsNullOrWhiteSpace(ApartmentId)))
             return Forbid();
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        var recipientType = User.IsInRole("admin") ? "admin" : "resident";
-        var recipientId = recipientType == "resident" ? User.FindFirstValue("apartmentId") : null;
-        if (building != null && _notify.MarkRead(building, id, recipientType, recipientId))
-            await _buildings.SaveFullAsync(building);
 
-        return LocalRedirect(string.IsNullOrWhiteSpace(returnUrl) ? Url.Action("Index")! : returnUrl);
+        await _notifications.MarkReadAsync(
+            BuildingId, id, RecipientType,
+            RecipientType == "resident" ? ApartmentId : null,
+            HttpContext.RequestAborted);
+
+        return LocalRedirect(string.IsNullOrWhiteSpace(returnUrl)
+            ? Url.Action(nameof(Index))!
+            : returnUrl);
     }
 
-    /// <summary>
-    /// Marks the all read.
-    /// </summary>
-    /// <remarks>
-    /// HTTP POST.
-    /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> MarkAllRead()
     {
         if (string.IsNullOrWhiteSpace(BuildingId) ||
-            (User.IsInRole("resident") && string.IsNullOrWhiteSpace(User.FindFirstValue("apartmentId"))))
+            (RecipientType == "resident" && string.IsNullOrWhiteSpace(ApartmentId)))
             return Forbid();
-        var building = await _buildings.GetByIdAsync(BuildingId);
-        if (building != null)
-        {
-            if (User.IsInRole("admin")) _notify.MarkAllReadForAdmin(building);
-            else _notify.MarkAllReadForResident(building, User.FindFirstValue("apartmentId")!);
-            await _buildings.SaveFullAsync(building);
-        }
-        return RedirectToAction("Index");
+
+        await _notifications.MarkAllReadAsync(
+            BuildingId, RecipientType,
+            RecipientType == "resident" ? ApartmentId : null,
+            HttpContext.RequestAborted);
+
+        return RedirectToAction(nameof(Index));
     }
 }

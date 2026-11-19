@@ -1,0 +1,8 @@
+﻿"Metric","MetricValue"
+"ApartmentsWithAtLeastOneResidentFlaggedOwner","79"
+"ApartmentsWithLegacyOwnerText","79"
+"ApartmentsWithLegacyOwnerTextButNoResidentOwnerFlag","0"
+"ApartmentsWithMultipleCurrentPrimaryResidents","0"
+"ApartmentsWithoutBuilding","0"
+"ApartmentsWithoutValidFloor","0"
+"ResidentsWithoutApartment","0"

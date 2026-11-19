@@ -29,12 +29,13 @@
     <h5>@Loc.T("Add_Revenue")</h5>
     <form method="post" asp-action="Add" class="row g-2 align-items-end">
         <input type="hidden" name="month" value="@month" />
+        <input type="hidden" name="commandId" value="@Guid.NewGuid()" />
         <div class="col-md-3">
             <label class="form-label small">@Loc.T("Item")</label>
             <select name="categoryId" class="form-select" required>
                 @foreach (var c in categories)
                 {
-                    <option value="@c.Id">@c.Name</option>
+                    <option value="@c.Id" disabled="@(!c.Active)">@c.Name@(c.Active ? "" : " (غير نشط)")</option>
                 }
             </select>
         </div>
@@ -97,10 +98,10 @@
                         <td>@r.Note</td>
                         <td>@r.Amount.ToString("0.##")</td>
                         <td>
-                            <form method="post" asp-action="Delete" onsubmit="return confirm('@Loc.Js("Delete_The_Revenue")');">
+                            <form method="post" asp-action="Delete" onsubmit="return confirm('هل تريد عكس هذا القيد؟');">
                                 <input type="hidden" name="month" value="@month" />
                                 <input type="hidden" name="id" value="@r.Id" />
-                                <button class="btn btn-sm btn-outline-danger">@Loc.T("Delete_2")</button>
+                                <button class="btn btn-sm btn-outline-danger">@عكس القيد</button>
                             </form>
                         </td>
                     </tr>

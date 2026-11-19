@@ -118,6 +118,7 @@
                     @if (Has("residents.manage"))
                     {
                         <li><a asp-controller="AdminApts" asp-action="Index" class="nav-link @Active("AdminApts")"><i class="bi bi-door-closed"></i><span>@Loc.T("Nav_Apts")</span></a></li>
+                        <li><a asp-controller="PhoneCorrection" asp-action="Index" class="nav-link @Active("PhoneCorrection")"><i class="bi bi-telephone"></i><span>@Loc.T("Phone_Correction_Requests")</span></a></li>
                     }
                 </ul>
             </div>
@@ -197,12 +198,13 @@
             </div>
 
             <div class="nav-section">
-                <div class="nav-section-title">@Loc.T("System")</div>
+                <div class="nav-section-title"><i class="bi bi-activity me-1"></i> @Loc.T("Log_Center_Eyebrow")</div>
                 <ul class="nav-list">
-                    <li><a asp-controller="AuditLog" asp-action="Index" class="nav-link @Active("AuditLog")"><i class="bi bi-journal-text"></i><span>@Loc.T("Nav_AuditLog")</span></a></li>
+                    <li><a asp-controller="AuditLog" asp-action="Index" class="nav-link @Active("AuditLog")"><i class="bi bi-shield-check"></i><span>@Loc.T("Nav_AuditLog")</span></a></li>
                     @if (Has("system.logs.view"))
                     {
-                        <li><a asp-controller="ApplicationLogs" asp-action="Index" class="nav-link @Active("ApplicationLogs")"><i class="bi bi-file-earmark-text"></i><span>@Loc.T("Application_Logs")</span></a></li>
+                        <li><a asp-controller="ApplicationLogs" asp-action="Index" class="nav-link @Active("ApplicationLogs")"><i class="bi bi-terminal"></i><span>@Loc.T("Application_Logs")</span></a></li>
+                        <li><a asp-controller="SystemHealth" asp-action="Index" class="nav-link @Active("SystemHealth")"><i class="bi bi-heart-pulse"></i><span>System Health</span></a></li>
                     }
                     <li><a asp-controller="Settings" asp-action="Index" class="nav-link @Active("Settings")"><i class="bi bi-sliders"></i><span>@Loc.T("Nav_Settings")</span></a></li>
                 </ul>
@@ -219,8 +221,11 @@
                 <ul class="nav-list">
                     <li><a asp-controller="SuperAdminHome" asp-action="Index" class="nav-link @Active("SuperAdminHome")"><i class="bi bi-speedometer2"></i><span>@Loc.T("Nav_Home")</span></a></li>
                     <li><a asp-controller="Buildings" asp-action="Index" class="nav-link @Active("Buildings")"><i class="bi bi-buildings"></i><span>@Loc.T("Nav_Buildings")</span></a></li>
+                    <li><a asp-controller="AccountManagement" asp-action="Index" class="nav-link @Active("AccountManagement")"><i class="bi bi-person-vcard"></i><span>مركز الحسابات</span></a></li>
                     <li><a asp-controller="Admins" asp-action="Index" class="nav-link @Active("Admins")"><i class="bi bi-people"></i><span>@Loc.T("Nav_Admins")</span></a></li>
                     <li><a asp-controller="Permissions" asp-action="Index" class="nav-link @Active("Permissions")"><i class="bi bi-shield-lock"></i><span>@Loc.T("Nav_Permissions")</span></a></li>
+                    <li><a asp-controller="ResidentAccountProvisioning" asp-action="Index" class="nav-link @Active("ResidentAccountProvisioning")"><i class="bi bi-person-check"></i><span>حسابات السكان</span></a></li>
+                    <li><a asp-controller="LanguageManagement" asp-action="Index" class="nav-link @Active("LanguageManagement")"><i class="bi bi-translate"></i><span>إدارة اللغات</span></a></li>
                     <li><a asp-controller="Categories" asp-action="Index" class="nav-link @Active("Categories")"><i class="bi bi-tags"></i><span>@Loc.T("Nav_Categories")</span></a></li>
                 </ul>
             </div>
@@ -247,10 +252,11 @@
             </div>
 
             <div class="nav-section">
-                <div class="nav-section-title">@Loc.T("System")</div>
+                <div class="nav-section-title"><i class="bi bi-activity me-1"></i> @Loc.T("Log_Center_Eyebrow")</div>
                 <ul class="nav-list">
-                    <li><a asp-controller="AuditLog" asp-action="Index" class="nav-link @Active("AuditLog")"><i class="bi bi-journal-text"></i><span>@Loc.T("Nav_AuditLog")</span></a></li>
-                    <li><a asp-controller="ApplicationLogs" asp-action="Index" class="nav-link @Active("ApplicationLogs")"><i class="bi bi-file-earmark-text"></i><span>@Loc.T("Application_Logs")</span></a></li>
+                    <li><a asp-controller="AuditLog" asp-action="Index" class="nav-link @Active("AuditLog")"><i class="bi bi-shield-check"></i><span>@Loc.T("Nav_AuditLog")</span></a></li>
+                    <li><a asp-controller="ApplicationLogs" asp-action="Index" class="nav-link @Active("ApplicationLogs")"><i class="bi bi-terminal"></i><span>@Loc.T("Application_Logs")</span></a></li>
+                    <li><a asp-controller="SystemHealth" asp-action="Index" class="nav-link @Active("SystemHealth")"><i class="bi bi-heart-pulse"></i><span>System Health</span></a></li>
                     <li><a asp-controller="Settings" asp-action="Index" class="nav-link @Active("Settings")"><i class="bi bi-sliders"></i><span>@Loc.T("Nav_Settings")</span></a></li>
                 </ul>
             </div>

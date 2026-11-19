@@ -1,0 +1,34 @@
+@model BuildingManagementMvc.Models.WhatsAppIndexViewModel
+@{
+    ViewData["Title"] = "إرسال إشعار موحد";
+}
+<div class="container py-3" style="max-width:850px">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h3 class="mb-0">مركز الإشعارات الموحد</h3>
+        <a asp-action="Index" class="btn btn-outline-secondary">سجل الإشعارات</a>
+    </div>
+    <p class="text-muted">سيصل الإشعار إلى صندوق الساكن داخل النظام، وسيتم تجهيز رسالة WhatsApp بنفس المحتوى لتراجعها وترسلها.</p>
+    <div class="alert alert-info">فتح WhatsApp لا يعني أن الرسالة أُرسلت. يجب الضغط على إرسال داخل WhatsApp، ولا يمكن للنظام تأكيد التسليم عبر رابط wa.me.</div>
+    <form method="post" asp-action="Publish" class="card shadow-sm p-3">
+        @Html.AntiForgeryToken()
+        <div class="mb-3">
+            <label class="form-label" for="aptId">الشقة</label>
+            <select class="form-select" id="aptId" name="aptId" required>
+                <option value="">اختر الشقة</option>
+                @foreach (var apt in Model.Apartments)
+                {
+                    <option value="@apt.Id">شقة @apt.Number — @apt.Owner</option>
+                }
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="title">عنوان الإشعار</label>
+            <input class="form-control" id="title" name="title" maxlength="200" required />
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="body">نص الإشعار</label>
+            <textarea class="form-control" id="body" name="body" rows="5" maxlength="800" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">نشر داخل النظام وتجهيز WhatsApp</button>
+    </form>
+</div>

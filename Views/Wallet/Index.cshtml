@@ -28,10 +28,10 @@
 
 @* ===== Totals ===== *@
 <div class="row mb-3 text-center">
-    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">@Loc.T("Collected")</div><div class="fw-bold">@totals.Collected.ToString("0.##")</div></div></div>
-    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">@Loc.T("Expenses_3")</div><div class="fw-bold">@totals.Expenses.ToString("0.##")</div></div></div>
-    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">@Loc.T("Revenues")</div><div class="fw-bold">@totals.Revenues.ToString("0.##")</div></div></div>
-    <div class="col"><div class="bg-white rounded shadow-sm p-3"><div class="text-muted small">@Loc.T("Wallet_Total")</div><div class="fw-bold">@totals.TotalWallet.ToString("0.##")</div></div></div>
+    <div class="col"><div class="ui-stat-tile p-3"><div class="text-muted small">@Loc.T("Collected")</div><div class="fw-bold">@totals.Collected.ToString("0.##")</div></div></div>
+    <div class="col"><div class="ui-stat-tile p-3"><div class="text-muted small">@Loc.T("Expenses_3")</div><div class="fw-bold">@totals.Expenses.ToString("0.##")</div></div></div>
+    <div class="col"><div class="ui-stat-tile p-3"><div class="text-muted small">@Loc.T("Revenues")</div><div class="fw-bold">@totals.Revenues.ToString("0.##")</div></div></div>
+    <div class="col"><div class="ui-stat-tile p-3"><div class="text-muted small">@Loc.T("Wallet_Total")</div><div class="fw-bold">@totals.TotalWallet.ToString("0.##")</div></div></div>
 </div>
 
 @* ============================================================ *@
@@ -39,7 +39,7 @@
 @* ============================================================ *@
 @if (pending.TotalItems > 0)
 {
-    <div class="bg-white rounded shadow-sm p-3 mb-3">
+    <div class="ui-panel p-3 mb-3">
         <h5>@Loc.T("Payments_Awaiting_Confirmation_N", pending.TotalItems)</h5>
         <table class="table table-sm">
             <thead>
@@ -95,6 +95,7 @@
                             <form method="post" asp-action="CancelDeposit" onsubmit="return confirm('@Loc.Js("Cancel_The_Payment")');">
                                 <input type="hidden" name="month" value="@depMonth" />
                                 <input type="hidden" name="depositId" value="@dep.Id" />
+                                <input name="reason" required maxlength="500" class="form-control form-control-sm" style="width:150px" placeholder="سبب الإلغاء" />
                                 <button class="btn btn-sm btn-outline-danger">@Loc.T("Cancel")</button>
                             </form>
 
@@ -120,7 +121,7 @@
 @* ============================================================ *@
 @* ✅ أرصدة الشقق + Pagination                                  *@
 @* ============================================================ *@
-<div class="bg-white rounded shadow-sm p-3">
+<div class="ui-panel p-3">
     <h5>@Loc.T("Apartment_Balances_N", balances.TotalItems)</h5>
 
     @* ✅ Pagination (فوق) *@
@@ -161,14 +162,39 @@
                 @foreach (var (apt, balance) in floorGroup.OrderBy(b => b.Apt.Number))
                 {
                     <tr>
-                        <td>@Loc.T("Apartment_N_N_2", apt.Number, string.IsNullOrEmpty(apt.Label) ? "" : "— " + apt.Label)</td>
+                        <td>
+                            <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                                <span>@Loc.T("Apartment_N_N_2", apt.Number, string.IsNullOrEmpty(apt.Label) ? "" : "— " + apt.Label)</span>
+                                <a asp-controller="Invoice" asp-action="Download"
+                                   asp-route-aptId="@apt.Id" asp-route-month="@month"
+                                   class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">
+                                    <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+                                    @Loc.T("Download_PDF_Invoice")
+                                </a>
+                                <a asp-controller="Invoice" asp-action="Qr"
+                                   asp-route-aptId="@apt.Id" asp-route-month="@month"
+                                   class="btn btn-sm btn-outline-success" target="_blank" rel="noopener"
+                                   title="@Loc.T("Scan_To_Verify")">
+                                    <i class="bi bi-qr-code" aria-hidden="true"></i>
+                                    QR
+                                </a>
+                                <a asp-controller="Invoice" asp-action="WhatsApp"
+                                   asp-route-aptId="@apt.Id" asp-route-month="@month"
+                                   class="btn btn-sm btn-success"
+                                   title="إرسال إشعار الفاتورة عبر واتساب">
+                                    <i class="bi bi-whatsapp" aria-hidden="true"></i>
+                                    WhatsApp
+                                </a>
+                            </div>
+                        </td>
                         <td class="@(balance < 0 ? "text-danger" : "text-success") fw-bold">@balance.ToString("0.##")</td>
                         <td>
                             <form method="post" asp-action="AddAdjustment" class="d-flex gap-1">
                                 <input type="hidden" name="month" value="@month" />
                                 <input type="hidden" name="aptId" value="@apt.Id" />
-                                <input name="amount" type="number" step="0.01" class="form-control form-control-sm" placeholder="@Loc.T("Amount_3")" style="width:110px" />
-                                <input name="reason" class="form-control form-control-sm" placeholder="@Loc.T("Reason")" />
+                                <input type="hidden" name="commandId" value="@Guid.NewGuid()" />
+                                <input name="amount" type="number" step="0.0001" min="-999999999999999" max="999999999999999" required class="form-control form-control-sm" placeholder="@Loc.T("Amount_3")" style="width:110px" />
+                                <input name="reason" required maxlength="500" class="form-control form-control-sm" placeholder="@Loc.T("Reason")" />
                                 <button class="btn btn-sm btn-outline-secondary text-nowrap">@Loc.T("Adjustment_2")</button>
                             </form>
                         </td>

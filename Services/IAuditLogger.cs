@@ -28,11 +28,12 @@ public interface IAuditLogger
         DateTime? to = null,
         string? action = null,
         string? severity = null,
-        int limit = 100);
+        int limit = 100,
+        string? correlationId = null);
 
     Task<BuildingManagementMvc.Models.PagedResult<AuditEntryDoc>> QueryPageAsync(
         string? buildingId, string? apartmentId, string? userId, DateTime? from, DateTime? to,
-        string? action, string? severity, int page, int pageSize);
+        string? action, string? severity, int page, int pageSize, string? correlationId = null);
 }
 
 /// <summary>
@@ -64,6 +65,7 @@ public class AuditEntryDoc
     /// Gets or sets the user role.
     /// </summary>
     public string? UserRole { get; set; }
+    public string? CorrelationId { get; set; }
     /// <summary>
     /// Gets or sets the severity.
     /// </summary>

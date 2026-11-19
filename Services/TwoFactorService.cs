@@ -45,6 +45,9 @@ public sealed class TwoFactorService
     public async Task<bool> IsEnabledAsync(string uid, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(uid)) return false;
+        if (Guid.TryParse(uid, out var accountId) && await IsTargetAccountAsync(accountId, cancellationToken))
+            return await IsTargetEnabledAsync(accountId, cancellationToken);
+
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
         return await db.Users.AsNoTracking().AnyAsync(
             x => x.Uid == uid && (x.Role == "admin" || x.Role == "superadmin") && x.TwoFactorEnabled,
@@ -61,6 +64,8 @@ public sealed class TwoFactorService
         string uid, string secret, string code, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(uid) || string.IsNullOrWhiteSpace(secret)) return null;
+        if (Guid.TryParse(uid, out var accountId) && await IsTargetAccountAsync(accountId, cancellationToken))
+            return await EnableTargetAsync(accountId, secret, code, cancellationToken);
 
         using var gate = await KeyedLock.AcquireAsync("2fa:" + uid, cancellationToken);
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
@@ -99,6 +104,8 @@ public sealed class TwoFactorService
         string uid, string code, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(uid) || string.IsNullOrWhiteSpace(code)) return false;
+        if (Guid.TryParse(uid, out var accountId) && await IsTargetAccountAsync(accountId, cancellationToken))
+            return await VerifyAndConsumeTargetAsync(accountId, code, cancellationToken);
 
         using var gate = await KeyedLock.AcquireAsync("2fa:" + uid, cancellationToken);
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
@@ -118,6 +125,8 @@ public sealed class TwoFactorService
         string uid, string code, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(uid) || string.IsNullOrWhiteSpace(code)) return false;
+        if (Guid.TryParse(uid, out var accountId) && await IsTargetAccountAsync(accountId, cancellationToken))
+            return await DisableTargetAsync(accountId, code, cancellationToken);
 
         using var gate = await KeyedLock.AcquireAsync("2fa:" + uid, cancellationToken);
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
@@ -133,6 +142,209 @@ public sealed class TwoFactorService
         _logger.LogInformation("Two-factor authentication disabled for administrator {Uid}", uid);
         return true;
     }
+
+    private async Task<bool> IsTargetAccountAsync(Guid accountId, CancellationToken cancellationToken)
+    {
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        return await db.UserAccounts.AsNoTracking().AnyAsync(x => x.AccountId == accountId, cancellationToken);
+    }
+
+    private async Task<bool> IsTargetEnabledAsync(Guid accountId, CancellationToken cancellationToken)
+    {
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        var now = DateTime.UtcNow;
+        return await (
+            from setting in db.UserTwoFactorSettings.AsNoTracking()
+            join account in db.UserAccounts.AsNoTracking() on setting.AccountId equals account.AccountId
+            join assignment in db.UserRoleAssignments.AsNoTracking() on account.AccountId equals assignment.AccountId
+            join role in db.RoleDefinitions.AsNoTracking() on assignment.RoleKey equals role.RoleKey
+            join person in db.Persons.AsNoTracking() on account.PersonId equals person.PersonId
+            where setting.AccountId == accountId && setting.IsEnabled
+                && account.AccountStatus == 1 && !person.IsArchived
+                && (assignment.RoleKey == "building-admin" || assignment.RoleKey == "superadmin")
+                && role.IsActive && assignment.RevokedAtUtc == null && assignment.ValidFromUtc <= now
+                && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
+            select setting.AccountId).AnyAsync(cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<string>?> EnableTargetAsync(
+        Guid accountId, string secret, string code, CancellationToken cancellationToken)
+    {
+        using var gate = await KeyedLock.AcquireAsync("2fa:" + accountId.ToString("D"), cancellationToken);
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await db.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable, cancellationToken);
+        var now = DateTime.UtcNow;
+        var eligible = await (
+            from account in db.UserAccounts
+            join person in db.Persons on account.PersonId equals person.PersonId
+            join assignment in db.UserRoleAssignments on account.AccountId equals assignment.AccountId
+            join role in db.RoleDefinitions on assignment.RoleKey equals role.RoleKey
+            where account.AccountId == accountId && account.AccountStatus == 1 && !person.IsArchived
+                && (assignment.RoleKey == "building-admin" || assignment.RoleKey == "superadmin")
+                && role.IsActive && assignment.RevokedAtUtc == null && assignment.ValidFromUtc <= now
+                && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
+            select account.AccountId).AnyAsync(cancellationToken);
+        if (!eligible) return null;
+
+        var setting = await db.UserTwoFactorSettings.SingleOrDefaultAsync(x => x.AccountId == accountId, cancellationToken);
+        if (setting?.IsEnabled == true) return null;
+        long acceptedStep;
+        try
+        {
+            if (!TotpAuthenticator.TryVerify(secret, code, DateTimeOffset.UtcNow, out acceptedStep))
+                return null;
+        }
+        catch (FormatException) { return null; }
+
+        var recoveryCodes = Enumerable.Range(0, 10)
+            .Select(_ => FormatRecoveryCode(TotpAuthenticator.EncodeBase32(RandomNumberGenerator.GetBytes(10))))
+            .ToArray();
+        if (setting == null)
+        {
+            setting = new UserTwoFactorSettingEntity { AccountId = accountId };
+            db.UserTwoFactorSettings.Add(setting);
+        }
+        setting.IsEnabled = true;
+        setting.SecretCiphertext = Encoding.UTF8.GetBytes(_encryption.Encrypt(secret));
+        setting.KeyVersion = "aes-gcm-v1";
+        setting.LastAcceptedTimeStep = acceptedStep;
+        setting.EnrolledAtUtc = now;
+        setting.LastVerifiedAtUtc = now;
+        setting.UpdatedAtUtc = now;
+        foreach (var recoveryCode in recoveryCodes)
+        {
+            db.UserRecoveryCodes.Add(new UserRecoveryCodeEntity
+            {
+                RecoveryCodeId = Guid.NewGuid(),
+                AccountId = accountId,
+                CodeHash = SHA256.HashData(Encoding.UTF8.GetBytes(NormalizeRecoveryCode(recoveryCode))),
+                CreatedAtUtc = now
+            });
+        }
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        _logger.LogInformation("Two-factor authentication enabled for target administrator account {AccountId}", accountId);
+        return recoveryCodes;
+    }
+
+    private async Task<bool> VerifyAndConsumeTargetAsync(
+        Guid accountId, string code, CancellationToken cancellationToken)
+    {
+        using var gate = await KeyedLock.AcquireAsync("2fa:" + accountId.ToString("D"), cancellationToken);
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await db.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable, cancellationToken);
+        var now = DateTime.UtcNow;
+        var setting = await db.UserTwoFactorSettings.SingleOrDefaultAsync(
+            x => x.AccountId == accountId && x.IsEnabled, cancellationToken);
+        if (setting == null || !await IsEligibleTargetAdminAsync(db, accountId, now, cancellationToken))
+            return false;
+
+        var normalized = NormalizeRecoveryCode(code);
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(normalized));
+        var recovery = await db.UserRecoveryCodes
+            .Where(x => x.AccountId == accountId && x.UsedAtUtc == null)
+            .ToListAsync(cancellationToken);
+        var matched = recovery.FirstOrDefault(x =>
+            CryptographicOperations.FixedTimeEquals(x.CodeHash, hash));
+        if (matched != null)
+        {
+            matched.UsedAtUtc = now;
+        }
+        else
+        {
+            if (setting.SecretCiphertext == null || setting.KeyVersion != "aes-gcm-v1")
+                return false;
+            string secret;
+            try { secret = _encryption.Decrypt(Encoding.UTF8.GetString(setting.SecretCiphertext)); }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unable to decrypt target two-factor secret for account {AccountId}", accountId);
+                return false;
+            }
+            try
+            {
+                if (!TotpAuthenticator.TryVerify(secret, code, DateTimeOffset.UtcNow, out var step)
+                    || (setting.LastAcceptedTimeStep.HasValue && step <= setting.LastAcceptedTimeStep.Value))
+                    return false;
+                setting.LastAcceptedTimeStep = step;
+            }
+            catch (FormatException) { return false; }
+        }
+        setting.LastVerifiedAtUtc = now;
+        setting.UpdatedAtUtc = now;
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return true;
+    }
+
+    private async Task<bool> DisableTargetAsync(Guid accountId, string code, CancellationToken cancellationToken)
+    {
+        using var gate = await KeyedLock.AcquireAsync("2fa:" + accountId.ToString("D"), cancellationToken);
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await db.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable, cancellationToken);
+        var now = DateTime.UtcNow;
+        var setting = await db.UserTwoFactorSettings.SingleOrDefaultAsync(
+            x => x.AccountId == accountId && x.IsEnabled, cancellationToken);
+        if (setting == null || !await IsEligibleTargetAdminAsync(db, accountId, now, cancellationToken))
+            return false;
+
+        var normalized = NormalizeRecoveryCode(code);
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(normalized));
+        var recovery = await db.UserRecoveryCodes
+            .Where(x => x.AccountId == accountId && x.UsedAtUtc == null)
+            .ToListAsync(cancellationToken);
+        var matched = recovery.FirstOrDefault(x => CryptographicOperations.FixedTimeEquals(x.CodeHash, hash));
+        if (matched != null) matched.UsedAtUtc = now;
+        else
+        {
+            if (setting.SecretCiphertext == null || setting.KeyVersion != "aes-gcm-v1") return false;
+            string secret;
+            try { secret = _encryption.Decrypt(Encoding.UTF8.GetString(setting.SecretCiphertext)); }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unable to decrypt target two-factor secret for account {AccountId}", accountId);
+                return false;
+            }
+            try
+            {
+                if (!TotpAuthenticator.TryVerify(secret, code, DateTimeOffset.UtcNow, out var step)
+                    || (setting.LastAcceptedTimeStep.HasValue && step <= setting.LastAcceptedTimeStep.Value))
+                    return false;
+                setting.LastAcceptedTimeStep = step;
+            }
+            catch (FormatException) { return false; }
+        }
+        setting.IsEnabled = false;
+        setting.SecretCiphertext = null;
+        setting.KeyVersion = null;
+        setting.EnrolledAtUtc = null;
+        setting.LastAcceptedTimeStep = null;
+        setting.LastVerifiedAtUtc = now;
+        setting.UpdatedAtUtc = now;
+        foreach (var unused in recovery.Where(x => x.UsedAtUtc == null))
+            unused.UsedAtUtc = now;
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return true;
+    }
+
+    private static async Task<bool> IsEligibleTargetAdminAsync(
+        AppDbContext db, Guid accountId, DateTime now, CancellationToken cancellationToken) =>
+        await (from account in db.UserAccounts
+               join person in db.Persons on account.PersonId equals person.PersonId
+               join assignment in db.UserRoleAssignments on account.AccountId equals assignment.AccountId
+               join role in db.RoleDefinitions on assignment.RoleKey equals role.RoleKey
+               where account.AccountId == accountId && account.AccountStatus == 1 && !person.IsArchived
+                   && (assignment.RoleKey == "building-admin" || assignment.RoleKey == "superadmin")
+                   && role.IsActive && assignment.RevokedAtUtc == null && assignment.ValidFromUtc <= now
+                   && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
+               select assignment.RoleAssignmentId).AnyAsync(cancellationToken);
+
+    private static string NormalizeRecoveryCode(string code) =>
+        new((code ?? "").ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
 
     private bool TryConsumeCode(UserEntity user, string code)
     {

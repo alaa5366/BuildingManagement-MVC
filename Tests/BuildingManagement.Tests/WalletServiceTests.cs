@@ -378,6 +378,57 @@ public void EnsureMonth_ExistingMonthWithEmptyCarryOver_DepositEqualsFee_YieldsZ
     }
 
     [Fact]
+    public void ExpenseDistribution_UsesLargestRemainderAndStableApartmentIdOrder()
+    {
+        var b = BuildingWithApartments(("c", false, 0), ("a", false, 0), ("b", false, 0));
+        var month = Svc.EnsureMonth(b, Month);
+        month.Expenses.Add(new Expense { Id = "e1", Amount = 100m });
+
+        var distribution = Svc.RecalculateDistribution(b, Month);
+
+        Assert.Equal(33.34m, distribution["a"]);
+        Assert.Equal(33.33m, distribution["b"]);
+        Assert.Equal(33.33m, distribution["c"]);
+        Assert.Equal(100m, distribution.Values.Sum());
+    }
+
+    [Fact]
+    public void ExpenseDistribution_IsIndependentOfApartmentInputOrder()
+    {
+        var first = BuildingWithApartments(("c", false, 0), ("a", false, 0), ("b", false, 0));
+        var second = BuildingWithApartments(("b", false, 0), ("c", false, 0), ("a", false, 0));
+        Svc.EnsureMonth(first, Month).Expenses.Add(new Expense { Id = "e1", Amount = 100m });
+        Svc.EnsureMonth(second, Month).Expenses.Add(new Expense { Id = "e1", Amount = 100m });
+
+        var firstResult = Svc.RecalculateDistribution(first, Month);
+        var secondResult = Svc.RecalculateDistribution(second, Month);
+
+        Assert.Equal(firstResult.OrderBy(x => x.Key), secondResult.OrderBy(x => x.Key));
+    }
+
+    [Fact]
+    public void FinanceAllocation_October2026Amounts_ReconcileExactlyAcross57Apartments()
+    {
+        var apartments = Enumerable.Range(1, 57)
+            .Select(i => ($"apt-{i:D3}", false, 0m))
+            .ToArray();
+        var b = BuildingWithApartments(apartments);
+        var month = Svc.EnsureMonth(b, Month);
+        month.Expenses.Add(new Expense { Id = "e1", Amount = 4700m });
+        month.Revenues.Add(new Revenue { Id = "r1", Amount = 27173m });
+
+        var expenses = Svc.RecalculateDistribution(b, Month);
+        var revenues = Svc.RecalculateRevenueDistribution(b, Month);
+
+        Assert.Equal(4700m, expenses.Values.Sum());
+        Assert.Equal(35, expenses.Values.Count(x => x == 82.46m));
+        Assert.Equal(22, expenses.Values.Count(x => x == 82.45m));
+        Assert.Equal(27173m, revenues.Values.Sum());
+        Assert.Equal(53, revenues.Values.Count(x => x == 476.72m));
+        Assert.Equal(4, revenues.Values.Count(x => x == 476.71m));
+    }
+
+    [Fact]
     public void RevenueDistribution_AllocatesRoundingRemainderExactly()
     {
         var b = BuildingWithApartments(("a1", false, 0), ("a2", false, 0), ("a3", false, 0));
@@ -613,13 +664,12 @@ public void EnsureMonth_ExistingMonthWithEmptyCarryOver_DepositEqualsFee_YieldsZ
     }
 
     [Fact]
-    public void AddWalletAdjustment_NullReason_StoredAsEmptyString()
+    public void AddWalletAdjustment_NullReason_IsRejected()
     {
         var b = BuildingWithApartments(("a1", false, 0));
 
-        var adj = Svc.AddWalletAdjustment(b, "a1", 10, null, Month, "admin");
-
-        Assert.Equal("", adj.Reason);
+        Assert.Throws<ArgumentException>(() => Svc.AddWalletAdjustment(b, "a1", 10, null, Month, "admin"));
+        Assert.Empty(b.WalletAdjustments);
     }
 
     // ================================================================

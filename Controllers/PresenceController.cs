@@ -1,6 +1,7 @@
 ﻿using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
 using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
@@ -42,6 +43,7 @@ public class PresenceController : Controller
     [IgnoreAntiforgeryToken]
     public async Task<IActionResult> Heartbeat()
     {
+        var timer = Stopwatch.StartNew();
         var uid = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(uid))
             return Json(new { success = false, error = "not-authenticated" });
@@ -49,7 +51,19 @@ public class PresenceController : Controller
         var buildingId = User.FindFirst("buildingId")?.Value ?? "";
         var apartmentId = User.FindFirst("apartmentId")?.Value ?? "";
 
+        var serviceTimer = Stopwatch.StartNew();
         await _presence.HeartbeatAsync(uid, apartmentId, buildingId);
+        serviceTimer.Stop();
+
+        timer.Stop();
+        if (timer.ElapsedMilliseconds >= 100)
+        {
+            _logger.LogWarning(
+                "[Presence PERF] Heartbeat action slow: Total={TotalMs}ms PresenceService={ServiceMs}ms Role={Role}",
+                timer.ElapsedMilliseconds,
+                serviceTimer.ElapsedMilliseconds,
+                User.FindFirst(ClaimTypes.Role)?.Value ?? "unknown");
+        }
 
         return Json(new
         {

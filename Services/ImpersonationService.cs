@@ -289,4 +289,6 @@ public class AdminBackupData
     public bool TwoFactorVerified { get; set; }
     /// <summary>Second-factor state of the original actor for nested impersonation.</summary>
     public string ImpersonationActorTwoFactorVerified { get; set; } = "false";
+    /// <summary>Security version of the original SuperAdmin actor, used to revoke nested impersonation after credential changes.</summary>
+    public string ImpersonationActorSecurityStamp { get; set; } = "";
 }

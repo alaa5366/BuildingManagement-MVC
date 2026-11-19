@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,39 +32,52 @@ public sealed class ApplicationLogsAuthorizationTests
     }
 
     [Fact]
-    public void AdminWithoutPermission_IsForbidden()
+    public async Task AdminWithoutPermission_IsForbidden()
     {
         var context = CreateContext(new Claim(ClaimTypes.Role, "admin"));
         var filterContext = CreateFilterContext(context);
 
-        new AdminPermissionAttribute(AdminPermissions.ViewApplicationLogs).OnAuthorization(filterContext);
+        await new AdminPermissionAttribute(AdminPermissions.ViewApplicationLogs).OnAuthorizationAsync(filterContext);
 
         var result = Assert.IsType<ContentResult>(filterContext.Result);
         Assert.Equal(StatusCodes.Status403Forbidden, result.StatusCode);
     }
 
     [Fact]
-    public void AdminWithPermission_IsAllowed()
+    public async Task AdminWithPermission_IsAllowed()
     {
         var context = CreateContext(
             new Claim(ClaimTypes.Role, "admin"),
             new Claim("perm", AdminPermissions.ViewApplicationLogs));
         var filterContext = CreateFilterContext(context);
 
-        new AdminPermissionAttribute(AdminPermissions.ViewApplicationLogs).OnAuthorization(filterContext);
+        await new AdminPermissionAttribute(AdminPermissions.ViewApplicationLogs).OnAuthorizationAsync(filterContext);
 
         Assert.Null(filterContext.Result);
     }
 
     [Fact]
-    public void SuperAdmin_BypassesAdminPermissionMatrix()
+    public async Task SuperAdminWithoutPermission_IsForbidden()
     {
         var context = CreateContext(new Claim(ClaimTypes.Role, "superadmin"));
         var filterContext = CreateFilterContext(context);
 
-        new AdminPermissionAttribute(AdminPermissions.ViewApplicationLogs).OnAuthorization(filterContext);
+        await new AdminPermissionAttribute(AdminPermissions.ViewApplicationLogs).OnAuthorizationAsync(filterContext);
 
-        Assert.Null(filterContext.Result);
+        var result = Assert.IsType<ContentResult>(filterContext.Result);
+        Assert.Equal(StatusCodes.Status403Forbidden, result.StatusCode);
+    }
+
+    [Fact]
+    public void ExportCsv_IsReadOnlyGetAndUsesSameProtectedControllerBoundary()
+    {
+        var method = typeof(ApplicationLogsController).GetMethod(nameof(ApplicationLogsController.ExportCsv));
+        Assert.NotNull(method);
+        Assert.NotNull(method!.GetCustomAttribute<HttpGetAttribute>());
+        Assert.NotNull(method.GetCustomAttribute<EnableRateLimitingAttribute>());
+        Assert.Equal("superadmin,admin", typeof(ApplicationLogsController)
+            .GetCustomAttribute<AuthorizeAttribute>()?.Roles);
+        Assert.NotNull(typeof(ApplicationLogsController).GetCustomAttribute<AdminPermissionAttribute>());
     }
 
     private static DefaultHttpContext CreateContext(params Claim[] claims)

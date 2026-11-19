@@ -2,147 +2,170 @@ using BuildingManagementMvc.Models;
 
 namespace BuildingManagementMvc.Services;
 
-// ترجمة حرفية لـ js/features/reports.js
-/// <summary>
-/// Builds the financial reports (summaries, monthly series, category breakdowns, top debtors and creditors).
-/// </summary>
-public class ReportsService
+/// <summary>Builds financial reports from target periods, allocation records and posted ledger entries.</summary>
+public sealed class ReportsService
 {
-    private readonly WalletService _wallet;
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ReportsService"/> class.
-    /// </summary>
-    public ReportsService(WalletService wallet) => _wallet = wallet;
+    private readonly TargetWalletReadService _wallet;
+    private readonly TargetFinanceReadService _finance;
 
-    private static string[] MonthNamesAr => new[]
+    public ReportsService(TargetWalletReadService wallet, TargetFinanceReadService finance)
     {
-        Loc.T("January"), Loc.T("February"), Loc.T("March"), Loc.T("April"), Loc.T("May"), Loc.T("June"),
-        Loc.T("July"), Loc.T("August"), Loc.T("September"), Loc.T("October"), Loc.T("November"), Loc.T("December")
-    };
+        _wallet = wallet;
+        _finance = finance;
+    }
 
-    /// <summary>
-    /// Returns the month label.
-    /// </summary>
+    private static string[] MonthNamesAr =>
+    [
+        Loc.T("January"), Loc.T("February"), Loc.T("March"), Loc.T("April"),
+        Loc.T("May"), Loc.T("June"), Loc.T("July"), Loc.T("August"),
+        Loc.T("September"), Loc.T("October"), Loc.T("November"), Loc.T("December")
+    ];
+
     public static string MonthLabel(string key)
     {
         var parts = key.Split('-');
-        if (parts.Length != 2 || !int.TryParse(parts[1], out var m) || m < 1 || m > 12) return key;
-        return $"{MonthNamesAr[m - 1]} {parts[0]}";
+        if (parts.Length != 2 || !int.TryParse(parts[1], out var month) || month is < 1 or > 12)
+            return key;
+        return $"{MonthNamesAr[month - 1]} {parts[0]}";
     }
 
-    /// <summary>
-    /// Returns the shift month.
-    /// </summary>
     public static string ShiftMonth(string key, int delta)
     {
-        var parts = key.Split('-');
-        var y = int.Parse(parts[0]);
-        var m = int.Parse(parts[1]) + delta;
-        while (m < 1) { m += 12; y--; }
-        while (m > 12) { m -= 12; y++; }
-        return $"{y}-{m:D2}";
+        if (!DateOnly.TryParseExact(key + "-01", "yyyy-MM-dd",
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out var date))
+            throw new ArgumentException("Month must use yyyy-MM format.", nameof(key));
+        return date.AddMonths(delta).ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
     }
 
-    /// <summary>
-    /// Gets the report months.
-    /// </summary>
-    public List<string> GetReportMonths(Building building, string range, string currentMonth)
+    public Task<string> GetCurrentPeriodKeyAsync(string buildingId, CancellationToken cancellationToken = default) =>
+        _wallet.GetCurrentPeriodKeyAsync(buildingId, cancellationToken: cancellationToken);
+
+    public async Task<ReportsVm> BuildReportAsync(
+        string buildingId,
+        string range,
+        string currentMonth,
+        CancellationToken cancellationToken = default)
     {
-        var allKeys = building.Months.Keys.OrderBy(k => k).ToList();
+        if (string.IsNullOrWhiteSpace(buildingId))
+            throw new ArgumentException("Building is required.", nameof(buildingId));
+        var building = await _wallet.GetBuildingShellAsync(
+            buildingId, null, cancellationToken)
+            ?? throw new KeyNotFoundException("The requested building was not found in the target store.");
 
-        if (range == "all") return allKeys.Count > 0 ? allKeys : new List<string> { currentMonth };
+        var normalizedRange = range is "all" or "year" or "12m" or "6m" ? range : "6m";
+        var allKeys = (await _wallet.GetFinancialPeriodKeysAsync(building.Id, cancellationToken))
+            .Where(key => string.CompareOrdinal(key, currentMonth) <= 0)
+            .TakeLast(600)
+            .ToList();
+        var months = SelectMonths(allKeys, normalizedRange, currentMonth);
+        var periodTotals = await _wallet.GetPeriodTotalsAsync(building.Id, months, cancellationToken);
 
-        if (range == "year")
+        var categorySnapshot = await _finance.GetMonthAsync(
+            building.Id, currentMonth, "expense", cancellationToken);
+        var categoryById = categorySnapshot.Categories
+            .ToDictionary(category => category.Id, StringComparer.Ordinal);
+        var categoryTotals = await _finance.GetExpenseCategoryTotalsAsync(
+            building.Id, months, cancellationToken);
+
+        var monthly = months.Select(month =>
         {
-            var year = currentMonth.Split('-')[0];
-            var filtered = allKeys.Where(k => k.StartsWith(year)).ToList();
-            return filtered.Count > 0 ? filtered : new List<string> { currentMonth };
-        }
-
-        var count = range == "12m" ? 12 : 6;
-        var keys = new List<string>();
-        var k = currentMonth;
-        for (var i = 0; i < count; i++) { keys.Insert(0, k); k = ShiftMonth(k, -1); }
-        return keys;
-    }
-
-    /// <summary>
-    /// Builds the report.
-    /// </summary>
-    public ReportsVm BuildReport(Building building, string range, string currentMonth)
-    {
-        var months = GetReportMonths(building, range, currentMonth);
-
-        decimal totalCollected = 0, totalExpenses = 0, totalRevenues = 0;
-        var monthly = new List<MonthlyPoint>();
-
-        foreach (var mk in months)
-        {
-            decimal collected = 0;
-            foreach (var a in building.Apartments) collected += _wallet.TotalConfirmedDeposits(building, a.Id, mk);
-
-            decimal expenses = 0, revenues = 0;
-            if (building.Months.TryGetValue(mk, out var m))
+            var totals = periodTotals.GetValueOrDefault(month) ?? new TargetWalletPeriodTotals(0m, 0m, 0m);
+            return new MonthlyPoint
             {
-                expenses = m.Expenses.Sum(e => e.Amount);
-                revenues = m.Revenues.Sum(r => r.Amount);
-            }
+                Month = month,
+                Label = MonthLabel(month),
+                Collected = totals.Collected,
+                Revenues = totals.Revenues,
+                Expenses = totals.Expenses
+            };
+        }).ToList();
 
-            totalCollected += collected; totalExpenses += expenses; totalRevenues += revenues;
-            monthly.Add(new MonthlyPoint { Month = mk, Label = MonthLabel(mk), Collected = collected, Revenues = revenues, Expenses = expenses });
-        }
-
+        var totalCollected = monthly.Sum(item => item.Collected);
+        var totalExpenses = monthly.Sum(item => item.Expenses);
+        var totalRevenues = monthly.Sum(item => item.Revenues);
         var netBalance = totalCollected - totalExpenses + totalRevenues;
-        var avgMonthly = months.Count > 0 ? netBalance / months.Count : 0;
+        var averageMonthly = months.Count > 0 ? netBalance / months.Count : 0m;
 
-        // بنود المصروفات
-        var catTotals = new Dictionary<string, CategoryPoint>();
-        foreach (var c in building.ExpenseCategories)
-            catTotals[c.Id] = new CategoryPoint { Name = c.Name, Color = c.Color, Total = 0 };
-
-        foreach (var mk in months)
+        var categories = categoryTotals.Select(item =>
         {
-            if (!building.Months.TryGetValue(mk, out var m)) continue;
-            foreach (var e in m.Expenses)
+            categoryById.TryGetValue(item.Key, out var category);
+            return new CategoryPoint
             {
-                if (!catTotals.TryGetValue(e.CategoryId, out var cp))
-                {
-                    cp = new CategoryPoint { Name = "—", Color = "#888888", Total = 0 };
-                    catTotals[e.CategoryId] = cp;
-                }
-                cp.Total += e.Amount;
-            }
-        }
+                Name = category?.Name ?? "—",
+                Color = category?.Color ?? "#888888",
+                Total = item.Value
+            };
+        }).Where(item => item.Total > 0)
+          .OrderByDescending(item => item.Total)
+          .ToList();
 
-        var categories = catTotals.Values.Where(c => c.Total > 0).ToList();
-
-        // توزيع المحفظة (الشقق المفتوحة فقط، الشهر الحالي)
-        var wallet = building.Apartments.Where(a => !a.Closed)
-            .Select(a => new WalletPoint { Number = a.Number, Label = Loc.T("Apartment_N", a.Number), Balance = _wallet.ComputeWalletBalance(building, a.Id, currentMonth) })
-            .OrderBy(w => w.Number).ToList();
-
-        // أعلى مدينين ودائنين
-        var allBalances = building.Apartments
-            .Select(a => new TopEntry { Apt = a, Balance = _wallet.ComputeWalletBalance(building, a.Id, currentMonth) })
+        var currentSnapshot = await _wallet.GetAdminSnapshotAsync(
+            building.Id, currentMonth, cancellationToken);
+        var wallet = building.Apartments.Where(apartment => !apartment.Closed && !apartment.Disabled)
+            .Select(apartment => new WalletPoint
+            {
+                ApartmentId = apartment.Id,
+                Owner = apartment.Owner,
+                Number = apartment.Number,
+                Label = Loc.T("Apartment_N", apartment.Number),
+                Balance = currentSnapshot.Balances.GetValueOrDefault(apartment.Id)
+            })
+            .OrderBy(item => item.Number)
             .ToList();
 
-        var debtors = allBalances.Where(x => x.Balance < 0).OrderBy(x => x.Balance).Take(5).ToList();
-        var creditors = allBalances.Where(x => x.Balance > 0).OrderByDescending(x => x.Balance).Take(5).ToList();
+        var allBalances = building.Apartments.Select(apartment => new TopEntry
+        {
+            Apt = apartment,
+            Balance = currentSnapshot.Balances.GetValueOrDefault(apartment.Id)
+        }).ToList();
+        var debtors = allBalances.Where(item => item.Balance < 0)
+            .OrderBy(item => item.Balance).Take(5).ToList();
+        var creditors = allBalances.Where(item => item.Balance > 0)
+            .OrderByDescending(item => item.Balance).Take(5).ToList();
 
         return new ReportsVm
         {
             Building = building,
-            Range = range,
+            Range = normalizedRange,
             TotalCollected = totalCollected,
             TotalExpenses = totalExpenses,
             TotalRevenues = totalRevenues,
             NetBalance = netBalance,
-            AvgMonthly = avgMonthly,
+            AvgMonthly = averageMonthly,
             Monthly = monthly,
             Categories = categories,
             Wallet = wallet,
             Debtors = debtors,
             Creditors = creditors
         };
+    }
+
+    public static List<string> GetReportMonths(
+        IReadOnlyList<string> allKeys, string range, string currentMonth) =>
+        SelectMonths(allKeys, range, currentMonth);
+
+    private static List<string> SelectMonths(
+        IReadOnlyList<string> allKeys, string range, string currentMonth)
+    {
+        if (range == "all")
+            return allKeys.Count > 0 ? allKeys.ToList() : new List<string> { currentMonth };
+        if (range == "year")
+        {
+            var year = currentMonth[..4];
+            var filtered = allKeys.Where(key => key.StartsWith(year, StringComparison.Ordinal))
+                .OrderBy(key => key, StringComparer.Ordinal).ToList();
+            return filtered.Count > 0 ? filtered : new List<string> { currentMonth };
+        }
+
+        var count = range == "12m" ? 12 : 6;
+        var months = new List<string>(count);
+        var month = currentMonth;
+        for (var index = 0; index < count; index++)
+        {
+            months.Insert(0, month);
+            month = ShiftMonth(month, -1);
+        }
+        return months;
     }
 }
