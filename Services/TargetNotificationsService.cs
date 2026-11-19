@@ -78,7 +78,7 @@ public sealed class TargetNotificationsService
     private static IQueryable<NotificationRecipientEntity> RecipientQuery(
         AppDbContext db, string buildingId, byte recipientType, string? apartmentId)
     {
-        var query = db.NotificationRecipients.AsNoTracking().Where(x =>
+        var query = db.NotificationRecipients.Where(x =>
             x.RecipientType == recipientType && x.Message!.BuildingId == buildingId);
         if (recipientType == ResidentRecipient)
             query = query.Where(x => x.ApartmentId == apartmentId);
