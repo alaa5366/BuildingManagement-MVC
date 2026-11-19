@@ -81,5 +81,71 @@ internal static class OperationalModelConfiguration
             e.HasIndex(x => new { x.PresenceSessionId, x.ObservedAtUtc })
                 .HasDatabaseName("IX_PresenceHeartbeats_Session_Observed");
         });
+
+        mb.Entity<NotificationMessageEntity>(e =>
+        {
+            e.ToTable("NotificationMessages");
+            e.HasKey(x => x.MessageId);
+            e.Property(x => x.MessageId).ValueGeneratedNever();
+            e.Property(x => x.BuildingId).HasMaxLength(64);
+            e.Property(x => x.LegacyNotificationId).HasMaxLength(128);
+            e.Property(x => x.Title).HasMaxLength(250);
+            e.Property(x => x.Body).HasMaxLength(4000).IsRequired();
+            e.Property(x => x.Origin).HasMaxLength(80).IsRequired();
+            e.Property(x => x.CreatedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(x => x.ExpiresAtUtc).HasColumnType("datetime2(3)");
+            e.HasIndex(x => new { x.BuildingId, x.CreatedAtUtc, x.MessageId })
+                .IsDescending(false, true, true)
+                .HasDatabaseName("IX_NotificationMessages_Building_Created");
+            e.HasMany(x => x.Recipients).WithOne(x => x.Message)
+                .HasForeignKey(x => x.MessageId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        mb.Entity<NotificationRecipientEntity>(e =>
+        {
+            e.ToTable("NotificationRecipients");
+            e.HasKey(x => x.RecipientId);
+            e.Property(x => x.RecipientId).ValueGeneratedNever();
+            e.Property(x => x.RecipientReference).HasMaxLength(160).IsRequired();
+            e.Property(x => x.ApartmentId).HasMaxLength(64);
+            e.Property(x => x.CreatedAtUtc).HasColumnType("datetime2(3)");
+            e.HasIndex(x => new { x.RecipientReference, x.CreatedAtUtc });
+            e.HasOne(x => x.ReadState).WithOne(x => x.Recipient)
+                .HasForeignKey<NotificationReadStateEntity>(x => x.RecipientId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        mb.Entity<NotificationDeliveryEntity>(e =>
+        {
+            e.ToTable("NotificationDeliveries");
+            e.HasKey(x => x.DeliveryId);
+            e.Property(x => x.DeliveryId).ValueGeneratedNever();
+            e.Property(x => x.Provider).HasMaxLength(80).IsRequired();
+            e.Property(x => x.ProviderReference).HasMaxLength(200);
+            e.Property(x => x.SafeErrorCode).HasMaxLength(100);
+            e.Property(x => x.AttemptedAtUtc).HasColumnType("datetime2(3)");
+            e.Property(x => x.CompletedAtUtc).HasColumnType("datetime2(3)");
+            e.HasIndex(x => new { x.RecipientId, x.AttemptNumber }).IsUnique();
+        });
+
+        mb.Entity<NotificationReadStateEntity>(e =>
+        {
+            e.ToTable("NotificationReadStates");
+            e.HasKey(x => x.ReadStateId);
+            e.Property(x => x.ReadStateId).ValueGeneratedNever();
+            e.Property(x => x.ReadAtUtc).HasColumnType("datetime2(3)");
+            e.Property(x => x.DismissedAtUtc).HasColumnType("datetime2(3)");
+            e.HasIndex(x => x.RecipientId).IsUnique();
+        });
+
+        mb.Entity<NotificationPreferenceEntity>(e =>
+        {
+            e.ToTable("NotificationPreferences");
+            e.HasKey(x => x.PreferenceId);
+            e.Property(x => x.PreferenceId).ValueGeneratedNever();
+            e.Property(x => x.SubjectReference).HasMaxLength(160).IsRequired();
+            e.Property(x => x.UpdatedAtUtc).HasColumnType("datetime2(3)");
+            e.HasIndex(x => new { x.SubjectType, x.SubjectReference, x.Channel }).IsUnique();
+        });
     }
 }
