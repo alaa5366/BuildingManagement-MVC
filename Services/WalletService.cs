@@ -220,7 +220,7 @@ public class WalletService
 
     // -------- Distribution --------
     /// <summary>
-    /// Splits the month's expenses equally between the open apartments (each share rounded to two decimals) and stores the result in the month.
+    /// Splits the month's expenses equally between open apartments using deterministic largest-remainder cent allocation.
     /// </summary>
     public Dictionary<string, decimal> RecalculateDistribution(Building building, string monthKey)
     {
@@ -250,7 +250,7 @@ public class WalletService
     }
 
     /// <summary>
-    /// Splits the month's revenues equally between the open apartments and stores the result in the month.
+    /// Splits the month's revenues equally between open apartments using deterministic largest-remainder cent allocation.
     /// </summary>
     public Dictionary<string, decimal> RecalculateRevenueDistribution(Building building, string monthKey)
     {
