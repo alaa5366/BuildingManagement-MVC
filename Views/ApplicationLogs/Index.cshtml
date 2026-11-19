@@ -265,7 +265,16 @@
                             </td>
                             <td class="log-source-cell">
                                 <small class="log-component-kind">@item.ComponentType</small>
-                                <span title="@item.SourceContext">@item.SourceContext</span>
+                                @if (!string.IsNullOrWhiteSpace(item.SourceContext))
+                                {
+                                    <a asp-action="Index" asp-route-source="@item.SourceContext" asp-route-level="@query.Level"
+                                       asp-route-from="@fromValue" asp-route-to="@toValue" class="log-source-filter"
+                                       title="Filter by this source">@item.SourceContext <i class="bi bi-funnel"></i></a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
                             </td>
                             <td class="log-correlation-cell">
                                 @if (!string.IsNullOrWhiteSpace(item.CorrelationId))
