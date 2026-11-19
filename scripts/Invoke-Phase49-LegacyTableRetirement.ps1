@@ -50,11 +50,25 @@ GROUP BY s.name,t.name ORDER BY s.name,t.name;
     $hasMap=(Query $target "SELECT CASE WHEN OBJECT_ID(N'dbo.LegacyDataMigrationMap',N'U') IS NULL THEN 0 ELSE 1 END HasMap").Rows[0].HasMap
     if(-not $hasMap){throw 'dbo.LegacyDataMigrationMap is missing; retirement cannot be proven.'}
     $mapCounts=Query $target @"
-SELECT SourceTable,COUNT_BIG(*) MapRows,
-       SUM(CASE WHEN TargetKey IS NULL OR LEN(TargetKey)=0 THEN 1 ELSE 0 END) MissingTargetKeys,
-       SUM(CASE WHEN NOT EXISTS (SELECT 1 FROM sys.tables tt JOIN sys.schemas ss ON ss.schema_id=tt.schema_id WHERE ss.name=N'dbo' AND tt.name=m.TargetTable) THEN 1 ELSE 0 END) MissingTargetTables
-FROM dbo.LegacyDataMigrationMap m
-WHERE SourceSystem=N'BuildingManagement.Legacy'
+;WITH MapRows AS
+(
+    SELECT m.SourceTable,
+           CASE WHEN m.TargetKey IS NULL OR LEN(m.TargetKey)=0 THEN 1 ELSE 0 END AS MissingTargetKey,
+           CASE WHEN EXISTS
+           (
+               SELECT 1
+               FROM sys.tables tt
+               JOIN sys.schemas ss ON ss.schema_id=tt.schema_id
+               WHERE ss.name=N'dbo' AND tt.name=m.TargetTable
+           ) THEN 0 ELSE 1 END AS MissingTargetTable
+    FROM dbo.LegacyDataMigrationMap m
+    WHERE m.SourceSystem=N'BuildingManagement.Legacy'
+)
+SELECT SourceTable,
+       COUNT_BIG(*) AS MapRows,
+       SUM(MissingTargetKey) AS MissingTargetKeys,
+       SUM(MissingTargetTable) AS MissingTargetTables
+FROM MapRows
 GROUP BY SourceTable;
 "@
     $maps=@{}; foreach($r in $mapCounts.Rows){$maps[[string]$r.SourceTable]=$r}
