@@ -60,13 +60,13 @@ public class MaintenanceController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Add(
-        string title, string? description, string date, decimal cost, string? vendor, string status)
+        string title, string? description, string date, string? vendor, string status)
     {
         if (string.IsNullOrWhiteSpace(BuildingId)) return Forbid();
         try
         {
             var record = await _maintenance.AddAsync(
-                BuildingId, title, description, date, cost, vendor, status,
+                BuildingId, title, description, date, 0m, vendor, status,
                 User.Identity?.Name ?? "admin", HttpContext.RequestAborted);
             await _audit.LogAsync(
                 action: "maintenance.added",
@@ -167,12 +167,12 @@ public class MaintenanceController : Controller
     /// <summary>Records the maintenance cost as an expense.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddToExpenses(string id)
+    public async Task<IActionResult> AddToExpenses(string id, decimal cost)
     {
         if (string.IsNullOrWhiteSpace(BuildingId)) return Forbid();
         var record = await _maintenance.GetAsync(BuildingId, id, HttpContext.RequestAborted);
         if (record is null) return NotFound();
-        if (record.AddedToExpense || record.Cost <= 0 ||
+        if (record.AddedToExpense || cost <= 0 ||
             string.Equals(record.Status, "cancelled", StringComparison.OrdinalIgnoreCase))
         {
             TempData["Error"] = "سجل الصيانة غير موجود أو تمت إضافته للمصروفات بالفعل.";
@@ -209,7 +209,7 @@ public class MaintenanceController : Controller
             var note = "🔧 " + record.Title +
                 (string.IsNullOrWhiteSpace(record.Vendor) ? "" : $" — {record.Vendor}");
             await _financeWorkflow.AddExpenseAsync(
-                BuildingId, monthKey, category.Id, note, record.Cost, expenseDate,
+                BuildingId, monthKey, category.Id, note, cost, expenseDate,
                 commandId, actorAccountId.Value, HttpContext.RequestAborted);
 
             if (!await _maintenance.MarkAddedToExpenseAsync(BuildingId, id, HttpContext.RequestAborted))
@@ -220,7 +220,7 @@ public class MaintenanceController : Controller
                 buildingId: BuildingId,
                 userId: User.Identity?.Name ?? "admin",
                 userRole: "admin",
-                metadata: new { record.Id, record.Cost, monthKey, categoryId = category.Id },
+                metadata: new { record.Id, cost, monthKey, categoryId = category.Id },
                 severity: "info");
 
             var apartmentIds = await _maintenance.GetActiveApartmentIdsAsync(
@@ -232,7 +232,7 @@ public class MaintenanceController : Controller
                 {
                     await _notifications.CreateResidentDepositNoticeAsync(
                         BuildingId, apartmentId, "مصروف صيانة جديد",
-                        $"{category.Name}: {record.Cost:0.##} — {buildingName}",
+                        $"{category.Name}: {cost:0.##} — {buildingName}",
                         HttpContext.RequestAborted, "expense_new", "💸");
                 }
                 catch (Exception ex)
