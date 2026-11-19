@@ -19,8 +19,8 @@ public class ResidentHomeController : Controller
 {
     private readonly BuildingsService _buildings;
     private readonly TargetWalletReadService _targetWallet;
-    private readonly PollsService _polls;
-    private readonly MaintenanceService _maint;
+    private readonly TargetPollsService _targetPolls;
+    private readonly TargetMaintenanceService _targetMaintenance;
     private readonly TargetNotificationsService _targetNotifications;
 
     /// <summary>
@@ -29,14 +29,14 @@ public class ResidentHomeController : Controller
     public ResidentHomeController(
         BuildingsService buildings,
         TargetWalletReadService targetWallet,
-        PollsService polls,
-        MaintenanceService maint,
+        TargetPollsService targetPolls,
+        TargetMaintenanceService targetMaintenance,
         TargetNotificationsService targetNotifications)
     {
         _buildings = buildings;
         _targetWallet = targetWallet;
-        _polls = polls;
-        _maint = maint;
+        _targetPolls = targetPolls;
+        _targetMaintenance = targetMaintenance;
         _targetNotifications = targetNotifications;
     }
 
@@ -48,7 +48,6 @@ public class ResidentHomeController : Controller
         var buildingId = User.FindFirstValue("buildingId");
         var aptId = User.FindFirstValue("apartmentId");
 
-        var legacyBuilding = buildingId == null ? null : await _buildings.GetByIdAsync(buildingId);
         var building = string.IsNullOrWhiteSpace(buildingId) || string.IsNullOrWhiteSpace(aptId)
             ? null
             : await _targetWallet.GetBuildingShellAsync(
@@ -137,12 +136,11 @@ public class ResidentHomeController : Controller
         // ============================================================
         // 6. التصويتات النشطة (آخر 3)
         // ============================================================
-        var activePolls = legacyBuilding is null
-            ? new List<Poll>()
-            : _polls.GetPolls(legacyBuilding)
-                .Where(p => PollsService.IsPollActive(p))
-                .Take(3)
-                .ToList();
+        var activePolls = (await _targetPolls.GetPageAsync(
+                building.Id, 1, 3, activeOnly: true, HttpContext.RequestAborted))
+            .Items
+            .Where(p => !PollsService.IsPollExpired(p))
+            .ToList();
 
         // ============================================================
         // 7. آخر 3 إشعارات + unread
@@ -155,12 +153,10 @@ public class ResidentHomeController : Controller
         // ============================================================
         // 8. آخر 3 صيانة
         // ============================================================
-        var maintenance = legacyBuilding is null
-            ? new List<MaintenanceRecord>()
-            : _maint.GetLog(legacyBuilding)
-                .Where(m => m.Status != "cancelled")
-                .Take(3)
-                .ToList();
+        var maintenance = (await _targetMaintenance.GetResidentLogAsync(
+                building.Id, HttpContext.RequestAborted))
+            .Take(3)
+            .ToList();
 
         // ============================================================
         // 9. آخر دفعة (للـ Hero) — الشهر الحالي فقط
