@@ -103,6 +103,45 @@ public sealed class TargetWalletReadServiceTests
 
 
 
+
+    [Fact]
+    public async Task GetBuildingShellAsync_UsesTargetBuildingFloorAndApartmentRows()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.Buildings.Add(new BuildingEntity
+            {
+                Id = "B1", Name = "Target Building", BuildingNumber = "01",
+                AdminWhatsapp = "201000000000"
+            });
+            seed.Floors.Add(new FloorEntity
+            {
+                BuildingId = "B1", Id = "F1", Label = "First Floor", SortOrder = 1
+            });
+            seed.Apartments.Add(new ApartmentEntity
+            {
+                BuildingId = "B1", Id = "A1", FloorId = "F1", Number = 101,
+                Owner = "Resident", Phone = "201000000001", MonthlyFee = 500m,
+                Label = "North", IsClosed = false, IsDisabled = false
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetWalletReadService(new TestContextFactory(options));
+        var building = await service.GetBuildingShellAsync("B1");
+
+        Assert.NotNull(building);
+        Assert.Equal("Target Building", building!.Name);
+        Assert.Equal("First Floor", Assert.Single(building.Floors).Label);
+        var apartment = Assert.Single(building.Apartments);
+        Assert.Equal("A1", apartment.Id);
+        Assert.Equal(101, apartment.Number);
+        Assert.Equal("North", apartment.Label);
+    }
+
     [Fact]
     public async Task GetAdminSnapshotAsync_UsesTargetLedgerAndIncludesPendingDepositsAcrossPeriods()
     {
