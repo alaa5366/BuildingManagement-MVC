@@ -201,13 +201,16 @@ public sealed class TargetPollsService
             var token = RandomNumberGenerator.GetBytes(32);
             var tokenHash = SHA256.HashData(token);
             CryptographicOperations.ZeroMemory(token);
+            // Coarsen the ballot timestamp so it cannot be directly joined to the precise
+            // eligibility-consumption timestamp. No apartment or actor reference is stored with the ballot.
+            var ballotTimeBucket = new DateTime(
+                now.Ticks - now.Ticks % TimeSpan.FromMinutes(15).Ticks, DateTimeKind.Utc);
             db.PollBallots.Add(new PollBallotEntity
             {
                 BallotId = Guid.NewGuid(), BuildingId = buildingId, PollId = pollId,
                 BallotTokenHash = tokenHash, ChoicePayload = Encoding.UTF8.GetBytes(_choiceProtector.Protect(optionId)),
-                CastAtUtc = now, BallotVersion = 1
+                CastAtUtc = ballotTimeBucket, BallotVersion = 1
             });
-            db.PollLifecycleEvents.Add(CreateEvent(buildingId, pollId, 5, null, "Anonymous ballot cast", now));
             await db.SaveChangesAsync(cancellationToken);
             if (transaction is not null) await transaction.CommitAsync(cancellationToken);
             return true;
