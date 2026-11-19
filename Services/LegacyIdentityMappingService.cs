@@ -82,7 +82,7 @@ public sealed class LegacyIdentityMappingService
             CreatedAtUtc = nowUtc
         };
         db.LegacyIdentityMaps.Add(map);
-        db.AuditLog.Add(CreateAudit(nowUtc, reviewerId, "identity.mapping.candidate.registered", new
+        db.AuditEvents.Add(CreateAudit(nowUtc, reviewerId, "identity.mapping.candidate.registered", new
         {
             mappingId = map.LegacyIdentityMapId,
             map.SourceTable,
@@ -132,7 +132,7 @@ public sealed class LegacyIdentityMappingService
         map.ReviewedByAccountId = reviewerId;
         map.UpdatedAtUtc = nowUtc;
 
-        db.AuditLog.Add(CreateAudit(nowUtc, reviewerId, "identity.mapping.reviewed", new
+        db.AuditEvents.Add(CreateAudit(nowUtc, reviewerId, "identity.mapping.reviewed", new
         {
             mappingId = map.LegacyIdentityMapId,
             map.SourceTable,
@@ -198,16 +198,17 @@ public sealed class LegacyIdentityMappingService
         return reviewerId;
     }
 
-    private static AuditLogEntity CreateAudit(DateTime nowUtc, Guid reviewerId, string action, object details) => new()
+    private static AuditEventEntity CreateAudit(DateTime nowUtc, Guid reviewerId, string action, object details) => new()
     {
-        Ts = nowUtc,
-        Action = action,
-        Label = action,
-        Actor = reviewerId.ToString("D"),
-        ActorRole = "identity.mapping.reviewer",
-        Details = JsonSerializer.Serialize(details),
-        MonthKey = nowUtc.ToString("yyyy-MM"),
-        Severity = "info"
+        AuditEventId = Guid.NewGuid(),
+        OccurredAtUtc = nowUtc,
+        ActorAccountId = reviewerId,
+        ActorReference = reviewerId.ToString("D"),
+        EventCategory = "Identity",
+        EventType = action,
+        ResourceType = "LegacyIdentityMap",
+        Outcome = 0,
+        SafeDetailsJson = JsonSerializer.Serialize(details)
     };
 
     private static string? NormalizeOptional(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
