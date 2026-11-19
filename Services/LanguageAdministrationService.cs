@@ -198,7 +198,7 @@ public sealed class LanguageAdministrationService
         static string Q(string? value) => "\""+(value??"").Replace("\"","\"\"")+"\"";
         var lines=new List<string>{"Key,Category,SourceGroup,Description,Culture,Value"};
         lines.AddRange(rows.Select(x=>string.Join(",",Q(x.Key),Q(x.Category),Q(x.SourceGroup),Q(x.Description),Q(x.CultureCode),Q(x.Value))));
-        return "\uFEFF"+string.Join("\r\n",lines);
+        return string.Join("\r\n",lines);
     }
 
     private static string NormalizeCategory(string? value) => value is "Controllers" or "Services" or "Views" or "Shared" or "JavaScript" or "Validation" or "System" ? value : "System";
