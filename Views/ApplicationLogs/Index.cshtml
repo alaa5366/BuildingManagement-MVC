@@ -103,9 +103,21 @@
                 <span class="log-section-kicker">@Loc.T("Log_Explore")</span>
                 <h2><i class="bi bi-funnel"></i> @Loc.T("Search")</h2>
             </div>
-            <a asp-controller="ApplicationLogs" asp-action="Index" class="log-reset-link">
-                <i class="bi bi-arrow-counterclockwise"></i> @Loc.T("Reset")
-            </a>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <a asp-controller="ApplicationLogs" asp-action="ExportCsv"
+                   asp-route-from="@fromValue" asp-route-to="@toValue" asp-route-level="@query.Level"
+                   asp-route-search="@query.Search" asp-route-correlationId="@query.CorrelationId"
+                   asp-route-source="@query.Source" asp-route-componentType="@query.ComponentType"
+                   asp-route-hasException="@query.HasException" asp-route-httpStatusCode="@query.HttpStatusCode"
+                   asp-route-minDurationMs="@query.MinDurationMs" asp-route-maxDurationMs="@query.MaxDurationMs"
+                   asp-route-page="@result.CurrentPage" asp-route-pageSize="@result.PageSize"
+                   class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-download"></i> @(isArabic ? "تصدير الصفحة الحالية CSV" : "Export current page CSV")
+                </a>
+                <a asp-controller="ApplicationLogs" asp-action="Index" class="log-reset-link">
+                    <i class="bi bi-arrow-counterclockwise"></i> @Loc.T("Reset")
+                </a>
+            </div>
         </div>
 
         <div class="observability-time-presets" aria-label="Quick time ranges">
