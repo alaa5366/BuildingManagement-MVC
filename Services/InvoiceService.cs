@@ -58,6 +58,9 @@ public sealed class InvoiceService
         var currencyCode = await db.BuildingSettings.AsNoTracking()
             .Where(settings => settings.BuildingId == buildingId)
             .Select(settings => settings.Currency).SingleOrDefaultAsync(cancellationToken) ?? "EGP";
+        if (string.IsNullOrWhiteSpace(currencyCode) || currencyCode.Length != 3 ||
+            currencyCode.Any(character => !char.IsAsciiLetter(character)))
+            throw new InvalidOperationException("Building currency configuration is invalid.");
         currencyCode = currencyCode.ToUpperInvariant();
 
         var monthDeposits = await db.PaymentDeposits.AsNoTracking()
