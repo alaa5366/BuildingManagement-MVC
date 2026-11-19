@@ -189,18 +189,21 @@ public sealed class InvoiceServiceTests
                     BuildingId = "B1", Id = "CAT2", Kind = "expense", Name = "Cleaning",
                     Color = "#654321", IsActive = true
                 });
-            seed.Expenses.Add(new ExpenseEntity
-            {
-                BuildingId = "B1", Id = expenseSourceId.ToString("N"), MonthKey = "2026-11",
-                CategoryId = "CAT1", CategoryKind = "expense", Note = "Reversed maintenance",
-                Amount = 40m, ExpenseDate = new DateOnly(2026, 11, 10)
-            });
-            seed.Expenses.Add(new ExpenseEntity
-            {
-                BuildingId = "B1", Id = activeExpenseSourceId.ToString("N"), MonthKey = "2026-11",
-                CategoryId = "CAT2", CategoryKind = "expense", Note = "Cleaning",
-                Amount = 25m, ExpenseDate = new DateOnly(2026, 11, 12)
-            });
+            seed.AuditEvents.AddRange(
+                new AuditEventEntity
+                {
+                    AuditEventId = Guid.NewGuid(), OccurredAtUtc = now, BuildingId = "B1",
+                    EventCategory = "Finance", EventType = "ExpensePosted", ResourceType = "Expense",
+                    ResourceReference = expenseSourceId.ToString("D"), Outcome = 0,
+                    SafeDetailsJson = "{\\"categoryId\\":\\"CAT1\\"}"
+                },
+                new AuditEventEntity
+                {
+                    AuditEventId = Guid.NewGuid(), OccurredAtUtc = now, BuildingId = "B1",
+                    EventCategory = "Finance", EventType = "ExpensePosted", ResourceType = "Expense",
+                    ResourceReference = activeExpenseSourceId.ToString("D"), Outcome = 0,
+                    SafeDetailsJson = "{\\"categoryId\\":\\"CAT2\\"}"
+                });
             seed.PaymentDeposits.Add(new PaymentDepositEntity
             {
                 PaymentDepositId = depositId, PeriodId = periodId, BuildingId = "B1",
