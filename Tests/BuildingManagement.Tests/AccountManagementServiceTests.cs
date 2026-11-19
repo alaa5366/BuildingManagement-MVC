@@ -102,7 +102,7 @@ public sealed class AccountManagementServiceTests
         Assert.True(result.Success);
         Assert.NotNull(result.TemporaryPin);
         Assert.Equal(6, result.TemporaryPin!.Length);
-        Assert.All(result.TemporaryPin, char.IsDigit);
+        Assert.All(result.TemporaryPin, character => Assert.True(char.IsDigit(character)));
 
         await using var verify = await factory.CreateDbContextAsync();
         var account = await verify.UserAccounts.SingleAsync(x => x.AccountId == accountId);
@@ -110,7 +110,7 @@ public sealed class AccountManagementServiceTests
         Assert.NotEqual("before", account.SecurityStamp);
         Assert.NotNull((await verify.UserCredentials.SingleAsync(x => x.CredentialId == oldCredentialId)).RevokedAtUtc);
         var activeCredential = await verify.UserCredentials.SingleAsync(x => x.AccountId == accountId && x.RevokedAtUtc == null);
-        Assert.True(hasher.VerifyPin(result.TemporaryPin, activeCredential.CredentialHash));
+        Assert.True(hasher.VerifyPin(result.TemporaryPin!, activeCredential.CredentialHash));
         audit.Verify(x => x.LogAsync("identity.resident.pin.reset", null, null, "superadmin-actor", "superadmin",
             It.IsAny<object?>(), "info"), Times.Once);
     }
