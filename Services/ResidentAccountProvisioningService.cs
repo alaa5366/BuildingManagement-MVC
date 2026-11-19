@@ -120,6 +120,7 @@ public sealed class ResidentAccountProvisioningService
             ArchivedPersons = people.Count(x => x.IsArchived),
             TotalAccounts = accounts.Count,
             ActiveAccounts = accounts.Count(x => x.AccountStatus == ActiveAccountStatus),
+            NonActiveAccounts = accounts.Count(x => x.AccountStatus != ActiveAccountStatus),
             AccountsRequiringPinChange = accounts.Count(x => x.MustChangePin),
             Eligible = rows.Count(x => x.Status == "Eligible"),
             MissingPhone = rows.Count(x => x.Status == "MissingPhone"),
@@ -291,6 +292,7 @@ public sealed class ResidentAccountProvisioningReport
     public int ArchivedPersons { get; init; }
     public int TotalAccounts { get; init; }
     public int ActiveAccounts { get; init; }
+    public int NonActiveAccounts { get; init; }
     public int AccountsRequiringPinChange { get; init; }
     public int Eligible { get; init; }
     public int MissingPhone { get; init; }
