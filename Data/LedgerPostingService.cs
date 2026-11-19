@@ -42,7 +42,10 @@ public sealed class LedgerPostingService
             throw new ArgumentException("At least one ledger line is required.", nameof(lines));
         if (lines.Any(x => string.IsNullOrWhiteSpace(x.ApartmentId) ||
                            x.SignedAmount == 0 ||
-                           x.CurrencyCode?.Length != 3))
+                           x.CurrencyCode?.Length != 3 ||
+                           x.CurrencyCode.Any(c => !((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))) ||
+                           x.ApartmentId.Length > 64 ||
+                           (x.Description?.Length ?? 0) > 500))
             throw new ArgumentException("Ledger lines require an apartment, non-zero amount and ISO currency code.", nameof(lines));
         if (lines.Select(x => x.CurrencyCode).Distinct(StringComparer.OrdinalIgnoreCase).Count() != 1)
             throw new ArgumentException("A transaction cannot mix currencies.", nameof(lines));
@@ -183,8 +186,7 @@ public sealed class LedgerPostingService
         if (string.IsNullOrWhiteSpace(buildingId) || string.IsNullOrWhiteSpace(apartmentId))
             return 0m;
         if (string.IsNullOrWhiteSpace(currencyCode) || currencyCode.Length != 3 ||
-            currencyCode.Any(c => c < 'A' || c > 'Z') &&
-            currencyCode.Any(c => c < 'a' || c > 'z'))
+            currencyCode.Any(c => !((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))))
             throw new ArgumentException("Currency code must contain exactly three ASCII letters.", nameof(currencyCode));
 
         var normalizedCurrency = currencyCode.ToUpperInvariant();
