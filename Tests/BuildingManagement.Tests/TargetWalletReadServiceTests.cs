@@ -227,6 +227,34 @@ public sealed class TargetWalletReadServiceTests
             service.GetApartmentAsync("B1", "A1", currencyCode: "EG"));
     }
 
+
+    [Fact]
+    public async Task GetSubmissionContextAsync_DoesNotExposeClosedPeriods()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.FinancialPeriods.Add(new FinancialPeriodEntity
+            {
+                PeriodId = Guid.NewGuid(),
+                BuildingId = "B1",
+                PeriodKey = "2026-10",
+                TimeZoneId = "Africa/Cairo",
+                Status = FinancialPeriodStatus.Closed,
+                StartsAtUtc = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndsAtUtc = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+                CreatedAtUtc = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc)
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetWalletReadService(new TestContextFactory(options));
+
+        Assert.Null(await service.GetSubmissionContextAsync("B1", "2026-10"));
+    }
+
     private sealed class TestContextFactory(DbContextOptions<AppDbContext> options)
         : IDbContextFactory<AppDbContext>
     {
