@@ -67,13 +67,21 @@ public class QrTokenStoreService
         if (string.IsNullOrWhiteSpace(uid) || uid.Length > 128)
             return (false, "not-found", null, null);
 
-        await using var db = await _sqlFactory.CreateDbContextAsync(cancellationToken);
-        var token = await db.QrTokens.AsNoTracking()
-            .FirstOrDefaultAsync(item => item.Uid == uid, cancellationToken);
-        if (token is null) return (false, "not-found", null, null);
-        if (DateTime.UtcNow > token.ExpiresAt) return (false, "expired", null, null);
-        if (token.UseType == "single" && token.IsUsed) return (false, "already-used", null, null);
-        return (true, null, token.BuildingId, token.ApartmentId);
+        try
+        {
+            await using var db = await _sqlFactory.CreateDbContextAsync(cancellationToken);
+            var token = await db.QrTokens.AsNoTracking()
+                .FirstOrDefaultAsync(item => item.Uid == uid, cancellationToken);
+            if (token is null) return (false, "not-found", null, null);
+            if (DateTime.UtcNow > token.ExpiresAt) return (false, "expired", null, null);
+            if (token.UseType == "single" && token.IsUsed) return (false, "already-used", null, null);
+            return (true, null, token.BuildingId, token.ApartmentId);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "PreviewTargetAsync failed");
+            return (false, "error", null, null);
+        }
     }
 
     public async Task<(bool Allowed, string? Reason, string? Bld, string? Apt)> CheckAndUseTokenAsync(string uid)
