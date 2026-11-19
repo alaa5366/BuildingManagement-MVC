@@ -102,6 +102,69 @@ public sealed class TargetWalletReadServiceTests
     }
 
 
+
+    [Fact]
+    public async Task GetAdminSnapshotAsync_UsesTargetLedgerAndIncludesPendingDepositsAcrossPeriods()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        var now = DateTime.UtcNow;
+        var currentPeriodId = Guid.NewGuid();
+        var previousPeriodId = Guid.NewGuid();
+        var transactionId = Guid.NewGuid();
+        var pendingId = Guid.NewGuid();
+
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.BuildingSettings.Add(new BuildingSettingsEntity { BuildingId = "B1", Currency = "EGP" });
+            seed.FinancialPeriods.AddRange(
+                new FinancialPeriodEntity
+                {
+                    PeriodId = previousPeriodId, BuildingId = "B1", PeriodKey = "2026-10",
+                    TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Closed,
+                    StartsAtUtc = now.AddMonths(-2), EndsAtUtc = now.AddMonths(-1), CreatedAtUtc = now.AddMonths(-2)
+                },
+                new FinancialPeriodEntity
+                {
+                    PeriodId = currentPeriodId, BuildingId = "B1", PeriodKey = "2026-11",
+                    TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Open,
+                    StartsAtUtc = now.AddMonths(-1), EndsAtUtc = now.AddMonths(1), CreatedAtUtc = now.AddMonths(-1)
+                });
+            seed.LedgerTransactions.Add(new LedgerTransactionEntity
+            {
+                LedgerTransactionId = transactionId, PeriodId = previousPeriodId, BuildingId = "B1",
+                Kind = LedgerTransactionKind.Deposit, Status = LedgerTransactionStatus.Posted,
+                IdempotencyKey = "posted", CreatedAtUtc = now.AddMonths(-1), PostedAtUtc = now.AddMonths(-1)
+            });
+            seed.LedgerEntries.Add(new LedgerEntryEntity
+            {
+                LedgerEntryId = Guid.NewGuid(), LedgerTransactionId = transactionId,
+                PeriodId = previousPeriodId, BuildingId = "B1", ApartmentId = "A1",
+                EntryKind = LedgerEntryKind.Deposit, SignedAmount = 120m, CurrencyCode = "EGP",
+                EffectiveAtUtc = now.AddMonths(-1), CreatedAtUtc = now.AddMonths(-1)
+            });
+            seed.PaymentDeposits.Add(new PaymentDepositEntity
+            {
+                PaymentDepositId = pendingId, PeriodId = currentPeriodId, BuildingId = "B1",
+                ApartmentId = "A2", Amount = 75m, CurrencyCode = "EGP",
+                Status = PaymentDepositStatus.Pending, SubmittedAtUtc = now,
+                Note = "Pending evidence", SourceSystem = "application"
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetWalletReadService(new TestContextFactory(options));
+        var snapshot = await service.GetAdminSnapshotAsync("B1", "2026-11");
+
+        Assert.Equal(120m, snapshot.Balances["A1"]);
+        var pending = Assert.Single(snapshot.PendingDeposits);
+        Assert.Equal(pendingId.ToString("D"), pending.Deposit.Id);
+        Assert.Equal("A2", pending.ApartmentId);
+        Assert.Equal("2026-11", pending.MonthKey);
+        Assert.Equal(75m, pending.Deposit.Amount);
+    }
+
     [Fact]
     public async Task GetApartmentAsync_ShowsCancelledDepositsWithoutAddingThemToBalance()
     {
