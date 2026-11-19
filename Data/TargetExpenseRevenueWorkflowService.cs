@@ -24,6 +24,7 @@ public sealed class TargetExpenseRevenueWorkflowService
         _timeProvider = timeProvider;
     }
 
+    /// <summary>Creates an expense entry in the target financial ledger.</summary>
     public Task<Guid> AddExpenseAsync(
         string buildingId, string monthKey, string categoryId, string note,
         decimal amount, string transactionDate, Guid commandId, Guid actorAccountId,
@@ -31,6 +32,7 @@ public sealed class TargetExpenseRevenueWorkflowService
         AddAsync(false, buildingId, monthKey, categoryId, note, amount,
             transactionDate, commandId, actorAccountId, cancellationToken);
 
+    /// <summary>Creates a revenue entry in the target financial ledger.</summary>
     public Task<Guid> AddRevenueAsync(
         string buildingId, string monthKey, string categoryId, string note,
         decimal amount, string transactionDate, Guid commandId, Guid actorAccountId,
