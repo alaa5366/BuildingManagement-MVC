@@ -385,7 +385,6 @@ public class BackupServiceTests
     // ================================================================
 
     [Fact]
-    [Fact]
     public async Task SavedWhatsAppTemplates_BackupAndRestore_RestoresTemplateByStableGuid()
     {
         var templateId = Guid.NewGuid();
