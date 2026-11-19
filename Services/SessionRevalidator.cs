@@ -167,11 +167,21 @@ public class SessionRevalidator
                     x.IsActive,
                     x.IsDisabled,
                     x.TwoFactorEnabled,
+                    x.CreatedAt,
+                    x.UpdatedAt,
                     Permissions = x.Permissions.Select(p => p.Permission).ToList()
                 })
                 .FirstOrDefaultAsync();
 
+            var currentSecurityStamp = account == null ? null
+                : (account.UpdatedAt ?? account.CreatedAt ?? DateTime.MinValue).Ticks
+                    .ToString(System.Globalization.CultureInfo.InvariantCulture);
+            var securityStampMatches = string.Equals(
+                currentSecurityStamp,
+                user.FindFirst("legacySuperAdminSecurityStamp")?.Value,
+                StringComparison.Ordinal);
             var valid = account != null && account.IsActive && !account.IsDisabled
+                && securityStampMatches
                 && (!account.TwoFactorEnabled || user.HasClaim("twoFactorVerified", "true"));
             return new Result(valid, valid ? account!.Permissions.Distinct(StringComparer.Ordinal).ToList() : null);
         }
