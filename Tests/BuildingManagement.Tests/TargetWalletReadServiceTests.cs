@@ -101,6 +101,49 @@ public sealed class TargetWalletReadServiceTests
         Assert.Equal("pending", pending.Status);
     }
 
+
+    [Fact]
+    public async Task GetApartmentAsync_ShowsCancelledDepositsWithoutAddingThemToBalance()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        var periodId = Guid.NewGuid();
+        var cancelledId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.FinancialPeriods.Add(new FinancialPeriodEntity
+            {
+                PeriodId = periodId, BuildingId = "B1", PeriodKey = now.ToString("yyyy-MM"),
+                TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Open,
+                StartsAtUtc = now.AddDays(-10), EndsAtUtc = now.AddDays(20), CreatedAtUtc = now
+            });
+            seed.PaymentDeposits.Add(new PaymentDepositEntity
+            {
+                PaymentDepositId = cancelledId, PeriodId = periodId, BuildingId = "B1",
+                ApartmentId = "A1", Amount = 125m, CurrencyCode = "EGP",
+                Status = PaymentDepositStatus.Cancelled, SubmittedAtUtc = now.AddDays(-2),
+                CancelledAtUtc = now.AddDays(-1), ResolutionReason = "Duplicate transfer",
+                SourceSystem = "application"
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetWalletReadService(new TestContextFactory(options));
+        var snapshot = await service.GetApartmentAsync("B1", "A1");
+
+        Assert.Equal(0m, snapshot.Balance);
+        var cancelled = Assert.Single(snapshot.Transactions);
+        Assert.Equal(cancelledId.ToString("D"), cancelled.Id);
+        Assert.Equal("deposit", cancelled.Type);
+        Assert.Equal("cancelled", cancelled.Status);
+        Assert.Equal(125m, cancelled.Amount);
+        Assert.Equal("Duplicate transfer", cancelled.Note);
+        Assert.Empty(snapshot.PendingDeposits);
+    }
+
     [Fact]
     public async Task GetApartmentAsync_RejectsInvalidMonthAndCurrency()
     {
