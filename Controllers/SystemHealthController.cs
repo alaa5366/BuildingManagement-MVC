@@ -30,12 +30,18 @@ public sealed class SystemHealthController : Controller
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         var report = await _healthChecks.CheckHealthAsync(cancellationToken: cancellationToken);
+        using var process = Process.GetCurrentProcess();
         var model = new SystemHealthViewModel
         {
             CheckedAtUtc = _timeProvider.GetUtcNow(),
             ProcessStartedAtUtc = ProcessStartedAt,
             TotalDuration = report.TotalDuration,
             OverallStatus = report.Status.ToString(),
+            WorkingSetBytes = process.WorkingSet64,
+            PrivateMemoryBytes = process.PrivateMemorySize64,
+            ManagedMemoryBytes = GC.GetTotalMemory(forceFullCollection: false),
+            ThreadCount = process.Threads.Count,
+            HandleCount = process.HandleCount,
             Checks = report.Entries.OrderBy(x => x.Key, StringComparer.Ordinal)
                 .Select(x => new SystemHealthCheckViewModel
                 {
