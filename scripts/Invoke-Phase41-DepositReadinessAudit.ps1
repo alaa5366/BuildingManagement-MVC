@@ -53,7 +53,7 @@ try {
 ),
 ActorCheck AS (
     SELECT d.*,
-      CASE WHEN d.Status=N'confirmed' AND EXISTS (
+      CASE WHEN LOWER(LTRIM(RTRIM(d.Status)))=N'confirmed' AND EXISTS (
           SELECT 1 FROM dbo.LegacyIdentityMap m
           JOIN dbo.UserAccounts ua ON ua.AccountId=m.AccountId
           WHERE m.SourceSystem=N'legacy-sql' AND m.SourceTable=N'Users'
