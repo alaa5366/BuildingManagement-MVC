@@ -10,6 +10,10 @@
 {
     <div class="alert alert-warning">@TempData["Error"]</div>
 }
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
 
 <div class="bg-white rounded shadow-sm p-3">
     <form method="post" asp-action="Generate">
@@ -26,9 +30,20 @@
             <div class="col-md-4">
                 <label class="form-label small">@Loc.T("Template")</label>
                 <select name="templateId" class="form-select" required>
+                    <optgroup label="القوالب الجاهزة">
                     @foreach (var kv in templates)
                     {
                         <option value="@kv.Key">@kv.Value.Name</option>
+                    }
+                    </optgroup>
+                    @if (Model.SavedTemplates.Count > 0)
+                    {
+                        <optgroup label="رسائلي المحفوظة">
+                        @foreach (var item in Model.SavedTemplates)
+                        {
+                            <option value="saved:@item.Id">@item.Name</option>
+                        }
+                        </optgroup>
                     }
                 </select>
             </div>
@@ -52,3 +67,89 @@
         <button class="btn btn-brand mt-3">@Loc.T("Generate_Message")</button>
     </form>
 </div>
+
+<hr class="my-4" />
+<section class="bg-white rounded shadow-sm p-3">
+    <h4 class="mb-2">رسائلي المحفوظة</h4>
+    <p class="text-muted small">احفظ رسائلك المتكررة واستخدمها في أي وقت. القوالب خاصة بهذه العمارة فقط.</p>
+    <div class="alert alert-light border small">
+        المتغيرات المتاحة: <code>{owner}</code> اسم الساكن،
+        <code>{building}</code> العمارة،
+        <code>{apt}</code> رقم الشقة،
+        <code>{floor}</code> الدور،
+        <code>{phone}</code> الهاتف،
+        <code>{month}</code> الشهر،
+        <code>{payment_info}</code> بيانات الدفع،
+        <code>{amount}</code> المبلغ،
+        <code>{note}</code> البيان،
+        <code>{share}</code> نصيب الشقة،
+        <code>{login_url}</code> رابط الدخول.
+    </div>
+
+    <form method="post" asp-action="SaveTemplate" id="savedTemplateForm" class="row g-2 mb-3">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" id="savedTemplateId" />
+        <div class="col-md-4">
+            <label class="form-label">اسم الرسالة</label>
+            <input class="form-control" name="name" id="savedTemplateName" maxlength="100" required placeholder="مثال: تنبيه موعد اجتماع السكان" />
+        </div>
+        <div class="col-12">
+            <label class="form-label">نص الرسالة</label>
+            <textarea class="form-control" name="message" id="savedTemplateMessage" rows="5" maxlength="4000" required placeholder="اكتب نص الرسالة هنا..."></textarea>
+        </div>
+        <div class="col-12 d-flex gap-2">
+            <button class="btn btn-success" type="submit">حفظ الرسالة</button>
+            <button class="btn btn-outline-secondary" type="button" id="newSavedTemplate">قالب جديد</button>
+        </div>
+    </form>
+
+    @if (Model.SavedTemplates.Count == 0)
+    {
+        <div class="text-muted">لا توجد رسائل محفوظة بعد.</div>
+    }
+    else
+    {
+        <div class="list-group">
+        @foreach (var item in Model.SavedTemplates)
+        {
+            <div class="list-group-item d-flex flex-wrap align-items-center gap-2">
+                <div class="flex-grow-1">
+                    <div class="fw-bold">@item.Name</div>
+                    <div class="small text-muted text-truncate" style="max-width:650px">@item.Message</div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-primary edit-saved-template"
+                        data-id="@item.Id" data-name="@item.Name" data-message="@item.Message">تعديل</button>
+                <form method="post" asp-action="DeleteTemplate" onsubmit="return confirm('حذف الرسالة المحفوظة؟');">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@item.Id" />
+                    <button class="btn btn-sm btn-outline-danger">حذف</button>
+                </form>
+            </div>
+        }
+        </div>
+    }
+</section>
+
+@section Scripts {
+<script>
+(() => {
+    const id = document.getElementById('savedTemplateId');
+    const name = document.getElementById('savedTemplateName');
+    const message = document.getElementById('savedTemplateMessage');
+    document.querySelectorAll('.edit-saved-template').forEach(button => {
+        button.addEventListener('click', () => {
+            id.value = button.dataset.id || '';
+            name.value = button.dataset.name || '';
+            message.value = button.dataset.message || '';
+            name.focus();
+        });
+    });
+    document.getElementById('newSavedTemplate')?.addEventListener('click', () => {
+        id.value = '';
+        name.value = '';
+        message.value = '';
+        name.focus();
+    });
+})();
+</script>
+}
