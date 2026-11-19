@@ -1,5 +1,6 @@
 namespace BuildingManagementMvc.Data.Entities;
 
+/// <summary>Represents a normalized notification message shared with one or more recipients.</summary>
 public sealed class NotificationMessageEntity
 {
     public Guid MessageId { get; set; }
@@ -14,6 +15,7 @@ public sealed class NotificationMessageEntity
     public ICollection<NotificationRecipientEntity> Recipients { get; set; } = new List<NotificationRecipientEntity>();
 }
 
+/// <summary>Represents a message delivery target within a building or apartment.</summary>
 public sealed class NotificationRecipientEntity
 {
     public Guid RecipientId { get; set; }
@@ -26,6 +28,7 @@ public sealed class NotificationRecipientEntity
     public NotificationReadStateEntity? ReadState { get; set; }
 }
 
+/// <summary>Records an individual provider delivery attempt for a notification recipient.</summary>
 public sealed class NotificationDeliveryEntity
 {
     public Guid DeliveryId { get; set; }
@@ -39,6 +42,7 @@ public sealed class NotificationDeliveryEntity
     public string? SafeErrorCode { get; set; }
 }
 
+/// <summary>Stores read and dismissal timestamps for a notification recipient.</summary>
 public sealed class NotificationReadStateEntity
 {
     public Guid ReadStateId { get; set; }
@@ -48,6 +52,7 @@ public sealed class NotificationReadStateEntity
     public NotificationRecipientEntity? Recipient { get; set; }
 }
 
+/// <summary>Stores a subject's channel-specific notification preference.</summary>
 public sealed class NotificationPreferenceEntity
 {
     public Guid PreferenceId { get; set; }
