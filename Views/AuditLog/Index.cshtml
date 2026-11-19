@@ -57,7 +57,11 @@
     </header>
 
     <nav class="observability-nav" aria-label="Observability sections">
-        <a asp-controller="ApplicationLogs" asp-action="Index"><i class="bi bi-terminal"></i><span>Application Logs</span><small>Runtime events</small></a>
+        @if ((User.IsInRole("admin") || User.IsInRole("superadmin")) &&
+             User.HasClaim("perm", BuildingManagementMvc.Models.AdminPermissions.ViewApplicationLogs))
+        {
+            <a asp-controller="ApplicationLogs" asp-action="Index"><i class="bi bi-terminal"></i><span>Application Logs</span><small>Runtime events</small></a>
+        }
         <a class="active" asp-controller="AuditLog" asp-action="Index"><i class="bi bi-shield-check"></i><span>Audit Trail</span><small>Business activity</small></a>
     </nav>
 
