@@ -7,6 +7,7 @@ using Xunit;
 
 namespace BuildingManagement.Tests;
 
+[Collection("SuperAdmin configuration")]
 public sealed class IdentityAccountAuthenticationServiceTests
 {
     [Fact]
