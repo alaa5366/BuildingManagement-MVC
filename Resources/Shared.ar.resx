@@ -4726,4 +4726,8 @@
   <data name="Backup_Collection_maintenanceAssignments" xml:space="preserve"><value>تكليفات الصيانة</value></data>
   <data name="Backup_Collection_maintenanceComments" xml:space="preserve"><value>تعليقات الصيانة</value></data>
   <data name="Backup_Collection_maintenanceStatusEvents" xml:space="preserve"><value>سجل حالات الصيانة</value></data>
+  <data name="Backup_Collection_pollVotingPolicies" xml:space="preserve"><value>سياسات التصويت</value></data>
+  <data name="Backup_Collection_pollEligibility" xml:space="preserve"><value>أهلية التصويت</value></data>
+  <data name="Backup_Collection_pollBallots" xml:space="preserve"><value>أصوات الاقتراع المجهولة</value></data>
+  <data name="Backup_Collection_pollLifecycleEvents" xml:space="preserve"><value>أحداث دورة حياة الاستطلاع</value></data>
 </root>
