@@ -16,7 +16,7 @@ public class ExpensesServiceTests
 
     private static Building CreateBuilding()
     {
-        return new Building { Name = "Test" };
+        return new Building { Name = "Test", ExpenseCategories = [new FinancialCategory { Id = "cat1" }, new FinancialCategory { Id = "cat2" }] };
     }
 
     // ================================================================
@@ -41,7 +41,8 @@ public class ExpensesServiceTests
     public void AddExpense_NullDate_UsesToday()
     {
         var b = CreateBuilding();
-        var expense = _service.AddExpense(b, "cat1", null!, 500, null, "2025-01");
+        var month = WalletService.CurrentMonthKey();
+        var expense = _service.AddExpense(b, "cat1", null!, 500, null, month);
         Assert.NotNull(expense.Date);
         Assert.NotEmpty(expense.Date);
         Assert.Matches(@"\d{4}-\d{2}-\d{2}", expense.Date);
@@ -51,7 +52,8 @@ public class ExpensesServiceTests
     public void AddExpense_EmptyDate_UsesToday()
     {
         var b = CreateBuilding();
-        var expense = _service.AddExpense(b, "cat1", "", 500, null, "2025-01");
+        var month = WalletService.CurrentMonthKey();
+        var expense = _service.AddExpense(b, "cat1", "", 500, null, month);
         Assert.NotNull(expense.Date);
         Assert.NotEmpty(expense.Date);
     }
@@ -178,7 +180,7 @@ public class RevenuesServiceTests
 
     private static Building CreateBuilding()
     {
-        return new Building { Name = "Test" };
+        return new Building { Name = "Test", RevenueCategories = [new FinancialCategory { Id = "cat1" }, new FinancialCategory { Id = "cat2" }] };
     }
 
     // ================================================================
@@ -203,7 +205,8 @@ public class RevenuesServiceTests
     public void AddRevenue_NullDate_UsesToday()
     {
         var b = CreateBuilding();
-        var revenue = _service.AddRevenue(b, "cat1", null!, 500, null, "2025-01");
+        var month = WalletService.CurrentMonthKey();
+        var revenue = _service.AddRevenue(b, "cat1", null!, 500, null, month);
         Assert.NotNull(revenue.Date);
         Assert.Matches(@"\d{4}-\d{2}-\d{2}", revenue.Date);
     }
@@ -212,7 +215,8 @@ public class RevenuesServiceTests
     public void AddRevenue_NullNote_StoresEmpty()
     {
         var b = CreateBuilding();
-        var revenue = _service.AddRevenue(b, "cat1", "", 500, null, "2025-01");
+        var month = WalletService.CurrentMonthKey();
+        var revenue = _service.AddRevenue(b, "cat1", "", 500, null, month);
         Assert.Equal("", revenue.Note);
     }
 
