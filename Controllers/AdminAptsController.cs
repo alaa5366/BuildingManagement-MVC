@@ -130,6 +130,9 @@ public class AdminAptsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> GenerateRecoveryQr(string aptId)
     {
+        if (User.HasClaim("impersonated", "true"))
+            return Forbid();
+
         var apt = await _targetQr.GetApartmentAsync(
             BuildingId, aptId, requireActive: true, HttpContext.RequestAborted);
         if (apt is null) return NotFound();
