@@ -32,6 +32,7 @@ public class QrController : Controller
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
 
+    /// <summary>Displays the current records and associated management actions.</summary>
     [HttpGet]
     public async Task<IActionResult> Index()
     {
@@ -39,6 +40,7 @@ public class QrController : Controller
         return model is null ? NotFound() : View(model);
     }
 
+    /// <summary>Handles the ApartmentBadge operation.</summary>
     [HttpGet]
     public async Task<IActionResult> ApartmentBadge(string aptId)
     {
@@ -54,6 +56,7 @@ public class QrController : Controller
             $"QR-{apartment.BuildingNumber}-apt-{apartment.ApartmentNumber}.png");
     }
 
+    /// <summary>Handles the GenerateAccessLink operation.</summary>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> GenerateAccessLink(string aptId, int minutes, bool oneTime)
     {
