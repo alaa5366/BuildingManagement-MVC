@@ -1,25 +1,19 @@
-@* =============================================================================
-   View:        Qr/AccessLinkResult
-   Rendered by: QrController.AccessLinkResult
-   Model:       none
-   Purpose:     Access link result page.
-   ============================================================================= *@
 @{
     ViewData["Title"] = Loc.T("Temporary_Login_Link");
-    var apt = (Apartment)ViewBag.Apt;
-    var building = (Building)ViewBag.Building;
     DateTime expiresAt = ViewBag.ExpiresAt;
     string link = ViewBag.Link;
+    int apartmentNumber = (int)ViewBag.ApartmentNumber;
+    string buildingName = (string)ViewBag.BuildingName;
 }
 
 <div class="col-md-6">
     <h3 class="mb-3">@Loc.T("A_Temporary_Login_Link_Was_Created")</h3>
     <div class="bg-white rounded shadow-sm p-4">
-        <p>@Loc.T("Apt")<strong>@apt.Number</strong> — @building.Name</p>
+        <p>@Loc.T("Apt")<strong>@apartmentNumber</strong> — @buildingName</p>
         <p class="text-muted small">@Loc.T("Valid_Until_N", expiresAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm"))</p>
         <div class="input-group mb-3">
             <input type="text" class="form-control" value="@link" readonly id="linkBox" />
-            <button class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('linkBox').value)">@Loc.T("Copy_2")</button>
+            <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(document.getElementById('linkBox').value)">@Loc.T("Copy_2")</button>
         </div>
         <a asp-action="Index" class="btn btn-link">@Loc.T("Back_To_All_Codes")</a>
     </div>
