@@ -45,6 +45,53 @@ public sealed class TargetWalletReadService
         return new TargetWalletSubmissionContext(periodId.Value, currencyCode.ToUpperInvariant());
     }
 
+
+    public async Task<IReadOnlyList<TargetPendingDeposit>> GetPendingForBuildingAsync(
+        string buildingId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(buildingId) || buildingId.Length > 64)
+            throw new ArgumentException("A valid building scope is required.", nameof(buildingId));
+
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        var rows = await (
+            from deposit in db.PaymentDeposits.AsNoTracking()
+            join period in db.FinancialPeriods.AsNoTracking()
+                on deposit.PeriodId equals period.PeriodId
+            join apartment in db.Apartments.AsNoTracking()
+                on new { deposit.BuildingId, deposit.ApartmentId }
+                equals new { apartment.BuildingId, ApartmentId = apartment.Id }
+            where deposit.BuildingId == buildingId &&
+                deposit.Status == PaymentDepositStatus.Pending &&
+                period.BuildingId == buildingId
+            orderby deposit.SubmittedAtUtc descending, deposit.PaymentDepositId descending
+            select new
+            {
+                deposit.PaymentDepositId,
+                deposit.ApartmentId,
+                deposit.Amount,
+                deposit.CurrencyCode,
+                deposit.Note,
+                deposit.ReceiptMetadataJson,
+                deposit.SubmittedAtUtc,
+                period.PeriodKey,
+                apartment.Number,
+                apartment.Label
+            }).ToListAsync(cancellationToken);
+
+        return rows.Select(row => new TargetPendingDeposit(
+            row.PaymentDepositId,
+            row.ApartmentId,
+            row.Number,
+            row.Label,
+            row.Amount,
+            row.CurrencyCode,
+            row.Note ?? "",
+            DeserializeReceipt(row.ReceiptMetadataJson),
+            row.SubmittedAtUtc,
+            row.PeriodKey)).ToList();
+    }
+
     public async Task<TargetWalletSnapshot> GetApartmentAsync(
         string buildingId,
         string apartmentId,
@@ -246,3 +293,15 @@ public sealed record TargetWalletSnapshot(
     IReadOnlyList<Deposit> PendingDeposits);
 
 public sealed record TargetWalletSubmissionContext(Guid PeriodId, string CurrencyCode);
+
+public sealed record TargetPendingDeposit(
+    Guid PaymentDepositId,
+    string ApartmentId,
+    int ApartmentNumber,
+    string ApartmentLabel,
+    decimal Amount,
+    string CurrencyCode,
+    string Note,
+    ReceiptData? Receipt,
+    DateTime SubmittedAtUtc,
+    string PeriodKey);
