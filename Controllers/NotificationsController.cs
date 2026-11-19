@@ -7,6 +7,7 @@ using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
 
+/// <summary>NotificationsController coordinates the corresponding application controller actions.</summary>
 [Authorize(Roles = "admin,resident")]
 public class NotificationsController : Controller
 {
