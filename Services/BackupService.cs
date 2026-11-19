@@ -74,7 +74,11 @@ public class BackupService
         ["maintenanceRequests"] = Loc.T("Backup_Collection_maintenanceRequests"),
         ["maintenanceAssignments"] = Loc.T("Backup_Collection_maintenanceAssignments"),
         ["maintenanceComments"] = Loc.T("Backup_Collection_maintenanceComments"),
-        ["maintenanceStatusEvents"] = Loc.T("Backup_Collection_maintenanceStatusEvents")
+        ["maintenanceStatusEvents"] = Loc.T("Backup_Collection_maintenanceStatusEvents"),
+        ["pollVotingPolicies"] = Loc.T("Backup_Collection_pollVotingPolicies"),
+        ["pollEligibility"] = Loc.T("Backup_Collection_pollEligibility"),
+        ["pollBallots"] = Loc.T("Backup_Collection_pollBallots"),
+        ["pollLifecycleEvents"] = Loc.T("Backup_Collection_pollLifecycleEvents")
     };
 
     /// <summary>
@@ -168,6 +172,10 @@ public class BackupService
                     "maintenanceAssignments" => await db.MaintenanceAssignments.CountAsync(),
                     "maintenanceComments" => await db.MaintenanceComments.CountAsync(),
                     "maintenanceStatusEvents" => await db.MaintenanceStatusEvents.CountAsync(),
+                    "pollVotingPolicies" => await db.PollVotingPolicies.CountAsync(),
+                    "pollEligibility" => await db.PollEligibility.CountAsync(),
+                    "pollBallots" => await db.PollBallots.CountAsync(),
+                    "pollLifecycleEvents" => await db.PollLifecycleEvents.CountAsync(),
                     _ => 0
                 };
             }
@@ -452,6 +460,22 @@ By: {userId}
                 foreach (var statusEvent in await db.MaintenanceStatusEvents.AsNoTracking().ToListAsync())
                     result.Add(ToDict(statusEvent.StatusEventId.ToString("D"), statusEvent));
                 break;
+            case "pollVotingPolicies":
+                foreach (var policy in await db.PollVotingPolicies.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(policy.PolicyId.ToString("D"), policy));
+                break;
+            case "pollEligibility":
+                foreach (var eligibility in await db.PollEligibility.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(eligibility.EligibilityId.ToString("D"), eligibility));
+                break;
+            case "pollBallots":
+                foreach (var ballot in await db.PollBallots.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(ballot.BallotId.ToString("D"), ballot));
+                break;
+            case "pollLifecycleEvents":
+                foreach (var lifecycleEvent in await db.PollLifecycleEvents.AsNoTracking().ToListAsync())
+                    result.Add(ToDict(lifecycleEvent.EventId.ToString("D"), lifecycleEvent));
+                break;
         }
 
         return result;
@@ -592,7 +616,11 @@ By: {userId}
             "maintenanceRequests",
             "maintenanceAssignments",
             "maintenanceComments",
-            "maintenanceStatusEvents"
+            "maintenanceStatusEvents",
+            "pollVotingPolicies",
+            "pollEligibility",
+            "pollBallots",
+            "pollLifecycleEvents"
         };
 
         // نحتفظ فقط بالجداول اللي المستخدم اختارها
@@ -1043,6 +1071,54 @@ By: {userId}
                         entity.Id = optionId;
                         ApplyOrAdd(db, db.PollOptions, existing, entity);
                     }
+                    return true;
+                }
+
+            case "pollVotingPolicies":
+                {
+                    if (!Guid.TryParse(id, out var policyId)) return false;
+                    var existing = await db.PollVotingPolicies.FirstOrDefaultAsync(x => x.PolicyId == policyId);
+                    // Versioned policy snapshots are immutable: never overwrite an existing version.
+                    if (existing != null) return false;
+                    var entity = JsonSerializer.Deserialize<Data.Entities.PollVotingPolicyEntity>(data.GetRawText(), RestoreJsonOptions);
+                    if (entity == null || entity.PolicyId != policyId) return false;
+                    db.PollVotingPolicies.Add(entity);
+                    return true;
+                }
+
+            case "pollEligibility":
+                {
+                    if (!Guid.TryParse(id, out var eligibilityId)) return false;
+                    var existing = await db.PollEligibility.FirstOrDefaultAsync(x => x.EligibilityId == eligibilityId);
+                    // Do not roll back consumed/revoked entitlements by overwriting live eligibility state.
+                    if (existing != null) return false;
+                    var entity = JsonSerializer.Deserialize<Data.Entities.PollEligibilityEntity>(data.GetRawText(), RestoreJsonOptions);
+                    if (entity == null || entity.EligibilityId != eligibilityId) return false;
+                    db.PollEligibility.Add(entity);
+                    return true;
+                }
+
+            case "pollBallots":
+                {
+                    if (!Guid.TryParse(id, out var ballotId)) return false;
+                    var existing = await db.PollBallots.FirstOrDefaultAsync(x => x.BallotId == ballotId);
+                    // Ballots are immutable records; preserve any ballot already present in the target.
+                    if (existing != null) return false;
+                    var entity = JsonSerializer.Deserialize<Data.Entities.PollBallotEntity>(data.GetRawText(), RestoreJsonOptions);
+                    if (entity == null || entity.BallotId != ballotId) return false;
+                    db.PollBallots.Add(entity);
+                    return true;
+                }
+
+            case "pollLifecycleEvents":
+                {
+                    if (!Guid.TryParse(id, out var eventId)) return false;
+                    var existing = await db.PollLifecycleEvents.FirstOrDefaultAsync(x => x.EventId == eventId);
+                    // Lifecycle history is append-only; restore only missing events.
+                    if (existing != null) return false;
+                    var entity = JsonSerializer.Deserialize<Data.Entities.PollLifecycleEventEntity>(data.GetRawText(), RestoreJsonOptions);
+                    if (entity == null || entity.EventId != eventId) return false;
+                    db.PollLifecycleEvents.Add(entity);
                     return true;
                 }
 
