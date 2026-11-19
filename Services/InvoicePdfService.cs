@@ -1,3 +1,4 @@
+using System.Globalization;
 using BuildingManagementMvc.Models;
 using QRCoder;
 using QuestPDF.Fluent;
@@ -75,12 +76,12 @@ public class InvoicePdfService
                         c.Item().PaddingTop(6).Row(r =>
                         {
                             r.RelativeItem().Text(Loc.T("Previous_Balance"));
-                            r.RelativeItem().AlignRight().Text(Loc.T("N_EGP_2", d.PreviousBalance));
+                            r.RelativeItem().AlignRight().Text(FormatCurrency(d.PreviousBalance, d.CurrencyCode));
                         });
                         c.Item().Row(r =>
                         {
                             r.RelativeItem().Text(Loc.T("Deposits_This_Month"));
-                            r.RelativeItem().AlignRight().Text((d.MonthDeposits >= 0 ? Loc.T("N_EGP_3", d.MonthDeposits) : Loc.T("N_EGP_2", d.MonthDeposits))).FontColor(d.MonthDeposits >= 0 ? "#2E7D5B" : "#A0432A");
+                            r.RelativeItem().AlignRight().Text(FormatMovement(d.MonthDeposits, d.CurrencyCode)).FontColor(d.MonthDeposits >= 0 ? "#2E7D5B" : "#A0432A");
                         });
 
                         // Show both charges and reversal credits when non-zero.
@@ -89,7 +90,7 @@ public class InvoicePdfService
                             c.Item().Row(r =>
                             {
                                 r.RelativeItem().Text(Loc.T("Monthly_Fee_Due"));
-                                r.RelativeItem().AlignRight().Text((d.MonthFee >= 0 ? Loc.T("N_EGP_4", d.MonthFee) : Loc.T("N_EGP_2", d.MonthFee))).FontColor(d.MonthFee >= 0 ? "#A0432A" : "#2E7D5B");
+                                r.RelativeItem().AlignRight().Text(FormatMovement(d.MonthFee, d.CurrencyCode, invertSign: true)).FontColor(d.MonthFee >= 0 ? "#A0432A" : "#2E7D5B");
                             });
                         }
 
@@ -98,18 +99,18 @@ public class InvoicePdfService
                             c.Item().Row(r =>
                             {
                                 r.RelativeItem().Text(Loc.T("Your_Share_Of_Revenues"));
-                                r.RelativeItem().AlignRight().Text((d.MonthRevenuesShare >= 0 ? Loc.T("N_EGP_3", d.MonthRevenuesShare) : Loc.T("N_EGP_2", d.MonthRevenuesShare))).FontColor(d.MonthRevenuesShare >= 0 ? "#1F6B2E" : "#A0432A");
+                                r.RelativeItem().AlignRight().Text(FormatMovement(d.MonthRevenuesShare, d.CurrencyCode)).FontColor(d.MonthRevenuesShare >= 0 ? "#1F6B2E" : "#A0432A");
                             });
                         }
                         c.Item().Row(r =>
                         {
                             r.RelativeItem().Text(Loc.T("Your_Share_Of_Expenses"));
-                            r.RelativeItem().AlignRight().Text((d.MonthExpensesShare >= 0 ? Loc.T("N_EGP_4", d.MonthExpensesShare) : Loc.T("N_EGP_2", d.MonthExpensesShare))).FontColor(d.MonthExpensesShare >= 0 ? "#A0432A" : "#2E7D5B");
+                            r.RelativeItem().AlignRight().Text(FormatMovement(d.MonthExpensesShare, d.CurrencyCode, invertSign: true)).FontColor(d.MonthExpensesShare >= 0 ? "#A0432A" : "#2E7D5B");
                         });
                         c.Item().PaddingTop(6).BorderTop(1).BorderColor("#B9853B").PaddingTop(6).Row(r =>
                         {
                             r.RelativeItem().Text(Loc.T("Current_Balance_2")).Bold();
-                            r.RelativeItem().AlignRight().Text(Loc.T("N_EGP_2", d.Balance)).Bold().FontSize(14)
+                            r.RelativeItem().AlignRight().Text(FormatCurrency(d.Balance, d.CurrencyCode)).Bold().FontSize(14)
                                 .FontColor(d.Balance >= 0 ? "#2E7D5B" : "#A0432A");
                         });
                     });
@@ -141,9 +142,9 @@ public class InvoicePdfService
                                 foreach (var cs in d.CategoryShares)
                                 {
                                     table.Cell().Text(cs.Name).FontSize(9);
-                                    table.Cell().Text($"{cs.Total:0.##}").FontSize(9);
+                                    table.Cell().Text(FormatCurrency(cs.Total, d.CurrencyCode)).FontSize(9);
                                     table.Cell().Text(cs.AptCount.ToString()).FontSize(9);
-                                    table.Cell().Text($"{cs.Share:0.##}").FontSize(9).FontColor(cs.Share >= 0 ? "#A0432A" : "#2E7D5B");
+                                    table.Cell().Text(FormatCurrency(cs.Share, d.CurrencyCode)).FontSize(9).FontColor(cs.Share >= 0 ? "#A0432A" : "#2E7D5B");
                                 }
                             });
                         });
@@ -183,4 +184,14 @@ public class InvoicePdfService
 
         return document.GeneratePdf();
     }
+    private static string FormatCurrency(decimal amount, string currencyCode) =>
+        $"{amount.ToString("0.##", CultureInfo.CurrentCulture)} {currencyCode}";
+
+    private static string FormatMovement(decimal amount, string currencyCode, bool invertSign = false)
+    {
+        var movement = invertSign ? -amount : amount;
+        var sign = movement > 0m ? "+" : movement < 0m ? "-" : "";
+        return $"{sign}{Math.Abs(movement).ToString("0.##", CultureInfo.CurrentCulture)} {currencyCode}";
+    }
+
 }
