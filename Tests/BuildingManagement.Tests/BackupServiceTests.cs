@@ -138,12 +138,37 @@ public class BackupServiceTests
     }
 
     [Fact]
-    public async Task CreateBackupAsync_UnknownTable_SkipsIt()
+    public async Task CreateBackupAsync_UnknownTable_RejectsRequestWithoutCreatingArchive()
     {
-        var (_, result) = await _service.CreateBackupAsync(new() { "unknown_table" }, "admin");
+        var (bytes, result) = await _service.CreateBackupAsync(new() { "buildings", "unknown_table" }, "admin");
+
+        Assert.False(result.Success);
+        Assert.Empty(bytes);
+        Assert.Empty(result.Collections);
+        Assert.Contains(result.Errors, error => error.Contains("unknown_table", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task CreateBackupAsync_DuplicateCollections_AreWrittenOnlyOnce()
+    {
+        var (bytes, result) = await _service.CreateBackupAsync(
+            new() { "buildings", "buildings" }, "admin");
 
         Assert.True(result.Success);
-        Assert.Equal(0, result.TotalCollections);
+        Assert.Equal(1, result.TotalCollections);
+        using var stream = new MemoryStream(bytes);
+        using var zip = new System.IO.Compression.ZipArchive(stream);
+        Assert.Single(zip.Entries.Where(entry => entry.Name == "buildings.json"));
+    }
+
+    [Fact]
+    public async Task CreateBackupAsync_EmptySelection_IsRejected()
+    {
+        var (bytes, result) = await _service.CreateBackupAsync(new(), "admin");
+
+        Assert.False(result.Success);
+        Assert.Empty(bytes);
+        Assert.NotEmpty(result.Errors);
     }
 
     // ================================================================
