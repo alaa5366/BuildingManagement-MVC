@@ -90,12 +90,26 @@ public class AuditLogger : IAuditLogger
             userId, from, to, action, severity, correlationId);
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 200);
+        var countTimer = Stopwatch.StartNew();
         var total = await query.CountAsync();
+        countTimer.Stop();
         var totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
         page = Math.Min(page, totalPages);
+        var pageTimer = Stopwatch.StartNew();
         var rows = await query.OrderByDescending(x => x.OccurredAtUtc)
             .ThenByDescending(x => x.AuditEventId)
             .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        pageTimer.Stop();
+        if (countTimer.ElapsedMilliseconds >= 250 || pageTimer.ElapsedMilliseconds >= 250)
+        {
+            _log.LogWarning(
+                "AUDIT PERF: Count={CountMs}ms PageQuery={PageMs}ms Rows={RowCount} Total={Total}",
+                countTimer.ElapsedMilliseconds,
+                pageTimer.ElapsedMilliseconds,
+                rows.Count,
+                total);
+        }
+
         return new BuildingManagementMvc.Models.PagedResult<AuditEntryDoc>
         {
             Items = rows.Select(ToDoc).ToList(),

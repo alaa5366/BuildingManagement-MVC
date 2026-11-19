@@ -7,8 +7,10 @@
 
     const HEARTBEAT_INTERVAL = 30 * 1000; // 30 ثانية
     const HEARTBEAT_ENDPOINT = '/Presence/Heartbeat';
+    const SLOW_HEARTBEAT_MS = 100;
 
     async function sendHeartbeat() {
+        const startedAt = performance.now();
         try {
             const response = await fetch(HEARTBEAT_ENDPOINT, {
                 method: 'POST',
@@ -17,6 +19,14 @@
                 },
                 credentials: 'same-origin'
             });
+
+            const elapsedMs = performance.now() - startedAt;
+            if (elapsedMs >= SLOW_HEARTBEAT_MS) {
+                console.warn('[Presence PERF] Slow heartbeat request', {
+                    elapsedMs: Math.round(elapsedMs),
+                    status: response.status
+                });
+            }
 
             if (response.ok) {
                 // console.log('[Presence] Heartbeat OK');

@@ -33,16 +33,34 @@ public class PresenceService
 
         var now = DateTime.UtcNow;
         var docId = BuildDocId(uid, aptId, buildingId);
+        var totalTimer = Stopwatch.StartNew();
+        long contextCreateMs = 0;
+        long transactionBeginMs = 0;
+        long sessionQueryMs = 0;
+        long saveCommitMs = 0;
+        var stage = "ContextCreate";
         try
         {
+            var stageTimer = Stopwatch.StartNew();
             await using var db = await _sqlFactory.CreateDbContextAsync();
+            stageTimer.Stop();
+            contextCreateMs = stageTimer.ElapsedMilliseconds;
+
+            stage = "BeginTransaction";
+            stageTimer.Restart();
             await using var tx = await db.Database.BeginTransactionAsync(
                 System.Data.IsolationLevel.Serializable);
+            stageTimer.Stop();
+            transactionBeginMs = stageTimer.ElapsedMilliseconds;
 
+            stage = "FindSession";
+            stageTimer.Restart();
             var session = await db.PresenceSessions
                 .Where(x => x.LegacyUid == docId && x.Status == 0)
                 .OrderByDescending(x => x.LastSeenAtUtc)
                 .FirstOrDefaultAsync();
+            stageTimer.Stop();
+            sessionQueryMs = stageTimer.ElapsedMilliseconds;
 
             if (session == null)
             {
@@ -74,12 +92,37 @@ public class PresenceService
                 Signal = 0
             });
 
+            stage = "SaveAndCommit";
+            stageTimer.Restart();
             await db.SaveChangesAsync();
             await tx.CommitAsync();
+            stageTimer.Stop();
+            saveCommitMs = stageTimer.ElapsedMilliseconds;
+
+            totalTimer.Stop();
+            if (totalTimer.ElapsedMilliseconds >= 100)
+            {
+                _logger.LogWarning(
+                    "[Presence PERF] Heartbeat service slow: Total={TotalMs}ms ContextCreate={ContextMs}ms TransactionBegin={TransactionMs}ms SessionQuery={QueryMs}ms SaveCommit={SaveCommitMs}ms",
+                    totalTimer.ElapsedMilliseconds,
+                    contextCreateMs,
+                    transactionBeginMs,
+                    sessionQueryMs,
+                    saveCommitMs);
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "[Presence] Heartbeat failed for {DocId}", docId);
+            totalTimer.Stop();
+            _logger.LogWarning(
+                ex,
+                "[Presence] Heartbeat failed at {Stage}; Total={TotalMs}ms ContextCreate={ContextMs}ms TransactionBegin={TransactionMs}ms SessionQuery={QueryMs}ms SaveCommit={SaveCommitMs}ms",
+                stage,
+                totalTimer.ElapsedMilliseconds,
+                contextCreateMs,
+                transactionBeginMs,
+                sessionQueryMs,
+                saveCommitMs);
         }
     }
 
