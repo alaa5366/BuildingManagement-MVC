@@ -33,61 +33,6 @@ public sealed class TargetWalletReadService
             .SingleOrDefaultAsync(cancellationToken);
         if (periodId is null) return null;
 
-        var buildingName = await db.Buildings.AsNoTracking()
-            .Where(building => building.Id == buildingId)
-            .Select(building => building.Name)
-            .SingleOrDefaultAsync(cancellationToken);
-        if (buildingName is null)
-            throw new InvalidOperationException("The requested building does not exist in the target store.");
-
-        var floors = await db.Floors.AsNoTracking()
-            .Where(floor => floor.BuildingId == buildingId)
-            .OrderBy(floor => floor.SortOrder)
-            .Select(floor => new Floor
-            {
-                Id = floor.Id,
-                Label = floor.Label,
-                Order = floor.SortOrder
-            }).ToListAsync(cancellationToken);
-
-        var apartmentRows = await db.Apartments.AsNoTracking()
-            .Where(apartment => apartment.BuildingId == buildingId)
-            .OrderBy(apartment => apartment.Number)
-            .Select(apartment => new
-            {
-                apartment.Id,
-                apartment.FloorId,
-                apartment.Number,
-                apartment.Owner,
-                apartment.Phone,
-                apartment.MonthlyFee,
-                apartment.IsClosed,
-                apartment.Label,
-                apartment.Email,
-                apartment.Notes,
-                apartment.OpenDate,
-                apartment.CloseDate,
-                apartment.IsDisabled,
-                apartment.DisabledReason
-            }).ToListAsync(cancellationToken);
-        var apartments = apartmentRows.Select(apartment => new Apartment
-        {
-            Id = apartment.Id,
-            FloorId = apartment.FloorId,
-            Number = apartment.Number,
-            Owner = apartment.Owner,
-            Phone = apartment.Phone,
-            MonthlyFee = apartment.MonthlyFee,
-            Closed = apartment.IsClosed,
-            Label = apartment.Label,
-            Email = apartment.Email,
-            Notes = apartment.Notes,
-            OpenDate = apartment.OpenDate?.ToString("yyyy-MM-dd") ?? "",
-            CloseDate = apartment.CloseDate?.ToString("yyyy-MM-dd"),
-            Disabled = apartment.IsDisabled,
-            DisabledReason = apartment.DisabledReason
-        }).ToList();
-
         var currencyCode = await db.BuildingSettings.AsNoTracking()
             .Where(settings => settings.BuildingId == buildingId)
             .Select(settings => settings.Currency)
@@ -345,13 +290,7 @@ public sealed class TargetWalletReadService
             Balance: currentEntries.Sum(e => e.SignedAmount),
             TotalWallet: balances.Values.Sum());
 
-        return new TargetWalletAdminSnapshot(
-            buildingName,
-            floors,
-            apartments,
-            balances,
-            pending,
-            totals);
+        return new TargetWalletAdminSnapshot(balances, pending, totals);
     }
 
     public async Task<TargetWalletSnapshot> GetApartmentAsync(
@@ -577,9 +516,6 @@ public sealed record TargetPendingDeposit(
 public sealed record TargetPendingWalletDeposit(Deposit Deposit, string ApartmentId, string MonthKey);
 
 public sealed record TargetWalletAdminSnapshot(
-    string BuildingName,
-    IReadOnlyList<Floor> Floors,
-    IReadOnlyList<Apartment> Apartments,
     IReadOnlyDictionary<string, decimal> Balances,
     IReadOnlyList<TargetPendingWalletDeposit> PendingDeposits,
     (decimal Collected, decimal Expenses, decimal Revenues, int OpenCount, int ClosedCount, decimal Balance, decimal TotalWallet) Totals);
