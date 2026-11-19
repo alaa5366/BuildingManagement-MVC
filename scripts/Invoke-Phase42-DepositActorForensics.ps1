@@ -83,7 +83,17 @@ FROM DistinctActors a
 ORDER BY a.ActorField,a.ActorValue;
 "@
 
-    $phoneDigits = [regex]::Replace($Phone, '\D', '')
+    function Normalize-EgyptPhone([string]$Value) {
+        $digits = [regex]::Replace([string]$Value, '\D', '')
+        if ($digits.StartsWith('0020') -and $digits.Length -eq 14) {
+            return '0' + $digits.Substring(4)
+        }
+        if ($digits.StartsWith('20') -and $digits.Length -eq 12) {
+            return '0' + $digits.Substring(2)
+        }
+        return $digits
+    }
+    $phoneDigits = Normalize-EgyptPhone $Phone
     if ([string]::IsNullOrWhiteSpace($phoneDigits)) { throw 'Phone must contain at least one digit.' }
 
     Log "Phone search (digits only): $phoneDigits"
@@ -105,8 +115,8 @@ FROM dbo.Users u
 ORDER BY u.Uid;
 "@
     $phoneMatches = @($users | Where-Object {
-        $phone = [regex]::Replace([string]$_.Phone, '\D', '')
-        $whatsapp = [regex]::Replace([string]$_.Whatsapp, '\D', '')
+        $phone = Normalize-EgyptPhone ([string]$_.Phone)
+        $whatsapp = Normalize-EgyptPhone ([string]$_.Whatsapp)
         $phone -eq $phoneDigits -or $whatsapp -eq $phoneDigits
     })
     Log "Users matching supplied phone in Phone/Whatsapp: $($phoneMatches.Count)"
