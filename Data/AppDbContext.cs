@@ -195,6 +195,11 @@ public class AppDbContext : DbContext
     public DbSet<PresenceSessionEntity> PresenceSessions => Set<PresenceSessionEntity>();
     public DbSet<PresenceHeartbeatEntity> PresenceHeartbeats => Set<PresenceHeartbeatEntity>();
     public DbSet<AuditEventEntity> AuditEvents => Set<AuditEventEntity>();
+    public DbSet<NotificationMessageEntity> NotificationMessages => Set<NotificationMessageEntity>();
+    public DbSet<NotificationRecipientEntity> NotificationRecipients => Set<NotificationRecipientEntity>();
+    public DbSet<NotificationDeliveryEntity> NotificationDeliveries => Set<NotificationDeliveryEntity>();
+    public DbSet<NotificationReadStateEntity> NotificationReadStates => Set<NotificationReadStateEntity>();
+    public DbSet<NotificationPreferenceEntity> NotificationPreferences => Set<NotificationPreferenceEntity>();
 
     // Canonical identity and authorization foundation (Gate A).
     public DbSet<PersonEntity> Persons => Set<PersonEntity>();
