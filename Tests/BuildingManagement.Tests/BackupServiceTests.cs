@@ -508,6 +508,62 @@ public class BackupServiceTests
     }
 
     [Fact]
+    public async Task PollBallotRestore_DoesNotOverwriteOrDuplicateAnExistingOpaqueToken()
+    {
+        var originalBallotId = Guid.NewGuid();
+        var existingBallotId = Guid.NewGuid();
+        var tokenHash = new byte[] { 31, 32, 33, 34, 35 };
+        var now = DateTime.UtcNow;
+
+        _db.PollBallots.Add(new PollBallotEntity
+        {
+            BallotId = originalBallotId,
+            BuildingId = "poll-restore-collision-building",
+            PollId = "POLL-COLLISION",
+            BallotTokenHash = tokenHash,
+            ChoicePayload = new byte[] { 1, 2, 3 },
+            CastAtUtc = now,
+            BallotVersion = 1
+        });
+        await _db.SaveChangesAsync();
+
+        var selected = new List<string> { "pollBallots" };
+        var (bytes, backup) = await _service.CreateBackupAsync(selected, "poll-ballot-collision-test");
+        Assert.True(backup.Success, string.Join("; ", backup.Errors));
+
+        _db.PollBallots.Remove(await _db.PollBallots.SingleAsync(x => x.BallotId == originalBallotId));
+        _db.PollBallots.Add(new PollBallotEntity
+        {
+            BallotId = existingBallotId,
+            BuildingId = "poll-restore-collision-building",
+            PollId = "POLL-COLLISION",
+            BallotTokenHash = tokenHash,
+            ChoicePayload = new byte[] { 9, 9, 9 },
+            CastAtUtc = now.AddMinutes(1),
+            BallotVersion = 2
+        });
+        await _db.SaveChangesAsync();
+
+        using var upload = new MemoryStream(bytes);
+        var preview = await _service.PreviewRestoreAsync(upload, "poll-ballot-collision.zip", "poll-ballot-collision-test");
+        Assert.True(preview.Success, string.Join("; ", preview.Errors));
+
+        var restored = await _service.RestoreSessionAsync(
+            preview.RestoreSessionId!, selected, overwrite: true, "poll-ballot-collision-test");
+
+        Assert.True(restored.Success, string.Join("; ", restored.Errors));
+        Assert.Equal(1, restored.Skipped);
+        Assert.Equal(0, restored.Restored);
+
+        _db.ChangeTracker.Clear();
+        Assert.False(await _db.PollBallots.AnyAsync(x => x.BallotId == originalBallotId));
+        var preserved = await _db.PollBallots.SingleAsync(x => x.BallotId == existingBallotId);
+        Assert.Equal(new byte[] { 9, 9, 9 }, preserved.ChoicePayload);
+        Assert.Equal(2, preserved.BallotVersion);
+        Assert.False(File.Exists(preview.TempFilePath));
+    }
+
+    [Fact]
     public void GetKnownCollections_ReturnsAllKnownTables()
     {
         var collections = BackupService.GetKnownCollections();
