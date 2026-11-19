@@ -201,3 +201,12 @@ These phases are additive migration steps, not application cutover. Legacy table
 - Single-use tokens retain MaxUses=1; legacy multi-use semantics are represented by the maximum integer bound.
 - QrUsages are aggregate counters, not event-level records. They are retained as provenance evidence and are not expanded into invented QrCapabilityUses events.
 - Device fingerprints are intentionally excluded from migration output. Source QR rows remain unchanged.
+
+
+| 17 | Polls / PollOptions / PollVotes | PollLifecycleEvents + LegacyDataMigrationMap evidence | Schema and idempotent backfill published; apply pending |
+
+### Poll migration rules (Phase 17)
+- Poll creation is recorded as a lifecycle event with EventType 0 explicitly marked unclassified; the original question, description, deadline, and closed state are preserved in event metadata.
+- PollOptions and PollVotes are fingerprinted and retained as legacy evidence in LegacyDataMigrationMap; no option or vote rows are discarded.
+- Legacy votes remain apartment-attributed. They are not converted into person-attributed votes or anonymous PollBallots because the source semantics do not establish either identity model.
+- No eligibility credentials, delegation, ballot tokens, or synthetic individual vote events are created. Source tables remain unchanged.
