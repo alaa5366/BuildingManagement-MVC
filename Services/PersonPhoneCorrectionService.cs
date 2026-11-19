@@ -20,6 +20,7 @@ public sealed class PersonPhoneCorrectionService
         => value.Length is >= 9 and <= 16 && value[0] == '+' &&
            value.Skip(1).All(char.IsDigit) && value[1] != '0';
 
+    /// <summary>Submits a resident phone correction request.</summary>
     public async Task<bool> SubmitAsync(string previousPhone, string requestedPhone, string buildingId, string apartmentId)
     {
         var oldPhone = AuthHelpers.NormalizePhone(previousPhone);
@@ -56,6 +57,7 @@ public sealed class PersonPhoneCorrectionService
         return true;
     }
 
+    /// <summary>Retrieves pending resident phone correction requests.</summary>
     public async Task<List<PhoneCorrectionQueueItem>> GetPendingAsync(string? buildingId, bool superAdmin)
     {
         await using var db = await _factory.CreateDbContextAsync();
@@ -73,6 +75,7 @@ public sealed class PersonPhoneCorrectionService
         return await query.Take(200).ToListAsync();
     }
 
+    /// <summary>Reviews and resolves a resident phone correction request.</summary>
     public async Task<bool> ReviewAsync(Guid requestId, string reviewerUserId, bool approve, string reason, bool superAdmin, string? buildingId)
     {
         if (string.IsNullOrWhiteSpace(reviewerUserId) || reviewerUserId.Length > 128 || string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500) return false;
