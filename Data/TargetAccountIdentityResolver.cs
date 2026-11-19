@@ -5,8 +5,8 @@ using Microsoft.EntityFrameworkCore;
 namespace BuildingManagementMvc.Data;
 
 /// <summary>
-/// Resolves the authenticated legacy web principal to one canonical target account.
-/// Resolution fails closed unless the email maps to exactly one active target account.
+/// Resolves a target account from its immutable subject claim, with a unique-email fallback for legacy cookies.
+/// Resolution fails closed for inactive, archived, missing, or ambiguous identities.
 /// </summary>
 public sealed class TargetAccountIdentityResolver
 {
