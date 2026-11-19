@@ -204,6 +204,9 @@
                     @if (Has("system.logs.view"))
                     {
                         <li><a asp-controller="ApplicationLogs" asp-action="Index" class="nav-link @Active("ApplicationLogs")"><i class="bi bi-terminal"></i><span>@Loc.T("Application_Logs")</span></a></li>
+                    }
+                    @if (Has("system.health.view"))
+                    {
                         <li><a asp-controller="SystemHealth" asp-action="Index" class="nav-link @Active("SystemHealth")"><i class="bi bi-heart-pulse"></i><span>System Health</span></a></li>
                     }
                     <li><a asp-controller="Settings" asp-action="Index" class="nav-link @Active("Settings")"><i class="bi bi-sliders"></i><span>@Loc.T("Nav_Settings")</span></a></li>
@@ -255,8 +258,14 @@
                 <div class="nav-section-title"><i class="bi bi-activity me-1"></i> @Loc.T("Log_Center_Eyebrow")</div>
                 <ul class="nav-list">
                     <li><a asp-controller="AuditLog" asp-action="Index" class="nav-link @Active("AuditLog")"><i class="bi bi-shield-check"></i><span>@Loc.T("Nav_AuditLog")</span></a></li>
-                    <li><a asp-controller="ApplicationLogs" asp-action="Index" class="nav-link @Active("ApplicationLogs")"><i class="bi bi-terminal"></i><span>@Loc.T("Application_Logs")</span></a></li>
-                    <li><a asp-controller="SystemHealth" asp-action="Index" class="nav-link @Active("SystemHealth")"><i class="bi bi-heart-pulse"></i><span>System Health</span></a></li>
+                    @if (User.HasClaim("perm", "system.logs.view"))
+                    {
+                        <li><a asp-controller="ApplicationLogs" asp-action="Index" class="nav-link @Active("ApplicationLogs")"><i class="bi bi-terminal"></i><span>@Loc.T("Application_Logs")</span></a></li>
+                    }
+                    @if (User.HasClaim("perm", "system.health.view"))
+                    {
+                        <li><a asp-controller="SystemHealth" asp-action="Index" class="nav-link @Active("SystemHealth")"><i class="bi bi-heart-pulse"></i><span>System Health</span></a></li>
+                    }
                     <li><a asp-controller="Settings" asp-action="Index" class="nav-link @Active("Settings")"><i class="bi bi-sliders"></i><span>@Loc.T("Nav_Settings")</span></a></li>
                 </ul>
             </div>
@@ -264,7 +273,10 @@
             <div class="nav-section">
                 <div class="nav-section-title">@Loc.T("Advanced_Tools")</div>
                 <ul class="nav-list">
-                    <li><a asp-controller="Backup" asp-action="Index" class="nav-link @Active("Backup")"><i class="bi bi-cloud-arrow-down"></i><span>@Loc.T("Nav_Backup")</span></a></li>
+                    @if (User.HasClaim("perm", "backup.view"))
+                    {
+                        <li><a asp-controller="Backup" asp-action="Index" class="nav-link @Active("Backup")"><i class="bi bi-cloud-arrow-down"></i><span>@Loc.T("Nav_Backup")</span></a></li>
+                    }
                 </ul>
             </div>
         }

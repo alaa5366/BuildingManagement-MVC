@@ -52,6 +52,42 @@ public sealed class AuthorizationEvaluatorTests
         Assert.False(catalog.TryGet(permissionKey, out _));
     }
 
+    [Theory]
+    [InlineData("backup.view")]
+    [InlineData("backup.create")]
+    [InlineData("backup.download")]
+    [InlineData("backup.restore")]
+    [InlineData("backup.delete")]
+    [InlineData("system.health.view")]
+    public void PermissionCatalog_SeparatesPrivilegedOperationsAndRequiresFreshMfa(string permissionKey)
+    {
+        var catalog = new DefaultAuthorizationPermissionCatalog();
+
+        Assert.True(catalog.TryGet(permissionKey, out var definition));
+        Assert.True(definition.RequiresFreshMfa);
+        Assert.Equal(TimeSpan.FromMinutes(10), definition.MfaFreshnessWindow);
+        Assert.Equal(new HashSet<AuthorizationScopeType> { AuthorizationScopeType.System }, definition.AllowedGrantScopes);
+    }
+
+    [Fact]
+    public void PermissionCatalog_RejectsLegacyBroadBackupPermission()
+    {
+        var catalog = new DefaultAuthorizationPermissionCatalog();
+
+        Assert.False(catalog.TryGet("backup.manage", out _));
+    }
+
+    [Fact]
+    public void PermissionCatalog_ApplicationLogsAndSystemHealthAreIndependentPermissions()
+    {
+        var catalog = new DefaultAuthorizationPermissionCatalog();
+
+        Assert.True(catalog.TryGet("system.logs.view", out var logs));
+        Assert.True(catalog.TryGet("system.health.view", out var health));
+        Assert.NotSame(logs, health);
+        Assert.NotEqual(logs.Key, health.Key);
+    }
+
     [Fact]
     public void PermissionCatalog_ApartmentAccessManagementRequiresMfaAtBuildingOrApartmentScope()
     {

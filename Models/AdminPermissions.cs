@@ -110,6 +110,8 @@ public static class AdminPermissions
     public const string ViewAuditLogOwn = "audit.view.own";
     /// <summary>Permission to view sanitized application log events.</summary>
     public const string ViewApplicationLogs = "system.logs.view";
+    /// <summary>Permission to view system health and readiness diagnostics.</summary>
+    public const string ViewSystemHealth = "system.health.view";
 
     // ============================================================
     // الإعدادات
@@ -138,6 +140,16 @@ public static class AdminPermissions
     /// The manage backup constant.
     /// </summary>
     public const string ManageBackup = "backup.manage";
+    /// <summary>Permission to view backup inventory and history.</summary>
+    public const string ViewBackups = "backup.view";
+    /// <summary>Permission to create and schedule backups.</summary>
+    public const string CreateBackup = "backup.create";
+    /// <summary>Permission to download backup artifacts and exports.</summary>
+    public const string DownloadBackup = "backup.download";
+    /// <summary>Permission to preview and execute database restores.</summary>
+    public const string RestoreBackup = "backup.restore";
+    /// <summary>Permission to delete backup artifacts.</summary>
+    public const string DeleteBackup = "backup.delete";
     /// <summary>
     /// The manage sync constant.
     /// </summary>
@@ -160,9 +172,9 @@ public static class AdminPermissions
         ManageDvrs, ViewCameras, ManageCameras,
         ManageWallet, ManageExpenses, ManageRevenues, ManageCategories, ViewReports,
         ManagePolls, ManageMaintenance, SendNotifications, UseWhatsApp,
-        ViewAuditLogAll, ViewAuditLogBuilding, ViewAuditLogOwn, ViewApplicationLogs,
+        ViewAuditLogAll, ViewAuditLogBuilding, ViewAuditLogOwn, ViewApplicationLogs, ViewSystemHealth,
         ManageSettingsGlobal, ManageSettingsBuilding, ManageSettingsOwn,
-        ManageTools, ManageBackup, ManageSync, SecretAccess
+        ManageTools, ViewSystemHealth, ManageSync, SecretAccess
     };
 
     /// <summary>
@@ -255,6 +267,12 @@ public static class AdminPermissions
         ViewAuditLogBuilding => Loc.T("Building_Log"),
         ViewAuditLogOwn => Loc.T("My_Log_Only"),
         ViewApplicationLogs => Loc.T("View_Application_Logs"),
+        ViewSystemHealth => "View System Health",
+        ViewBackups => "View Backup Inventory",
+        CreateBackup => "Create / Schedule Backup",
+        DownloadBackup => "Download Backup",
+        RestoreBackup => "Restore Backup",
+        DeleteBackup => "Delete Backup",
         ManageSettingsGlobal => Loc.T("Global_Settings"),
         ManageSettingsBuilding => Loc.T("Building_Settings"),
         ManageSettingsOwn => Loc.T("My_Settings"),
@@ -289,11 +307,12 @@ public static class AdminPermissions
             => PermissionCategory.Financial,
         ManagePolls or ManageMaintenance or SendNotifications or UseWhatsApp
             => PermissionCategory.Services,
-        ViewAuditLogAll or ViewAuditLogBuilding or ViewAuditLogOwn or ViewApplicationLogs
+        ViewAuditLogAll or ViewAuditLogBuilding or ViewAuditLogOwn or ViewApplicationLogs or ViewSystemHealth
+            or ViewBackups or CreateBackup or DownloadBackup or RestoreBackup or DeleteBackup
             => PermissionCategory.System,
         ManageSettingsGlobal or ManageSettingsBuilding or ManageSettingsOwn
             => PermissionCategory.System,
-        ManageTools or ManageBackup or ManageSync or SecretAccess
+        ManageTools or ViewSystemHealth or ManageSync or SecretAccess
             => PermissionCategory.System,
         _ => PermissionCategory.System
     };
@@ -333,6 +352,12 @@ public static class AdminPermissions
         SendNotifications => Loc.T("Send_In_App_Notifications_To_Admins"),
         UseWhatsApp => Loc.T("Generate_WhatsApp_Messages_From_Templates_Open"),
         ViewApplicationLogs => Loc.T("View_Application_Logs_Desc"),
+        ViewSystemHealth => "View system health checks, process metrics, and readiness diagnostics.",
+        ViewBackups => "View backup inventory, scheduled-backup status, and backup history.",
+        CreateBackup => "Create on-demand backups and manage scheduled backup execution.",
+        DownloadBackup => "Download protected backup artifacts and data exports.",
+        RestoreBackup => "Preview and execute a restore from a validated backup archive.",
+        DeleteBackup => "Delete a stored backup artifact.",
         ViewAuditLogAll => Loc.T("View_All_Records_Across_All_Buildings"),
         ViewAuditLogBuilding => Loc.T("View_The_Building_Log_Only_Admin"),
         ViewAuditLogOwn => Loc.T("View_My_Apartment_S_Log_Only"),
@@ -392,8 +417,9 @@ public static class AdminPermissions
         ManageSettingsOwn => ("SettingsService", "SettingsController", "Own"),
         ManageTools => ("MigrationService, DbMaintenanceService", "ToolsController",
             "Index, RunMigration, RunMaintenance, MigrateCarryOver, CleanupData"),
-        ManageBackup => ("BackupService, ScheduledBackupService", "BackupController",
-            "Index, Create, PreviewRestore, ExecuteRestore, UploadExcel, ConfirmImport, ExportAllJson"),
+        ViewBackups or CreateBackup or DownloadBackup or RestoreBackup or DeleteBackup
+            => ("BackupService, ScheduledBackupService", "BackupController",
+                "Index, Create, PreviewRestore, ExecuteRestore, SaveScheduledSettings, RunNow, DownloadBackup, DeleteBackup"),
         ManageSync => ("DbSyncService, ReverseSyncService", "SyncController",
             "Index, SyncAdmins, SyncResidents, SyncPasswords, SyncSql, ReverseSync"),
         SecretAccess => ("ImpersonationService", "ImpersonationController",

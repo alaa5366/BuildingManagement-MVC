@@ -10,7 +10,7 @@ namespace BuildingManagementMvc.Controllers;
 
 /// <summary>Displays a safe, administrator-only view of registered system health checks.</summary>
 [Authorize(Roles = "superadmin,admin")]
-[AdminPermission(AdminPermissions.ViewApplicationLogs)]
+[AdminPermission(AdminPermissions.ViewSystemHealth)]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public sealed class SystemHealthController : Controller
 {

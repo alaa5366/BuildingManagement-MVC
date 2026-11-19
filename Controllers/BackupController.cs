@@ -22,7 +22,7 @@ namespace BuildingManagementMvc.Controllers;
 /// Access: requires one of the roles <c>superadmin</c>.
 /// </remarks>
 [Authorize(Roles = "superadmin")]
-[HasPermission(AdminPermissions.ManageBackup)]
+
 public class BackupController : Controller
 {
     private readonly BuildingsService _buildings;
@@ -70,6 +70,7 @@ public class BackupController : Controller
     /// HTTP GET.
     /// </remarks>
     [HttpGet]
+    [AdminPermission(AdminPermissions.ViewBackups)]
     public async Task<IActionResult> Index(string? tab = "overview")
     {
         var buildings = await _buildings.GetSummariesWithCountsAsync();
@@ -107,6 +108,7 @@ public class BackupController : Controller
     /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [AdminPermission(AdminPermissions.CreateBackup)]
     public async Task<IActionResult> Create(List<string> collections)
     {
         if (collections == null || collections.Count == 0)
@@ -142,6 +144,7 @@ public class BackupController : Controller
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(100 * 1024 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = 100 * 1024 * 1024)]
+    [AdminPermission(AdminPermissions.RestoreBackup)]
     public async Task<IActionResult> PreviewRestore(IFormFile backupFile)
     {
         if (backupFile == null || backupFile.Length == 0)
@@ -185,6 +188,7 @@ public class BackupController : Controller
     /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [AdminPermission(AdminPermissions.RestoreBackup)]
     public async Task<IActionResult> ExecuteRestore(
         string restoreSessionId, List<string> collections, bool overwrite)
     {
@@ -218,6 +222,7 @@ public class BackupController : Controller
     /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [AdminPermission(AdminPermissions.CreateBackup)]
     public async Task<IActionResult> SaveScheduledSettings(ScheduledBackupSettings model)
     {
         if (model.Enabled && (model.Collections == null || model.Collections.Count == 0))
@@ -248,6 +253,7 @@ public class BackupController : Controller
     /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [AdminPermission(AdminPermissions.CreateBackup)]
     public async Task<IActionResult> RunNow()
     {
         try
@@ -270,6 +276,7 @@ public class BackupController : Controller
     /// HTTP GET.
     /// </remarks>
     [HttpGet]
+    [AdminPermission(AdminPermissions.DownloadBackup)]
     public async Task<IActionResult> DownloadBackup(string fileName)
     {
         var path = await _scheduled.GetBackupFilePathAsync(_env, fileName);
@@ -288,6 +295,7 @@ public class BackupController : Controller
     /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [AdminPermission(AdminPermissions.DeleteBackup)]
     public async Task<IActionResult> DeleteBackup(string fileName)
     {
         var ok = await _scheduled.DeleteBackupAsync(_env, fileName, CurrentUserId);
@@ -305,6 +313,7 @@ public class BackupController : Controller
     /// HTTP GET.
     /// </remarks>
     [HttpGet]
+    [AdminPermission(AdminPermissions.ManageBuildings)]
     public IActionResult DownloadTemplate()
     {
         try
@@ -334,6 +343,7 @@ public class BackupController : Controller
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(10 * 1024 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = 10 * 1024 * 1024)]
+    [AdminPermission(AdminPermissions.ManageBuildings)]
     public async Task<IActionResult> UploadExcel(IFormFile excelFile)
     {
         if (excelFile == null || excelFile.Length == 0)
@@ -381,6 +391,7 @@ public class BackupController : Controller
     /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [AdminPermission(AdminPermissions.ManageBuildings)]
     public async Task<IActionResult> ConfirmImport(
     [FromServices] ExcelImportService importService)
     {
@@ -506,6 +517,7 @@ public class BackupController : Controller
     /// HTTP GET.
     /// </remarks>
     [HttpGet]
+    [AdminPermission(AdminPermissions.DownloadBackup)]
     public async Task<IActionResult> ExportJson(string id)
     {
         var building = await _buildings.GetByIdAsync(id);
@@ -529,6 +541,7 @@ public class BackupController : Controller
     /// HTTP GET.
     /// </remarks>
     [HttpGet]
+    [AdminPermission(AdminPermissions.DownloadBackup)]
     public async Task<IActionResult> ExportAllJson()
     {
         var buildings = await _buildings.GetSummariesWithCountsAsync();
@@ -559,6 +572,7 @@ public class BackupController : Controller
     /// HTTP GET.
     /// </remarks>
     [HttpGet]
+    [AdminPermission(AdminPermissions.DownloadBackup)]
     public async Task<IActionResult> ExportExcel(string id)
     {
         var building = await _buildings.GetByIdAsync(id);
