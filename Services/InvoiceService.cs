@@ -1,3 +1,4 @@
+using System.Data;
 using System.Text.Json;
 using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
@@ -42,6 +43,22 @@ public sealed class InvoiceService
             System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _))
             throw new ArgumentException("Month must use yyyy-MM format.", nameof(monthKey));
 
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken)
+            : null;
+
+        // The unique building/apartment/month key plus a serializable transaction
+        // guarantees one issued invoice even when two print requests arrive together.
+        var existingIssue = await db.InvoiceIssues.SingleOrDefaultAsync(issue =>
+            issue.BuildingId == buildingId && issue.ApartmentId == apartmentId &&
+            issue.MonthKey == monthKey, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(existingIssue?.SnapshotJson))
+        {
+            var storedInvoice = JsonSerializer.Deserialize<InvoiceData>(existingIssue.SnapshotJson);
+            return storedInvoice ?? throw new InvalidOperationException("Stored invoice snapshot is invalid.");
+        }
+
         var building = await _wallet.GetBuildingShellAsync(buildingId, apartmentId, cancellationToken);
         var apartment = building?.Apartments.SingleOrDefault(item => item.Id == apartmentId);
         if (building is null || apartment is null) return null;
@@ -53,10 +70,12 @@ public sealed class InvoiceService
         var previousSnapshot = await _wallet.GetApartmentAsync(buildingId, apartmentId, null, previousMonth,
             cancellationToken: cancellationToken);
 
-        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
-        var periodIds = await db.FinancialPeriods.AsNoTracking()
-            .Where(period => period.BuildingId == buildingId && period.PeriodKey == monthKey)
-            .Select(period => period.PeriodId).ToListAsync(cancellationToken);
+        var period = await db.FinancialPeriods.AsNoTracking()
+            .Where(item => item.BuildingId == buildingId && item.PeriodKey == monthKey)
+            .Select(item => new { item.PeriodId, item.TimeZoneId })
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw new InvalidOperationException("The invoice financial period does not exist.");
+        var periodIds = new[] { period.PeriodId };
 
         var currencyCode = await db.BuildingSettings.AsNoTracking()
             .Where(settings => settings.BuildingId == buildingId)
@@ -200,24 +219,8 @@ public sealed class InvoiceService
             });
         }
 
-        var random = Random.Shared.Next(0, 1000).ToString("D3");
-        var invoiceNo = $"INV-{building.BuildingNumber}-{apartment.Number}-{monthKey.Replace("-", "")}-{random}";
-        var issueDate = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
-        var qrPayload = JsonSerializer.Serialize(new
+        var data = new InvoiceData
         {
-            v = "3.2",
-            no = invoiceNo,
-            bld = building.BuildingNumber,
-            apt = apartment.Number,
-            month = monthKey,
-            currency = currencyCode,
-            balance = currentSnapshot.Balance
-        });
-
-        return new InvoiceData
-        {
-            InvoiceNo = invoiceNo,
-            IssueDate = issueDate,
             Building = building,
             Apt = apartment,
             Floor = floor,
@@ -231,9 +234,91 @@ public sealed class InvoiceService
             CategoryShares = categoryShares.OrderBy(item => item.Name, StringComparer.CurrentCulture).ToList(),
             Payment = building.PaymentInfo,
             MonthKey = monthKey,
-            MonthLabelText = ReportsService.MonthLabel(monthKey),
-            QrPayload = qrPayload
+            MonthLabelText = ReportsService.MonthLabel(monthKey)
         };
+
+        var issuedAtUtc = existingIssue?.IssuedAtUtc ?? DateTime.UtcNow;
+        var timeZone = TimeZoneInfo.FindSystemTimeZoneById(period.TimeZoneId);
+        var issuedAtLocal = TimeZoneInfo.ConvertTimeFromUtc(
+            DateTime.SpecifyKind(issuedAtUtc, DateTimeKind.Utc), timeZone);
+
+        if (existingIssue is null)
+        {
+            existingIssue = new InvoiceIssueEntity
+            {
+                BuildingId = buildingId,
+                ApartmentId = apartmentId,
+                MonthKey = monthKey,
+                IssuedAtUtc = issuedAtUtc
+            };
+            db.InvoiceIssues.Add(existingIssue);
+            await db.SaveChangesAsync(cancellationToken); // SQL identity allocates the stable serial.
+        }
+
+        data.InvoiceNo = $"INV-{building.BuildingNumber}-{apartment.Number}-{issuedAtLocal:yyyyMMdd}-{existingIssue.InvoiceSerial:D6}";
+        data.IssueDate = issuedAtLocal.ToString("dd/MM/yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+        data.QrPayload = JsonSerializer.Serialize(new
+        {
+            v = "3.3",
+            no = data.InvoiceNo,
+            bld = building.BuildingNumber,
+            apt = apartment.Number,
+            month = monthKey,
+            issuedAt = issuedAtLocal.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+            serial = existingIssue.InvoiceSerial,
+            currency = currencyCode,
+            balance = currentSnapshot.Balance
+        });
+
+        // Persist only the data printed on the invoice, not the full building aggregate.
+        var immutableSnapshot = new InvoiceData
+        {
+            InvoiceNo = data.InvoiceNo,
+            IssueDate = data.IssueDate,
+            Building = new Building
+            {
+                Id = building.Id,
+                BuildingNumber = building.BuildingNumber,
+                Name = building.Name
+            },
+            Apt = new Apartment
+            {
+                Id = apartment.Id,
+                Number = apartment.Number,
+                Owner = apartment.Owner,
+                Phone = apartment.Phone
+            },
+            Floor = floor is null ? null : new Floor { Id = floor.Id, Label = floor.Label },
+            CurrencyCode = data.CurrencyCode,
+            Balance = data.Balance,
+            PreviousBalance = data.PreviousBalance,
+            MonthDeposits = data.MonthDeposits,
+            MonthExpensesShare = data.MonthExpensesShare,
+            MonthRevenuesShare = data.MonthRevenuesShare,
+            MonthFee = data.MonthFee,
+            CategoryShares = data.CategoryShares.Select(item => new CategoryShare
+            {
+                Name = item.Name, ColorHex = item.ColorHex, Total = item.Total,
+                AptCount = item.AptCount, Share = item.Share
+            }).ToList(),
+            Payment = new PaymentInfo
+            {
+                Label = data.Payment.Label,
+                AccountNumber = data.Payment.AccountNumber,
+                Phone = data.Payment.Phone,
+                Notes = data.Payment.Notes
+            },
+            MonthKey = data.MonthKey,
+            MonthLabelText = data.MonthLabelText,
+            QrPayload = data.QrPayload
+        };
+        existingIssue.InvoiceNo = data.InvoiceNo;
+        existingIssue.SnapshotJson = JsonSerializer.Serialize(immutableSnapshot);
+        await db.SaveChangesAsync(cancellationToken);
+        if (transaction is not null)
+            await transaction.CommitAsync(cancellationToken);
+
+        return data;
     }
 
     private static string NormalizeSourceKey(string? key) =>
