@@ -235,25 +235,7 @@ public static class BuildingSqlMapper
                     AddedToExpense = m.AddedToExpense,
                     AddedToExpenseAt = FormatTs(m.AddedToExpenseAt)
                 }).ToList(),
-            AuditLog = audit.Select(a =>
-            {
-                using var payload = JsonDocument.Parse(string.IsNullOrWhiteSpace(a.SafeDetailsJson) ? "{}" : a.SafeDetailsJson);
-                var root = payload.RootElement;
-                return new AuditLogEntry
-                {
-                    Id = a.ResourceReference!,
-                    Ts = FormatTs(a.OccurredAtUtc) ?? "",
-                    Action = a.EventType,
-                    Label = JsonString(root, "label"),
-                    Actor = a.ActorReference ?? "",
-                    ActorRole = JsonString(root, "actorRole"),
-                    Details = JsonString(root, "details"),
-                    Month = JsonString(root, "month"),
-                    BuildingNumber = JsonNullableString(root, "buildingNumber"),
-                    AptNumber = JsonNullableInt(root, "aptNumber"),
-                    Severity = AuditSeverity(a.Outcome)
-                };
-            }).ToList()
+            AuditLog = audit.Select(MapAggregateAuditEvent).ToList()
         };
 
         // ---- الشهور ----
@@ -790,6 +772,28 @@ public static class BuildingSqlMapper
         await tx.CommitAsync(ct);
         src.RowVersion = be.RowVersion.ToArray();
         return warn;
+    }
+
+    internal static AuditLogEntry MapAggregateAuditEvent(AuditEventEntity auditEvent)
+    {
+        ArgumentNullException.ThrowIfNull(auditEvent);
+        using var payload = JsonDocument.Parse(
+            string.IsNullOrWhiteSpace(auditEvent.SafeDetailsJson) ? "{}" : auditEvent.SafeDetailsJson);
+        var root = payload.RootElement;
+        return new AuditLogEntry
+        {
+            Id = auditEvent.ResourceReference ?? auditEvent.AuditEventId.ToString("N"),
+            Ts = FormatTs(auditEvent.OccurredAtUtc) ?? "",
+            Action = auditEvent.EventType,
+            Label = JsonString(root, "label"),
+            Actor = auditEvent.ActorReference ?? "",
+            ActorRole = JsonString(root, "actorRole"),
+            Details = JsonString(root, "details"),
+            Month = JsonString(root, "month"),
+            BuildingNumber = JsonNullableString(root, "buildingNumber"),
+            AptNumber = JsonNullableInt(root, "aptNumber"),
+            Severity = AuditSeverity(auditEvent.Outcome)
+        };
     }
 
     private static string? JsonString(JsonElement root, string name)
