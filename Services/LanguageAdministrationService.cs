@@ -33,6 +33,7 @@ public sealed class LanguageAdministrationService
     public LanguageAdministrationService(IDbContextFactory<AppDbContext> factory, IAuditLogger audit, ILogger<LanguageAdministrationService> logger)
     { _factory = factory; _audit = audit; _logger = logger; }
 
+    /// <summary>Gets the active localization runtime configuration.</summary>
     public static string? GetRuntime(string key, string culture)
     {
         lock (CacheLock)
@@ -54,10 +55,13 @@ public sealed class LanguageAdministrationService
         }
     }
 
+    /// <summary>Gets the configured default culture.</summary>
     public static string GetDefaultCulture() { lock (CacheLock) return _defaultCulture; }
 
+    /// <summary>Gets the text direction for the active culture.</summary>
     public static string GetDirection(string culture) { lock (CacheLock) { if (_directions.TryGetValue(culture,out var direction)) return direction; try { var parent=CultureInfo.GetCultureInfo(culture).Parent.Name; if (_directions.TryGetValue(parent,out direction)) return direction; } catch (CultureNotFoundException) { } return culture.StartsWith("ar", StringComparison.OrdinalIgnoreCase) ? "RTL" : "LTR"; } }
 
+    /// <summary>Reloads the localization runtime configuration.</summary>
     public async Task RefreshRuntimeAsync(CancellationToken ct = default)
     {
         try
@@ -78,6 +82,7 @@ public sealed class LanguageAdministrationService
         catch (Exception ex) { _logger.LogWarning(ex, "Dynamic localization cache refresh failed; resource files remain the fallback."); }
     }
 
+    /// <summary>Retrieves a paginated view of localization languages or translations.</summary>
     public async Task<LanguageAdminPage> GetPageAsync(string? culture, string? category, string? search, bool missingOnly, CancellationToken ct)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
@@ -96,6 +101,7 @@ public sealed class LanguageAdministrationService
         return new(languages,groups,rows,selected,category,search,missingOnly,totalKeys,rows.Count(x=>x.IsMissing));
     }
 
+    /// <summary>Creates or updates a localization language.</summary>
     public async Task<(bool Success,string Message)> SaveLanguageAsync(string culture,string englishName,string nativeName,string direction,string? fallback,string? flag,bool enabled,bool isDefault,int sortOrder,string actor,CancellationToken ct)
     {
         culture = (culture ?? "").Trim();
@@ -129,6 +135,7 @@ public sealed class LanguageAdministrationService
         return false;
     }
 
+    /// <summary>Creates or updates a localized translation.</summary>
     public async Task<(bool Success,string Message)> SaveTranslationAsync(string key,string category,string sourceGroup,string? description,string culture,string value,string actor,CancellationToken ct)
     {
         key=(key??"").Trim(); culture=(culture??"").Trim();
@@ -150,6 +157,7 @@ public sealed class LanguageAdministrationService
         return (true,"تم حفظ الترجمة.");
     }
 
+    /// <summary>Scans application source files for localization keys.</summary>
     public async Task<int> ScanSourceFilesAsync(string contentRoot, string actor, CancellationToken ct)
     {
         var root = Path.GetFullPath(contentRoot);
@@ -208,6 +216,7 @@ public sealed class LanguageAdministrationService
         return discovered.Count;
     }
 
+    /// <summary>Exports localization translations as a CSV file.</summary>
     public async Task<string> ExportCsvAsync(CancellationToken ct)
     {
         await using var db=await _factory.CreateDbContextAsync(ct);
@@ -221,6 +230,7 @@ public sealed class LanguageAdministrationService
         return string.Join("\r\n",lines);
     }
 
+    /// <summary>Imports translations from a CSV file.</summary>
     public async Task<int> ImportTranslationsAsync(IReadOnlyCollection<TranslationImportRow> rows,string actor,CancellationToken ct)
     {
         var valid=rows.Where(x=>!string.IsNullOrWhiteSpace(x.Key)&&x.Key.Length<=200&&!string.IsNullOrWhiteSpace(x.Value)&&x.Value.Length<=4000).ToList();
