@@ -68,6 +68,9 @@ public sealed class TargetWalletAdjustmentWorkflowServiceTests
         var entry = await verify.LedgerEntries.SingleAsync();
         Assert.Equal(-25m, entry.SignedAmount);
         Assert.Equal("EGP", entry.CurrencyCode);
+        var sourceLink = await verify.FinancialSourceLinks.SingleAsync();
+        Assert.Equal("WalletAdjustment", sourceLink.SourceType);
+        Assert.Equal(transaction.LedgerTransactionId, sourceLink.LedgerTransactionId);
         Assert.Single(await verify.AuditEvents.Where(item => item.EventType == "WalletAdjustmentPosted").ToListAsync());
     }
 
