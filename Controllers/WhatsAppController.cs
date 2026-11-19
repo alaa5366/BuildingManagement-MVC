@@ -11,8 +11,13 @@ namespace BuildingManagementMvc.Controllers;
 public class WhatsAppController : Controller
 {
     private readonly TargetWhatsAppService _whatsApp;
+    private readonly TargetNotificationsService _notifications;
 
-    public WhatsAppController(TargetWhatsAppService whatsApp) => _whatsApp = whatsApp;
+    public WhatsAppController(TargetWhatsAppService whatsApp, TargetNotificationsService notifications)
+    {
+        _whatsApp = whatsApp;
+        _notifications = notifications;
+    }
 
     private string BuildingId => User.FindFirstValue("buildingId")!;
 
@@ -44,6 +49,17 @@ public class WhatsAppController : Controller
             var result = await _whatsApp.GenerateAsync(
                 BuildingId, aptId, templateId, extra, baseUrl, HttpContext.RequestAborted);
             if (result is null) return NotFound();
+
+            // Publish the same content to the resident's in-app inbox. WhatsApp remains
+            // a user-confirmed wa.me draft; the browser cannot truthfully confirm delivery.
+            var templateName = WhatsAppTemplateService.Templates[templateId].Name;
+            var notificationBody = result.Message.Length <= 1000
+                ? result.Message
+                : result.Message[..997] + "...";
+            await _notifications.CreateResidentNotificationAsync(
+                BuildingId, aptId, templateName, notificationBody,
+                "whatsapp-draft", "📲", HttpContext.RequestAborted);
+
             return View("Result", result);
         }
         catch (ArgumentException ex)
