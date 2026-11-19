@@ -12,6 +12,10 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>@Loc.T("Notifications_N", Model.TotalItems)</h3>
+    @if (User.IsInRole("admin"))
+    {
+        <a asp-action="Compose" class="btn btn-sm btn-primary">إرسال إشعار جديد</a>
+    }
     @if (Model.Items.Any(n => !n.Read))
     {
         <form method="post" asp-action="MarkAllRead">
