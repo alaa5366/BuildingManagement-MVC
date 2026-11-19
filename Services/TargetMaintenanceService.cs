@@ -136,14 +136,15 @@ public sealed class TargetMaintenanceService
         string buildingId, string id, CancellationToken cancellationToken = default)
     {
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
-        var now = DateTime.UtcNow;
-        var affected = await db.MaintenanceRecords
-            .Where(x => x.BuildingId == buildingId && x.Id == id && !x.AddedToExpense)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(x => x.AddedToExpense, true)
-                .SetProperty(x => x.AddedToExpenseAt, now), cancellationToken);
-        return affected == 1 || await db.MaintenanceRecords.AnyAsync(
-            x => x.BuildingId == buildingId && x.Id == id && x.AddedToExpense, cancellationToken);
+        var row = await db.MaintenanceRecords.SingleOrDefaultAsync(
+            item => item.BuildingId == buildingId && item.Id == id, cancellationToken);
+        if (row is null) return false;
+        if (row.AddedToExpense) return true;
+
+        row.AddedToExpense = true;
+        row.AddedToExpenseAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async Task<string?> GetBuildingNameAsync(
