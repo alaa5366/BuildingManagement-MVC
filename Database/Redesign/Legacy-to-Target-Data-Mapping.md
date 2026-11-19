@@ -210,3 +210,18 @@ These phases are additive migration steps, not application cutover. Legacy table
 - PollOptions and PollVotes are fingerprinted and retained as legacy evidence in LegacyDataMigrationMap; no option or vote rows are discarded.
 - Legacy votes remain apartment-attributed. They are not converted into person-attributed votes or anonymous PollBallots because the source semantics do not establish either identity model.
 - No eligibility credentials, delegation, ballot tokens, or synthetic individual vote events are created. Source tables remain unchanged.
+
+
+| 18 | Dvrs / Cameras | LegacyOperationalRecords | Schema and backfill published; apply pending |
+| 19 | UserPermissions | LegacyOperationalRecords | Schema and backfill published; apply pending |
+
+### Media inventory rules (Phase 18)
+- DVR and camera non-secret topology metadata is retained as JSON with SHA-256 fingerprints.
+- DVR usernames and encrypted password material are excluded; credentials require vault provisioning and rotation before new media access is enabled.
+- RTSP/HLS URLs are excluded because they may embed credentials.
+- No new credential references or access sessions are fabricated.
+
+### Permission evidence rules (Phase 19)
+- UserPermissions remain user-scoped legacy permission evidence, not role-level RolePermissions.
+- UID is retained only as a legacy reference; no account/person identity is inferred and no new permission is granted.
+- Permission strings are preserved verbatim; source rows remain unchanged.
