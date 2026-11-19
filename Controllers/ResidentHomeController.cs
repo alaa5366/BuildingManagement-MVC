@@ -76,7 +76,7 @@ public class ResidentHomeController : Controller
         // ============================================================
         // 1. المالية
         // ============================================================
-        var walletSnapshot = await _targetWallet.GetApartmentAsync(building.Id, apt.Id);
+        var walletSnapshot = await _targetWallet.GetApartmentAsync(building.Id, apt.Id, null, currentMonth, cancellationToken: HttpContext.RequestAborted);
         var balance = walletSnapshot.Balance;
 
         // ============================================================
@@ -106,7 +106,7 @@ public class ResidentHomeController : Controller
             .Where(t => t.Type == "revenue")
             .Sum(t => t.Amount);
 
-        var monthsCount = building.Months?.Count ?? 0;
+        var monthsCount = await _targetWallet.GetFinancialPeriodCountAsync(building.Id, HttpContext.RequestAborted);
 
         // ============================================================
         // 4. آخر 5 حركات (بدون carry_over)
