@@ -766,19 +766,30 @@ public class WalletService
         }
     }
 
-    // Allocate rounded shares while assigning any rounding remainder to the final apartment.
+    // Deterministic equal allocation using the largest-remainder method.
+    // Amounts are rounded to cents once; residual cents are assigned by immutable ApartmentId order.
+    // This guarantees conservation and makes results independent of SQL/in-memory row ordering.
     private static void DistributeExactCents(decimal total, IReadOnlyList<Apartment> apartments,
         IDictionary<string, decimal> distribution)
     {
         if (apartments.Count == 0) return;
-        var share = Math.Round(total / apartments.Count, 2, MidpointRounding.AwayFromZero);
-        decimal allocated = 0m;
-        for (var i = 0; i < apartments.Count; i++)
+
+        var ordered = apartments
+            .OrderBy(a => a.Id, StringComparer.Ordinal)
+            .ToArray();
+        var totalCents = decimal.ToInt64(Math.Round(total * 100m, 0, MidpointRounding.AwayFromZero));
+        var baseCents = Math.DivRem(totalCents, ordered.Length, out var remainderCents);
+        var residualCount = Math.Abs(remainderCents);
+        var residualSign = Math.Sign(remainderCents);
+
+        for (var i = 0; i < ordered.Length; i++)
         {
-            var amount = i == apartments.Count - 1 ? total - allocated : share;
-            distribution[apartments[i].Id] = amount;
-            allocated += amount;
+            var cents = baseCents + (i < residualCount ? residualSign : 0L);
+            distribution[ordered[i].Id] = cents / 100m;
         }
+
+        if (distribution.Values.Sum() != Math.Round(total, 2, MidpointRounding.AwayFromZero))
+            throw new InvalidOperationException("Financial allocation failed to conserve the source total.");
     }
 
 }
