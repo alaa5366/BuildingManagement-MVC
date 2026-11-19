@@ -15,7 +15,6 @@ internal static class FinanceModelConfiguration
                 t.HasCheckConstraint("CK_InvoiceIssues_MonthKey", "[MonthKey] LIKE '[0-9][0-9][0-9][0-9]-[01][0-9]' AND SUBSTRING([MonthKey],6,2) BETWEEN '01' AND '12'"));
             e.HasKey(x => x.InvoiceSerial);
             e.Property(x => x.InvoiceSerial).UseIdentityColumn();
-            e.Property(x => x.InvoiceIssueId).ValueGeneratedNever();
             e.Property(x => x.BuildingId).HasMaxLength(64).IsRequired();
             e.Property(x => x.ApartmentId).HasMaxLength(64).IsRequired();
             e.Property(x => x.MonthKey).HasColumnType("char(7)").HasMaxLength(7).IsRequired();
@@ -29,8 +28,6 @@ internal static class FinanceModelConfiguration
                 .IsUnique().HasDatabaseName("UX_InvoiceIssues_Apartment_Month");
             e.HasIndex(x => x.InvoiceNo).IsUnique()
                 .HasDatabaseName("UX_InvoiceIssues_Number").HasFilter("[InvoiceNo] IS NOT NULL");
-            e.HasIndex(x => x.InvoiceIssueId).IsUnique()
-                .HasDatabaseName("UX_InvoiceIssues_Id");
         });
 
         mb.Entity<FinancialPeriodEntity>(e =>
