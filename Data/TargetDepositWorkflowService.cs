@@ -122,7 +122,7 @@ public sealed class TargetDepositWorkflowService
             SourceKey = sourceKey
         });
         db.AuditEvents.Add(CreateAuditEvent(
-            buildingId, actorAccountId, "PaymentDepositSubmitted", id, apartmentId, now,
+            buildingId, actorAccountId, "PaymentDepositSubmitted", apartmentId, now,
             new { paymentDepositId = id, amount, currencyCode = currencyCode.ToUpperInvariant() }));
         await db.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
@@ -224,7 +224,7 @@ public sealed class TargetDepositWorkflowService
         deposit.ConfirmedAtUtc = now;
         deposit.ConfirmedByAccountId = actorAccountId;
         db.AuditEvents.Add(CreateAuditEvent(
-            deposit.BuildingId, actorAccountId, "PaymentDepositConfirmed", deposit.PaymentDepositId, deposit.ApartmentId, now,
+            deposit.BuildingId, actorAccountId, "PaymentDepositConfirmed", deposit.ApartmentId, now,
             new { paymentDepositId = deposit.PaymentDepositId, amount = deposit.Amount, currencyCode = deposit.CurrencyCode, transactionId }));
         await db.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
@@ -279,7 +279,7 @@ public sealed class TargetDepositWorkflowService
         deposit.Amount = amount;
         deposit.Note = normalizedNote;
         db.AuditEvents.Add(CreateAuditEvent(
-            deposit.BuildingId, actorAccountId, "PaymentDepositUpdated", deposit.PaymentDepositId, deposit.ApartmentId, now,
+            deposit.BuildingId, actorAccountId, "PaymentDepositUpdated", deposit.ApartmentId, now,
             new { paymentDepositId = deposit.PaymentDepositId, oldAmount, newAmount = amount, oldNote, newNote = normalizedNote, reason = reason.Trim() }));
         await db.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
@@ -395,7 +395,7 @@ public sealed class TargetDepositWorkflowService
         deposit.ReversalTransactionId = reversalId;
         deposit.ResolutionReason = reason.Trim();
         db.AuditEvents.Add(CreateAuditEvent(
-            deposit.BuildingId, actorAccountId, "PaymentDepositReversed", deposit.PaymentDepositId, deposit.ApartmentId, now,
+            deposit.BuildingId, actorAccountId, "PaymentDepositReversed", deposit.ApartmentId, now,
             new { paymentDepositId = deposit.PaymentDepositId, amount = deposit.Amount, currencyCode = deposit.CurrencyCode, reversalId, reason = reason.Trim() }));
         await db.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
@@ -493,7 +493,7 @@ public sealed class TargetDepositWorkflowService
         deposit.CancelledByAccountId = actorAccountId;
         deposit.ResolutionReason = reason.Trim();
         db.AuditEvents.Add(CreateAuditEvent(
-            deposit.BuildingId, actorAccountId, "PaymentDepositCancelled", deposit.PaymentDepositId, deposit.ApartmentId, now,
+            deposit.BuildingId, actorAccountId, "PaymentDepositCancelled", deposit.ApartmentId, now,
             new { paymentDepositId = deposit.PaymentDepositId, reason = reason.Trim() }));
         await db.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
@@ -543,7 +543,6 @@ public sealed class TargetDepositWorkflowService
         string buildingId,
         Guid actorAccountId,
         string eventType,
-        Guid depositId,
         string apartmentId,
         DateTime occurredAtUtc,
         object details) => new()
