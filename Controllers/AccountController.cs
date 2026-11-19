@@ -1,3 +1,4 @@
+using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authentication;
@@ -543,7 +544,8 @@ public class AccountController : Controller
         }
 
         if (!string.IsNullOrWhiteSpace(throttleKey)) _throttle.Reset(throttleKey);
-        return await CompleteSignInAsync(result, AcctKey(identifier));
+        await SignInCookieAsync(result);
+        return RedirectBasedOnRole(result.Role!);
     }
 
     /// <summary>Legacy route retained for compatibility; the challenge is rendered by UnifiedLogin.</summary>
@@ -1182,6 +1184,7 @@ public class AccountController : Controller
         public string? Error { get; init; }
         public QuickTokenPayload? Payload { get; init; }
         public QrApartmentInfo? Apartment { get; init; }
+        public ResidentEntity? Resident { get; init; }
     }
 
     private async Task<QuickLoginContext> ResolveQuickLoginAsync(string token, QrSecurityService qrSecurity)
