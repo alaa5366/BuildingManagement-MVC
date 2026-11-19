@@ -1,4 +1,4 @@
-﻿using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -7,77 +7,58 @@ using System.Diagnostics;
 
 namespace BuildingManagementMvc.Services;
 
-/// <summary>
-/// Persists audit entries to the database. Implementation of <see cref="IAuditLogger"/>.
-/// </summary>
+/// <summary>Persists immutable business audit events and provides bounded, indexed queries.</summary>
 public class AuditLogger : IAuditLogger
 {
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly ILogger<AuditLogger> _log;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AuditLogger"/> class.
-    /// </summary>
     public AuditLogger(IDbContextFactory<AppDbContext> sqlFactory, ILogger<AuditLogger> log)
     {
         _sqlFactory = sqlFactory;
         _log = log;
     }
 
-    /// <summary>
-    /// Logs the operation on the audit logger.
-    /// </summary>
     public async Task LogAsync(
-        string action,
-        string? buildingId = null,
-        string? apartmentId = null,
-        string? userId = null,
-        string? userRole = null,
-        object? metadata = null,
+        string action, string? buildingId = null, string? apartmentId = null,
+        string? userId = null, string? userRole = null, object? metadata = null,
         string severity = "info")
     {
         try
         {
             await using var db = await _sqlFactory.CreateDbContextAsync();
-
-            string? effectiveBuildingId = buildingId;
-            if (!string.IsNullOrWhiteSpace(buildingId))
-            {
-                var exists = await db.Buildings.AnyAsync(b => b.Id == buildingId);
-                if (!exists) effectiveBuildingId = null;
-            }
-
-            var metadataJson = SerializeMetadataWithCorrelation(metadata);
-
-            int? apartmentNumber = null;
-            if (!string.IsNullOrWhiteSpace(effectiveBuildingId) && !string.IsNullOrWhiteSpace(apartmentId))
-            {
-                apartmentNumber = await db.Apartments.AsNoTracking()
-                    .Where(a => a.BuildingId == effectiveBuildingId && a.Id == apartmentId)
-                    .Select(a => (int?)a.Number).FirstOrDefaultAsync();
-            }
+            var effectiveBuildingId = buildingId;
+            if (!string.IsNullOrWhiteSpace(buildingId) &&
+                !await db.Buildings.AnyAsync(x => x.Id == buildingId))
+                effectiveBuildingId = null;
 
             var severityValue = (severity ?? "info").Trim().ToLowerInvariant();
-            var normalizedSeverity = new[] { "info", "warning", "error", "critical" }
-                .Contains(severityValue) ? severityValue : "info";
-
-            db.AuditLog.Add(new AuditLogEntity
+            var outcome = severityValue switch
             {
-                BuildingId = effectiveBuildingId,
-                ApartmentId = apartmentNumber.HasValue ? apartmentId : null,
-                AptNumber = apartmentNumber,
-                Severity = normalizedSeverity,
-                Ts = DateTime.UtcNow,
-                Action = Cut(action, 100),
-                Label = Cut(action, 300),
-                Actor = Cut(userId ?? "", 200),
-                ActorRole = Cut(userRole ?? "", 20),
-                Details = metadataJson ?? "",
-                MonthKey = DateTime.UtcNow.ToString("yyyy-MM"),
-                SourceId = null,
-                BuildingNumber = null
-            });
+                "warning" => (byte)1,
+                "error" => (byte)2,
+                "critical" => (byte)3,
+                _ => (byte)0
+            };
 
+            var correlationId = Activity.Current?
+                .GetTagItem(CorrelationIdMiddleware.ActivityTagName)?.ToString();
+            var details = SerializeSafeMetadata(metadata);
+            db.AuditEvents.Add(new AuditEventEntity
+            {
+                AuditEventId = Guid.NewGuid(),
+                OccurredAtUtc = DateTime.UtcNow,
+                ActorAccountId = Guid.TryParse(userId, out var accountId) ? accountId : null,
+                ActorReference = Cut(userId, 160),
+                BuildingId = effectiveBuildingId,
+                EventCategory = "Business",
+                EventType = Cut(action, 120),
+                ResourceType = string.IsNullOrWhiteSpace(apartmentId) ? null : "Apartment",
+                ResourceReference = Cut(apartmentId, 200),
+                CorrelationId = Cut(correlationId, 100),
+                Outcome = outcome,
+                SafeDetailsJson = details
+            });
             await db.SaveChangesAsync();
         }
         catch (Exception ex)
@@ -86,119 +67,133 @@ public class AuditLogger : IAuditLogger
         }
     }
 
-    /// <summary>
-    /// Returns the query.
-    /// </summary>
     public async Task<List<AuditEntryDoc>> QueryAsync(
-        string? buildingId = null,
-        string? apartmentId = null,
-        string? userId = null,
-        DateTime? from = null,
-        DateTime? to = null,
-        string? action = null,
-        string? severity = null,
-        int limit = 100)
+        string? buildingId = null, string? apartmentId = null, string? userId = null,
+        DateTime? from = null, DateTime? to = null, string? action = null,
+        string? severity = null, int limit = 100)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
-        var query = db.AuditLog.AsNoTracking().AsQueryable();
-
-        if (!string.IsNullOrWhiteSpace(buildingId))
-            query = query.Where(x => x.BuildingId == buildingId);
-
-        if (!string.IsNullOrWhiteSpace(apartmentId))
-            query = query.Where(x => x.ApartmentId == apartmentId);
-
-        if (!string.IsNullOrWhiteSpace(severity))
-            query = query.Where(x => x.Severity == severity);
-
-        if (!string.IsNullOrWhiteSpace(action))
-            query = query.Where(x => x.Action == action);
-
-        if (!string.IsNullOrWhiteSpace(userId))
-            query = query.Where(x => x.Actor == userId);
-
-        if (from.HasValue)
-            query = query.Where(x => x.Ts >= from.Value);
-
-        if (to.HasValue)
-            query = query.Where(x => x.Ts <= to.Value);
-
-        limit = Math.Clamp(limit, 1, 50000);
-        var entries = await query
-            .OrderByDescending(x => x.Ts)
-            .Take(limit)
-            .ToListAsync();
-
-        return entries.Select(ToDoc).ToList();
+        var query = ApplyFilters(db.AuditEvents.AsNoTracking(), buildingId, apartmentId,
+            userId, from, to, action, severity);
+        var rows = await query.OrderByDescending(x => x.OccurredAtUtc)
+            .ThenByDescending(x => x.AuditEventId)
+            .Take(Math.Clamp(limit, 1, 50000)).ToListAsync();
+        return rows.Select(ToDoc).ToList();
     }
-    /// <summary>
-    /// يسترجع صفحة من سجلات التدقيق حسب معايير التصفية.
-    /// </summary>
-    /// <param name="buildingId">معايير التصفية والترقيم.</param>
-    /// <param name="apartmentId"></param>
-    /// <param name="userId"></param>
-    /// <param name="from"></param>
-    /// <param name="to"></param>
-    /// <param name="action"></param>
-    /// <param name="severity"></param>
-    /// <param name="page"></param>
-    /// <param name="pageSize"></param>
-    /// <returns>صفحة من سجلات التدقيق.</returns>
+
     public async Task<BuildingManagementMvc.Models.PagedResult<AuditEntryDoc>> QueryPageAsync(
         string? buildingId, string? apartmentId, string? userId, DateTime? from, DateTime? to,
         string? action, string? severity, int page, int pageSize)
     {
         await using var db = await _sqlFactory.CreateDbContextAsync();
-        var query = db.AuditLog.AsNoTracking().AsQueryable();
-        if (!string.IsNullOrWhiteSpace(buildingId)) query = query.Where(x => x.BuildingId == buildingId);
-        if (!string.IsNullOrWhiteSpace(apartmentId)) query = query.Where(x => x.ApartmentId == apartmentId);
-        if (!string.IsNullOrWhiteSpace(userId)) query = query.Where(x => x.Actor == userId);
-        if (!string.IsNullOrWhiteSpace(action)) query = query.Where(x => x.Action == action);
-        if (!string.IsNullOrWhiteSpace(severity)) query = query.Where(x => x.Severity == severity);
-        if (from.HasValue) query = query.Where(x => x.Ts >= from.Value);
-        if (to.HasValue) query = query.Where(x => x.Ts <= to.Value);
-
+        var query = ApplyFilters(db.AuditEvents.AsNoTracking(), buildingId, apartmentId,
+            userId, from, to, action, severity);
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 200);
         var total = await query.CountAsync();
         var totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
         page = Math.Min(page, totalPages);
-        var rows = await query.OrderByDescending(x => x.Ts).ThenByDescending(x => x.AuditId)
+        var rows = await query.OrderByDescending(x => x.OccurredAtUtc)
+            .ThenByDescending(x => x.AuditEventId)
             .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
         return new BuildingManagementMvc.Models.PagedResult<AuditEntryDoc>
         {
-            Items = rows.Select(ToDoc).ToList(), CurrentPage = page, PageSize = pageSize, TotalItems = total
+            Items = rows.Select(ToDoc).ToList(),
+            CurrentPage = page,
+            PageSize = pageSize,
+            TotalItems = total
         };
     }
 
-    private static AuditEntryDoc ToDoc(AuditLogEntity e) => new()
+    private static IQueryable<AuditEventEntity> ApplyFilters(
+        IQueryable<AuditEventEntity> query, string? buildingId, string? apartmentId,
+        string? userId, DateTime? from, DateTime? to, string? action, string? severity)
     {
-        Id = e.SourceId ?? e.AuditId.ToString(),
-        Action = e.Action,
-        BuildingId = e.BuildingId,
-        ApartmentId = e.ApartmentId ?? e.AptNumber?.ToString(),
-        UserId = e.Actor,
-        UserRole = e.ActorRole,
-        Severity = string.IsNullOrWhiteSpace(e.Severity) ? "info" : e.Severity,
-        Details = e.Details,
-        CreatedAt = DateTime.SpecifyKind(e.Ts, DateTimeKind.Utc)
-    };
-
-    private static string? SerializeMetadataWithCorrelation(object? metadata)
-    {
-        var correlationId = Activity.Current?.GetTagItem(CorrelationIdMiddleware.ActivityTagName)?.ToString();
-        if (string.IsNullOrWhiteSpace(correlationId))
-            return metadata == null ? null : JsonConvert.SerializeObject(metadata);
-
-        var token = metadata == null ? new JObject() : JToken.FromObject(metadata);
-        var envelope = token as JObject ?? new JObject { ["value"] = token };
-        envelope["correlationId"] = correlationId;
-        return envelope.ToString(Formatting.None);
+        if (!string.IsNullOrWhiteSpace(buildingId))
+            query = query.Where(x => x.BuildingId == buildingId);
+        if (!string.IsNullOrWhiteSpace(apartmentId))
+            query = query.Where(x => x.ResourceType == "Apartment" && x.ResourceReference == apartmentId);
+        if (!string.IsNullOrWhiteSpace(userId))
+            query = query.Where(x => x.ActorReference == userId);
+        if (!string.IsNullOrWhiteSpace(action))
+            query = query.Where(x => x.EventType == action);
+        if (!string.IsNullOrWhiteSpace(severity))
+        {
+            var outcome = severity.Trim().ToLowerInvariant() switch
+            {
+                "warning" => (byte)1,
+                "error" => (byte)2,
+                "critical" => (byte)3,
+                _ => (byte)0
+            };
+            query = query.Where(x => x.Outcome == outcome);
+        }
+        if (from.HasValue) query = query.Where(x => x.OccurredAtUtc >= from.Value);
+        if (to.HasValue) query = query.Where(x => x.OccurredAtUtc <= to.Value);
+        return query;
     }
 
-    private static string Cut(string? s, int max)
+    private static AuditEntryDoc ToDoc(AuditEventEntity e)
     {
-        s ??= "";
-        return s.Length <= max ? s : s[..max];
+        Dictionary<string, object>? metadata = null;
+        if (!string.IsNullOrWhiteSpace(e.SafeDetailsJson))
+        {
+            try
+            {
+                metadata = JsonConvert.DeserializeObject<Dictionary<string, object>>(e.SafeDetailsJson);
+            }
+            catch (JsonException)
+            {
+                metadata = new Dictionary<string, object> { ["details"] = e.SafeDetailsJson };
+            }
+        }
+        return new AuditEntryDoc
+        {
+            Id = e.AuditEventId.ToString("N"),
+            Action = e.EventType,
+            BuildingId = e.BuildingId,
+            ApartmentId = e.ResourceType == "Apartment" ? e.ResourceReference : null,
+            UserId = e.ActorReference,
+            Severity = e.Outcome switch { 1 => "warning", 2 => "error", 3 => "critical", _ => "info" },
+            Metadata = metadata,
+            Details = e.SafeDetailsJson,
+            CreatedAt = DateTime.SpecifyKind(e.OccurredAtUtc, DateTimeKind.Utc),
+            Timestamp = DateTime.SpecifyKind(e.OccurredAtUtc, DateTimeKind.Utc)
+        };
     }
+
+    private static string? SerializeSafeMetadata(object? metadata)
+    {
+        if (metadata == null) return null;
+        var token = JToken.FromObject(metadata);
+        RedactSensitiveValues(token);
+        return token.ToString(Formatting.None);
+    }
+
+    private static void RedactSensitiveValues(JToken token)
+    {
+        if (token is JObject obj)
+        {
+            foreach (var property in obj.Properties().ToList())
+            {
+                var key = property.Name;
+                if (key.Contains("password", StringComparison.OrdinalIgnoreCase) ||
+                    key.Contains("secret", StringComparison.OrdinalIgnoreCase) ||
+                    key.Contains("token", StringComparison.OrdinalIgnoreCase) ||
+                    key.Contains("credential", StringComparison.OrdinalIgnoreCase) ||
+                    key.Contains("pin", StringComparison.OrdinalIgnoreCase) ||
+                    key.Contains("recovery", StringComparison.OrdinalIgnoreCase))
+                    property.Value = "[REDACTED]";
+                else
+                    RedactSensitiveValues(property.Value);
+            }
+        }
+        else if (token is JArray array)
+        {
+            foreach (var item in array) RedactSensitiveValues(item);
+        }
+    }
+
+    private static string? Cut(string? value, int max) =>
+        string.IsNullOrEmpty(value) ? value : value.Length <= max ? value : value[..max];
 }
