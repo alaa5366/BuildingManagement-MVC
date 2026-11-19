@@ -60,6 +60,17 @@
                                     <span class="label">@Loc.T("Quick_QR_2")</span>
                                 </button>
 
+                                @* QR مؤقت لاستعادة دخول الساكن عند نسيان PIN *@
+                                <form method="post" asp-action="GenerateRecoveryQr" class="d-inline"
+                                      onsubmit="return confirm('سيتم إنشاء رابط دخول للشقة صالح 5 دقائق ولمرة واحدة وإرساله إلى رقم الهاتف المسجل. هل تريد المتابعة؟');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="aptId" value="@apt.Id" />
+                                    <button type="submit" class="apt-action-btn btn-welcome">
+                                        <span class="icon">🔐</span>
+                                        <span class="label">إرسال QR لاستعادة الدخول</span>
+                                    </button>
+                                </form>
+
                                 @* 2. ترحيب *@
                                 <form method="post" asp-action="GenerateWelcome" class="d-inline">
                                     @Html.AntiForgeryToken()
