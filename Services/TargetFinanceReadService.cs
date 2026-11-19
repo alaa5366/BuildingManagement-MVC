@@ -57,6 +57,66 @@ public sealed class TargetFinanceReadService
         return new TargetFinanceMonthSnapshot(categories, Array.Empty<Expense>(), revenues, revenues.Sum(x => x.Amount));
     }
 
+    public async Task<IReadOnlyDictionary<string, decimal>> GetExpenseCategoryTotalsAsync(
+        string buildingId,
+        IReadOnlyCollection<string> monthKeys,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(buildingId))
+            throw new ArgumentException("Building is required.", nameof(buildingId));
+        ArgumentNullException.ThrowIfNull(monthKeys);
+        if (monthKeys.Count > 600)
+            throw new ArgumentOutOfRangeException(nameof(monthKeys), "At most 600 report months can be queried.");
+        foreach (var monthKey in monthKeys)
+        {
+            if (!DateOnly.TryParseExact(monthKey + "-01", "yyyy-MM-dd",
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out _))
+                throw new ArgumentException("Month must use yyyy-MM format.", nameof(monthKeys));
+        }
+
+        var keys = monthKeys.Distinct(StringComparer.Ordinal).ToList();
+        if (keys.Count == 0)
+            return new Dictionary<string, decimal>(StringComparer.Ordinal);
+
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        var periodIds = await db.FinancialPeriods.AsNoTracking()
+            .Where(period => period.BuildingId == buildingId && keys.Contains(period.PeriodKey))
+            .Select(period => period.PeriodId)
+            .ToListAsync(cancellationToken);
+        var transactions = await db.LedgerTransactions.AsNoTracking()
+            .Where(transaction => transaction.BuildingId == buildingId &&
+                periodIds.Contains(transaction.PeriodId) &&
+                transaction.Status == LedgerTransactionStatus.Posted &&
+                (transaction.SourceType == "Expense" || transaction.SourceType == "ExpenseReversal"))
+            .Select(transaction => new { transaction.SourceType, transaction.SourceKey })
+            .ToListAsync(cancellationToken);
+        var expenses = await db.Expenses.AsNoTracking()
+            .Where(expense => expense.BuildingId == buildingId)
+            .Select(expense => new { expense.Id, expense.CategoryId, expense.Amount })
+            .ToListAsync(cancellationToken);
+        var expenseById = expenses.ToDictionary(
+            expense => NormalizeSourceKey(expense.Id), StringComparer.OrdinalIgnoreCase);
+
+        var totals = new Dictionary<string, decimal>(StringComparer.Ordinal);
+        foreach (var transaction in transactions)
+        {
+            var sourceId = NormalizeSourceKey(transaction.SourceKey);
+            if (string.IsNullOrWhiteSpace(sourceId) || !expenseById.TryGetValue(sourceId, out var expense))
+                continue;
+            var categoryId = expense.CategoryId ?? "";
+            var amount = transaction.SourceType == "ExpenseReversal"
+                ? -expense.Amount
+                : expense.Amount;
+            totals[categoryId] = totals.GetValueOrDefault(categoryId) + amount;
+        }
+
+        return totals;
+    }
+
+    private static string NormalizeSourceKey(string? key) =>
+        Guid.TryParse(key, out var id) ? id.ToString("N") : key ?? "";
+
     private static async Task<HashSet<string>> GetReversedSourceIdsAsync(
         AppDbContext db, string buildingId, string sourceType, CancellationToken cancellationToken)
     {
