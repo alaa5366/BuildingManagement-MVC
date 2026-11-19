@@ -409,6 +409,7 @@ public sealed class IdentityAccountAuthenticationService
         return result;
     }
 
+    /// <summary>Changes the PIN for the specified resident account after validating the current credentials.</summary>
 
     public async Task<bool> ChangeResidentPinAsync(
         Guid accountId,
