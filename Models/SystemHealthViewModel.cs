@@ -7,6 +7,11 @@ public sealed class SystemHealthViewModel
     public DateTimeOffset ProcessStartedAtUtc { get; init; }
     public TimeSpan TotalDuration { get; init; }
     public string OverallStatus { get; init; } = "Unknown";
+    public long WorkingSetBytes { get; init; }
+    public long PrivateMemoryBytes { get; init; }
+    public long ManagedMemoryBytes { get; init; }
+    public int ThreadCount { get; init; }
+    public int HandleCount { get; init; }
     public IReadOnlyList<SystemHealthCheckViewModel> Checks { get; init; } = Array.Empty<SystemHealthCheckViewModel>();
 }
 
