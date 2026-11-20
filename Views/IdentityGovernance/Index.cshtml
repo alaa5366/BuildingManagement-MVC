@@ -1,0 +1,113 @@
+@model BuildingManagementMvc.Models.IdentityGovernancePage
+@{
+    ViewData["Title"] = "مركز حوكمة الهوية والصلاحيات";
+    var now = DateTime.UtcNow;
+}
+<div class="container-fluid py-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div><h2 class="mb-1">مركز حوكمة الهوية والصلاحيات</h2><div class="text-muted">إدارة مترابطة للهويات والحسابات والتسكين والأدوار، مع رقابة على جداول الأمن والمرجعية.</div></div>
+        <a asp-controller="AccountManagement" asp-action="Index" class="btn btn-outline-primary">مركز الحسابات وPIN</a>
+    </div>
+    <div class="row g-3 mb-4">
+        <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">الهويات</div><h3>@Model.PersonCount</h3></div></div></div>
+        <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">الحسابات</div><h3>@Model.AccountCount</h3></div></div></div>
+        <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">الإشغالات النشطة</div><h3>@Model.ActiveOccupancyCount</h3></div></div></div>
+        <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">إسنادات الأدوار النشطة</div><h3>@Model.ActiveRoleAssignmentCount</h3></div></div></div>
+    </div>
+    <div class="alert alert-info">قاعدة العمل: Person هوية مستقلة، UserAccount وسيلة دخول مستقلة، Occupancy علاقة زمنية بالشقة، وUserRoleAssignment صلاحية محددة بالنطاق. تكرار الهاتف لا يمنع إنشاء هوية؛ لكنه يمنع اعتماد الهاتف كمعرّف دخول فريد حتى تتم معالجته.</div>
+
+    <div class="card mb-4">
+        <div class="card-header fw-bold">إضافة هوية Person</div>
+        <div class="card-body">
+            <form asp-action="CreatePerson" method="post" class="row g-2">
+                @Html.AntiForgeryToken()
+                <div class="col-md-3"><label class="form-label">اسم العرض</label><input name="displayName" class="form-control" maxlength="160" required /></div>
+                <div class="col-md-3"><label class="form-label">الاسم القانوني</label><input name="legalName" class="form-control" maxlength="200" /></div>
+                <div class="col-md-2"><label class="form-label">الهاتف</label><input name="phone" class="form-control" maxlength="32" /></div>
+                <div class="col-md-3"><label class="form-label">البريد</label><input name="email" type="email" class="form-control" maxlength="254" /></div>
+                <div class="col-md-1 d-flex align-items-end"><button class="btn btn-primary w-100">إضافة</button></div>
+            </form>
+            <small class="text-muted">إنشاء الهوية لا ينشئ حساب دخول أو PIN تلقائيًا.</small>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header fw-bold">الهويات والأشخاص — Persons (أحدث 200)</div>
+        <div class="table-responsive"><table class="table table-sm table-striped align-middle mb-0">
+            <thead><tr><th>الشخص</th><th>Person ID</th><th>الهاتف / البريد</th><th>الحساب</th><th>إشغال</th><th>أدوار نشطة</th><th>الحالة / إجراء</th></tr></thead><tbody>
+            @foreach (var p in Model.Persons)
+            {
+                <tr><td><strong>@p.DisplayName</strong><div class="small text-muted">@p.LegalName</div></td><td class="small">@p.PersonId</td><td>@p.Phone<div class="small text-muted">@p.Email</div></td><td class="small">@(p.AccountId?.ToString() ?? "لا يوجد")<div>الحالة: @(p.AccountStatus?.ToString() ?? "-")</div></td><td>@p.ActiveOccupancies</td><td>@p.ActiveRoles</td><td>
+                    @if (p.IsArchived) { <span class="badge bg-secondary">مؤرشفة</span> }
+                    else { <span class="badge bg-success">نشطة</span> }
+                    <details class="mt-1"><summary class="small">تعديل</summary>
+                        <form asp-action="UpdatePerson" method="post" class="d-grid gap-1 mt-2">
+                            @Html.AntiForgeryToken()<input type="hidden" name="personId" value="@p.PersonId" />
+                            <input class="form-control form-control-sm" name="displayName" value="@p.DisplayName" maxlength="160" required />
+                            <input class="form-control form-control-sm" name="legalName" value="@p.LegalName" maxlength="200" placeholder="الاسم القانوني" />
+                            <input class="form-control form-control-sm" name="phone" value="@p.Phone" maxlength="32" placeholder="الهاتف" />
+                            <input class="form-control form-control-sm" name="email" value="@p.Email" maxlength="254" placeholder="البريد" />
+                            <button class="btn btn-sm btn-outline-primary">حفظ</button>
+                        </form>
+                        <form asp-action="SetPersonArchived" method="post" class="mt-1">
+                            @Html.AntiForgeryToken()<input type="hidden" name="personId" value="@p.PersonId" /><input type="hidden" name="archived" value="@(!p.IsArchived)" />
+                            <button class="btn btn-sm btn-outline-danger" onclick="return confirm('تأكيد تغيير حالة أرشفة الهوية؟')">@(p.IsArchived ? "استعادة" : "أرشفة")</button>
+                        </form>
+                    </details>
+                </td></tr>
+            }
+            </tbody></table></div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header fw-bold">سجلات التسكين — ApartmentOccupancies (أحدث 300)</div>
+        <div class="card-body border-bottom">
+            <form asp-action="CreateOccupancy" method="post" class="row g-2">
+                @Html.AntiForgeryToken()
+                <div class="col-md-3"><label class="form-label">Person ID</label><input name="personId" class="form-control" required /></div>
+                <div class="col-md-2"><label class="form-label">العمارة</label><select name="buildingId" class="form-select" required><option value="">اختر</option>@foreach(var b in Model.Buildings){<option value="@b.Key">@b.Title — @b.Key</option>}</select></div>
+                <div class="col-md-2"><label class="form-label">الشقة</label><select name="apartmentId" class="form-select" required><option value="">اختر رقم الشقة</option>@foreach(var a in Model.Apartments){<option value="@a.Key">@a.Detail / @a.Title</option>}</select><small class="text-muted">قيمة الاختيار مركبة؛ أدخل ApartmentId في حقل الشقة أدناه عند الحاجة.</small></div>
+                <div class="col-md-1"><label class="form-label">النوع</label><select name="occupancyType" class="form-select"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+                <div class="col-md-2"><label class="form-label">بداية الإشغال UTC</label><input name="validFromUtc" type="datetime-local" class="form-control" required /></div>
+                <div class="col-md-1 d-flex align-items-end"><label><input type="checkbox" name="isPrimary" value="true" /> أساسي</label></div>
+                <div class="col-md-1 d-flex align-items-end"><button class="btn btn-primary">تسكين</button></div>
+                <div class="col-12"><input name="notes" class="form-control" maxlength="1000" placeholder="ملاحظات / مرجع المستند" /></div>
+            </form>
+        </div>
+        <div class="table-responsive"><table class="table table-sm table-striped mb-0"><thead><tr><th>الشخص</th><th>العمارة / الشقة</th><th>النوع</th><th>أساسي</th><th>من</th><th>إلى</th><th>الحالة / إجراء</th></tr></thead><tbody>
+        @foreach(var o in Model.Occupancies){<tr><td>@o.PersonName<div class="small text-muted">@o.PersonId</div></td><td>@o.BuildingId / @o.ApartmentId</td><td>@o.OccupancyType</td><td>@o.IsPrimary</td><td>@o.ValidFromUtc.ToString("u")</td><td>@(o.ValidToUtc?.ToString("u") ?? "—")</td><td>@(o.IsCurrent ? "نشط" : "تاريخي") @if(o.ValidToUtc == null){<form asp-action="EndOccupancy" method="post" class="d-flex gap-1 mt-1">@Html.AntiForgeryToken()<input type="hidden" name="occupancyId" value="@o.OccupancyId" /><input name="validToUtc" type="datetime-local" class="form-control form-control-sm" required /><button class="btn btn-sm btn-outline-danger">إنهاء</button></form>}</td></tr>}
+        </tbody></table></div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header fw-bold">إسنادات الأدوار — UserRoleAssignments (أحدث 300)</div>
+        <div class="card-body border-bottom">
+            <form asp-action="GrantRole" method="post" class="row g-2">
+                @Html.AntiForgeryToken()
+                <div class="col-md-2"><label class="form-label">Account ID</label><input name="accountId" class="form-control" required /></div>
+                <div class="col-md-2"><label class="form-label">Role</label><select name="roleKey" class="form-select" required><option value="">اختر</option>@foreach(var r in Model.RoleCatalog.Where(x => x.Status == "Active" && x.Key != "superadmin")){<option value="@r.Key">@r.Key — @r.Title</option>}</select></div>
+                <div class="col-md-1"><label class="form-label">Scope</label><select name="scopeType" class="form-select"><option value="1">عمارة</option><option value="2">شقة</option><option value="3">شخصي</option><option value="0">نظام</option></select></div>
+                <div class="col-md-2"><label class="form-label">Building ID</label><select name="buildingId" class="form-select"><option value="">—</option>@foreach(var b in Model.Buildings){<option value="@b.Key">@b.Title (@b.Key)</option>}</select></div>
+                <div class="col-md-2"><label class="form-label">Apartment ID</label><input name="apartmentId" class="form-control" /></div>
+                <div class="col-md-1"><label class="form-label">بداية UTC</label><input name="validFromUtc" type="datetime-local" class="form-control" required /></div>
+                <div class="col-md-2"><label class="form-label">سبب المنح</label><input name="reason" class="form-control" maxlength="500" required /></div>
+                <div class="col-12"><button class="btn btn-primary">منح دور</button><small class="text-muted ms-2">لا يمكن منح SuperAdmin من هذه الشاشة. Resident يتطلب إشغالًا نشطًا في الشقة.</small></div>
+            </form>
+        </div>
+        <div class="table-responsive"><table class="table table-sm table-striped mb-0"><thead><tr><th>الشخص</th><th>الدور</th><th>النطاق</th><th>الفترة</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>
+        @foreach(var r in Model.RoleAssignments){<tr><td>@r.PersonName<div class="small text-muted">@r.AccountId</div></td><td>@r.RoleKey</td><td>@r.ScopeType — @r.BuildingId / @r.ApartmentId</td><td>@r.ValidFromUtc.ToString("u") إلى @(r.ValidToUtc?.ToString("u") ?? "مفتوح")</td><td>@(r.RevokedAtUtc == null ? "غير ملغى" : "ملغى")</td><td>@if(r.RevokedAtUtc == null && r.RoleKey != "superadmin"){<form asp-action="RevokeRole" method="post" class="d-flex gap-1">@Html.AntiForgeryToken()<input type="hidden" name="assignmentId" value="@r.AssignmentId" /><input name="reason" class="form-control form-control-sm" placeholder="سبب الإلغاء" required /><button class="btn btn-sm btn-outline-danger">إلغاء</button></form>}</td></tr>}
+        </tbody></table></div>
+    </div>
+
+    <div class="card mb-4"><div class="card-header fw-bold">حالة الحسابات وبيانات الدخول — UserAccounts / UserCredentials / 2FA / Recovery</div><div class="table-responsive"><table class="table table-sm table-striped mb-0"><thead><tr><th>الشخص</th><th>Account ID</th><th>الحالة</th><th>تغيير PIN</th><th>آخر دخول</th><th>Credentials نشطة</th><th>2FA</th><th>Recovery غير مستخدمة</th></tr></thead><tbody>@foreach(var a in Model.Accounts){<tr><td>@a.PersonName</td><td>@a.AccountId</td><td>@a.Status</td><td>@a.MustChangePin</td><td>@a.LastLoginAtUtc?.ToString("u")</td><td>@a.ActiveCredentials</td><td>@(a.TwoFactorEnabled ? "مفعل" : "غير مفعل")</td><td>@a.UnusedRecoveryCodes</td></tr>}</tbody></table></div><div class="card-body small text-muted">لا تعرض الشاشة hashes أو أسرار 2FA أو recovery codes، ولا تسمح بتعديلها مباشرة. إصدار PIN وتدويره يتم من مركز الحسابات المختص.</div></div>
+
+    <div class="row g-3">
+        <div class="col-lg-6"><div class="card h-100"><div class="card-header fw-bold">RoleDefinitions — كتالوج الأدوار (قراءة رقابية)</div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Key</th><th>الاسم</th><th>النوع</th><th>الحالة</th></tr></thead><tbody>@foreach(var x in Model.RoleCatalog){<tr><td>@x.Key</td><td>@x.Title</td><td>@x.Detail</td><td>@x.Status</td></tr>}</tbody></table></div></div></div>
+        <div class="col-lg-6"><div class="card h-100"><div class="card-header fw-bold">RolePermissions — مصفوفة الأدوار (قراءة رقابية)</div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Role / Permission</th><th>التأثير</th></tr></thead><tbody>@foreach(var x in Model.PermissionCatalog){<tr><td>@x.Key</td><td>@x.Status</td></tr>}</tbody></table></div></div></div>
+        <div class="col-lg-6"><div class="card h-100"><div class="card-header fw-bold">AccountPermissionOverrides</div><div class="table-responsive"><table class="table table-sm mb-0"><tbody>@foreach(var x in Model.PermissionOverrides){<tr><td>@x.Title<div class="small text-muted">@x.Detail</div></td><td>@x.Status</td></tr>}</tbody></table></div></div></div>
+        <div class="col-lg-6"><div class="card h-100"><div class="card-header fw-bold">ApartmentAccessGrants</div><div class="table-responsive"><table class="table table-sm mb-0"><tbody>@foreach(var x in Model.ApartmentAccessGrants){<tr><td>@x.Title<div class="small text-muted">@x.Detail</div></td><td>@x.Status</td></tr>}</tbody></table></div></div></div>
+        <div class="col-lg-6"><div class="card h-100"><div class="card-header fw-bold">ApartmentOwnerships — ملكية الشقق</div><div class="table-responsive"><table class="table table-sm mb-0"><tbody>@foreach(var x in Model.OwnershipRecords){<tr><td>@x.Title<div class="small text-muted">@x.Detail</div></td><td>@x.Status</td></tr>}</tbody></table></div></div></div>
+        <div class="col-lg-6"><div class="card h-100"><div class="card-header fw-bold">LegacyIdentityMaps — الربط التاريخي</div><div class="table-responsive"><table class="table table-sm mb-0"><tbody>@foreach(var x in Model.LegacyMappings){<tr><td>@x.Title<div class="small text-muted">@x.Detail</div></td><td>@x.Status</td></tr>}</tbody></table></div></div></div>
+        <div class="col-lg-6"><div class="card h-100"><div class="card-header fw-bold">PersonPhoneChangeRequests — طلبات تصحيح الهاتف (@Model.PendingPhoneChangeCount pending)</div><div class="table-responsive"><table class="table table-sm mb-0"><tbody>@foreach(var x in Model.PhoneChangeRequests){<tr><td>@x.Title<div class="small text-muted">@x.Detail</div></td><td>@x.Status</td></tr>}</tbody></table></div></div></div>
+    </div>
+</div>
