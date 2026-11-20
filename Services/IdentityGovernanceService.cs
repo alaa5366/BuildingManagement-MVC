@@ -108,7 +108,7 @@ public sealed class IdentityGovernanceService
         page.Buildings = await db.Buildings.AsNoTracking().OrderBy(x => x.BuildingNumber)
             .Select(x => new IdentityGovernanceCatalogRow { Key = x.Id, Title = x.BuildingNumber, Detail = x.Name, Status = "Active" }).ToListAsync(ct);
         page.Apartments = await db.Apartments.AsNoTracking().OrderBy(x => x.BuildingId).ThenBy(x => x.Number)
-            .Select(x => new IdentityGovernanceCatalogRow { Key = x.BuildingId + "|" + x.Id, Title = x.Number, Detail = x.BuildingId, Status = "Active" }).Take(500).ToListAsync(ct);
+            .Select(x => new IdentityGovernanceCatalogRow { Key = x.BuildingId + "|" + x.Id, Title = x.Number.ToString(), Detail = x.BuildingId, Status = "Active" }).Take(500).ToListAsync(ct);
         return page;
     }
 
@@ -201,6 +201,16 @@ public sealed class IdentityGovernanceService
         if (end <= entity.ValidFromUtc || (entity.ValidToUtc != null && end > entity.ValidToUtc)) return (false, "تاريخ نهاية الإشغال غير صالح.");
         if (entity.ValidToUtc != null) return (false, "سجل الإشغال منتهٍ بالفعل. لا نعيد كتابة التاريخ التاريخي.");
         entity.ValidToUtc = end;
+        var linkedAccount = await db.UserAccounts.SingleOrDefaultAsync(x => x.PersonId == entity.PersonId, ct);
+        if (linkedAccount != null)
+        {
+            var residentAssignments = await db.UserRoleAssignments.Where(x => x.AccountId == linkedAccount.AccountId && x.RoleKey == "resident" && x.ScopeBuildingId == entity.BuildingId && x.ScopeApartmentId == entity.ApartmentId && x.RevokedAtUtc == null && (x.ValidToUtc == null || x.ValidToUtc > end)).ToListAsync(ct);
+            foreach (var assignment in residentAssignments)
+            {
+                assignment.RevokedAtUtc = end; assignment.RevokedByAccountId = actor; assignment.RevocationReason = "Occupancy ended by SuperAdmin governance.";
+            }
+            linkedAccount.SecurityStamp = Guid.NewGuid().ToString("N");
+        }
         await db.SaveChangesAsync(ct);
         await _audit.LogAsync("identity.occupancy.ended", buildingId: entity.BuildingId, apartmentId: entity.ApartmentId, userId: actor.ToString(), userRole: "superadmin", metadata: new { occupancyId, end });
         return (true, "تم إنهاء فترة الإشغال مع الاحتفاظ بالسجل التاريخي.");
@@ -247,6 +257,24 @@ public sealed class IdentityGovernanceService
         await db.SaveChangesAsync(ct);
         await _audit.LogAsync("identity.role.revoked", buildingId: entity.ScopeBuildingId, apartmentId: entity.ScopeApartmentId, userId: actor.ToString(), userRole: "superadmin", metadata: new { assignmentId, entity.RoleKey, reason });
         return (true, "تم إلغاء إسناد الدور مع الاحتفاظ بسجل المنح والإلغاء.");
+    }
+
+    public async Task<(bool Success, string Message)> CreatePendingAccountAsync(Guid personId, Guid actor, CancellationToken ct)
+    {
+        await using var db = await _factory.CreateDbContextAsync(ct);
+        await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+        var person = await db.Persons.SingleOrDefaultAsync(x => x.PersonId == personId && !x.IsArchived, ct);
+        if (person == null) return (false, "الهوية غير موجودة أو مؤرشفة.");
+        if (await db.UserAccounts.AnyAsync(x => x.PersonId == personId, ct)) return (false, "يوجد حساب بالفعل لهذه الهوية.");
+        var now = DateTime.UtcNow;
+        if (!await db.ApartmentOccupancies.AnyAsync(x => x.PersonId == personId && x.ValidFromUtc <= now && (x.ValidToUtc == null || x.ValidToUtc > now), ct))
+            return (false, "لا يمكن إنشاء حساب ساكن دون إشغال نشط مرتبط بشقة.");
+        var account = new UserAccountEntity { AccountId = Guid.NewGuid(), PersonId = personId, AccountStatus = 3, MustChangePin = true, SecurityStamp = Guid.NewGuid().ToString("N"), CreatedAtUtc = now };
+        db.UserAccounts.Add(account);
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        await _audit.LogAsync("identity.account.created.pending", userId: actor.ToString(), userRole: "superadmin", metadata: new { account.AccountId, personId, credentialIssued = false, accountStatus = account.AccountStatus });
+        return (true, "تم إنشاء حساب انتظار دون PIN. استخدم مركز الحسابات للتحقق وإصدار PIN لاحقًا.");
     }
 
     private static string? Clean(string? value, int max)
