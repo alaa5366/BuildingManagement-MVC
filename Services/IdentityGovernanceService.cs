@@ -160,13 +160,21 @@ public sealed class IdentityGovernanceService
             var now = DateTime.UtcNow;
             if (await db.ApartmentOccupancies.AnyAsync(x => x.PersonId == personId && x.ValidFromUtc <= now && (x.ValidToUtc == null || x.ValidToUtc > now), ct))
                 return (false, "يجب إنهاء كل فترات الإشغال النشطة قبل أرشفة الهوية.");
+            if (await db.ApartmentOwnerships.AnyAsync(x => x.PersonId == personId && x.ValidFromUtc <= now && (x.ValidToUtc == null || x.ValidToUtc > now), ct))
+                return (false, "لا يمكن أرشفة هوية لها سجل ملكية شقة ساري. راجع دورة الملكية أولًا.");
+            if (await db.ApartmentAccessGrants.AnyAsync(x => x.PersonId == personId && x.RevokedAtUtc == null && x.ValidFromUtc <= now && (x.ValidToUtc == null || x.ValidToUtc > now), ct))
+                return (false, "يجب إلغاء صلاحيات الوصول النشطة للشقق قبل أرشفة الهوية.");
             var account = await db.UserAccounts.SingleOrDefaultAsync(x => x.PersonId == personId, ct);
             if (account != null)
             {
                 if (await db.UserRoleAssignments.AnyAsync(x => x.AccountId == account.AccountId && x.RevokedAtUtc == null && (x.ValidToUtc == null || x.ValidToUtc > now), ct))
                     return (false, "يجب إلغاء/إنهاء كل إسنادات الأدوار النشطة قبل أرشفة الهوية.");
+                if (await db.AccountPermissionOverrides.AnyAsync(x => x.AccountId == account.AccountId && x.RevokedAtUtc == null && x.ValidFromUtc <= now && (x.ValidToUtc == null || x.ValidToUtc > now), ct))
+                    return (false, "يجب مراجعة وإلغاء تجاوزات الصلاحيات النشطة قبل أرشفة الهوية.");
                 account.AccountStatus = 0;
                 account.SecurityStamp = Guid.NewGuid().ToString("N");
+                var sessions = await db.PresenceSessions.Where(x => x.AccountId == account.AccountId && x.Status == 0).ToListAsync(ct);
+                foreach (var session in sessions) { session.Status = 2; session.EndedAtUtc = now; }
             }
             person.ArchivedAtUtc = now;
         }
@@ -192,9 +200,19 @@ public sealed class IdentityGovernanceService
         var now = DateTime.UtcNow;
         var entity = new ApartmentOccupancyEntity { OccupancyId = Guid.NewGuid(), PersonId = personId, BuildingId = buildingId, ApartmentId = apartmentId, OccupancyType = occupancyType, IsPrimary = isPrimary, ValidFromUtc = DateTime.SpecifyKind(validFromUtc, DateTimeKind.Utc), RecordedAtUtc = now, RecordedByAccountId = actor, Notes = Clean(notes, 1000) };
         db.ApartmentOccupancies.Add(entity);
+        var createdPendingAccount = false;
+        if (!await db.UserAccounts.AnyAsync(x => x.PersonId == personId, ct))
+        {
+            db.UserAccounts.Add(new UserAccountEntity
+            {
+                AccountId = Guid.NewGuid(), PersonId = personId, AccountStatus = 3,
+                MustChangePin = true, SecurityStamp = Guid.NewGuid().ToString("N"), CreatedAtUtc = now
+            });
+            createdPendingAccount = true;
+        }
         await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
-        await _audit.LogAsync("identity.occupancy.created", buildingId: buildingId, apartmentId: apartmentId, userId: actor.ToString(), userRole: "superadmin", metadata: new { entity.OccupancyId, personId });
-        return (true, "تم إنشاء سجل التسكين.");
+        await _audit.LogAsync("identity.occupancy.created", buildingId: buildingId, apartmentId: apartmentId, userId: actor.ToString(), userRole: "superadmin", metadata: new { entity.OccupancyId, personId, pendingAccountCreated = createdPendingAccount, credentialIssued = false });
+        return (true, createdPendingAccount ? "تم إنشاء سجل التسكين وحساب انتظار تلقائي دون PIN." : "تم إنشاء سجل التسكين؛ الحساب الموجود لم يتم تعديله.");
     }
 
     public async Task<(bool Success, string Message)> EndOccupancyAsync(Guid occupancyId, DateTime validToUtc, Guid actor, CancellationToken ct)
