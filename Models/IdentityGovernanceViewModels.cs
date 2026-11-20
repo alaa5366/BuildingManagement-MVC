@@ -19,6 +19,8 @@ public sealed class IdentityGovernancePage
     public List<IdentityGovernanceCatalogRow> OwnershipRecords { get; set; } = new();
     public List<IdentityGovernanceCatalogRow> LegacyMappings { get; set; } = new();
     public List<IdentityGovernanceCatalogRow> PhoneChangeRequests { get; set; } = new();
+    public List<IdentityGovernanceCatalogRow> PresenceSessions { get; set; } = new();
+    public List<IdentityGovernanceCatalogRow> AuditEvents { get; set; } = new();
     public List<IdentityGovernanceCatalogRow> Buildings { get; set; } = new();
     public List<IdentityGovernanceCatalogRow> Apartments { get; set; } = new();
 }
@@ -48,6 +50,7 @@ public sealed class IdentityGovernanceAccountRow
     public int ActiveCredentials { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public int UnusedRecoveryCodes { get; set; }
+    public int PreferenceCount { get; set; }
 }
 
 public sealed class IdentityGovernanceOccupancyRow
