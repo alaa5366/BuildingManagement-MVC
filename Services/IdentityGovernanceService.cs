@@ -180,8 +180,8 @@ public sealed class IdentityGovernanceService
         if (person == null) return (false, "الهوية غير موجودة أو مؤرشفة.");
         if (occupancyType > 3 || string.IsNullOrWhiteSpace(buildingId) || string.IsNullOrWhiteSpace(apartmentId)) return (false, "بيانات التسكين غير صحيحة.");
         if (!await db.Apartments.AnyAsync(x => x.BuildingId == buildingId && x.Id == apartmentId, ct)) return (false, "الشقة غير موجودة داخل العمارة المحددة.");
-        if (await db.ApartmentOccupancies.AnyAsync(x => x.PersonId == personId && x.BuildingId == buildingId && x.ApartmentId == apartmentId && x.ValidFromUtc <= DateTime.UtcNow && (x.ValidToUtc == null || x.ValidToUtc > DateTime.UtcNow), ct))
-            return (false, "هذا الشخص لديه بالفعل تسكين نشط في الشقة نفسها.");
+        if (await db.ApartmentOccupancies.AnyAsync(x => x.PersonId == personId && x.BuildingId == buildingId && x.ApartmentId == apartmentId && (x.ValidToUtc == null || x.ValidToUtc > validFromUtc), ct))
+            return (false, "توجد فترة تسكين متداخلة للشخص في الشقة نفسها.");
         if (isPrimary && await db.ApartmentOccupancies.AnyAsync(x => x.BuildingId == buildingId && x.ApartmentId == apartmentId && x.IsPrimary && (x.ValidToUtc == null || x.ValidToUtc > validFromUtc), ct))
             return (false, "توجد إقامة أساسية متداخلة للشقة. راجع الفترة الحالية أولًا.");
         var now = DateTime.UtcNow;
@@ -198,13 +198,14 @@ public sealed class IdentityGovernanceService
         var entity = await db.ApartmentOccupancies.SingleOrDefaultAsync(x => x.OccupancyId == occupancyId, ct);
         if (entity == null) return (false, "سجل التسكين غير موجود.");
         var end = DateTime.SpecifyKind(validToUtc, DateTimeKind.Utc);
+        if (end > DateTime.UtcNow) return (false, "إنهاء الإشغال يجب أن يكون بتاريخ حالي أو سابق، وليس موعدًا مستقبليًا.");
         if (end <= entity.ValidFromUtc || (entity.ValidToUtc != null && end > entity.ValidToUtc)) return (false, "تاريخ نهاية الإشغال غير صالح.");
         if (entity.ValidToUtc != null) return (false, "سجل الإشغال منتهٍ بالفعل. لا نعيد كتابة التاريخ التاريخي.");
         entity.ValidToUtc = end;
         var linkedAccount = await db.UserAccounts.SingleOrDefaultAsync(x => x.PersonId == entity.PersonId, ct);
         if (linkedAccount != null)
         {
-            var residentAssignments = await db.UserRoleAssignments.Where(x => x.AccountId == linkedAccount.AccountId && x.RoleKey == "resident" && x.ScopeBuildingId == entity.BuildingId && x.ScopeApartmentId == entity.ApartmentId && x.RevokedAtUtc == null && (x.ValidToUtc == null || x.ValidToUtc > end)).ToListAsync(ct);
+            var residentAssignments = await db.UserRoleAssignments.Where(x => x.AccountId == linkedAccount.AccountId && x.RoleKey == "resident" && x.ScopeBuildingId == entity.BuildingId && x.ScopeApartmentId == entity.ApartmentId && x.ValidFromUtc < end && x.RevokedAtUtc == null && (x.ValidToUtc == null || x.ValidToUtc > end)).ToListAsync(ct);
             foreach (var assignment in residentAssignments)
             {
                 assignment.RevokedAtUtc = end; assignment.RevokedByAccountId = actor; assignment.RevocationReason = "Occupancy ended by SuperAdmin governance.";
@@ -228,11 +229,11 @@ public sealed class IdentityGovernanceService
         var account = await db.UserAccounts.SingleOrDefaultAsync(x => x.AccountId == accountId, ct);
         if (account == null || await db.Persons.AnyAsync(x => x.PersonId == account.PersonId && x.IsArchived, ct)) return (false, "الحساب غير موجود أو هويته مؤرشفة.");
         if (!await db.RoleDefinitions.AnyAsync(x => x.RoleKey == roleKey && x.IsActive, ct)) return (false, "الدور غير موجود أو غير نشط.");
-        if (scopeType >= 1 && !await db.Buildings.AnyAsync(x => x.Id == buildingId, ct)) return (false, "العمارة غير موجودة.");
+        if ((scopeType == 1 || scopeType == 2) && !await db.Buildings.AnyAsync(x => x.Id == buildingId, ct)) return (false, "العمارة غير موجودة.");
         if (scopeType == 2 && !await db.Apartments.AnyAsync(x => x.BuildingId == buildingId && x.Id == apartmentId, ct)) return (false, "الشقة غير موجودة داخل العمارة.");
         if (roleKey == "resident" && (scopeType != 2 || !await db.ApartmentOccupancies.AnyAsync(x => x.PersonId == account.PersonId && x.BuildingId == buildingId && x.ApartmentId == apartmentId && x.ValidFromUtc <= DateTime.UtcNow && (x.ValidToUtc == null || x.ValidToUtc > DateTime.UtcNow), ct)))
             return (false, "دور Resident يتطلب نطاق شقة بها إشغال نشط للشخص نفسه.");
-        if (roleKey is "admin" or "building-admin" && scopeType != 1) return (false, "دور إدارة العمارة يتطلب نطاق عمارة.");
+        if ((roleKey is "admin" or "building-admin") && scopeType != 1) return (false, "دور إدارة العمارة يتطلب نطاق عمارة.");
         var from = DateTime.SpecifyKind(validFromUtc, DateTimeKind.Utc);
         if (validToUtc.HasValue && DateTime.SpecifyKind(validToUtc.Value, DateTimeKind.Utc) <= from) return (false, "تاريخ نهاية الدور يجب أن يكون بعد بدايته.");
         if (await db.UserRoleAssignments.AnyAsync(x => x.AccountId == accountId && x.RoleKey == roleKey && x.ScopeType == scopeType && x.ScopeBuildingId == buildingId && x.ScopeApartmentId == apartmentId && x.RevokedAtUtc == null && (x.ValidToUtc == null || x.ValidToUtc > from) && x.ValidFromUtc <= (validToUtc ?? DateTime.MaxValue), ct))
