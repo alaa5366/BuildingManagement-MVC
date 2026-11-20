@@ -200,6 +200,7 @@ public sealed class IdentityGovernanceService
     public async Task<(bool Success, string Message)> EndOccupancyAsync(Guid occupancyId, DateTime validToUtc, Guid actor, CancellationToken ct)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
+        await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
         var entity = await db.ApartmentOccupancies.SingleOrDefaultAsync(x => x.OccupancyId == occupancyId, ct);
         if (entity == null) return (false, "سجل التسكين غير موجود.");
         var end = DateTime.SpecifyKind(validToUtc, DateTimeKind.Utc);
@@ -218,6 +219,7 @@ public sealed class IdentityGovernanceService
             linkedAccount.SecurityStamp = Guid.NewGuid().ToString("N");
         }
         await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
         await _audit.LogAsync("identity.occupancy.ended", buildingId: entity.BuildingId, apartmentId: entity.ApartmentId, userId: actor.ToString(), userRole: "superadmin", metadata: new { occupancyId, end });
         return (true, "تم إنهاء فترة الإشغال مع الاحتفاظ بالسجل التاريخي.");
     }
@@ -231,6 +233,7 @@ public sealed class IdentityGovernanceService
         if (scopeType == 1 && (string.IsNullOrWhiteSpace(buildingId) || !string.IsNullOrWhiteSpace(apartmentId))) return (false, "نطاق العمارة يتطلب عمارة فقط.");
         if (scopeType == 2 && (string.IsNullOrWhiteSpace(buildingId) || string.IsNullOrWhiteSpace(apartmentId))) return (false, "نطاق الشقة يتطلب عمارة وشقة.");
         await using var db = await _factory.CreateDbContextAsync(ct);
+        await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
         var account = await db.UserAccounts.SingleOrDefaultAsync(x => x.AccountId == accountId, ct);
         if (account == null || await db.Persons.AnyAsync(x => x.PersonId == account.PersonId && x.IsArchived, ct)) return (false, "الحساب غير موجود أو هويته مؤرشفة.");
         if (!await db.RoleDefinitions.AnyAsync(x => x.RoleKey == roleKey && x.IsActive, ct)) return (false, "الدور غير موجود أو غير نشط.");
@@ -246,6 +249,7 @@ public sealed class IdentityGovernanceService
         var entity = new UserRoleAssignmentEntity { RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = roleKey, ScopeType = scopeType, ScopeBuildingId = string.IsNullOrWhiteSpace(buildingId) ? null : buildingId, ScopeApartmentId = string.IsNullOrWhiteSpace(apartmentId) ? null : apartmentId, ValidFromUtc = from, ValidToUtc = validToUtc.HasValue ? DateTime.SpecifyKind(validToUtc.Value, DateTimeKind.Utc) : null, GrantedAtUtc = DateTime.UtcNow, GrantedByAccountId = actor, GrantReason = reason };
         db.UserRoleAssignments.Add(entity);
         await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
         await _audit.LogAsync("identity.role.granted", buildingId: buildingId, apartmentId: apartmentId, userId: actor.ToString(), userRole: "superadmin", metadata: new { entity.RoleAssignmentId, accountId, roleKey, scopeType, reason });
         return (true, "تم منح الدور بالنطاق المحدد.");
     }
@@ -255,12 +259,14 @@ public sealed class IdentityGovernanceService
         reason = (reason ?? "").Trim();
         if (reason.Length is < 3 or > 500) return (false, "سبب الإلغاء مطلوب (3 إلى 500 حرف).");
         await using var db = await _factory.CreateDbContextAsync(ct);
+        await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
         var entity = await db.UserRoleAssignments.SingleOrDefaultAsync(x => x.RoleAssignmentId == assignmentId, ct);
         if (entity == null) return (false, "إسناد الدور غير موجود.");
         if (entity.RoleKey == "superadmin") return (false, "لا يمكن إلغاء SuperAdmin من هذه الشاشة.");
         if (entity.RevokedAtUtc != null) return (true, "الدور ملغى بالفعل.");
         entity.RevokedAtUtc = DateTime.UtcNow; entity.RevokedByAccountId = actor; entity.RevocationReason = reason;
         await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
         await _audit.LogAsync("identity.role.revoked", buildingId: entity.ScopeBuildingId, apartmentId: entity.ScopeApartmentId, userId: actor.ToString(), userRole: "superadmin", metadata: new { assignmentId, entity.RoleKey, reason });
         return (true, "تم إلغاء إسناد الدور مع الاحتفاظ بسجل المنح والإلغاء.");
     }
