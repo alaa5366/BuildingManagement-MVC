@@ -61,8 +61,15 @@ public sealed class IdentityGovernanceController : Controller
     private async Task<IActionResult> Mutate(Func<Task<(bool Success, string Message)>> operation)
     {
         if (IsImpersonated || ActorId == Guid.Empty) return Forbid();
-        var result = await operation();
-        TempData[result.Success ? "Message" : "Error"] = result.Message;
+        try
+        {
+            var result = await operation();
+            TempData[result.Success ? "Message" : "Error"] = result.Message;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            TempData["Error"] = "تعذر تنفيذ العملية بسبب تعارض أو قيد بيانات: " + ex.Message;
+        }
         return RedirectToAction(nameof(Index));
     }
 }
