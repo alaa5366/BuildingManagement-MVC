@@ -204,6 +204,7 @@ builder.Services.AddScoped<TargetQrService>();
     builder.Services.AddScoped<PersonPhoneCorrectionService>();
     builder.Services.AddScoped<ResidentAccountProvisioningService>();
     builder.Services.AddScoped<AccountManagementService>();
+    builder.Services.AddScoped<IdentityGovernanceService>();
 
     builder.Services.AddSingleton<IEncryptionService, AesEncryptionService>();
     builder.Services.AddSingleton<DvrService>();
