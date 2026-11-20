@@ -52,7 +52,8 @@ public sealed class IdentityGovernanceService
                                    Status = a.AccountStatus, MustChangePin = a.MustChangePin, LastLoginAtUtc = a.LastLoginAtUtc,
                                    ActiveCredentials = db.UserCredentials.Count(c => c.AccountId == a.AccountId && c.RevokedAtUtc == null && (c.ExpiresAtUtc == null || c.ExpiresAtUtc > now)),
                                    TwoFactorEnabled = db.UserTwoFactorSettings.Any(t => t.AccountId == a.AccountId && t.IsEnabled),
-                                   UnusedRecoveryCodes = db.UserRecoveryCodes.Count(c => c.AccountId == a.AccountId && c.UsedAtUtc == null)
+                                   UnusedRecoveryCodes = db.UserRecoveryCodes.Count(c => c.AccountId == a.AccountId && c.UsedAtUtc == null),
+                                   PreferenceCount = db.UserPreferences.Count(pf => pf.AccountId == a.AccountId)
                                }).Take(200).ToListAsync(ct);
 
         page.Security = await (from a in db.UserAccounts.AsNoTracking()
@@ -105,6 +106,10 @@ public sealed class IdentityGovernanceService
             .Select(x => new IdentityGovernanceCatalogRow { Key = x.LegacyIdentityMapId.ToString(), Title = x.SourceSystem + " / " + x.SourceTable, Detail = x.SourceKey + " | Person " + (x.PersonId == null ? "unresolved" : x.PersonId.ToString()) + " | Account " + (x.AccountId == null ? "unresolved" : x.AccountId.ToString()), Status = x.MappingStatus.ToString() }).Take(200).ToListAsync(ct);
         page.PhoneChangeRequests = await db.PersonPhoneChangeRequests.AsNoTracking().OrderByDescending(x => x.RequestedAtUtc)
             .Select(x => new IdentityGovernanceCatalogRow { Key = x.RequestId.ToString(), Title = x.RequestedPhone, Detail = x.PreviousPhone + " | " + x.BuildingId + " / " + x.ApartmentId, Status = x.Status.ToString() }).Take(200).ToListAsync(ct);
+        page.PresenceSessions = await db.PresenceSessions.AsNoTracking().OrderByDescending(x => x.LastSeenAtUtc)
+            .Select(x => new IdentityGovernanceCatalogRow { Key = x.PresenceSessionId.ToString(), Title = x.AccountId == null ? "Legacy / unknown account" : x.AccountId.ToString()!, Detail = (x.BuildingId ?? "-") + " / " + (x.ApartmentId ?? "-") + " | last seen " + x.LastSeenAtUtc.ToString(), Status = x.Status.ToString() }).Take(200).ToListAsync(ct);
+        page.AuditEvents = await db.AuditEvents.AsNoTracking().OrderByDescending(x => x.OccurredAtUtc)
+            .Select(x => new IdentityGovernanceCatalogRow { Key = x.AuditEventId.ToString(), Title = x.EventType, Detail = (x.ResourceType ?? "-") + " / " + (x.ResourceReference ?? "-") + " | actor " + (x.ActorReference ?? "-") + " | " + x.OccurredAtUtc.ToString(), Status = x.Outcome.ToString() }).Take(200).ToListAsync(ct);
         page.Buildings = await db.Buildings.AsNoTracking().OrderBy(x => x.BuildingNumber)
             .Select(x => new IdentityGovernanceCatalogRow { Key = x.Id, Title = x.BuildingNumber, Detail = x.Name, Status = "Active" }).ToListAsync(ct);
         page.Apartments = await db.Apartments.AsNoTracking().OrderBy(x => x.BuildingId).ThenBy(x => x.Number)
@@ -220,7 +225,7 @@ public sealed class IdentityGovernanceService
     public async Task<(bool Success, string Message)> GrantRoleAsync(Guid accountId, string roleKey, byte scopeType, string? buildingId, string? apartmentId, DateTime validFromUtc, DateTime? validToUtc, string reason, Guid actor, CancellationToken ct)
     {
         roleKey = (roleKey ?? "").Trim(); reason = (reason ?? "").Trim();
-        if (roleKey.Length == 0 || reason.Length is < 3 or > 500 || scopeType > 3) return (false, "بيانات الدور أو النطاق أو سبب المنح غير صحيحة.");
+        if (roleKey.Length == 0 || reason.Length is < 3 or > 500 || scopeType is not (1 or 2 or 3)) return (false, "بيانات الدور أو النطاق أو سبب المنح غير صحيحة. نطاق النظام محجوز لمسار الصلاحيات المحمي.");
         if (roleKey.Equals("superadmin", StringComparison.OrdinalIgnoreCase)) return (false, "منح SuperAdmin لا يتم من مركز الإدارة؛ يخضع لمسار bootstrap المحمي.");
         if ((scopeType is 0 or 3) && (!string.IsNullOrWhiteSpace(buildingId) || !string.IsNullOrWhiteSpace(apartmentId))) return (false, "نطاق النظام/الشخصي لا يقبل عمارة أو شقة.");
         if (scopeType == 1 && (string.IsNullOrWhiteSpace(buildingId) || !string.IsNullOrWhiteSpace(apartmentId))) return (false, "نطاق العمارة يتطلب عمارة فقط.");
