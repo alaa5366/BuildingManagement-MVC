@@ -245,6 +245,8 @@ public sealed class IdentityGovernanceService
     public async Task<(bool Success, string Message)> GrantRoleAsync(Guid accountId, string roleKey, byte scopeType, string? buildingId, string? apartmentId, DateTime validFromUtc, DateTime? validToUtc, string reason, Guid actor, CancellationToken ct)
     {
         roleKey = (roleKey ?? "").Trim(); reason = (reason ?? "").Trim();
+        buildingId = string.IsNullOrWhiteSpace(buildingId) ? null : buildingId.Trim();
+        apartmentId = string.IsNullOrWhiteSpace(apartmentId) ? null : apartmentId.Trim();
         if (roleKey.Length == 0 || reason.Length is < 3 or > 500 || scopeType is not (1 or 2 or 3)) return (false, "بيانات الدور أو النطاق أو سبب المنح غير صحيحة. نطاق النظام محجوز لمسار الصلاحيات المحمي.");
         if (roleKey.Equals("superadmin", StringComparison.OrdinalIgnoreCase)) return (false, "منح SuperAdmin لا يتم من مركز الإدارة؛ يخضع لمسار bootstrap المحمي.");
         if ((scopeType is 0 or 3) && (!string.IsNullOrWhiteSpace(buildingId) || !string.IsNullOrWhiteSpace(apartmentId))) return (false, "نطاق النظام/الشخصي لا يقبل عمارة أو شقة.");
