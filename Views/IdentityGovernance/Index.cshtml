@@ -53,6 +53,10 @@
                             @Html.AntiForgeryToken()<input type="hidden" name="personId" value="@p.PersonId" /><input type="hidden" name="archived" value="@(!p.IsArchived)" />
                             <button class="btn btn-sm btn-outline-danger" onclick="return confirm('تأكيد تغيير حالة أرشفة الهوية؟')">@(p.IsArchived ? "استعادة" : "أرشفة")</button>
                         </form>
+                        @if (p.AccountId == null && p.ActiveOccupancies > 0 && !p.IsArchived)
+                        {
+                            <form asp-action="CreatePendingAccount" method="post" class="mt-1">@Html.AntiForgeryToken()<input type="hidden" name="personId" value="@p.PersonId" /><button class="btn btn-sm btn-outline-success" onclick="return confirm('إنشاء حساب انتظار دون PIN؟')">إنشاء حساب انتظار</button></form>
+                        }
                     </details>
                 </td></tr>
             }
@@ -66,7 +70,7 @@
                 @Html.AntiForgeryToken()
                 <div class="col-md-3"><label class="form-label">Person ID</label><input name="personId" class="form-control" required /></div>
                 <div class="col-md-2"><label class="form-label">العمارة</label><select name="buildingId" class="form-select" required><option value="">اختر</option>@foreach(var b in Model.Buildings){<option value="@b.Key">@b.Title — @b.Key</option>}</select></div>
-                <div class="col-md-2"><label class="form-label">الشقة</label><select name="apartmentId" class="form-select" required><option value="">اختر رقم الشقة</option>@foreach(var a in Model.Apartments){<option value="@a.Key">@a.Detail / @a.Title</option>}</select><small class="text-muted">قيمة الاختيار مركبة؛ أدخل ApartmentId في حقل الشقة أدناه عند الحاجة.</small></div>
+                <div class="col-md-2"><label class="form-label">الشقة</label><input name="apartmentId" class="form-control" required placeholder="ApartmentId" /></div>
                 <div class="col-md-1"><label class="form-label">النوع</label><select name="occupancyType" class="form-select"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
                 <div class="col-md-2"><label class="form-label">بداية الإشغال UTC</label><input name="validFromUtc" type="datetime-local" class="form-control" required /></div>
                 <div class="col-md-1 d-flex align-items-end"><label><input type="checkbox" name="isPrimary" value="true" /> أساسي</label></div>
