@@ -39,6 +39,10 @@ public sealed class IdentityGovernanceController : Controller
         => await Mutate(() => _service.SetPersonArchivedAsync(personId, archived, ActorId, ct));
 
     [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreatePendingAccount(Guid personId, CancellationToken ct)
+        => await Mutate(() => _service.CreatePendingAccountAsync(personId, ActorId, ct));
+
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateOccupancy(Guid personId, string buildingId, string apartmentId, byte occupancyType, bool isPrimary, DateTime validFromUtc, string? notes, CancellationToken ct)
         => await Mutate(() => _service.CreateOccupancyAsync(personId, buildingId, apartmentId, occupancyType, isPrimary, validFromUtc, notes, ActorId, ct));
 
