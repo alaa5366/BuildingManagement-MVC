@@ -216,12 +216,12 @@ public class SessionRevalidator
             if (claimedBuildings.Count == 0) return new Result(false, null);
 
             var activeBuildings = await db.UserRoleAssignments.AsNoTracking()
-                .Where(item => item.AccountId == accountId && item.RoleKey == "admin"
+                .Where(item => item.AccountId == accountId && (item.RoleKey == "admin" || item.RoleKey == "building-admin")
                     && item.ScopeType == 1 && item.ScopeBuildingId != null
                     && item.ScopeApartmentId == null && item.RevokedAtUtc == null
                     && item.ValidFromUtc <= now
                     && (item.ValidToUtc == null || item.ValidToUtc > now))
-                .Join(db.RoleDefinitions.AsNoTracking().Where(role => role.RoleKey == "admin" && role.IsActive),
+                .Join(db.RoleDefinitions.AsNoTracking().Where(role => (role.RoleKey == "admin" || role.RoleKey == "building-admin") && role.IsActive),
                     assignment => assignment.RoleKey, role => role.RoleKey,
                     (assignment, role) => assignment.ScopeBuildingId!)
                 .Distinct().ToListAsync();
@@ -234,7 +234,7 @@ public class SessionRevalidator
                 return new Result(false, null);
 
             var basePermissions = await db.RolePermissions.AsNoTracking()
-                .Where(item => item.RoleKey == "admin" && item.Effect == 1)
+                .Where(item => (item.RoleKey == "admin" || item.RoleKey == "building-admin") && item.Effect == 1)
                 .Select(item => item.PermissionKey).Distinct().ToListAsync();
             var overrides = await db.AccountPermissionOverrides.AsNoTracking()
                 .Where(item => item.AccountId == accountId && item.ScopeType == 1

@@ -16,6 +16,35 @@ public sealed class ScheduledBackupService
     private const byte BackupFailed = 2;
     private const string BackupEncryptionKeyVersion = "backup-file-protector-v1";
 
+    // Collection identifiers persisted by the legacy backup configuration before
+    // the target-schema redesign. A legacy collection can now span multiple tables.
+    private static readonly IReadOnlyDictionary<string, string[]> LegacyCollectionAliases =
+        new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            ["globalSettings"] = ["globalApplicationSettings"],
+            ["scheduledBackupSettings"] = ["backupScheduleConfigurations"],
+            ["users"] = ["persons", "userAccounts", "userCredentials"],
+            ["buildingAdmins"] = ["userRoleAssignments"],
+            ["residents"] = ["persons", "apartmentOccupancies", "apartmentAccessGrants"],
+            ["expenses"] = ["financialPeriods", "ledgerTransactions", "ledgerEntries", "financialSourceLinks"],
+            ["revenues"] = ["financialPeriods", "ledgerTransactions", "ledgerEntries", "financialSourceLinks"],
+            ["monthlyApartmentShares"] = ["financialPeriods", "financialAllocationBatches", "financialAllocationLines"],
+            ["deposits"] = ["paymentDeposits", "ledgerTransactions", "ledgerEntries", "financialSourceLinks"],
+            ["depositEditHistory"] = ["auditEvents"],
+            ["walletAdjustments"] = ["ledgerTransactions", "ledgerEntries", "financialSourceLinks"],
+            ["userPermissions"] = ["roleDefinitions", "rolePermissions", "userRoleAssignments", "accountPermissionOverrides"],
+            ["auditLog"] = ["auditEvents"],
+            ["notifications"] = ["notificationMessages", "notificationRecipients", "notificationDeliveries", "notificationReadStates", "notificationPreferences"],
+            ["polls"] = ["pollDefinitions", "pollChoiceOptions", "pollVotingPolicies", "pollEligibility", "pollBallots", "pollLifecycleEvents"],
+            ["pollOptions"] = ["pollChoiceOptions"],
+            ["pollVotes"] = ["pollBallots"],
+            ["maintenanceRecords"] = ["maintenanceRequests", "maintenanceAssignments", "maintenanceComments", "maintenanceAttachments", "maintenanceStatusEvents", "maintenanceLedgerLinks"],
+            ["dvrs"] = ["mediaDevices", "mediaDeviceChannels", "mediaCredentialReferences", "mediaProvisioningOperations"],
+            ["cameras"] = ["mediaDevices", "mediaDeviceChannels", "mediaAccessSessions"],
+            ["qrTokens"] = ["qrCapabilities"],
+            ["qrUsages"] = ["qrCapabilityUses"]
+        };
+
     private readonly IDbContextFactory<AppDbContext> _sqlFactory;
     private readonly BackupService _backup;
     private readonly IAuditLogger _audit;
@@ -365,6 +394,42 @@ public sealed class ScheduledBackupService
             .OrderByDescending(item => item.CreatedAt).ToList();
     }
 
+    private static List<string> NormalizeLegacyCollections(IEnumerable<string> collections)
+    {
+        var known = BackupService.GetKnownCollections();
+        var normalized = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        void Add(string value)
+        {
+            if (seen.Add(value)) normalized.Add(value);
+        }
+
+        foreach (var collection in collections.Where(value => !string.IsNullOrWhiteSpace(value)))
+        {
+            if (known.ContainsKey(collection))
+            {
+                Add(collection);
+                continue;
+            }
+
+            if (LegacyCollectionAliases.TryGetValue(collection, out var replacements))
+            {
+                foreach (var replacement in replacements)
+                {
+                    if (known.ContainsKey(replacement)) Add(replacement);
+                }
+                continue;
+            }
+
+            // Preserve truly unknown values so the scheduled run fails closed
+            // instead of silently omitting data from the requested backup.
+            Add(collection);
+        }
+
+        return normalized;
+    }
+
     private static ScheduledBackupSettings MapSettings(BackupScheduleConfigurationEntity entity) => new()
     {
         Id = entity.LegacySettingId,
@@ -373,7 +438,7 @@ public sealed class ScheduledBackupService
         Hour = entity.ScheduledHour,
         DayOfWeek = entity.DayOfWeek,
         DayOfMonth = entity.DayOfMonth,
-        Collections = JsonSerializer.Deserialize<List<string>>(entity.CollectionsJson) ?? new(),
+        Collections = NormalizeLegacyCollections(JsonSerializer.Deserialize<List<string>>(entity.CollectionsJson) ?? new()),
         MaxBackupsToKeep = entity.MaxBackupsToKeep,
         LastRunAt = entity.LastRunAtUtc?.ToString("o"),
         LastRunStatus = entity.LastRunStatus,

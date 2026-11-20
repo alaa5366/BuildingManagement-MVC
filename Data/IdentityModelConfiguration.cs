@@ -61,6 +61,18 @@ internal static class IdentityModelConfiguration
                 .HasFilter("[NormalizedEmail] IS NOT NULL");
         });
 
+        mb.Entity<UserPreferenceEntity>(e =>
+        {
+            e.ToTable("UserPreferences");
+            e.HasKey(x => x.PreferenceId);
+            e.Property(x => x.PreferenceId).ValueGeneratedNever();
+            e.Property(x => x.PreferenceKey).HasMaxLength(120).IsRequired();
+            e.Property(x => x.PreferenceJson).HasMaxLength(2000).IsRequired();
+            Utc3(e.Property(x => x.UpdatedAtUtc));
+            e.HasIndex(x => new { x.AccountId, x.PreferenceKey }).IsUnique()
+                .HasDatabaseName("UQ_UserPreferences_Account_Key");
+        });
+
         mb.Entity<UserCredentialEntity>(e =>
         {
             e.ToTable("UserCredentials", t =>

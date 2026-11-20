@@ -1,4 +1,4 @@
-﻿using BuildingManagementMvc.Attributes;
+using BuildingManagementMvc.Attributes;
 using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -22,7 +22,6 @@ public class AdminAptsController : Controller
 {
     private readonly BuildingsService _buildings;
     private readonly WalletService _wallet;
-    private readonly ResidentsService _residents;
     private readonly QrSecurityService _qrSecurity;
     private readonly TargetQrService _targetQr;
     private readonly QrGeneratorService _qrGen;
@@ -38,7 +37,6 @@ public class AdminAptsController : Controller
     public AdminAptsController(
         BuildingsService buildings,
         WalletService wallet,
-        ResidentsService residents,
         QrSecurityService qrSecurity,
         TargetQrService targetQr,
         QrGeneratorService qrGen,
@@ -50,7 +48,6 @@ public class AdminAptsController : Controller
     {
         _buildings = buildings;
         _wallet = wallet;
-        _residents = residents;
         _qrSecurity = qrSecurity;
         _targetQr = targetQr;
         _qrGen = qrGen;
@@ -575,7 +572,6 @@ public class AdminAptsController : Controller
         string owner,
         string label,
         string phone,
-        string? pin,
         decimal monthlyFee,
         string? notes,
         string? email)
@@ -593,11 +589,6 @@ public class AdminAptsController : Controller
         }
 
         // الـ PIN اختياري: فاضي = يفضل زي ما هو، 4 أرقام = إعادة تعيين
-        if (!string.IsNullOrWhiteSpace(pin) && (pin.Length != 4 || !pin.All(char.IsDigit)))
-        {
-            TempData["Error"] = Loc.T("PIN_Must_Be_Exactly_4_Digits");
-            return RedirectToAction(nameof(Edit), new { aptId });
-        }
 
         try
         {
@@ -608,8 +599,6 @@ public class AdminAptsController : Controller
                 monthlyFee, notes ?? "", email);
 
             // 2. ✅ تحديث جدول السكان باستخدام الدالة المركزية
-            if (!string.IsNullOrWhiteSpace(pin))
-                await _residents.SetApartmentPinAsync(BuildingId, aptId, pin, CurrentUserId);
 
             await _auditLogger.LogAsync(
                 action: "apartment.updated",

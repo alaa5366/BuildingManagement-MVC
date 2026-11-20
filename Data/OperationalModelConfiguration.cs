@@ -1,4 +1,4 @@
-﻿using BuildingManagementMvc.Data.Entities;
+using BuildingManagementMvc.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Data;
@@ -228,8 +228,9 @@ internal static class OperationalModelConfiguration
                 .IsDescending(false, true, true)
                 .HasDatabaseName("IX_AuditEvents_Correlation_Time");
             e.Property(x => x.OccurredAtUtc).HasColumnType("datetime2(3)");
-            e.Property(x => x.Outcome).HasDefaultValue((byte)0);
+            e.Property(x => x.Outcome).ValueGeneratedNever();
             e.HasIndex(x => new { x.OccurredAtUtc, x.AuditEventId })
+                .IsDescending(true, true)
                 .HasDatabaseName("IX_AuditEvents_OccurredAt");
             e.HasIndex(x => new { x.ResourceType, x.ResourceReference, x.OccurredAtUtc })
                 .HasDatabaseName("IX_AuditEvents_Resource");

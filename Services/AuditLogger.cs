@@ -3,7 +3,11 @@ using BuildingManagementMvc.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Data;
 using System.Diagnostics;
+using System.Globalization;
+using System.Text;
+using Microsoft.Data.SqlClient;
 
 namespace BuildingManagementMvc.Services;
 
@@ -99,9 +103,127 @@ public class AuditLogger : IAuditLogger
         var totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
         page = Math.Min(page, totalPages);
         var pageTimer = Stopwatch.StartNew();
-        var rows = await query.OrderByDescending(x => x.OccurredAtUtc)
-            .ThenByDescending(x => x.AuditEventId)
-            .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        var skip = (long)(page - 1) * pageSize;
+        var requiredRows = skip + pageSize;
+
+        var orderedQuery = query.OrderByDescending(x => x.OccurredAtUtc)
+            .ThenByDescending(x => x.AuditEventId);
+        List<AuditEventEntity> rows;
+        if (db.Database.IsSqlServer() && skip <= 10000)
+        {
+            // Parameterized TOP/OFFSET plans were measured at ~25 seconds on this
+            // SQL Server workload. Literal TOP chunks of 100 rows stay fast. Use
+            // keyset continuation for deeper pages so no query needs a large TOP
+            // value or OFFSET/FETCH; every user value remains a SQL parameter.
+            async Task<List<AuditEventEntity>> FetchSqlPage(
+                int take, DateTime? afterUtc, Guid? afterAuditEventId)
+            {
+                var sql = new StringBuilder(
+                    $"SELECT TOP ({take.ToString(CultureInfo.InvariantCulture)}) * FROM dbo.AuditEvents");
+                var predicates = new List<string>();
+                var parameters = new List<SqlParameter>();
+
+                void AddTextFilter(string column, string parameterName, string? value, int maxLength)
+                {
+                    if (string.IsNullOrWhiteSpace(value)) return;
+                    predicates.Add($"[{column}] = {parameterName}");
+                    parameters.Add(new SqlParameter(parameterName, SqlDbType.NVarChar, maxLength) { Value = value });
+                }
+
+                AddTextFilter("BuildingId", "@buildingId", buildingId, 64);
+                if (!string.IsNullOrWhiteSpace(apartmentId))
+                {
+                    predicates.Add("[ResourceType] = N'Apartment'");
+                    AddTextFilter("ResourceReference", "@apartmentId", apartmentId, 200);
+                }
+                AddTextFilter("ActorReference", "@userId", userId, 160);
+                AddTextFilter("EventType", "@action", action, 120);
+                AddTextFilter("CorrelationId", "@correlationId", correlationId, 100);
+
+                if (!string.IsNullOrWhiteSpace(severity))
+                {
+                    var outcome = severity.Trim().ToLowerInvariant() switch
+                    {
+                        "info" => (byte)0,
+                        "warning" => (byte)1,
+                        "error" => (byte)2,
+                        "critical" => (byte)3,
+                        _ => byte.MaxValue
+                    };
+                    predicates.Add("[Outcome] = @outcome");
+                    parameters.Add(new SqlParameter("@outcome", SqlDbType.TinyInt) { Value = outcome });
+                }
+
+                if (from.HasValue)
+                {
+                    predicates.Add("[OccurredAtUtc] >= @fromUtc");
+                    parameters.Add(new SqlParameter("@fromUtc", SqlDbType.DateTime2) { Scale = 3, Value = from.Value });
+                }
+                if (to.HasValue)
+                {
+                    predicates.Add("[OccurredAtUtc] <= @toUtc");
+                    parameters.Add(new SqlParameter("@toUtc", SqlDbType.DateTime2) { Scale = 3, Value = to.Value });
+                }
+
+                if (afterUtc.HasValue && afterAuditEventId.HasValue)
+                {
+                    predicates.Add("([OccurredAtUtc] < @afterUtc OR ([OccurredAtUtc] = @afterUtc AND [AuditEventId] < @afterAuditEventId))");
+                    parameters.Add(new SqlParameter("@afterUtc", SqlDbType.DateTime2) { Scale = 3, Value = afterUtc.Value });
+                    parameters.Add(new SqlParameter("@afterAuditEventId", SqlDbType.UniqueIdentifier) { Value = afterAuditEventId.Value });
+                }
+
+                if (predicates.Count > 0)
+                    sql.Append(" WHERE ").Append(string.Join(" AND ", predicates));
+                sql.Append(" ORDER BY [OccurredAtUtc] DESC, [AuditEventId] DESC;");
+
+                return await db.AuditEvents
+                    .FromSqlRaw(sql.ToString(), parameters.Cast<object>().ToArray())
+                    .AsNoTracking()
+                    .ToListAsync();
+            }
+
+            if (requiredRows <= 100)
+            {
+                var orderedRows = await FetchSqlPage((int)requiredRows, null, null);
+                rows = orderedRows.Skip((int)skip).Take(pageSize).ToList();
+            }
+            else
+            {
+                var remaining = skip;
+                DateTime? cursorUtc = null;
+                Guid? cursorAuditEventId = null;
+
+                while (remaining > 0)
+                {
+                    var chunkSize = (int)Math.Min(100, remaining);
+                    var boundaryRows = await FetchSqlPage(chunkSize, cursorUtc, cursorAuditEventId);
+                    if (boundaryRows.Count == 0)
+                        break;
+
+                    var boundary = boundaryRows[^1];
+                    cursorUtc = boundary.OccurredAtUtc;
+                    cursorAuditEventId = boundary.AuditEventId;
+                    remaining -= boundaryRows.Count;
+
+                    if (boundaryRows.Count < chunkSize)
+                        break;
+                }
+
+                rows = remaining == 0
+                    ? await FetchSqlPage(pageSize, cursorUtc, cursorAuditEventId)
+                    : new List<AuditEventEntity>();
+            }
+        }
+        else if (requiredRows <= 10000)
+        {
+            var orderedRows = await orderedQuery.Take((int)requiredRows).ToListAsync();
+            rows = orderedRows.Skip((int)skip).Take(pageSize).ToList();
+        }
+        else
+        {
+            rows = await orderedQuery.Skip((int)Math.Min(skip, int.MaxValue))
+                .Take(pageSize).ToListAsync();
+        }
         pageTimer.Stop();
         if (countTimer.ElapsedMilliseconds >= 250 || pageTimer.ElapsedMilliseconds >= 250)
         {

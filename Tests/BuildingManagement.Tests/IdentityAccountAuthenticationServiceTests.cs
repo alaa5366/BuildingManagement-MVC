@@ -1,4 +1,4 @@
-﻿using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Services;
 using Microsoft.EntityFrameworkCore;
@@ -296,7 +296,7 @@ public sealed class IdentityAccountAuthenticationServiceTests
     }
 
     [Fact]
-    public async Task AuthenticateResidentAsync_ProvisioningWithInitialPinRequiresPinRotation()
+    public async Task AuthenticateResidentAsync_DoesNotAutoProvisionWithSharedDefaultPin()
     {
         var factory = new TestContextFactory();
         var hasher = new BcryptPasswordHasher();
@@ -337,29 +337,12 @@ public sealed class IdentityAccountAuthenticationServiceTests
         var initial = await service.AuthenticateResidentAsync("+201000000077", "1234");
 
         Assert.NotNull(initial);
-        Assert.True(initial.Success);
-        Assert.True(initial.MustChangePin);
-        Assert.True(Guid.TryParse(initial.Uid, out var accountId));
+        Assert.False(initial.Success);
+        Assert.Equal("wrong-credentials", initial.Error);
 
-        await using (var db = await factory.CreateDbContextAsync())
-        {
-            var account = await db.UserAccounts.SingleAsync(item => item.AccountId == accountId);
-            Assert.True(account.MustChangePin);
-            Assert.Equal(1, account.AccountStatus);
-            Assert.Equal(1, await db.UserCredentials.CountAsync(item =>
-                item.AccountId == accountId && item.CredentialType == 0 && item.RevokedAtUtc == null));
-            Assert.Equal(1, await db.UserRoleAssignments.CountAsync(item =>
-                item.AccountId == accountId && item.RoleKey == "resident" &&
-                item.ScopeType == 2 && item.ScopeBuildingId == "building-1" &&
-                item.ScopeApartmentId == "apt-77"));
-        }
-
-        Assert.True(await service.ChangeResidentPinAsync(accountId, initial.SecurityStamp!, "9876"));
-        var afterChange = await service.AuthenticateResidentAsync("01000000077", "9876");
-
-        Assert.NotNull(afterChange);
-        Assert.True(afterChange.Success);
-        Assert.False(afterChange.MustChangePin);
+        await using var verify = await factory.CreateDbContextAsync();
+        Assert.Empty(await verify.UserAccounts.ToListAsync());
+        Assert.Empty(await verify.UserCredentials.ToListAsync());
     }
 
     [Fact]
@@ -421,16 +404,26 @@ public sealed class IdentityAccountAuthenticationServiceTests
                 PersonId = personId, DisplayName = "Target Admin",
                 PrimaryPhone = "+201000000555", PrimaryEmail = "admin@example.invalid", CreatedAtUtc = now
             });
-            db.UserAccounts.Add(new UserAccountEntity
+            // A separate Resident-only record may share the contact phone.
+            db.Persons.Add(new PersonEntity
+            {
+                PersonId = Guid.NewGuid(), DisplayName = "Resident Contact Record",
+                PrimaryPhone = "01000000555", CreatedAtUtc = now
+            });            db.UserAccounts.Add(new UserAccountEntity
             {
                 AccountId = accountId, PersonId = personId, AccountStatus = 1,
                 SecurityStamp = "admin-stamp", CreatedAtUtc = now
             });
-            db.RoleDefinitions.Add(new RoleDefinitionEntity { RoleKey = "admin", DisplayName = "Admin", IsActive = true });
-            db.RolePermissions.Add(new RolePermissionEntity { RoleKey = "admin", PermissionKey = "residents.manage", Effect = 1 });
+            db.RoleDefinitions.Add(new RoleDefinitionEntity { RoleKey = "building-admin", DisplayName = "Building Administrator", IsActive = true });
+            db.RoleDefinitions.Add(new RoleDefinitionEntity { RoleKey = "resident", DisplayName = "Resident", IsActive = true });
+            db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            {
+                RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "resident",
+                ScopeType = 1, ScopeBuildingId = "building-b", ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1)
+            });            db.RolePermissions.Add(new RolePermissionEntity { RoleKey = "building-admin", PermissionKey = "residents.manage", Effect = 1 });
             db.UserRoleAssignments.AddRange(
-                new UserRoleAssignmentEntity { RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "admin", ScopeType = 1, ScopeBuildingId = "building-a", ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1) },
-                new UserRoleAssignmentEntity { RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "admin", ScopeType = 1, ScopeBuildingId = "building-b", ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1) });
+                new UserRoleAssignmentEntity { RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "building-admin", ScopeType = 1, ScopeBuildingId = "building-a", ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1) },
+                new UserRoleAssignmentEntity { RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "building-admin", ScopeType = 1, ScopeBuildingId = "building-b", ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1) });
             db.UserCredentials.Add(new UserCredentialEntity
             {
                 CredentialId = Guid.NewGuid(), AccountId = accountId, CredentialType = 0,
@@ -455,8 +448,7 @@ public sealed class IdentityAccountAuthenticationServiceTests
         Assert.False(wrongPin.Success);
 
         var wrongBuilding = await service.AuthenticateAdminAsync("+201000000555", "583921", "building-c");
-        Assert.NotNull(wrongBuilding);
-        Assert.False(wrongBuilding.Success);
+        Assert.Null(wrongBuilding);
     }
 
     [Fact]
@@ -531,6 +523,48 @@ public sealed class IdentityAccountAuthenticationServiceTests
         Assert.Equal(gmailAccountId.ToString("D"), gmail.Uid);
         Assert.Contains("buildings.manage", hotmail.Permissions);
         Assert.False(crossed.Success);
+    }
+
+    [Fact]
+    public async Task ResetApartmentResidentPinsAsync_DoesNotChangeAnyIndividualResidentCredential()
+    {
+        var factory = new TestContextFactory();
+        var hasher = new BcryptPasswordHasher();
+        var now = DateTime.UtcNow;
+        var personId = Guid.NewGuid();
+        var accountId = Guid.NewGuid();
+        var credentialId = Guid.NewGuid();
+        var oldHash = hasher.HashPin("246810");
+        await using (var db = await factory.CreateDbContextAsync())
+        {
+            db.Persons.Add(new PersonEntity
+            {
+                PersonId = personId, DisplayName = "Individual Resident",
+                PrimaryPhone = "+201000000909", CreatedAtUtc = now
+            });
+            db.UserAccounts.Add(new UserAccountEntity
+            {
+                AccountId = accountId, PersonId = personId, AccountStatus = 1,
+                SecurityStamp = "before", CreatedAtUtc = now
+            });
+            db.UserCredentials.Add(new UserCredentialEntity
+            {
+                CredentialId = credentialId, AccountId = accountId, CredentialType = 0,
+                CredentialHash = oldHash, HashAlgorithm = "BCrypt.Net-Next", CreatedAtUtc = now
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var service = new IdentityAccountAuthenticationService(factory, hasher);
+        var affected = await service.ResetApartmentResidentPinsAsync(
+            "building-1", "apt-1", "9876", "qr-shared-link");
+
+        Assert.Equal(0, affected);
+        await using var verify = await factory.CreateDbContextAsync();
+        var credential = await verify.UserCredentials.SingleAsync(x => x.CredentialId == credentialId);
+        Assert.Null(credential.RevokedAtUtc);
+        Assert.Equal(oldHash, credential.CredentialHash);
+        Assert.Equal("before", (await verify.UserAccounts.SingleAsync(x => x.AccountId == accountId)).SecurityStamp);
     }
 
     private sealed class TestContextFactory : IDbContextFactory<AppDbContext>

@@ -87,6 +87,38 @@ public class AuditLoggerTests
     }
 
     [Fact]
+    public async Task QueryPage_UsesOrderedTopWindowForStablePageBoundaries()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        var factory = new Mock<IDbContextFactory<AppDbContext>>();
+        factory.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new AppDbContext(options));
+        var baseline = DateTime.UtcNow.AddMinutes(-10);
+        await using (var db = new AppDbContext(options))
+        {
+            for (var i = 1; i <= 5; i++)
+            {
+                var item = Event(null, null, 0, $"event-{i}");
+                item.OccurredAtUtc = baseline.AddMinutes(i);
+                db.AuditEvents.Add(item);
+            }
+            await db.SaveChangesAsync();
+        }
+
+        var logger = new AuditLogger(factory.Object, NullLogger<AuditLogger>.Instance);
+        var firstPage = await logger.QueryPageAsync(null, null, null, null, null, null, null, 1, 2);
+        var secondPage = await logger.QueryPageAsync(null, null, null, null, null, null, null, 2, 2);
+        var lastPage = await logger.QueryPageAsync(null, null, null, null, null, null, null, 3, 2);
+
+        Assert.Equal(new[] { "event-5", "event-4" }, firstPage.Items.Select(x => x.Action));
+        Assert.Equal(new[] { "event-3", "event-2" }, secondPage.Items.Select(x => x.Action));
+        Assert.Equal("event-1", Assert.Single(lastPage.Items).Action);
+        Assert.Equal(5, firstPage.TotalItems);
+        Assert.Equal(3, lastPage.CurrentPage);
+    }
+
+    [Fact]
     public async Task LogAsync_PersistsCorrelationAndActorRoleInSafeAuditMetadata()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()

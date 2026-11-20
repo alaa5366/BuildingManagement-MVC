@@ -1,0 +1,20 @@
+@{
+    ViewData["Title"] = "حدث خطأ";
+    var message = ViewBag.ErrorMessage as string;
+}
+
+<div class="container py-5" style="max-width: 760px">
+    <div class="alert alert-danger shadow-sm" role="alert">
+        <h1 class="h4 mb-3">تعذر إكمال العملية</h1>
+        <p class="mb-2">
+            حدث خطأ غير متوقع. لم نتمكن من إكمال طلبك؛ يُرجى المحاولة مرة أخرى.
+        </p>
+        @if (!string.IsNullOrWhiteSpace(message))
+        {
+            <p class="mb-0">@message</p>
+        }
+    </div>
+    <a asp-controller="Home" asp-action="Index" class="btn btn-primary">
+        العودة إلى الصفحة الرئيسية
+    </a>
+</div>

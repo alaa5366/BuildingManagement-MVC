@@ -66,17 +66,23 @@
                     @if (account.ActiveRoleCount == 0) { <span class="badge bg-danger">بدون دور نشط</span> }
                 </td>
                 <td>
-                    @if (!account.IsArchived && account.Roles is "resident" or "admin" or "building-admin")
+                    @if (!account.IsArchived && (account.CanManagePin || account.CanChangeStatus))
                     {
                         <div class="d-flex flex-wrap gap-1">
-                            @if (account.AccountStatus == 1)
+                            @if (account.CanChangeStatus && account.AccountStatus == 1)
                             {
                                 <form asp-action="SetManagedAccountStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="accountId" value="@account.AccountId" /><input type="hidden" name="activate" value="false" /><button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm(&quot;إيقاف حساب المستخدم؟&quot;)">إيقاف</button></form>
-                                <form asp-action="ResetManagedAccountPin" method="post">@Html.AntiForgeryToken()<input type="hidden" name="accountId" value="@account.AccountId" /><button type="submit" class="btn btn-sm btn-outline-primary" onclick="return confirm(&quot;إصدار PIN مؤقت جديد وإلغاء الحالي؟&quot;)">إعادة تعيين PIN</button></form>
                             }
-                            else if (account.AccountStatus == 0)
+                            @if (account.CanChangeStatus && account.AccountStatus == 0 && !account.RequiresIdentityVerificationForPin)
                             {
                                 <form asp-action="SetManagedAccountStatus" method="post">@Html.AntiForgeryToken()<input type="hidden" name="accountId" value="@account.AccountId" /><input type="hidden" name="activate" value="true" /><button type="submit" class="btn btn-sm btn-outline-success">تفعيل</button></form>
+                            }
+                            @if (account.CanManagePin && (account.AccountStatus == 1 || (account.AccountStatus == 0 && account.RequiresIdentityVerificationForPin && !account.Roles.Contains("admin", StringComparison.OrdinalIgnoreCase) && !account.Roles.Contains("building-admin", StringComparison.OrdinalIgnoreCase))))
+                            {
+                                <form asp-action="ResetManagedAccountPin" method="post">@Html.AntiForgeryToken()<input type="hidden" name="accountId" value="@account.AccountId" />
+                                    @if (account.RequiresIdentityVerificationForPin) { <label class="small"><input type="checkbox" name="identityVerified" value="true" required /> أؤكد التحقق من هوية الساكن وملكيته لرقم الهاتف</label> }
+                                    <button type="submit" class="btn btn-sm btn-outline-primary" onclick="return confirm(&quot;إصدار PIN مؤقت جديد وإلغاء الحالي؟&quot;)">@(account.AccountStatus == 0 ? "إصدار PIN وتفعيل الحساب" : "إعادة تعيين PIN")</button>
+                                </form>
                             }
                         </div>
                     }

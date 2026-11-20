@@ -51,7 +51,7 @@ public class NotificationsController : Controller
 
     /// <summary>Prepares a notification for publication.</summary>
     [HttpGet]
-    [AdminPermission(AdminPermissions.UseWhatsApp)]
+    [AdminPermission("integration.whatsapp.send")]
     public async Task<IActionResult> Compose()
     {
         if (!User.IsInRole("admin") || string.IsNullOrWhiteSpace(BuildingId)) return Forbid();
@@ -62,7 +62,7 @@ public class NotificationsController : Controller
 
     /// <summary>Publishes the prepared notification.</summary>
     [HttpPost]
-    [AdminPermission(AdminPermissions.UseWhatsApp)]
+    [AdminPermission("integration.whatsapp.send")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Publish(string aptId, string title, string body)
     {

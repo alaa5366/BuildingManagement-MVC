@@ -26,8 +26,14 @@ public sealed class TargetPollsServiceTests
         var entitlement = await verify.PollEligibility.SingleAsync(x =>
             x.BuildingId == "B1" && x.PollId == poll.Id && x.SubjectReference == "A1");
         Assert.NotNull(entitlement.ConsumedAtUtc);
-        Assert.False(System.Text.Encoding.UTF8.GetString(ballot.ChoicePayload).Contains("A1", StringComparison.Ordinal));
-        Assert.False(System.Text.Encoding.UTF8.GetString(ballot.ChoicePayload).Contains(poll.Options[0].Id, StringComparison.Ordinal));
+        var protectedChoice = System.Text.Encoding.UTF8.GetString(ballot.ChoicePayload);
+        // A short identifier such as "A1" can occur by chance in ciphertext. Assert
+        // the stored value is not plaintext and can only be recovered by the protector.
+        Assert.NotEqual("A1", protectedChoice);
+        Assert.False(protectedChoice.Contains(poll.Options[0].Id, StringComparison.Ordinal));
+        var protector = DataProtectionProvider.Create("BuildingManagement.Tests")
+            .CreateProtector("BuildingManagement.Polls.ChoicePayload.v1");
+        Assert.Equal(poll.Options[0].Id, protector.Unprotect(protectedChoice));
         Assert.Equal(32, ballot.BallotTokenHash.Length);
 
         var residentView = await service.GetAsync("B1", poll.Id, subjectReference: "A1");

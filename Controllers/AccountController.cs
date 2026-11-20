@@ -1097,6 +1097,7 @@ public class AccountController : Controller
     [HttpPost]
     [AllowAnonymous]
     [EnableRateLimiting("login")]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> SetPin(
         string token, string newPin, string confirmPin,
         [FromServices] QrSecurityService qrSecurity)
@@ -1136,7 +1137,10 @@ public class AccountController : Controller
             var affectedAccounts = await _identityAuth.ResetApartmentResidentPinsAsync(
                 ctx.Payload!.BuildingId, ctx.Payload.AptId, newPin, "setpin-link", HttpContext.RequestAborted);
             if (affectedAccounts == 0)
-                throw new InvalidOperationException("No active target resident accounts are linked to this apartment.");
+            {
+                ViewBag.Error = "رابط الشقة المشترك لا يغيّر PIN الحسابات الشخصية. اطلب من إدارة العمارة إصدار PIN مستقل من مركز إدارة الحسابات.";
+                return View("QuickLoginError");
+            }
             _log.LogInformation("[SetPin] PIN set via link for apartment {Apt} in building {B}",
                 ctx.Apartment.ApartmentNumber, ctx.Payload.BuildingId);
         }

@@ -545,6 +545,7 @@ namespace BuildingManagementMvc.Migrations
                     b.HasKey("AuditEventId");
 
                     b.HasIndex("OccurredAtUtc", "AuditEventId")
+                        .IsDescending()
                         .HasDatabaseName("IX_AuditEvents_OccurredAt");
 
                     b.HasIndex("CorrelationId", "OccurredAtUtc", "AuditEventId")
@@ -3366,6 +3367,36 @@ namespace BuildingManagementMvc.Migrations
 
                             t.HasCheckConstraint("CK_UserCredentials_Type", "[CredentialType] IN (0,1)");
                         });
+                });
+
+            modelBuilder.Entity("BuildingManagementMvc.Data.Entities.UserPreferenceEntity", b =>
+                {
+                    b.Property<Guid>("PreferenceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PreferenceJson")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("PreferenceKey")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2(3)");
+
+                    b.HasKey("PreferenceId");
+
+                    b.HasIndex("AccountId", "PreferenceKey")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_UserPreferences_Account_Key");
+
+                    b.ToTable("UserPreferences", (string)null);
                 });
 
             modelBuilder.Entity("BuildingManagementMvc.Data.Entities.UserRecoveryCodeEntity", b =>

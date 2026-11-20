@@ -5,6 +5,7 @@ using BuildingManagementMvc.Controllers;
 using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Xunit;
@@ -85,6 +86,68 @@ public class ControllerAuthorizationTests
             Assert.Equal(
                 AdminPermissions.ManageSettingsBuilding,
                 method.GetCustomAttribute<AdminPermissionAttribute>()?.Permission));
+    }
+
+    [Fact]
+    public void Admin_resident_actions_enforce_building_scope_and_protect_move_post()
+    {
+        var controller = new AdminResidentsController(null!, null!);
+        var identity = new ClaimsIdentity(
+            new[]
+            {
+                new Claim(ClaimTypes.Role, "admin"),
+                new Claim("buildingId", "building-a")
+            },
+            "test");
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
+        };
+
+        var scopeCheck = typeof(AdminResidentsController).GetMethod(
+            "CanAccessBuilding",
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        Assert.True((bool)scopeCheck.Invoke(controller, new object[] { "building-a" })!);
+        Assert.False((bool)scopeCheck.Invoke(controller, new object[] { "building-b" })!);
+
+        var move = typeof(AdminResidentsController).GetMethod(nameof(AdminResidentsController.Move))!;
+        Assert.NotNull(move.GetCustomAttribute<HttpPostAttribute>());
+        Assert.NotNull(move.GetCustomAttribute<ValidateAntiForgeryTokenAttribute>());
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(
+                    new[] { new Claim(ClaimTypes.Role, "superadmin") }, "test"))
+            }
+        };
+        Assert.True((bool)scopeCheck.Invoke(controller, new object[] { "building-b" })!);
+    }
+
+    [Fact]
+    public void Anonymous_post_actions_require_explicit_antiforgery_validation()
+    {
+        var offenders = new List<string>();
+
+        foreach (var controller in ControllerTypes())
+        {
+            foreach (var method in controller.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            {
+                var acceptsPost = method.GetCustomAttributes<HttpMethodAttribute>(true)
+                    .Any(attribute => attribute.HttpMethods.Contains("POST", StringComparer.OrdinalIgnoreCase));
+                if (!acceptsPost || method.GetCustomAttribute<AllowAnonymousAttribute>() is null)
+                    continue;
+
+                if (method.GetCustomAttribute<ValidateAntiForgeryTokenAttribute>() is null &&
+                    controller.GetCustomAttribute<ValidateAntiForgeryTokenAttribute>() is null &&
+                    controller.GetCustomAttribute<AutoValidateAntiforgeryTokenAttribute>() is null)
+                    offenders.Add($"{controller.Name}.{method.Name}");
+            }
+        }
+
+        Assert.Empty(offenders);
     }
 
     [Fact]

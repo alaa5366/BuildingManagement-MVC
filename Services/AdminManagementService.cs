@@ -31,7 +31,7 @@ public sealed class AdminManagementService
             from account in db.UserAccounts.AsNoTracking()
             join person in db.Persons.AsNoTracking() on account.PersonId equals person.PersonId
             join assignment in db.UserRoleAssignments.AsNoTracking() on account.AccountId equals assignment.AccountId
-            where assignment.RoleKey == "admin" && assignment.ScopeType == 1
+            where (assignment.RoleKey == "admin" || assignment.RoleKey == "building-admin") && assignment.ScopeType == 1
                 && assignment.RevokedAtUtc == null
                 && (assignment.ValidFromUtc <= now)
                 && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
@@ -65,7 +65,7 @@ public sealed class AdminManagementService
         if (record is null) return null;
 
         var buildings = await db.UserRoleAssignments.AsNoTracking()
-            .Where(item => item.AccountId == accountId && item.RoleKey == "admin"
+            .Where(item => item.AccountId == accountId && (item.RoleKey == "admin" || item.RoleKey == "building-admin")
                 && item.ScopeType == 1 && item.RevokedAtUtc == null
                 && item.ValidFromUtc <= now && (item.ValidToUtc == null || item.ValidToUtc > now))
             .Select(item => item.ScopeBuildingId!).Distinct().ToListAsync();
@@ -136,7 +136,7 @@ public sealed class AdminManagementService
         {
             RoleAssignmentId = Guid.NewGuid(),
             AccountId = accountId,
-            RoleKey = "admin",
+            RoleKey = "building-admin",
             ScopeType = 1,
             ScopeBuildingId = buildingId,
             ValidFromUtc = now,
@@ -172,7 +172,7 @@ public sealed class AdminManagementService
         if (account is null || person is null) throw new InvalidOperationException(Loc.T("The_Admin_Does_Not_Exist"));
 
         var assignments = await db.UserRoleAssignments.Where(item => item.AccountId == accountId
-            && item.RoleKey == "admin" && item.ScopeType == 1 && item.RevokedAtUtc == null
+            && (item.RoleKey == "admin" || item.RoleKey == "building-admin") && item.ScopeType == 1 && item.RevokedAtUtc == null
             && item.ValidFromUtc <= now && (item.ValidToUtc == null || item.ValidToUtc > now)).ToListAsync();
         if (assignments.Count == 0) throw new InvalidOperationException(Loc.T("The_Admin_Does_Not_Exist"));
 
@@ -254,7 +254,7 @@ public sealed class AdminManagementService
         var account = await db.UserAccounts.SingleOrDefaultAsync(item => item.AccountId == accountId)
             ?? throw new InvalidOperationException(Loc.T("The_Admin_Does_Not_Exist"));
         var assignments = await db.UserRoleAssignments.Where(item => item.AccountId == accountId
-            && item.RoleKey == "admin" && item.RevokedAtUtc == null).ToListAsync();
+            && (item.RoleKey == "admin" || item.RoleKey == "building-admin") && item.RevokedAtUtc == null).ToListAsync();
         if (assignments.Count == 0) throw new InvalidOperationException(Loc.T("The_Admin_Does_Not_Exist"));
         foreach (var assignment in assignments)
         {
@@ -263,7 +263,7 @@ public sealed class AdminManagementService
             assignment.RevocationReason = "Administrator access removed";
         }
         var hasOtherActiveRole = await db.UserRoleAssignments.AnyAsync(item => item.AccountId == accountId
-            && item.RoleKey != "admin" && item.RevokedAtUtc == null
+            && item.RoleKey != "admin" && item.RoleKey != "building-admin" && item.RevokedAtUtc == null
             && item.ValidFromUtc <= now && (item.ValidToUtc == null || item.ValidToUtc > now));
         if (!hasOtherActiveRole) account.AccountStatus = 0;
         account.SecurityStamp = Guid.NewGuid().ToString("N");
@@ -282,7 +282,7 @@ public sealed class AdminManagementService
         var actorId = Guid.TryParse(updatedBy, out var parsedActor) ? parsedActor : (Guid?)null;
         await using var db = await _factory.CreateDbContextAsync();
         var buildings = await db.UserRoleAssignments.Where(item => item.AccountId == accountId
-            && item.RoleKey == "admin" && item.RevokedAtUtc == null && item.ScopeBuildingId != null)
+            && (item.RoleKey == "admin" || item.RoleKey == "building-admin") && item.RevokedAtUtc == null && item.ScopeBuildingId != null)
             .Select(item => item.ScopeBuildingId!).Distinct().ToArrayAsync();
         if (buildings.Length == 0) return;
         AddPermissionOverrides(db, accountId, buildings, NormalizePermissions(permissions), actorId, now);
@@ -357,7 +357,7 @@ public sealed class AdminManagementService
     {
         if (buildingIds.Count == 0) return new List<string>();
         var basePermissions = await db.RolePermissions.AsNoTracking()
-            .Where(item => item.RoleKey == "admin" && item.Effect == 1)
+            .Where(item => (item.RoleKey == "admin" || item.RoleKey == "building-admin") && item.Effect == 1)
             .Select(item => item.PermissionKey).Distinct().ToListAsync();
         var overrides = await db.AccountPermissionOverrides.AsNoTracking()
             .Where(item => item.AccountId == accountId && item.ScopeType == 1

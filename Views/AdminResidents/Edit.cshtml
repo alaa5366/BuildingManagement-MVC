@@ -1,4 +1,4 @@
-﻿@* =============================================================================
+@* =============================================================================
    View:        AdminResidents/Edit
    Rendered by: AdminResidentsController.Edit
    Model:       BuildingManagementMvc.Data.Entities.ResidentEntity
@@ -9,6 +9,9 @@
     ViewData["Title"] = Loc.T("Edit_Resident");
     var building = ViewBag.Building as Building;
     var apt = ViewBag.Apartment as Apartment;
+    var movableApartments = building?.Apartments
+        .Where(item => item.Id != Model.ApartmentId)
+        .ToList() ?? new List<Apartment>();
 }
 
 <div class="container" style="max-width: 900px;">
@@ -69,7 +72,7 @@
                     <div class="col-md-6">
                         <label class="form-label fw-bold">@Loc.T("Phone")</label>
                         <input type="tel" name="phone" value="@Model.Phone"
-                               class="form-control form-control-lg" dir="ltr" required />
+                               class="form-control form-control-lg" dir="ltr" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-bold">@Loc.T("WhatsApp")</label>
@@ -124,28 +127,34 @@
     </form>
 
     @* ═══════════════════════════════════════════════════════════ *@
-    @* Change PIN                                                    *@
-    @* ═══════════════════════════════════════════════════════════ *@
-    <div class="card shadow-sm mb-3 border-warning">
-        <div class="card-header bg-warning">
-            <strong><i class="bi bi-key-fill"></i> @Loc.T("Change_PIN")</strong>
-        </div>
+
+    <div class="card shadow-sm mb-5">
+        <div class="card-header"><strong><i class="bi bi-arrow-left-right"></i> Move resident</strong></div>
         <div class="card-body">
-            <form asp-action="ChangePin" method="post" class="row g-2">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="id" value="@Model.Id" />
-                <div class="col-md-6">
-                    <label class="form-label">@Loc.T("New_PIN")</label>
-                    <input type="text" name="newPin" class="form-control form-control-lg"
-                           maxlength="4" inputmode="numeric" pattern="\d{4}" required
-                           placeholder="0000" />
-                </div>
-                <div class="col-md-6 d-flex align-items-end">
-                    <button type="submit" class="btn btn-warning btn-lg w-100">
-                        <i class="bi bi-key"></i> @Loc.T("Change_PIN")
-                    </button>
-                </div>
-            </form>
+            <p class="text-muted">Move this person to another apartment in the same building. Their personal account is retained and only the apartment access scope changes.</p>
+            @if (movableApartments.Count > 0)
+            {
+                <form asp-action="Move" method="post" class="d-flex flex-wrap gap-2 align-items-end">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <div class="flex-grow-1" style="min-width:240px;">
+                        <label class="form-label">Target apartment</label>
+                        <select name="targetApartmentId" class="form-select" required>
+                            <option value="">Select apartment</option>
+                            @foreach (var target in movableApartments)
+                            {
+                                <option value="@target.Id">@Loc.T("Apartment_N", target.Number) - @target.Label</option>
+                            }
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary"
+                            onclick="return confirm('Move this resident and update apartment access?')">Move resident</button>
+                </form>
+            }
+            else
+            {
+                <p class="text-muted mb-0">There are no other apartments available in this building.</p>
+            }
         </div>
     </div>
 

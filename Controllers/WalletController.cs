@@ -17,7 +17,7 @@ namespace BuildingManagementMvc.Controllers;
 /// Access: requires one of the roles <c>admin</c>.
 /// </remarks>
 [Authorize(Roles = "admin")]
-[AdminPermission(BuildingManagementMvc.Models.AdminPermissions.ManageWallet)]
+[AdminPermission("wallet.read")]
 public class WalletController : Controller
 {
     private readonly TargetDepositWorkflowService _depositWorkflow;
@@ -121,6 +121,7 @@ public class WalletController : Controller
     /// HTTP POST.
     /// </remarks>
     [HttpPost]
+    [AdminPermission("deposit.confirm")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ConfirmDeposit(string month, string depositId)
     {
@@ -169,6 +170,7 @@ public class WalletController : Controller
 
     /// <summary>Cancels a pending deposit and records the supplied reason.</summary>
     [HttpPost]
+    [AdminPermission("deposit.cancel")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CancelDeposit(string month, string depositId, string? reason)
     {
@@ -217,6 +219,7 @@ public class WalletController : Controller
 
     /// <summary>Applies a wallet adjustment through the controlled adjustment workflow.</summary>
     [HttpPost]
+    [AdminPermission("wallet.adjust")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddAdjustment(
         string month, string aptId, decimal amount, string? reason, Guid commandId)
@@ -256,6 +259,7 @@ public class WalletController : Controller
     /// HTTP POST.
     /// </remarks>
     [HttpPost]
+    [AdminPermission("deposit.update")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateDeposit(
         string month,

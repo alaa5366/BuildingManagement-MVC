@@ -1,4 +1,5 @@
 using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using Microsoft.EntityFrameworkCore;
@@ -115,5 +116,54 @@ public class ScheduledBackupServiceTests
         Assert.Equal(5, saved.MaxBackupsToKeep);
         Assert.Equal(new[] { "buildings" },
             System.Text.Json.JsonSerializer.Deserialize<List<string>>(saved.CollectionsJson));
+    }
+
+    [Fact]
+    public async Task GetSettingsAsync_MapsLegacyCollectionsToTargetSchemaCollections()
+    {
+        var legacyCollections = new[]
+        {
+            "globalSettings", "scheduledBackupSettings", "users", "buildings",
+            "buildingSettings", "buildingAdmins", "floors", "apartments", "residents",
+            "financialCategories", "expenses", "revenues", "monthlyApartmentShares",
+            "deposits", "depositEditHistory", "walletAdjustments", "userPermissions",
+            "auditLog", "notifications", "polls", "pollOptions", "pollVotes",
+            "maintenanceRecords", "dvrs", "cameras", "qrTokens", "qrUsages"
+        };
+
+        await using (var db = new AppDbContext(_options))
+        {
+            db.BackupScheduleConfigurations.Add(new BackupScheduleConfigurationEntity
+            {
+                ConfigurationId = Guid.NewGuid(),
+                LegacySettingId = "default",
+                IsEnabled = true,
+                Frequency = "daily",
+                ScheduledHour = 4,
+                CollectionsJson = System.Text.Json.JsonSerializer.Serialize(legacyCollections),
+                MaxBackupsToKeep = 7,
+                ImportedAtUtc = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var settings = await _service.GetSettingsAsync();
+        var knownCollections = BackupService.GetKnownCollections();
+
+        Assert.NotEmpty(settings.Collections);
+        Assert.All(settings.Collections, collection => Assert.Contains(collection, knownCollections.Keys));
+        Assert.Contains("globalApplicationSettings", settings.Collections);
+        Assert.Contains("backupScheduleConfigurations", settings.Collections);
+        Assert.Contains("persons", settings.Collections);
+        Assert.Contains("userAccounts", settings.Collections);
+        Assert.Contains("paymentDeposits", settings.Collections);
+        Assert.Contains("ledgerTransactions", settings.Collections);
+        Assert.Contains("notificationMessages", settings.Collections);
+        Assert.Contains("pollDefinitions", settings.Collections);
+        Assert.Contains("maintenanceRequests", settings.Collections);
+        Assert.Contains("mediaDevices", settings.Collections);
+        Assert.Contains("qrCapabilities", settings.Collections);
+        Assert.DoesNotContain("scheduledBackupSettings", settings.Collections);
+        Assert.Equal(settings.Collections.Count, settings.Collections.Distinct(StringComparer.Ordinal).Count());
     }
 }

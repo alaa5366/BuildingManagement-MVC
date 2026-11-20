@@ -1,5 +1,6 @@
 using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -263,7 +264,8 @@ public sealed class ApplicationLogQueryServiceTests : IDisposable
 
     private ApplicationLogQueryService CreateService() =>
         new(new TestHostEnvironment { ContentRootPath = _root },
-            NullLogger<ApplicationLogQueryService>.Instance);
+            NullLogger<ApplicationLogQueryService>.Instance,
+            new MemoryCache(new MemoryCacheOptions()));
 
     private void WriteLog(params string[] lines) =>
         File.WriteAllLines(Path.Combine(_root, "logs", "serilog", "serilog-20261117.txt"), lines);

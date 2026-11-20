@@ -8,7 +8,7 @@ namespace BuildingManagementMvc.Controllers;
 
 /// <summary>WhatsAppController coordinates the corresponding application functionality.</summary>
 [Authorize(Roles = "admin")]
-[AdminPermission(BuildingManagementMvc.Models.AdminPermissions.UseWhatsApp)]
+[AdminPermission("integration.whatsapp.send")]
 public class WhatsAppController : Controller
 {
     private readonly TargetWhatsAppService _whatsApp;
@@ -38,7 +38,7 @@ public class WhatsAppController : Controller
     }
 
     /// <summary>Handles the SaveTemplate operation.</summary>
-    [HttpPost, ValidateAntiForgeryToken]
+    [HttpPost, AdminPermission("integration.whatsapp.configure"), ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveTemplate(string name, string message, Guid? id)
     {
         if (User.HasClaim("impersonated", "true")) return Forbid();
@@ -56,7 +56,7 @@ public class WhatsAppController : Controller
     }
 
     /// <summary>Handles the DeleteTemplate operation.</summary>
-    [HttpPost, ValidateAntiForgeryToken]
+    [HttpPost, AdminPermission("integration.whatsapp.configure"), ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteTemplate(Guid id)
     {
         if (User.HasClaim("impersonated", "true")) return Forbid();

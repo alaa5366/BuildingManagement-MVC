@@ -1,4 +1,4 @@
-﻿
+
 using BuildingManagementMvc.Attributes;
 using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
@@ -8,8 +8,8 @@ using System.Security.Claims;
 
 namespace BuildingManagementMvc.Controllers;
 // =====================================================================
-//  AdminResidentsController — إدارة الساكنين
-//  متاح للأدمن (في عمارته بس) والـ SuperAdmin (كل العمارات)
+//  AdminResidentsController â€” ط¥ط¯ط§ط±ط© ط§ظ„ط³ط§ظƒظ†ظٹظ†
+//  ظ…طھط§ط­ ظ„ظ„ط£ط¯ظ…ظ† (ظپظٹ ط¹ظ…ط§ط±طھظ‡ ط¨ط³) ظˆط§ظ„ظ€ SuperAdmin (ظƒظ„ ط§ظ„ط¹ظ…ط§ط±ط§طھ)
 // =====================================================================
 /// <summary>
 /// Admin screens for managing the residents of the current building (create, edit, enable/disable, delete, PIN reset).
@@ -43,9 +43,9 @@ public class AdminResidentsController : Controller
 
     private bool IsSuperAdmin => User.IsInRole("superadmin");
 
-    // ═══════════════════════════════════════════════════════════
-    // Index — قائمة الساكنين
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
+    // Index â€” ظ‚ط§ط¦ظ…ط© ط§ظ„ط³ط§ظƒظ†ظٹظ†
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
 
     /// <summary>
     /// Shows the main page of the admin residents screen.
@@ -56,7 +56,7 @@ public class AdminResidentsController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(string? buildingId, string? search)
     {
-        // SuperAdmin: يختار العمارة
+        // SuperAdmin: ظٹط®طھط§ط± ط§ظ„ط¹ظ…ط§ط±ط©
         if (IsSuperAdmin && string.IsNullOrWhiteSpace(buildingId))
         {
             var allBuildings = await _buildings.GetSummariesAsync();
@@ -72,7 +72,7 @@ public class AdminResidentsController : Controller
 
         var residents = await _residents.GetByBuildingAsync(bid);
 
-        // فلترة بالبحث
+        // ظپظ„طھط±ط© ط¨ط§ظ„ط¨ط­ط«
         if (!string.IsNullOrWhiteSpace(search))
         {
             var s = search.Trim().ToLowerInvariant();
@@ -92,9 +92,9 @@ public class AdminResidentsController : Controller
         return View(residents);
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // Details — تفاصيل ساكن
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
+    // Details â€” طھظپط§طµظٹظ„ ط³ط§ظƒظ†
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
 
     /// <summary>
     /// Shows the details page of the admin residents screen.
@@ -120,9 +120,9 @@ public class AdminResidentsController : Controller
         return View(resident);
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // Create (GET)
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
 
     /// <summary>
     /// Creates the admin residents create page.
@@ -141,13 +141,15 @@ public class AdminResidentsController : Controller
 
         ViewBag.Building = building;
         ViewBag.ApartmentId = apartmentId;
+        ViewBag.RegistrationPersonId = Guid.NewGuid();
+        ViewBag.ExistingPeople = await _residents.GetPeopleForRegistrationAsync(bid!, IsSuperAdmin);
 
         return View();
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // Create (POST)
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
 
     /// <summary>
     /// Handles the create form submission of the admin residents screen.
@@ -163,10 +165,11 @@ public class AdminResidentsController : Controller
         string name,
         string phone,
         string whatsapp,
-        string pin,
         string? email,
-        bool isPrimary = true,
-        bool isOwner = true)
+        Guid? personId = null,
+        Guid? registrationPersonId = null,
+        bool isPrimary = false,
+        bool isOwner = false)
     {
         if (!CanAccessBuilding(buildingId))
             return Forbid();
@@ -175,9 +178,9 @@ public class AdminResidentsController : Controller
         {
             await _residents.CreateAsync(
                 buildingId, apartmentId,
-                name, phone, whatsapp, pin, email,
+                name, phone, whatsapp, email,
                 isPrimary, isOwner,
-                CurrentUserId);
+                CurrentUserId, personId, createLoginAccount: true, registrationPersonId: registrationPersonId, allowCrossBuildingReuse: IsSuperAdmin);
 
             TempData["Message"] = Loc.T("Resident_Created_Successfully");
             return RedirectToAction(nameof(Index), new { buildingId });
@@ -189,13 +192,15 @@ public class AdminResidentsController : Controller
             var building = await _buildings.GetByIdAsync(buildingId);
             ViewBag.Building = building;
             ViewBag.ApartmentId = apartmentId;
+            ViewBag.RegistrationPersonId = registrationPersonId ?? Guid.NewGuid();
+            ViewBag.ExistingPeople = await _residents.GetPeopleForRegistrationAsync(buildingId, IsSuperAdmin);
             return View();
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // Edit (GET)
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
 
     /// <summary>
     /// Edits the admin residents edit page.
@@ -221,9 +226,9 @@ public class AdminResidentsController : Controller
         return View(resident);
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // Edit (POST)
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
 
     /// <summary>
     /// Handles the edit form submission of the admin residents screen.
@@ -270,19 +275,14 @@ public class AdminResidentsController : Controller
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // ChangePin
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
 
-    /// <summary>
-    /// Changes the PIN.
-    /// </summary>
-    /// <remarks>
-    /// HTTP POST.
-    /// </remarks>
+    /// <summary>Moves the resident to another apartment within the same building.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ChangePin(string id, string newPin)
+    public async Task<IActionResult> Move(string id, string targetApartmentId)
     {
         var resident = await _residents.GetByIdAsync(id);
         if (resident == null) return NotFound();
@@ -292,20 +292,41 @@ public class AdminResidentsController : Controller
 
         try
         {
-            await _residents.ChangePinAsync(id, newPin, CurrentUserId);
-            TempData["Message"] = Loc.T("PIN_Changed");
+            var newOccupancyId = await _residents.MoveAsync(id, targetApartmentId, CurrentUserId);
+            TempData["Message"] = Loc.T("Resident_Updated_Successfully");
+            return RedirectToAction(nameof(Edit), new { id = newOccupancyId.ToString("D") });
         }
-        catch (Exception)
+        catch (InvalidOperationException)
         {
-            TempData["Error"] = Loc.T("PIN_Change_Failed");
+            TempData["Error"] = Loc.T("Update_Failed");
+            return RedirectToAction(nameof(Edit), new { id });
         }
+        catch (ArgumentException)
+        {
+            TempData["Error"] = Loc.T("Update_Failed");
+            return RedirectToAction(nameof(Edit), new { id });
+        }
+    }
+
+    /// <summary>Handles the legacy direct PIN-change route, which redirects to verified account enrollment.</summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangePin(string id)
+    {
+        var resident = await _residents.GetByIdAsync(id);
+        if (resident == null) return NotFound();
+
+        if (!CanAccessBuilding(resident.BuildingId))
+            return Forbid();
+
+        TempData["Error"] = "Direct PIN changes from the resident profile are disabled. Use the verified individual account enrollment workflow.";
 
         return RedirectToAction(nameof(Edit), new { id });
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // Disable / Enable
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
 
     /// <summary>
     /// Handles the disable form submission of the admin residents screen.
@@ -351,9 +372,9 @@ public class AdminResidentsController : Controller
         return RedirectToAction(nameof(Index), new { buildingId = resident.BuildingId });
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // Delete
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
 
     /// <summary>
     /// Handles the delete form submission of the admin residents screen.
@@ -377,9 +398,9 @@ public class AdminResidentsController : Controller
         return RedirectToAction(nameof(Index), new { buildingId = resident.BuildingId });
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // Migration (SuperAdmin only)
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
 
     /// <summary>
     /// Migrates the admin residents data.
@@ -398,9 +419,9 @@ public class AdminResidentsController : Controller
         return View();
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // Migration (SuperAdmin only)
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
 
     /// <summary>
     /// Runs the migration.
@@ -420,7 +441,7 @@ public class AdminResidentsController : Controller
         {
             var result = await _residents.MigrateFromApartmentsAsync(buildingId, isDryRun);
 
-            // ✅ رسالة نجاح
+            // âœ… ط±ط³ط§ظ„ط© ظ†ط¬ط§ط­
             if (isDryRun)
             {
                 TempData["Success"] = Loc.T("Migration_DryRun_N", result.EntriesMigrated);
@@ -435,7 +456,7 @@ public class AdminResidentsController : Controller
                 TempData["Error"] = Loc.T("Migration_Residents_Failed_N", result.EntriesFailed);
             }
 
-            // ✅ ارجع لصفحة Sync
+            // âœ… ط§ط±ط¬ط¹ ظ„طµظپط­ط© Sync
             return RedirectToAction("Index", "Sync");
         }
         catch (Exception)
@@ -445,9 +466,9 @@ public class AdminResidentsController : Controller
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // Helpers
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
 
     private bool CanAccessBuilding(string buildingId)
     {

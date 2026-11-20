@@ -97,6 +97,16 @@ public sealed class UserAccountEntity
     public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 }
 
+/// <summary>Stores versioned, non-secret preferences owned by one authenticated account.</summary>
+public sealed class UserPreferenceEntity
+{
+    public Guid PreferenceId { get; set; }
+    public Guid AccountId { get; set; }
+    public string PreferenceKey { get; set; } = "";
+    public string PreferenceJson { get; set; } = "{}";
+    public DateTime UpdatedAtUtc { get; set; }
+}
+
 /// <summary>Versioned account credential material; only hashes are stored.</summary>
 public sealed class UserCredentialEntity
 {

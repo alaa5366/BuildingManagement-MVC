@@ -15,6 +15,7 @@ public sealed class AuthorizationEvaluatorTests
     [InlineData("deposit.read")]
     [InlineData("deposit.confirm")]
     [InlineData("deposit.cancel")]
+    [InlineData("deposit.update")]
     [InlineData("wallet.adjust")]
     [InlineData("expense.read")]
     [InlineData("expense.post")]
@@ -32,6 +33,28 @@ public sealed class AuthorizationEvaluatorTests
         Assert.True(catalog.TryGet(permissionKey, out var definition));
         Assert.Contains(AuthorizationScopeType.System, definition.AllowedGrantScopes);
         Assert.Contains(AuthorizationScopeType.Building, definition.AllowedGrantScopes);
+    }
+
+    [Fact]
+    public void PermissionCatalog_CategoriesManagementSupportsGlobalAndBuildingScope()
+    {
+        var catalog = new DefaultAuthorizationPermissionCatalog();
+
+        Assert.True(catalog.TryGet("categories.manage", out var definition));
+        Assert.Contains(AuthorizationScopeType.System, definition.AllowedGrantScopes);
+        Assert.Contains(AuthorizationScopeType.Building, definition.AllowedGrantScopes);
+        Assert.True(definition.SystemGrantIncludesChildResources);
+    }
+
+    [Fact]
+    public void PermissionCatalog_WhatsAppSendSupportsGlobalAndBuildingScope()
+    {
+        var catalog = new DefaultAuthorizationPermissionCatalog();
+
+        Assert.True(catalog.TryGet("integration.whatsapp.send", out var definition));
+        Assert.Contains(AuthorizationScopeType.System, definition.AllowedGrantScopes);
+        Assert.Contains(AuthorizationScopeType.Building, definition.AllowedGrantScopes);
+        Assert.True(definition.SystemGrantIncludesChildResources);
     }
 
     [Theory]
@@ -67,6 +90,18 @@ public sealed class AuthorizationEvaluatorTests
         Assert.True(definition.RequiresFreshMfa);
         Assert.Equal(TimeSpan.FromMinutes(10), definition.MfaFreshnessWindow);
         Assert.Equal(new HashSet<AuthorizationScopeType> { AuthorizationScopeType.System }, definition.AllowedGrantScopes);
+    }
+
+    [Fact]
+    public void PermissionCatalog_DepositUpdateRequiresFreshMfaAtSystemOrBuildingScope()
+    {
+        var catalog = new DefaultAuthorizationPermissionCatalog();
+
+        Assert.True(catalog.TryGet("deposit.update", out var definition));
+        Assert.True(definition.RequiresFreshMfa);
+        Assert.Equal(TimeSpan.FromMinutes(10), definition.MfaFreshnessWindow);
+        Assert.Contains(AuthorizationScopeType.System, definition.AllowedGrantScopes);
+        Assert.Contains(AuthorizationScopeType.Building, definition.AllowedGrantScopes);
     }
 
     [Fact]

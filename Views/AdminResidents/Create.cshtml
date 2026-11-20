@@ -1,0 +1,58 @@
+@using BuildingManagementMvc.Models
+@{
+    ViewData["Title"] = Loc.T("Add_Resident");
+    var building = ViewBag.Building as Building;
+    var buildingId = building?.Id ?? "";
+    var selectedApartmentId = ViewBag.ApartmentId as string ?? "";
+    var registrationPersonId = ViewBag.RegistrationPersonId?.ToString() ?? Guid.NewGuid().ToString();
+    var existingPeople = ViewBag.ExistingPeople as List<BuildingManagementMvc.Data.Entities.PersonEntity> ?? new();
+}
+<div class="container" style="max-width: 900px;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div><h2 class="mb-1"><i class="bi bi-person-plus"></i> @Loc.T("Add_Resident")</h2><p class="text-muted mb-0">@building?.Name</p></div>
+        <a asp-action="Index" asp-route-buildingId="@buildingId" class="btn btn-outline-secondary">@Loc.T("Back")</a>
+    </div>
+    @if (TempData["Error"] is string error) { <div class="alert alert-danger">@error</div> }
+    <div class="alert alert-info"><i class="bi bi-shield-lock"></i> The resident will receive an individual pending account. No PIN is created during registration; account enrollment happens only after identity verification.</div>
+    <form asp-action="Create" method="post" class="card shadow-sm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="buildingId" value="@buildingId" />
+        <input type="hidden" name="registrationPersonId" value="@registrationPersonId" />
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6"><label class="form-label">Existing person (optional)</label><select name="personId" id="personId" class="form-select"><option value="">Create a new person</option>@foreach (var person in existingPeople) { <option value="@person.PersonId" data-name="@person.DisplayName" data-phone="@person.PrimaryPhone" data-whatsapp="@person.Whatsapp" data-email="@person.PrimaryEmail">@person.DisplayName ? @(person.PrimaryPhone ?? "No phone")</option> }</select><div class="form-text">Select an existing person to add another apartment occupancy without creating a duplicate identity.</div></div>
+                <div class="col-md-6"><label class="form-label">@Loc.T("Name")</label><input name="name" id="personName" class="form-control" minlength="2" maxlength="160" autocomplete="name" /></div>
+                <div class="col-md-6"><label class="form-label">@Loc.T("Apartment")</label><select name="apartmentId" class="form-select" required><option value="">@Loc.T("Select_Apartment")</option>@foreach (var apt in building?.Apartments ?? new List<Apartment>()) { <option value="@apt.Id" selected="@(apt.Id == selectedApartmentId)">@Loc.T("Apartment_N", apt.Number) - @apt.Label</option> }</select></div>
+                <div class="col-md-6"><label class="form-label">@Loc.T("Phone")</label><input type="tel" name="phone" id="personPhone" class="form-control" dir="ltr" autocomplete="tel" /></div>
+                <div class="col-md-6"><label class="form-label">@Loc.T("WhatsApp")</label><input type="tel" name="whatsapp" id="personWhatsapp" class="form-control" dir="ltr" /></div>
+                <div class="col-md-6"><label class="form-label">@Loc.T("Email_Optional")</label><input type="email" name="email" id="personEmail" class="form-control" dir="ltr" autocomplete="email" /></div>
+                <div class="col-md-6 d-flex align-items-end gap-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="isPrimary" value="true" checked /><label class="form-check-label">@Loc.T("Primary_Resident")</label></div><div class="form-check"><input class="form-check-input" type="checkbox" name="isOwner" value="true" checked /><label class="form-check-label">@Loc.T("Owner_Not_Tenant")</label></div></div>
+            </div>
+        </div>
+        <div class="card-footer d-flex justify-content-end gap-2"><a asp-action="Index" asp-route-buildingId="@buildingId" class="btn btn-outline-secondary">@Loc.T("Cancel")</a><button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> @Loc.T("Save")</button></div>
+    </form>
+</div>
+@section Scripts {
+<script>
+(() => {
+    const selector = document.getElementById('personId');
+    const name = document.getElementById('personName');
+    const phone = document.getElementById('personPhone');
+    const whatsapp = document.getElementById('personWhatsapp');
+    const email = document.getElementById('personEmail');
+    const sync = () => {
+        const option = selector.options[selector.selectedIndex];
+        const existing = !!selector.value;
+        name.required = !existing;
+        if (existing) {
+            name.value = option.dataset.name || '';
+            phone.value = option.dataset.phone || '';
+            whatsapp.value = option.dataset.whatsapp || '';
+            email.value = option.dataset.email || '';
+        }
+    };
+    selector.addEventListener('change', sync);
+    sync();
+})();
+</script>
+}

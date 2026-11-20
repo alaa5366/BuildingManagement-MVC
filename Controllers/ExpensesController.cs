@@ -10,7 +10,7 @@ namespace BuildingManagementMvc.Controllers;
 
 /// <summary>ExpensesController coordinates the corresponding application controller actions.</summary>
 [Authorize(Roles = "admin")]
-[AdminPermission(AdminPermissions.ManageExpenses)]
+[AdminPermission("expense.read")]
 public class ExpensesController : Controller
 {
     private readonly TargetWalletReadService _targetWallet;
@@ -58,6 +58,7 @@ public class ExpensesController : Controller
 
     /// <summary>Creates a new record using the submitted values.</summary>
     [HttpPost]
+    [AdminPermission("expense.post")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Add(string month, string categoryId, string note, decimal amount,
         string date, Guid commandId)
@@ -85,6 +86,7 @@ public class ExpensesController : Controller
 
     /// <summary>Deletes the specified record.</summary>
     [HttpPost]
+    [AdminPermission("expense.reverse")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string month, string id)
     {

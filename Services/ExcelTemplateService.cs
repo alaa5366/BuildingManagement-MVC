@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
 using ClosedXML.Excel;
 
@@ -100,7 +100,7 @@ public class ExcelTemplateService
         var headers = new[]
         {
             "Floor Label", "Floor Order", "Apt Number", "Owner",
-            "WhatsApp", "PIN", "Monthly Fee", "Apt Label",
+            "WhatsApp", "Legacy PIN (ignored)", "Monthly Fee", "Apt Label",
             "Status", "Is Disabled?", "Closed Reason", "Notes"
         };
 

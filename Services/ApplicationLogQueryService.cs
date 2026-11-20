@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using BuildingManagementMvc.Models;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace BuildingManagementMvc.Services;
 
@@ -60,11 +61,16 @@ public sealed class ApplicationLogQueryService
 
     private readonly string _directory;
     private readonly ILogger<ApplicationLogQueryService> _logger;
+    private readonly IMemoryCache _cache;
 
-    public ApplicationLogQueryService(IHostEnvironment environment, ILogger<ApplicationLogQueryService> logger)
+    public ApplicationLogQueryService(
+        IHostEnvironment environment,
+        ILogger<ApplicationLogQueryService> logger,
+        IMemoryCache cache)
     {
         _directory = Path.Combine(environment.ContentRootPath, "logs", "serilog");
         _logger = logger;
+        _cache = cache;
     }
 
     /// <summary>Queries the retained log files and returns the requested bounded result page.</summary>
@@ -98,13 +104,40 @@ public sealed class ApplicationLogQueryService
             return Empty(page, pageSize);
         }
 
+        if (files.Length == 0)
+            return Empty(page, pageSize);
+
         foreach (var file in files)
         {
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                await ReadFileAsync(file, filter, entry =>
+                var fileInfo = new FileInfo(file);
+                var isActiveFile = string.Equals(file, files[0], StringComparison.OrdinalIgnoreCase);
+                // The active Serilog file is refreshed every 15 seconds; closed files are
+                // immutable and can be retained by their file signature for 30 minutes.
+                // This avoids reparsing and redacting the same multi-megabyte files for
+                // every filter, page, and export request.
+                var cacheKey = isActiveFile
+                    ? $"application-logs:active:{file}"
+                    : $"application-logs:{file}:{fileInfo.Length}:{fileInfo.LastWriteTimeUtc.Ticks}";
+                var events = await _cache.GetOrCreateAsync(cacheKey, async entry =>
                 {
+                    entry.AbsoluteExpirationRelativeToNow = isActiveFile
+                        ? TimeSpan.FromSeconds(15)
+                        : TimeSpan.FromMinutes(30);
+                    return await ReadFileAsync(file, cancellationToken);
+                });
+
+                if (events is null)
+                    continue;
+
+                foreach (var entry in events)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!Matches(entry, filter))
+                        continue;
+
                     total++;
                     var priority = (entry.Timestamp.UtcDateTime.Ticks, sequence++);
                     if (retained.Count < capacity)
@@ -117,7 +150,7 @@ public sealed class ApplicationLogQueryService
                         retained.Dequeue();
                         retained.Enqueue(entry, priority);
                     }
-                }, cancellationToken);
+                }
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -140,9 +173,10 @@ public sealed class ApplicationLogQueryService
         };
     }
 
-    private async Task ReadFileAsync(string path, ApplicationLogQuery filter,
-        Action<ApplicationLogEntry> onMatch, CancellationToken cancellationToken)
+    private async Task<List<ApplicationLogEntry>> ReadFileAsync(
+        string path, CancellationToken cancellationToken)
     {
+        var events = new List<ApplicationLogEntry>();
         await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read,
             FileShare.ReadWrite | FileShare.Delete, 64 * 1024, FileOptions.SequentialScan);
         using var reader = new StreamReader(stream, Encoding.UTF8, true);
@@ -155,8 +189,8 @@ public sealed class ApplicationLogQueryService
             var match = EventLine.Match(line);
             if (match.Success && TryParseEvent(match, Path.GetFileName(path), out var parsed))
             {
-                if (current is not null && Matches(current, filter))
-                    onMatch(current);
+                if (current is not null)
+                    events.Add(current);
 
                 current = parsed;
                 continue;
@@ -228,8 +262,10 @@ public sealed class ApplicationLogQueryService
             }
         }
 
-        if (current is not null && Matches(current, filter))
-            onMatch(current);
+        if (current is not null)
+            events.Add(current);
+
+        return events;
     }
 
     private static bool TryParseEvent(Match match, string fileName, out ApplicationLogEntry entry)

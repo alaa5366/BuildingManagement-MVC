@@ -2,6 +2,7 @@
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace BuildingManagementMvc.Services;
 
@@ -271,41 +272,102 @@ public class SettingsService
     public async Task<OwnSettings> GetOwnAsync(string uid, string? role = null,
         string? buildingId = null, string? apartmentId = null)
     {
+        if (!Guid.TryParse(uid, out var accountId)) return new OwnSettings();
+
         await using var db = await _sqlFactory.CreateDbContextAsync();
-
-        if (role == "resident" && !string.IsNullOrEmpty(buildingId) && !string.IsNullOrEmpty(apartmentId))
-        {
-            var apt = await db.Apartments.AsNoTracking()
-                .FirstOrDefaultAsync(a => a.BuildingId == buildingId && a.Id == apartmentId);
-
-            if (apt == null) return new OwnSettings();
-
-            return new OwnSettings
+        var identity = await (
+            from account in db.UserAccounts.AsNoTracking()
+            join person in db.Persons.AsNoTracking() on account.PersonId equals person.PersonId
+            where account.AccountId == accountId && account.AccountStatus == 1 && !person.IsArchived
+            select new
             {
-                Language = string.IsNullOrWhiteSpace(apt.Language) ? "ar" : apt.Language,
-                NotificationPreferences = new NotificationPreferences
-                {
-                    WhatsApp = apt.NotifyWhatsApp,
-                    Email = apt.NotifyEmail,
-                    InApp = apt.NotifyInApp
-                },
-                PreferredPaymentMethod = string.IsNullOrWhiteSpace(apt.PreferredPaymentMethod)
-                    ? "instapay" : apt.PreferredPaymentMethod,
-                UpdatedAt = apt.SettingsUpdatedAt?.ToString("o"),
-                UpdatedBy = apt.SettingsUpdatedBy
-            };
+                account.AccountStatus,
+                account.MustChangePin,
+                account.NormalizedEmail,
+                account.ExternalProvider,
+                account.CreatedAtUtc,
+                account.LastLoginAtUtc,
+                person.LegalName,
+                person.DisplayName,
+                person.PrimaryEmail,
+                person.PrimaryPhone,
+                person.Whatsapp,
+                person.PhotoUrl
+            }).SingleOrDefaultAsync();
+
+        if (identity is null) return new OwnSettings();
+
+        var preferences = await db.UserPreferences.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.AccountId == accountId && item.PreferenceKey == OwnPreferencesKey);
+        OwnPreferencesDocument? savedPreferences = null;
+        if (!string.IsNullOrWhiteSpace(preferences?.PreferenceJson))
+        {
+            try
+            {
+                savedPreferences = JsonSerializer.Deserialize<OwnPreferencesDocument>(preferences.PreferenceJson);
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "Ignoring invalid personal preferences for account {AccountId}", accountId);
+            }
         }
 
-        if (!Guid.TryParse(uid, out var accountId) ||
-            !await db.UserAccounts.AsNoTracking().AnyAsync(item => item.AccountId == accountId && item.AccountStatus == 1))
-            return new OwnSettings();
+        var apartment = role == "resident" && !string.IsNullOrWhiteSpace(buildingId)
+            && !string.IsNullOrWhiteSpace(apartmentId)
+            ? await db.Apartments.AsNoTracking().FirstOrDefaultAsync(item =>
+                item.BuildingId == buildingId && item.Id == apartmentId)
+            : null;
+
+        var twoFactor = await db.UserTwoFactorSettings.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.AccountId == accountId);
+        var unusedRecoveryCodes = await db.UserRecoveryCodes.AsNoTracking()
+            .CountAsync(item => item.AccountId == accountId && item.UsedAtUtc == null);
+
+        var legacyLanguage = apartment?.Language;
+        var language = savedPreferences?.Language ?? legacyLanguage;
+        if (language is not ("ar" or "en" or "fr" or "de")) language = "ar";
 
         return new OwnSettings
         {
-            Language = "ar",
-            NotificationPreferences = new NotificationPreferences(),
-            PreferredPaymentMethod = "instapay"
+            LegalName = identity.LegalName ?? "",
+            DisplayName = identity.DisplayName,
+            PrimaryEmail = identity.PrimaryEmail,
+            PrimaryPhone = identity.PrimaryPhone,
+            Whatsapp = identity.Whatsapp,
+            PhotoUrl = identity.PhotoUrl,
+            LoginEmail = identity.NormalizedEmail,
+            ExternalProvider = identity.ExternalProvider,
+            AccountStatus = identity.AccountStatus,
+            MustChangePin = identity.MustChangePin,
+            CreatedAtUtc = identity.CreatedAtUtc,
+            LastLoginAtUtc = identity.LastLoginAtUtc,
+            TwoFactorEnabled = twoFactor?.IsEnabled ?? false,
+            TwoFactorEnrolledAtUtc = twoFactor?.EnrolledAtUtc,
+            TwoFactorLastVerifiedAtUtc = twoFactor?.LastVerifiedAtUtc,
+            UnusedRecoveryCodes = unusedRecoveryCodes,
+            ApartmentLabel = apartment?.Label,
+            ApartmentNumber = apartment?.Number,
+            Language = language,
+            NotificationPreferences = savedPreferences?.NotificationPreferences ?? new NotificationPreferences
+            {
+                WhatsApp = apartment?.NotifyWhatsApp ?? true,
+                Email = apartment?.NotifyEmail ?? false,
+                InApp = apartment?.NotifyInApp ?? true
+            },
+            PreferredPaymentMethod = savedPreferences?.PreferredPaymentMethod
+                ?? (string.IsNullOrWhiteSpace(apartment?.PreferredPaymentMethod) ? "instapay" : apartment.PreferredPaymentMethod),
+            UpdatedAt = preferences?.UpdatedAtUtc.ToString("o") ?? apartment?.SettingsUpdatedAt?.ToString("o"),
+            UpdatedBy = apartment?.SettingsUpdatedBy
         };
+    }
+
+    private const string OwnPreferencesKey = "profile.settings.v1";
+
+    private sealed class OwnPreferencesDocument
+    {
+        public string Language { get; set; } = "ar";
+        public NotificationPreferences NotificationPreferences { get; set; } = new();
+        public string PreferredPaymentMethod { get; set; } = "instapay";
     }
 
     /// <summary>
@@ -314,38 +376,238 @@ public class SettingsService
     public async Task SaveOwnAsync(string uid, OwnSettings settings, string userId, string userRole,
         string? buildingId = null, string? apartmentId = null)
     {
+        ArgumentNullException.ThrowIfNull(settings);
+        if (!Guid.TryParse(uid, out var accountId))
+            throw new InvalidOperationException("account-not-found");
+
+        var language = (settings.Language ?? "ar").Trim().ToLowerInvariant();
+        if (language is not ("ar" or "en" or "fr" or "de"))
+            throw new InvalidOperationException("unsupported-language");
+
+        var paymentMethod = (settings.PreferredPaymentMethod ?? "instapay").Trim().ToLowerInvariant();
+        if (paymentMethod is not ("instapay" or "cash" or "bank" or "vodafone"))
+            throw new InvalidOperationException("unsupported-payment-method");
+
         await using var db = await _sqlFactory.CreateDbContextAsync();
+        var accountExists = await db.UserAccounts.AnyAsync(item =>
+            item.AccountId == accountId && item.AccountStatus == 1);
+        if (!accountExists) throw new InvalidOperationException("account-not-found");
 
-        if (userRole == "resident" && !string.IsNullOrEmpty(buildingId) && !string.IsNullOrEmpty(apartmentId))
+        var now = DateTime.UtcNow;
+        var preference = await db.UserPreferences.SingleOrDefaultAsync(item =>
+            item.AccountId == accountId && item.PreferenceKey == OwnPreferencesKey);
+        if (preference is null)
         {
-            var apt = await db.Apartments
-                .FirstOrDefaultAsync(a => a.BuildingId == buildingId && a.Id == apartmentId);
-
-            if (apt != null)
+            preference = new UserPreferenceEntity
             {
-                apt.Language = settings.Language ?? "ar";
-                apt.NotifyWhatsApp = settings.NotificationPreferences?.WhatsApp ?? true;
-                apt.NotifyEmail = settings.NotificationPreferences?.Email ?? false;
-                apt.NotifyInApp = settings.NotificationPreferences?.InApp ?? true;
-                apt.PreferredPaymentMethod = settings.PreferredPaymentMethod ?? "instapay";
-                apt.SettingsUpdatedAt = DateTime.UtcNow;
-                apt.SettingsUpdatedBy = userId;
-                await db.SaveChangesAsync();
-            }
+                PreferenceId = Guid.NewGuid(),
+                AccountId = accountId,
+                PreferenceKey = OwnPreferencesKey
+            };
+            db.UserPreferences.Add(preference);
         }
 
+        preference.PreferenceJson = JsonSerializer.Serialize(new OwnPreferencesDocument
+        {
+            Language = language,
+            NotificationPreferences = new NotificationPreferences
+            {
+                WhatsApp = settings.NotificationPreferences?.WhatsApp ?? true,
+                Email = settings.NotificationPreferences?.Email ?? false,
+                InApp = settings.NotificationPreferences?.InApp ?? true
+            },
+            PreferredPaymentMethod = paymentMethod
+        });
+        preference.UpdatedAtUtc = now;
+
+        if (userRole == "resident")
+        {
+            if (string.IsNullOrWhiteSpace(buildingId) || string.IsNullOrWhiteSpace(apartmentId))
+                throw new InvalidOperationException("apartment-access-denied");
+
+            var apartment = await db.Apartments.FirstOrDefaultAsync(item =>
+                item.BuildingId == buildingId && item.Id == apartmentId)
+                ?? throw new InvalidOperationException("apartment-not-found");
+            apartment.Language = language;
+            apartment.NotifyWhatsApp = settings.NotificationPreferences?.WhatsApp ?? true;
+            apartment.NotifyEmail = settings.NotificationPreferences?.Email ?? false;
+            apartment.NotifyInApp = settings.NotificationPreferences?.InApp ?? true;
+            apartment.PreferredPaymentMethod = paymentMethod;
+            apartment.SettingsUpdatedAt = now;
+            apartment.SettingsUpdatedBy = userId;
+        }
+
+        await db.SaveChangesAsync();
         await _audit.LogAsync(
             action: "settings.own.update",
             buildingId: buildingId,
             apartmentId: apartmentId,
             userId: userId,
             userRole: userRole,
-            metadata: new { language = settings.Language },
+            metadata: new { language, paymentMethod },
+            severity: "info");
+    }
+
+    /// <summary>Updates the editable canonical identity fields for the signed-in account.</summary>
+    public async Task UpdateOwnIdentityProfileAsync(
+        string uid, string role, string? buildingId, string? apartmentId,
+        OwnSettings settings, string? newPin, string? currentPin)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        if (!Guid.TryParse(uid, out var accountId))
+            throw new InvalidOperationException("account-not-found");
+
+        var displayName = settings.DisplayName?.Trim() ?? "";
+        var legalName = settings.LegalName?.Trim();
+        var email = string.IsNullOrWhiteSpace(settings.PrimaryEmail)
+            ? null : settings.PrimaryEmail.Trim();
+        var phone = string.IsNullOrWhiteSpace(settings.PrimaryPhone)
+            ? null : AuthHelpers.NormalizePhone(settings.PrimaryPhone);
+        var whatsapp = string.IsNullOrWhiteSpace(settings.Whatsapp)
+            ? null : AuthHelpers.NormalizePhone(settings.Whatsapp);
+        var photoUrl = string.IsNullOrWhiteSpace(settings.PhotoUrl) ? null : settings.PhotoUrl.Trim();
+
+        if (displayName.Length is < 2 or > 160) throw new InvalidOperationException("invalid-display-name");
+        if (settings.ApartmentLabel?.Length > 60)
+            throw new InvalidOperationException("apartment-label-too-long");
+        if (legalName?.Length > 200 || email?.Length > 254 || photoUrl?.Length > 2048)
+            throw new InvalidOperationException("profile-field-too-long");
+        if (email is not null && !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email))
+            throw new InvalidOperationException("invalid-email-address");
+        if (photoUrl is not null && (!Uri.TryCreate(photoUrl, UriKind.Absolute, out var photoUri)
+            || photoUri.Scheme is not ("https" or "http")))
+            throw new InvalidOperationException("invalid-photo-url");
+        if (!string.IsNullOrWhiteSpace(newPin) &&
+            (role == "superadmin" || newPin.Length is < 4 or > 12
+                || newPin.Any(character => character < '0' || character > '9')))
+            throw new InvalidOperationException("invalid-pin-change");
+
+        await using var db = await _sqlFactory.CreateDbContextAsync();
+        await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        var now = DateTime.UtcNow;
+        var account = await db.UserAccounts.SingleOrDefaultAsync(item =>
+            item.AccountId == accountId && item.AccountStatus == 1)
+            ?? throw new InvalidOperationException("account-not-found");
+        var person = await db.Persons.SingleOrDefaultAsync(item =>
+            item.PersonId == account.PersonId && !item.IsArchived)
+            ?? throw new InvalidOperationException("account-not-found");
+        phone ??= person.PrimaryPhone;
+
+        ApartmentEntity? apartment = null;
+        if (role == "resident")
+        {
+            if (string.IsNullOrWhiteSpace(buildingId) || string.IsNullOrWhiteSpace(apartmentId))
+                throw new InvalidOperationException("apartment-access-denied");
+            apartment = await db.Apartments.SingleOrDefaultAsync(item =>
+                item.BuildingId == buildingId && item.Id == apartmentId)
+                ?? throw new InvalidOperationException("apartment-not-found");
+            var hasOccupancy = await db.ApartmentOccupancies.AnyAsync(item =>
+                item.PersonId == person.PersonId && item.BuildingId == buildingId && item.ApartmentId == apartmentId
+                && item.ValidFromUtc <= now && (item.ValidToUtc == null || item.ValidToUtc > now));
+            if (!hasOccupancy) throw new InvalidOperationException("apartment-access-denied");
+        }
+        else if (role == "admin")
+        {
+            if (string.IsNullOrWhiteSpace(buildingId) || !await db.UserRoleAssignments.AnyAsync(item =>
+                item.AccountId == accountId && (item.RoleKey == "admin" || item.RoleKey == "building-admin")
+                && item.ScopeType == 1 && item.ScopeBuildingId == buildingId && item.RevokedAtUtc == null
+                && item.ValidFromUtc <= now && (item.ValidToUtc == null || item.ValidToUtc > now)))
+                throw new InvalidOperationException("building-access-denied");
+        }
+        else if (role == "superadmin")
+        {
+            if (!await db.UserRoleAssignments.AnyAsync(item => item.AccountId == accountId
+                && item.RoleKey == "superadmin" && item.ScopeType == 0 && item.RevokedAtUtc == null
+                && item.ValidFromUtc <= now && (item.ValidToUtc == null || item.ValidToUtc > now)))
+                throw new InvalidOperationException("superadmin-access-denied");
+        }
+        else
+        {
+            throw new InvalidOperationException("unsupported-account-role");
+        }
+
+        var nameChanged = !string.Equals(person.DisplayName, displayName, StringComparison.Ordinal);
+        var legalNameChanged = !string.Equals(person.LegalName ?? "", legalName ?? "", StringComparison.Ordinal);
+        var emailChanged = !string.Equals(person.PrimaryEmail ?? "", email ?? "", StringComparison.OrdinalIgnoreCase);
+        var phoneChanged = !string.Equals(person.PrimaryPhone ?? "", phone ?? "", StringComparison.Ordinal);
+        var whatsappChanged = !string.Equals(person.Whatsapp ?? "", whatsapp ?? "", StringComparison.Ordinal);
+        var photoChanged = !string.Equals(person.PhotoUrl ?? "", photoUrl ?? "", StringComparison.Ordinal);
+        var pinChanged = !string.IsNullOrWhiteSpace(newPin);
+
+        if (emailChanged && email is not null && await db.Persons.AsNoTracking().AnyAsync(item =>
+            item.PersonId != person.PersonId && item.PrimaryEmail == email))
+            throw new InvalidOperationException("email-already-in-use");
+        if (phoneChanged && phone is not null && await db.Persons.AsNoTracking().AnyAsync(item =>
+            item.PersonId != person.PersonId && item.PrimaryPhone == phone))
+            throw new InvalidOperationException("phone-already-in-use");
+
+        if ((role is "resident" or "admin") && (phoneChanged || emailChanged || whatsappChanged || pinChanged))
+        {
+            var credential = await db.UserCredentials.AsNoTracking()
+                .Where(item => item.AccountId == accountId && item.CredentialType == 0
+                    && item.RevokedAtUtc == null && (item.ExpiresAtUtc == null || item.ExpiresAtUtc > now))
+                .OrderByDescending(item => item.CreatedAtUtc).FirstOrDefaultAsync();
+            if (credential is null || string.IsNullOrWhiteSpace(currentPin)
+                || !_hasher.VerifyPin(currentPin, credential.CredentialHash))
+                throw new InvalidOperationException(Loc.T("The_Current_PIN_Is_Incorrect"));
+        }
+        if (role == "superadmin" && (phoneChanged || emailChanged || whatsappChanged))
+        {
+            var mfa = await db.UserTwoFactorSettings.AsNoTracking()
+                .SingleOrDefaultAsync(item => item.AccountId == accountId);
+            if (mfa?.IsEnabled != true || mfa.LastVerifiedAtUtc is null
+                || mfa.LastVerifiedAtUtc < now.AddMinutes(-10))
+                throw new InvalidOperationException("fresh-mfa-required-for-contact-change");
+        }
+
+        person.DisplayName = displayName;
+        person.LegalName = string.IsNullOrWhiteSpace(legalName) ? null : legalName;
+        person.PrimaryEmail = email;
+        person.PrimaryPhone = phone;
+        person.Whatsapp = whatsapp;
+        person.PhotoUrl = photoUrl;
+        if (apartment is not null)
+        {
+            apartment.Owner = displayName;
+            apartment.Label = settings.ApartmentLabel?.Trim() ?? "";
+            if (phoneChanged && phone is not null) apartment.Phone = phone;
+        }
+
+        if (pinChanged)
+        {
+            var oldCredentials = await db.UserCredentials.Where(item => item.AccountId == accountId
+                && item.CredentialType == 0 && item.RevokedAtUtc == null).ToListAsync();
+            foreach (var old in oldCredentials) old.RevokedAtUtc = now;
+            db.UserCredentials.Add(new UserCredentialEntity
+            {
+                CredentialId = Guid.NewGuid(), AccountId = accountId, CredentialType = 0,
+                CredentialHash = _hasher.HashPin(newPin!), HashAlgorithm = "BCrypt.Net-Next", CreatedAtUtc = now
+            });
+            account.MustChangePin = false;
+        }
+
+        if (nameChanged || legalNameChanged || emailChanged || phoneChanged || whatsappChanged || photoChanged || pinChanged)
+        {
+            person.UpdatedAtUtc = now;
+            if (phoneChanged || pinChanged) account.SecurityStamp = Guid.NewGuid().ToString("N");
+        }
+
+        await db.SaveChangesAsync();
+        await transaction.CommitAsync();
+        if (phoneChanged || pinChanged) _sessionRevalidator?.InvalidateAdmin(uid);
+
+        await _audit.LogAsync(
+            action: "account.profile_update",
+            buildingId: buildingId,
+            apartmentId: apartmentId,
+            userId: uid,
+            userRole: role,
+            metadata: new { nameChanged, legalNameChanged, emailChanged, phoneChanged, whatsappChanged, photoChanged, pinChanged },
             severity: "info");
     }
 
     // ============================================================
-    // Update Resident Profile (✅ المعدلة)
+    // Update Resident Profile (legacy compatibility)
     // ============================================================
     /// <summary>
     /// Updates the resident profile.
@@ -511,7 +773,7 @@ public class SettingsService
             item.PersonId == account.PersonId && !item.IsArchived)
             ?? throw new InvalidOperationException("admin-not-found");
         var buildingId = await db.UserRoleAssignments.AsNoTracking()
-            .Where(item => item.AccountId == accountId && item.RoleKey == "admin"
+            .Where(item => item.AccountId == accountId && (item.RoleKey == "admin" || item.RoleKey == "building-admin")
                 && item.ScopeType == 1 && item.RevokedAtUtc == null)
             .Select(item => item.ScopeBuildingId).FirstOrDefaultAsync() ?? "";
 

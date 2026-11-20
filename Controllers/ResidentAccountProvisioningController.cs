@@ -40,7 +40,7 @@ public sealed class ResidentAccountProvisioningController : Controller
             return Forbid();
 
         var result = await _provisioning.ProvisionBatchAsync(batchSize, actorId, cancellationToken);
-        TempData["Message"] = $"تم إنشاء {result.Created} حساب، وتجاوز {result.Skipped} حالة بعد إعادة التحقق. المتبقي المؤهل: {result.RemainingEligible}.";
+        TempData["Message"] = $"تم إنشاء {result.Created} حساب انتظار، وتجاوز {result.Skipped} حالة بعد إعادة التحقق. المتبقي لإنشاء حساب: {result.RemainingProvisionable}. لا يمكن إصدار PIN قبل التحقق من هوية الساكن وصلاحية رقم هاتفه وفرديته.";
         return RedirectToAction(nameof(Index));
     }
 }

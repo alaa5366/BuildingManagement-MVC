@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using BuildingManagementMvc.Attributes;
 using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
@@ -39,13 +39,13 @@ public sealed class AccountManagementController : Controller
     /// <summary>Updates the enabled status of a resident account.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SetResidentStatus(Guid accountId, bool activate, CancellationToken cancellationToken)
+    public async Task<IActionResult> SetResidentStatus(Guid accountId, bool activate, bool identityVerified = false, CancellationToken cancellationToken = default)
     {
         if (User.HasClaim("impersonated", "true")) return Forbid();
         var actorId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrWhiteSpace(actorId)) return Forbid();
 
-        var result = await _service.SetResidentStatusAsync(accountId, activate, actorId, cancellationToken);
+        var result = await _service.SetResidentStatusAsync(accountId, activate, actorId, identityVerified, cancellationToken);
         TempData[result.Success ? "Message" : "Error"] = result.Message;
         return RedirectToAction(nameof(Index));
     }
@@ -54,13 +54,13 @@ public sealed class AccountManagementController : Controller
     /// <summary>Updates the status of a managed account.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SetManagedAccountStatus(Guid accountId, bool activate, CancellationToken cancellationToken)
+    public async Task<IActionResult> SetManagedAccountStatus(Guid accountId, bool activate, bool identityVerified = false, CancellationToken cancellationToken = default)
     {
         if (User.HasClaim("impersonated", "true")) return Forbid();
         var actorId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrWhiteSpace(actorId)) return Forbid();
 
-        var result = await _service.SetManagedAccountStatusAsync(accountId, activate, actorId, cancellationToken);
+        var result = await _service.SetManagedAccountStatusAsync(accountId, activate, actorId, identityVerified, cancellationToken);
         TempData[result.Success ? "Message" : "Error"] = result.Message;
         return RedirectToAction(nameof(Index));
     }
@@ -68,13 +68,13 @@ public sealed class AccountManagementController : Controller
     /// <summary>Resets the PIN for a managed account.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ResetManagedAccountPin(Guid accountId, CancellationToken cancellationToken)
+    public async Task<IActionResult> ResetManagedAccountPin(Guid accountId, bool identityVerified = false, CancellationToken cancellationToken = default)
     {
         if (User.HasClaim("impersonated", "true")) return Forbid();
         var actorId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrWhiteSpace(actorId)) return Forbid();
 
-        var result = await _service.ResetManagedAccountPinAsync(accountId, actorId, _hasher, cancellationToken);
+        var result = await _service.ResetManagedAccountPinAsync(accountId, actorId, _hasher, identityVerified, cancellationToken);
         TempData[result.Success ? "Message" : "Error"] = result.Message;
         if (result.Success && !string.IsNullOrWhiteSpace(result.TemporaryPin))
             TempData["TemporaryManagedAccountPin"] = result.TemporaryPin;
@@ -84,13 +84,13 @@ public sealed class AccountManagementController : Controller
     /// <summary>Resets the PIN for a resident account.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ResetResidentPin(Guid accountId, CancellationToken cancellationToken)
+    public async Task<IActionResult> ResetResidentPin(Guid accountId, bool identityVerified = false, CancellationToken cancellationToken = default)
     {
         if (User.HasClaim("impersonated", "true")) return Forbid();
         var actorId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrWhiteSpace(actorId)) return Forbid();
 
-        var result = await _service.ResetResidentPinAsync(accountId, actorId, _hasher, cancellationToken);
+        var result = await _service.ResetResidentPinAsync(accountId, actorId, _hasher, identityVerified, cancellationToken);
         TempData[result.Success ? "Message" : "Error"] = result.Message;
         if (result.Success && !string.IsNullOrWhiteSpace(result.TemporaryPin))
             TempData["TemporaryResidentPin"] = result.TemporaryPin;

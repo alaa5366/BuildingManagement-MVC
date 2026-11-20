@@ -23,7 +23,6 @@ public class SettingsController : Controller
 {
     private readonly SettingsService _settings;
     private readonly BuildingsService _buildings;
-    private readonly TwoFactorService _twoFactor;
     private readonly ILogger<SettingsController> _logger;
 
     /// <summary>
@@ -32,12 +31,10 @@ public class SettingsController : Controller
     public SettingsController(
         SettingsService settings,
         BuildingsService buildings,
-        TwoFactorService twoFactor,
         ILogger<SettingsController> logger)
     {
         _settings = settings;
         _buildings = buildings;
-        _twoFactor = twoFactor;
         _logger = logger;
     }
 
@@ -202,54 +199,9 @@ public class SettingsController : Controller
         {
             var settings = await _settings.GetOwnAsync(
                 CurrentUserId, CurrentRole, CurrentBuildingId, CurrentApartmentId);
-
-            // ✅ جلب بيانات المستخدم الحالية حسب الدور
-            if (CurrentRole == "resident" &&
-                !string.IsNullOrEmpty(CurrentBuildingId) &&
-                !string.IsNullOrEmpty(CurrentApartmentId))
-            {
-                var building = await _buildings.GetByIdAsync(CurrentBuildingId);
-                var apt = building?.Apartments.FirstOrDefault(a => a.Id == CurrentApartmentId);
-
-                if (apt != null)
-                {
-                    ViewBag.OwnerName = apt.Owner;
-                    ViewBag.AptLabel = apt.Label;
-                    ViewBag.CurrentPhone = apt.Phone;
-                    ViewBag.CurrentWhatsapp = apt.Phone;
-                    ViewBag.AptNumber = apt.Number;
-                }
-                ViewBag.IsResident = true;
-            }
-            else if (CurrentRole == "admin")
-            {
-                var user = await _settings.GetAccountProfileAsync(CurrentUserId);
-                if (user != null)
-                {
-                    ViewBag.OwnerName = user.Value.Name;
-                    ViewBag.CurrentPhone = user.Value.Phone;
-                    ViewBag.CurrentWhatsapp = string.IsNullOrEmpty(user.Value.Whatsapp)
-                        ? user.Value.Phone
-                        : user.Value.Whatsapp;
-                }
-                ViewBag.IsResident = false;
-            }
-            else if (CurrentRole == "superadmin")
-            {
-                var user = await _settings.GetAccountProfileAsync(CurrentUserId);
-                if (user != null)
-                {
-                    ViewBag.OwnerName = user.Value.Name;
-                    ViewBag.CurrentPhone = user.Value.Phone;
-                }
-                ViewBag.IsResident = false;
-            }
-
-            ViewBag.TwoFactorEnabled =
-                (CurrentRole == "admin" || CurrentRole == "superadmin")
-                && !User.HasClaim("impersonated", "true")
-                && await _twoFactor.IsEnabledAsync(CurrentUserId);
-
+            ViewBag.IsResident = CurrentRole == "resident";
+            ViewBag.CanManageTwoFactor = (CurrentRole is "admin" or "superadmin")
+                && !User.HasClaim("impersonated", "true");
             return View(settings);
         }
         catch (Exception ex)
@@ -268,116 +220,77 @@ public class SettingsController : Controller
     /// </remarks>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Own(
-    OwnSettings model,
-    string? OwnerName,
-    string? AptLabel,
-    string? NewPhone,
-    string? NewWhatsapp,
-    string? NewPin,
-    string? ConfirmNewPin,
-    string? CurrentPin)
+    public async Task<IActionResult> Own(OwnSettings model)
     {
+        if (!ModelState.IsValid)
+        {
+            var validationErrors = ModelState
+                .Where(item => item.Value?.Errors.Count > 0)
+                .Select(item => $"{item.Key}: {string.Join(", ", item.Value!.Errors.Select(error => error.ErrorMessage))}")
+                .ToArray();
+            _logger.LogWarning("Own settings validation failed for account {AccountId}: {ValidationErrors}",
+                CurrentUserId, string.Join(" | ", validationErrors));
+            TempData["Error"] = Loc.T("Please_Check_The_Entered_Data");
+            return RedirectToAction(nameof(Own));
+        }
+
+        var pinChanged = !string.IsNullOrWhiteSpace(model.NewPin);
+        if (pinChanged && (model.NewPin != model.ConfirmNewPin
+            || model.NewPin!.Length is < 4 or > 12
+            || model.NewPin.Any(character => character < '0' || character > '9')
+            || string.IsNullOrWhiteSpace(model.CurrentPin)
+            || model.CurrentPin.Length is < 4 or > 12
+            || model.CurrentPin.Any(character => character < '0' || character > '9')))
+        {
+            TempData["Error"] = Loc.T("PIN_4_12_Digits");
+            return RedirectToAction(nameof(Own));
+        }
+
         var saveErrors = new List<string>();
         var saveSuccess = new List<string>();
 
-        // ============================================================
-        // 1. حفظ الإعدادات العادية (اللغة + التفضيلات)
-        // ============================================================
         try
         {
-            await _settings.SaveOwnAsync(
-                CurrentUserId, model, CurrentUserId, CurrentRole,
+            await _settings.SaveOwnAsync(CurrentUserId, model, CurrentUserId, CurrentRole,
                 CurrentBuildingId, CurrentApartmentId);
             saveSuccess.Add(Loc.T("Preferences"));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "SaveOwn (settings) failed");
+            _logger.LogError(ex, "SaveOwn preferences failed");
             saveErrors.Add(Loc.T("Preferences_2"));
         }
 
-        // ============================================================
-        // 2. تحديث بيانات المستخدم (الاسم/الموبايل/PIN)
-        // ============================================================
         try
         {
-            var pinChanged = !string.IsNullOrWhiteSpace(NewPin);
-
-            if (pinChanged)
-            {
-                if (NewPin != ConfirmNewPin)
-                    throw new InvalidOperationException(Loc.T("The_New_PIN_And_Its_Confirmation_2"));
-
-                if (NewPin!.Length != 4 || !NewPin.All(char.IsDigit))
-                    throw new InvalidOperationException(Loc.T("PIN_Must_Be_Exactly_4_Digits"));
-
-                if (string.IsNullOrWhiteSpace(CurrentPin))
-                    throw new InvalidOperationException(Loc.T("You_Must_Enter_The_Current_PIN"));
-            }
-
-            if (CurrentRole == "resident" &&
-                !string.IsNullOrEmpty(CurrentBuildingId) &&
-                !string.IsNullOrEmpty(CurrentApartmentId))
-            {
-                await _settings.UpdateResidentProfileAsync(
-                    CurrentBuildingId, CurrentApartmentId,
-                    OwnerName ?? "", AptLabel ?? "", NewPhone ?? "",
-                    pinChanged ? NewPin : null, CurrentPin ?? "",
-                    CurrentUserId, CurrentRole);
-                saveSuccess.Add(Loc.T("Your_Details"));
-            }
-            else if (CurrentRole == "admin")
-            {
-                await _settings.UpdateAdminProfileAsync(
-                    CurrentUserId, OwnerName ?? "", NewPhone ?? "", NewWhatsapp ?? "",
-                    pinChanged ? NewPin : null, CurrentPin ?? "", CurrentRole);
-                saveSuccess.Add(Loc.T("Your_Details"));
-            }
-            else if (CurrentRole == "superadmin")
-            {
-                await _settings.UpdateSuperAdminNameAsync(CurrentUserId, OwnerName ?? "");
-                saveSuccess.Add(Loc.T("Your_Details"));
-            }
+            await _settings.UpdateOwnIdentityProfileAsync(
+                CurrentUserId, CurrentRole, CurrentBuildingId, CurrentApartmentId,
+                model, pinChanged ? model.NewPin : null, model.CurrentPin);
+            saveSuccess.Add(Loc.T("Your_Details"));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "SaveOwn (profile) failed");
+            _logger.LogError(ex, "SaveOwn identity profile failed");
             saveErrors.Add(Loc.T("An_Unexpected_Error_Occurred"));
         }
 
-        // ============================================================
-        // 3. رسالة موحّدة
-        // ============================================================
         if (saveErrors.Count == 0)
-        {
             TempData["Message"] = Loc.T("Saved") + string.Join(Loc.T("And"), saveSuccess);
-        }
         else if (saveSuccess.Count > 0)
-        {
-            TempData["Message"] = Loc.T("Saved_2") + string.Join(Loc.T("And"), saveSuccess) +
-                                 Loc.T("But_Failed") + string.Join(" | ", saveErrors);
-        }
+            TempData["Message"] = Loc.T("Saved_2") + string.Join(Loc.T("And"), saveSuccess)
+                + Loc.T("But_Failed") + string.Join(" | ", saveErrors);
         else
-        {
             TempData["Error"] = Loc.T("Save_Failed_3") + string.Join(" | ", saveErrors);
-        }
 
-        // ============================================================
-        // ✅ 4. مزامنة اللغة: لو اتغيرت، نحدّث الكوكي عبر LanguageController
-        // ============================================================
         var currentLang = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
-        var newLang = string.IsNullOrWhiteSpace(model.Language) ? "ar" : model.Language.ToLower();
-        if (newLang != "ar" && newLang != "en" && newLang != "fr" && newLang != "de") newLang = "ar";
-
+        var newLang = string.IsNullOrWhiteSpace(model.Language) ? "ar" : model.Language.ToLowerInvariant();
+        if (newLang is not ("ar" or "en" or "fr" or "de")) newLang = "ar";
         if (newLang != currentLang)
-        {
             return RedirectToAction("Set", "Language", new
             {
                 lang = newLang,
                 returnUrl = Url.Action(nameof(Own))
             });
-        }
 
         return RedirectToAction(nameof(Own));
     }

@@ -119,6 +119,7 @@ public class AppDbContext : DbContext
     // Canonical identity and authorization foundation.
     public DbSet<PersonEntity> Persons => Set<PersonEntity>();
     public DbSet<UserAccountEntity> UserAccounts => Set<UserAccountEntity>();
+    public DbSet<UserPreferenceEntity> UserPreferences => Set<UserPreferenceEntity>();
     public DbSet<UserCredentialEntity> UserCredentials => Set<UserCredentialEntity>();
     public DbSet<UserTwoFactorSettingEntity> UserTwoFactorSettings => Set<UserTwoFactorSettingEntity>();
     public DbSet<UserRecoveryCodeEntity> UserRecoveryCodes => Set<UserRecoveryCodeEntity>();

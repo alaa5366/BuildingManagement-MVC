@@ -1,18 +1,8 @@
-﻿@* =============================================================================
-   View:        Settings/Own
-   Rendered by: SettingsController.Own
-   Model:       BuildingManagementMvc.Models.OwnSettings
-   Purpose:     Own page.
-   ============================================================================= *@
 @model BuildingManagementMvc.Models.OwnSettings
 @{
     ViewData["Title"] = Loc.T("My_Settings");
     var isResident = ViewBag.IsResident as bool? ?? false;
-    var ownerName = ViewBag.OwnerName as string ?? "";
-    var aptLabel = ViewBag.AptLabel as string ?? "";
-    var currentPhone = ViewBag.CurrentPhone as string ?? "";
-    var currentWhatsapp = ViewBag.CurrentWhatsapp as string ?? currentPhone;
-    var aptNumber = ViewBag.AptNumber as int? ?? 0;
+    var canManageTwoFactor = ViewBag.CanManageTwoFactor as bool? ?? false;
     var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
     var roleLabel = role switch
     {
@@ -21,377 +11,342 @@
         "resident" => Loc.T("Resident_2"),
         _ => role
     };
-
-    var initials = string.IsNullOrWhiteSpace(ownerName)
-        ? "?"
-        : string.Join("", ownerName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                                .Take(2).Select(w => w[0]));
+    var initials = string.Join("", (Model.DisplayName ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries)
+        .Take(2).Select(part => part[0]));
+    var statusLabel = Model.AccountStatus switch
+    {
+        0 => "Pending",
+        1 => "Active",
+        2 => "Suspended",
+        3 => "Closed",
+        _ => $"Unknown ({Model.AccountStatus})"
+    };
 }
 
-<div class="container" style="max-width: 1000px;">
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">@Loc.T("My_Settings_2")</h2>
-        <span class="badge bg-secondary fs-6">@roleLabel</span>
+<div class="container py-3" style="max-width: 1080px;">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h2 class="mb-1">@Loc.T("My_Settings_2")</h2>
+            <p class="text-muted mb-0">Manage your identity, account security and personal preferences</p>
+        </div>
+        <span class="badge rounded-pill text-bg-secondary px-3 py-2">@roleLabel</span>
     </div>
 
-    @if ((role == "admin" || role == "superadmin") && !User.HasClaim("impersonated", "true"))
+    @if (TempData["Error"] is string errorMessage)
     {
-        var twoFactorEnabled = ViewBag.TwoFactorEnabled is bool enabled && enabled;
-        <div class="card mb-4 border-0 shadow-sm">
-            <div class="card-header bg-dark text-white py-3">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-shield-lock fs-4"></i>
-                    <div>
-                        <strong class="fs-5">Two-Factor Authentication</strong>
-                        <div class="small text-white-50">Protect your administrator account with an authenticator app.</div>
-                    </div>
-                    <span class="badge ms-auto @(twoFactorEnabled ? "bg-success" : "bg-secondary")">@(twoFactorEnabled ? "Enabled" : "Disabled")</span>
-                </div>
-            </div>
-            <div class="card-body p-4">
-                @if (twoFactorEnabled)
-                {
-                    <div class="d-flex align-items-start gap-2 mb-3">
-                        <i class="bi bi-check-circle-fill text-success fs-5"></i>
-                        <div>
-                            <div class="fw-semibold">Your account is protected</div>
-                            <div class="text-muted small">A verification code is required whenever you sign in.</div>
-                        </div>
-                    </div>
-                    <form method="post" asp-controller="Account" asp-action="DisableTwoFactor" class="row g-2 align-items-end">
-                        @Html.AntiForgeryToken()
-                        <div class="col-md-8">
-                            <label class="form-label fw-semibold" for="disableTwoFactorCode">Authenticator or recovery code</label>
-                            <input id="disableTwoFactorCode" name="Code" class="form-control form-control-lg" required autocomplete="one-time-code" placeholder="Enter a current code to disable 2FA" />
-                        </div>
-                        <div class="col-md-4">
-                            <button type="submit" class="btn btn-outline-danger btn-lg w-100">Disable 2FA</button>
-                        </div>
-                    </form>
-                    <div class="form-text mt-2">Disabling requires a valid authenticator or unused recovery code.</div>
-                }
-                else
-                {
-                    <div class="text-muted mb-3">Two-factor authentication is currently off. Set up an authenticator app to add a second layer of protection.</div>
-                    <form method="post" asp-controller="Account" asp-action="BeginTwoFactorSetup">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-phone me-1"></i> Set up authenticator app
-                        </button>
-                    </form>
-                }
-            </div>
-        </div>
+        <div class="alert alert-danger" role="alert">@errorMessage</div>
+    }
+    @if (TempData["Message"] is string successMessage)
+    {
+        <div class="alert alert-success" role="status">@successMessage</div>
     }
 
-    <form method="post" asp-action="Own" id="ownSettingsForm" novalidate>
+    <form method="post" asp-action="Own" id="ownSettingsForm">
         @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
-        @* ============================================================ *@
-        @* 👤 بياناتي الشخصية                                          *@
-        @* ============================================================ *@
-        <div class="card mb-4 border-0 shadow-sm">
-            <div class="card-header bg-dark text-white py-3">
-                <div class="d-flex align-items-center gap-2">
-                    <span style="font-size: 22px;">👤</span>
-                    <div>
-                        <strong class="fs-5">@Loc.T("My_Personal_Details")</strong>
-                        <div class="small text-white-50">@Loc.T("Your_Name_And_Contact_Number_As")</div>
-                    </div>
-                </div>
-            </div>
-
+        <section class="card border-0 shadow-sm mb-4">
             <div class="card-body p-4">
-
-                @* ===== Avatar + Info ===== *@
-                <div class="d-flex align-items-center gap-3 pb-4 mb-4 border-bottom flex-wrap">
-                    <div class="rounded-circle bg-primary bg-gradient d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0"
-                         style="width: 72px; height: 72px; font-size: 26px;">
-                        @initials
-                    </div>
-                    <div class="flex-grow-1">
-                        <div class="fw-bold fs-5">
-                            @(string.IsNullOrWhiteSpace(ownerName) ? "—" : ownerName)
+                <div class="d-flex align-items-center gap-3 flex-wrap mb-4">
+                    @if (!string.IsNullOrWhiteSpace(Model.PhotoUrl))
+                    {
+                        <img src="@Model.PhotoUrl" alt="Profile photo" class="rounded-circle border"
+                             style="width:76px;height:76px;object-fit:cover" />
+                    }
+                    else
+                    {
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
+                             style="width:76px;height:76px;font-size:1.5rem">
+                            @(string.IsNullOrWhiteSpace(initials) ? "?" : initials)
                         </div>
-                        <div class="text-muted small">
-                            @roleLabel
-                            @if (isResident && aptNumber > 0)
+                    }
+                    <div class="flex-grow-1">
+                        <h4 class="mb-1">@Model.DisplayName</h4>
+                        <div class="text-muted">@roleLabel
+                            @if (isResident && Model.ApartmentNumber.HasValue)
                             {
-                                <text> @Loc.T("Apartment_N_3", aptNumber)</text>
+                                <span> · @Loc.T("Apartment_N_3", Model.ApartmentNumber.Value)</span>
                             }
                         </div>
                     </div>
+                    @if (Model.MustChangePin)
+                    {
+                        <span class="badge text-bg-warning">PIN change required</span>
+                    }
                 </div>
 
-                @* ===== الحقول ===== *@
+                <h5 class="mb-3">Personal identity</h5>
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">@Html.Raw(Loc.T("Name_2"))</label>
-                        <input name="OwnerName" value="@ownerName" required
-                               maxlength="100" class="form-control form-control-lg"
-                               placeholder="@Loc.T("Enter_Your_Name_Here")" />
-                        <div class="form-text">@Loc.T("The_Name_Shown_On_Invoices_And")</div>
+                        <label asp-for="DisplayName" class="form-label fw-semibold">Display name</label>
+                        <input asp-for="DisplayName" class="form-control" maxlength="160" required autocomplete="name" />
+                        <span asp-validation-for="DisplayName" class="text-danger small"></span>
                     </div>
-
+                    <div class="col-md-6">
+                        <label asp-for="LegalName" class="form-label fw-semibold">Legal name</label>
+                        <input asp-for="LegalName" class="form-control" maxlength="200" autocomplete="off" />
+                        <span asp-validation-for="LegalName" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="PrimaryEmail" class="form-label fw-semibold">Contact email</label>
+                        <input asp-for="PrimaryEmail" type="email" class="form-control" maxlength="254" autocomplete="email" />
+                        <span asp-validation-for="PrimaryEmail" class="text-danger small"></span>
+                        <div class="form-text">This contact address is separate from your sign-in identifier.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="PrimaryPhone" class="form-label fw-semibold">Mobile number</label>
+                        <input asp-for="PrimaryPhone" type="tel" class="form-control" maxlength="32" dir="ltr" autocomplete="tel" />
+                        <span asp-validation-for="PrimaryPhone" class="text-danger small"></span>
+                        <div class="form-text">Changing the mobile number requires your current PIN; SuperAdmin contact changes require recent MFA verification.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Whatsapp" class="form-label fw-semibold">WhatsApp number</label>
+                        <input asp-for="Whatsapp" type="tel" class="form-control" maxlength="32" dir="ltr" autocomplete="tel" />
+                        <span asp-validation-for="Whatsapp" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="PhotoUrl" class="form-label fw-semibold">Profile photo URL</label>
+                        <input asp-for="PhotoUrl" type="url" class="form-control" maxlength="2048" dir="ltr" placeholder="https://..." />
+                        <span asp-validation-for="PhotoUrl" class="text-danger small"></span>
+                    </div>
                     @if (isResident)
                     {
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">@Html.Raw(Loc.T("Apartment_Name_Optional"))</label>
-                            <input name="AptLabel" value="@aptLabel" maxlength="60"
-                                   class="form-control form-control-lg"
-                                   placeholder="@Loc.T("Example_Alaa_S_Apartment")" />
-                            <div class="form-text">@Loc.T("A_Short_Name_To_Identify_The")</div>
+                            <label asp-for="ApartmentLabel" class="form-label fw-semibold">Apartment display label</label>
+                            <input asp-for="ApartmentLabel" class="form-control" maxlength="60" />
+                            <span asp-validation-for="ApartmentLabel" class="text-danger small"></span>
                         </div>
                     }
+                </div>
+            </div>
+        </section>
 
+        <section class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <h5 class="mb-3">Account and security information</h5>
+                <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">@Html.Raw(Loc.T("Mobile_Number_Affects_Login"))</label>
-                        <input name="NewPhone" value="@currentPhone"
-                               class="form-control form-control-lg" dir="ltr"
-                               placeholder="+201xxxxxxxxx" />
-                        <div class="form-text text-warning small">
-                            @Loc.T("Changing_It_Automatically_Updates_The_Database")
-                        </div>
+                        <div class="small text-muted">Account status</div>
+                        <div class="fw-semibold">@statusLabel (@Model.AccountStatus)</div>
                     </div>
-
-                    @if (!isResident)
+                    <div class="col-md-6">
+                        <div class="small text-muted">Sign-in identifier</div>
+                        <div class="fw-semibold text-break">@(string.IsNullOrWhiteSpace(Model.LoginEmail) ? "Not configured" : Model.LoginEmail)</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="small text-muted">External sign-in provider</div>
+                        <div class="fw-semibold">@(Model.ExternalProvider ?? "Not linked")</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="small text-muted">PIN update required</div>
+                        <div class="fw-semibold">@(Model.MustChangePin ? "Yes" : "No")</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="small text-muted">Account created (UTC)</div>
+                        <div class="fw-semibold">@Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm")</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="small text-muted">Last sign-in (UTC)</div>
+                        <div class="fw-semibold">@(Model.LastLoginAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "No sign-in recorded")</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="small text-muted">Two-factor authentication</div>
+                        <div class="fw-semibold">@(Model.TwoFactorEnabled ? "Enabled" : "Disabled")</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="small text-muted">Unused recovery codes</div>
+                        <div class="fw-semibold">@Model.UnusedRecoveryCodes</div>
+                    </div>
+                    @if (Model.TwoFactorEnabled)
                     {
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">@Html.Raw(Loc.T("WhatsApp_Number_Separate"))</label>
-                            <input name="NewWhatsapp" value="@currentWhatsapp"
-                                   class="form-control form-control-lg" dir="ltr"
-                                   placeholder="+201xxxxxxxxx" />
-                            <div class="form-text">@Loc.T("Can_Be_Different_From_The_Mobile")</div>
+                            <div class="small text-muted">Authenticator enrolled (UTC)</div>
+                            <div class="fw-semibold">@(Model.TwoFactorEnrolledAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "—")</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="small text-muted">Last MFA verification (UTC)</div>
+                            <div class="fw-semibold">@(Model.TwoFactorLastVerifiedAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "—")</div>
                         </div>
                     }
                 </div>
+                @if (canManageTwoFactor)
+                {
+                    <hr class="my-4" />
+                    @if (Model.TwoFactorEnabled)
+                    {
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                            <div>
+                                <div class="fw-semibold text-success">Your administrator account is protected.</div>
+                                <div class="small text-muted">Disabling MFA requires a valid authenticator or unused recovery code.</div>
+                            </div>
+                            <div class="d-flex gap-2 align-items-end">
+                                <input name="Code" class="form-control" autocomplete="one-time-code"
+                                       maxlength="32" placeholder="Authenticator / recovery code" />
+                                <button type="submit" class="btn btn-outline-danger"
+                                        formaction="@Url.Action("DisableTwoFactor", "Account")" formmethod="post">Disable MFA</button>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                            <div>
+                                <div class="fw-semibold">Two-factor authentication is disabled.</div>
+                                <div class="small text-muted">Set up an authenticator app to protect your administrator account.</div>
+                            </div>
+                            <button type="submit" class="btn btn-primary"
+                                    formaction="@Url.Action("BeginTwoFactorSetup", "Account")" formmethod="post">Set up authenticator</button>
+                        </div>
+                    }
+                }
             </div>
-        </div>
+        </section>
 
-        @* ============================================================ *@
-        @* 🔐 الأمان — PIN                                              *@
-        @* ============================================================ *@
-        <div class="card mb-4 border-0 shadow-sm">
-            <div class="card-header bg-danger text-white py-3">
-                <div class="d-flex align-items-center gap-2">
-                    <span style="font-size: 22px;">🔐</span>
-                    <div>
-                        <strong class="fs-5">@Loc.T("Security_Change_PIN")</strong>
-                        <div class="small text-white-50">@Loc.T("Leave_Empty_If_You_Don_T")</div>
+        @if (role is "resident" or "admin")
+        {
+            <section class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h5 class="mb-1">Change PIN</h5>
+                    <p class="text-muted small mb-3">Leave all three fields empty if you do not want to change your PIN.</p>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label asp-for="CurrentPin" class="form-label">Current PIN</label>
+                            <div class="input-group">
+                                <input asp-for="CurrentPin" type="password" inputmode="numeric" minlength="4" maxlength="12"
+                                       pattern="[0-9]{4,12}" class="form-control pin-field" autocomplete="current-password" />
+                                <button type="button" class="btn btn-outline-secondary toggle-pin" data-target="CurrentPin">Show</button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="NewPin" class="form-label">New PIN</label>
+                            <div class="input-group">
+                                <input asp-for="NewPin" type="password" inputmode="numeric" minlength="4" maxlength="12"
+                                       pattern="[0-9]{4,12}" class="form-control pin-field" autocomplete="new-password" />
+                                <button type="button" class="btn btn-outline-secondary toggle-pin" data-target="NewPin">Show</button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="ConfirmNewPin" class="form-label">Confirm new PIN</label>
+                            <div class="input-group">
+                                <input asp-for="ConfirmNewPin" type="password" inputmode="numeric" minlength="4" maxlength="12"
+                                       pattern="[0-9]{4,12}" class="form-control pin-field" autocomplete="new-password" />
+                                <button type="button" class="btn btn-outline-secondary toggle-pin" data-target="ConfirmNewPin">Show</button>
+                            </div>
+                            <div id="pinMatchMessage" class="form-text" aria-live="polite"></div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </section>
+        }
+
+        <section class="card border-0 shadow-sm mb-4">
             <div class="card-body p-4">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label fw-semibold">@Loc.T("Current_PIN")</label>
-                        <div class="input-group">
-                            <input name="CurrentPin" id="currentPin" type="password"
-                                   maxlength="4" inputmode="numeric" pattern="\d*"
-                                   class="form-control form-control-lg" placeholder="••••" />
-                            <button type="button" class="btn btn-outline-secondary toggle-pin"
-                                    data-target="currentPin" tabindex="-1">👁</button>
-                        </div>
-                        <div class="form-text">@Loc.T("Required_Only_To_Change_The_Mobile")</div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label fw-semibold">@Loc.T("New_PIN_2")</label>
-                        <div class="input-group">
-                            <input name="NewPin" id="newPin" type="password"
-                                   maxlength="4" inputmode="numeric" pattern="\d*"
-                                   class="form-control form-control-lg" placeholder="••••" />
-                            <button type="button" class="btn btn-outline-secondary toggle-pin"
-                                    data-target="newPin" tabindex="-1">👁</button>
-                        </div>
-                        <div class="progress mt-1" style="height: 4px;">
-                            <div id="pinStrength" class="progress-bar" style="width: 0%;"></div>
-                        </div>
-                        <div class="form-text">@Loc.T("Exactly_4_Digits")</div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label fw-semibold">@Loc.T("Confirm_New_PIN")</label>
-                        <div class="input-group">
-                            <input name="ConfirmNewPin" id="confirmPin" type="password"
-                                   maxlength="4" inputmode="numeric" pattern="\d*"
-                                   class="form-control form-control-lg" placeholder="••••" />
-                            <button type="button" class="btn btn-outline-secondary toggle-pin"
-                                    data-target="confirmPin" tabindex="-1">👁</button>
-                        </div>
-                        <div class="form-text" id="pinMatchMsg"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        @* ============================================================ *@
-        @* ⚙️ التفضيلات                                                  *@
-        @* ============================================================ *@
-        <div class="card mb-4 border-0 shadow-sm">
-            <div class="card-header bg-primary text-white py-3">
-                <div class="d-flex align-items-center gap-2">
-                    <span style="font-size: 22px;">⚙️</span>
-                    <div>
-                        <strong class="fs-5">@Loc.T("Preferences")</strong>
-                        <div class="small text-white-50">@Loc.T("Language_Notifications_Payment_Method")</div>
-                    </div>
-                </div>
-            </div>
-            <div class="card-body p-4">
+                <h5 class="mb-3">Personal preferences</h5>
                 <div class="row g-3 mb-3">
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">@Loc.T("Language")</label>
-                        <select name="Language" class="form-select form-select-lg">
-                            <option value="ar" selected="@(Model.Language == "ar")">🇪🇬 العربية</option>
-                            <option value="en" selected="@(Model.Language == "en")">🇬🇧 English</option>
-                            <option value="fr" selected="@(Model.Language == "fr")">🇫🇷 Français</option>
-                            <option value="de" selected="@(Model.Language == "de")">🇩🇪 Deutsch</option>
+                        <label asp-for="Language" class="form-label fw-semibold">Language</label>
+                        <select asp-for="Language" class="form-select">
+                            <option value="ar">العربية</option>
+                            <option value="en">English</option>
+                            <option value="fr">Français</option>
+                            <option value="de">Deutsch</option>
                         </select>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">@Loc.T("Preferred_Payment_Method")</label>
-                        <select name="PreferredPaymentMethod" class="form-select form-select-lg">
-                            <option value="instapay" selected="@(Model.PreferredPaymentMethod == "instapay")">InstaPay</option>
-                            <option value="cash" selected="@(Model.PreferredPaymentMethod == "cash")">@Loc.T("Cash")</option>
-                            <option value="bank" selected="@(Model.PreferredPaymentMethod == "bank")">@Loc.T("Bank_Transfer")</option>
-                            <option value="vodafone" selected="@(Model.PreferredPaymentMethod == "vodafone")">@Loc.T("Vodafone_Cash")</option>
+                        <label asp-for="PreferredPaymentMethod" class="form-label fw-semibold">Preferred payment method</label>
+                        <select asp-for="PreferredPaymentMethod" class="form-select">
+                            <option value="instapay">InstaPay</option>
+                            <option value="cash">@Loc.T("Cash")</option>
+                            <option value="bank">@Loc.T("Bank_Transfer")</option>
+                            <option value="vodafone">@Loc.T("Vodafone_Cash")</option>
                         </select>
                     </div>
                 </div>
-
-                <label class="form-label fw-semibold">@Loc.T("Notification_Preferences")</label>
+                <label class="form-label fw-semibold">Notification channels</label>
                 <div class="row g-2">
                     <div class="col-md-4">
-                        <div class="form-check form-switch p-3 border rounded">
+                        <div class="form-check form-switch border rounded p-3">
                             <input asp-for="NotificationPreferences.WhatsApp" class="form-check-input" />
-                            <label asp-for="NotificationPreferences.WhatsApp" class="form-check-label">
-                                @Loc.T("WhatsApp_2")
-                            </label>
+                            <label asp-for="NotificationPreferences.WhatsApp" class="form-check-label">WhatsApp</label>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="form-check form-switch p-3 border rounded">
+                        <div class="form-check form-switch border rounded p-3">
                             <input asp-for="NotificationPreferences.Email" class="form-check-input" />
-                            <label asp-for="NotificationPreferences.Email" class="form-check-label">
-                                @Loc.T("Email_3")
-                            </label>
+                            <label asp-for="NotificationPreferences.Email" class="form-check-label">Email</label>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="form-check form-switch p-3 border rounded">
+                        <div class="form-check form-switch border rounded p-3">
                             <input asp-for="NotificationPreferences.InApp" class="form-check-input" />
-                            <label asp-for="NotificationPreferences.InApp" class="form-check-label">
-                                @Loc.T("In_App")
-                            </label>
+                            <label asp-for="NotificationPreferences.InApp" class="form-check-label">In-app</label>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        @* ===== أزرار ===== *@
-        <div class="d-flex gap-2 justify-content-end mb-5">
-            <a href="javascript:history.back()" class="btn btn-outline-secondary btn-lg">@Loc.T("Cancel_3")</a>
-            <button type="submit" class="btn btn-primary btn-lg px-4">
-                @Loc.T("Save_Changes")
-            </button>
+        <div class="d-flex flex-wrap justify-content-end gap-2 mb-5">
+            <a asp-controller="Settings" asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary px-4">Save changes</button>
         </div>
-
     </form>
 </div>
 
 @section Scripts {
 <script>
-    // 👁 إظهار/إخفاء PIN
-    document.querySelectorAll('.toggle-pin').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const input = document.getElementById(btn.dataset.target);
+(() => {
+    const form = document.getElementById('ownSettingsForm');
+    if (!form) return;
+
+    document.querySelectorAll('.toggle-pin').forEach(button => {
+        button.addEventListener('click', () => {
+            const input = document.getElementById(button.dataset.target);
             if (!input) return;
             input.type = input.type === 'password' ? 'text' : 'password';
-            btn.textContent = input.type === 'password' ? '👁' : '🙈';
+            button.textContent = input.type === 'password' ? 'Show' : 'Hide';
         });
     });
 
-    // 🔢 امنع غير الأرقام في حقول PIN
-    ['currentPin', 'newPin', 'confirmPin'].forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.addEventListener('input', () => {
-            el.value = el.value.replace(/\D/g, '').slice(0, 4);
-            if (id === 'newPin') updatePinStrength(el.value);
-            if (id === 'newPin' || id === 'confirmPin') checkPinMatch();
+    document.querySelectorAll('.pin-field').forEach(input => {
+        input.addEventListener('input', () => {
+            input.value = input.value.replace(/\D/g, '').slice(0, 12);
+            updatePinMatch();
         });
     });
 
-    // 📊 مؤشر قوة PIN
-    function updatePinStrength(pin) {
-        const bar = document.getElementById('pinStrength');
-        if (!bar) return;
-        const len = pin.length;
-        let pct = 0, color = 'bg-danger';
-        if (len === 4) {
-            const unique = new Set(pin).size;
-            if (unique === 1) { pct = 40; color = 'bg-danger'; }
-            else if (unique === 2) { pct = 60; color = 'bg-warning'; }
-            else if (unique === 3) { pct = 80; color = 'bg-info'; }
-            else { pct = 100; color = 'bg-success'; }
-        } else if (len > 0) {
-            pct = len * 15;
-            color = 'bg-danger';
-        }
-        bar.style.width = pct + '%';
-        bar.className = 'progress-bar ' + color;
-    }
-
-    // ✅ تحقق فوري من تطابق PIN
-    function checkPinMatch() {
-        const np = document.getElementById('newPin')?.value || '';
-        const cp = document.getElementById('confirmPin')?.value || '';
-        const msg = document.getElementById('pinMatchMsg');
-        const cpEl = document.getElementById('confirmPin');
-        if (!msg || !cpEl) return;
-
-        if (cp.length === 0) {
-            msg.textContent = '';
-            cpEl.classList.remove('is-valid', 'is-invalid');
-        } else if (cp === np) {
-            msg.textContent = '✅ @Html.Raw(Loc.Js("Matching"))';
-            msg.className = 'form-text text-success';
-            cpEl.classList.remove('is-invalid');
-            cpEl.classList.add('is-valid');
+    function updatePinMatch() {
+        const next = document.getElementById('NewPin');
+        const confirm = document.getElementById('ConfirmNewPin');
+        const message = document.getElementById('pinMatchMessage');
+        if (!next || !confirm || !message) return;
+        if (!confirm.value) {
+            message.textContent = '';
+            confirm.classList.remove('is-valid', 'is-invalid');
+        } else if (next.value === confirm.value) {
+            message.textContent = 'PINs match';
+            message.className = 'form-text text-success';
+            confirm.classList.add('is-valid');
+            confirm.classList.remove('is-invalid');
         } else {
-            msg.textContent = '❌ @Html.Raw(Loc.Js("Not_Matching"))';
-            msg.className = 'form-text text-danger';
-            cpEl.classList.remove('is-valid');
-            cpEl.classList.add('is-invalid');
+            message.textContent = 'PINs do not match';
+            message.className = 'form-text text-danger';
+            confirm.classList.add('is-invalid');
+            confirm.classList.remove('is-valid');
         }
     }
 
-    // 🛡 تأكيد قبل الحفظ لو فيه تغيير PIN
-    document.getElementById('ownSettingsForm')?.addEventListener('submit', (e) => {
-        const np = document.getElementById('newPin')?.value || '';
-        const cp = document.getElementById('confirmPin')?.value || '';
-        const cur = document.getElementById('currentPin')?.value || '';
-
-        if (np.length > 0 || cp.length > 0) {
-            if (np.length !== 4) {
-                e.preventDefault();
-                alert('⚠️ PIN @Html.Raw(Loc.Js("The_New_One_Must_Be_4"))');
-                return;
-            }
-            if (np !== cp) {
-                e.preventDefault();
-                alert('⚠️ PIN @Html.Raw(Loc.Js("The_New_PIN_And_Its_Confirmation"))');
-                return;
-            }
-            if (cur.length !== 4) {
-                e.preventDefault();
-                alert('⚠️ @Html.Raw(Loc.Js("You_Must_Enter_The_Current_PIN"))');
-                return;
-            }
+    form.addEventListener('submit', event => {
+        const next = document.getElementById('NewPin');
+        const confirm = document.getElementById('ConfirmNewPin');
+        const current = document.getElementById('CurrentPin');
+        if (!next || !confirm || !current) return;
+        if (!next.value && !confirm.value && !current.value) return;
+        if (!/^\d{4,12}$/.test(next.value) || next.value !== confirm.value || !/^\d{4,12}$/.test(current.value)) {
+            event.preventDefault();
+            window.alert('Enter the current PIN and matching new PIN values (4–12 digits).');
         }
     });
+})();
 </script>
 }

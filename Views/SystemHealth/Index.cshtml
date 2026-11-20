@@ -67,7 +67,7 @@
         <div class="log-section-heading"><div><span class="log-section-kicker">PROCESS</span><h2><i class="bi bi-cpu"></i> Application process</h2></div></div>
         <div class="health-process-grid">
             <div><small>Process started (UTC)</small><strong>@Model.ProcessStartedAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</strong></div>
-            <div><small>Process uptime</small><strong>@((DateTimeOffset.UtcNow - Model.ProcessStartedAtUtc).ToString(@"d.hh:mm:ss"))</strong></div>
+            <div><small>Process uptime</small><strong>@((DateTimeOffset.UtcNow - Model.ProcessStartedAtUtc).ToString(@"d\.hh\:mm\:ss"))</strong></div>
             <div><small>Last health check (UTC)</small><strong>@Model.CheckedAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</strong></div>
             <div><small>Working set</small><strong>@((Model.WorkingSetBytes / 1024d / 1024d).ToString("N1")) MB</strong></div>
             <div><small>Private memory</small><strong>@((Model.PrivateMemoryBytes / 1024d / 1024d).ToString("N1")) MB</strong></div>

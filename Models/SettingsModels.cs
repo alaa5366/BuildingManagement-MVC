@@ -1,4 +1,6 @@
-﻿namespace BuildingManagementMvc.Models;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace BuildingManagementMvc.Models;
 
 // ============================================================
 // Global Settings (Super Admin)
@@ -180,25 +182,55 @@ public class UserSettingsDoc
 /// </summary>
 public class OwnSettings
 {
-    /// <summary>
-    /// Gets or sets the language.
-    /// </summary>
+    [StringLength(200)]
+    public string? LegalName { get; set; }
+
+    [Required, StringLength(160, MinimumLength = 2)]
+    public string DisplayName { get; set; } = "";
+
+    [EmailAddress, StringLength(254)]
+    public string? PrimaryEmail { get; set; }
+
+    [StringLength(32)]
+    public string? PrimaryPhone { get; set; }
+
+    [StringLength(32)]
+    public string? Whatsapp { get; set; }
+
+    [Url, StringLength(2048)]
+    public string? PhotoUrl { get; set; }
+
+    // Account/security metadata is displayed read-only; credentials and external identities are never exposed.
+    public string? LoginEmail { get; set; }
+    public string? ExternalProvider { get; set; }
+    public byte AccountStatus { get; set; }
+    public bool MustChangePin { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+    public DateTime? LastLoginAtUtc { get; set; }
+    public bool TwoFactorEnabled { get; set; }
+    public DateTime? TwoFactorEnrolledAtUtc { get; set; }
+    public DateTime? TwoFactorLastVerifiedAtUtc { get; set; }
+    public int UnusedRecoveryCodes { get; set; }
+
+    [StringLength(60)]
+    public string? ApartmentLabel { get; set; }
+    public int? ApartmentNumber { get; set; }
+
+    // Transient form fields; PIN values are never stored in preferences or account profile records.
+    [StringLength(12)]
+    public string? CurrentPin { get; set; }
+    [StringLength(12)]
+    public string? NewPin { get; set; }
+    [StringLength(12)]
+    public string? ConfirmNewPin { get; set; }
+
+    [Required, RegularExpression("^(ar|en|fr|de)$")]
     public string Language { get; set; } = "ar";
-    /// <summary>
-    /// Gets or sets the notification preferences.
-    /// </summary>
     public NotificationPreferences NotificationPreferences { get; set; } = new();
-    /// <summary>
-    /// Gets or sets the preferred payment method.
-    /// </summary>
+
+    [StringLength(40)]
     public string PreferredPaymentMethod { get; set; } = "instapay";
-    /// <summary>
-    /// Gets or sets the updated date and time.
-    /// </summary>
     public string? UpdatedAt { get; set; }
-    /// <summary>
-    /// Gets or sets the updated by.
-    /// </summary>
     public string? UpdatedBy { get; set; }
 }
 

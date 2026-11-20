@@ -73,14 +73,14 @@ public class ImpersonationService
     /// <summary>
     /// Pushes the backup.
     /// </summary>
-    public void PushBackup(HttpContext ctx, AdminBackupData data)
+    public bool PushBackup(HttpContext ctx, AdminBackupData data)
     {
         var stack = ReadBackupStack(ctx);
 
         if (stack.Count >= MaxStackDepth)
         {
             _logger.LogWarning("[Impersonation] Stack depth limit ({Max}) reached", MaxStackDepth);
-            return;
+            return false;
         }
 
         stack.Add(data);
@@ -89,6 +89,7 @@ public class ImpersonationService
         _logger.LogInformation(
             "[Impersonation] Push: depth={Depth}, role={Role}",
             stack.Count, data.Role);
+        return true;
     }
 
     // ============================================================

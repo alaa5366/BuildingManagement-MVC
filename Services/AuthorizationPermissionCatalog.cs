@@ -53,6 +53,9 @@ public sealed class DefaultAuthorizationPermissionCatalog : IAuthorizationPermis
             ["cameras.view"] = Define("cameras.view", AuthorizationScopeType.System, AuthorizationScopeType.Building, systemChildren: true),
             ["cameras.manage"] = Define("cameras.manage", AuthorizationScopeType.System, AuthorizationScopeType.Building, systemChildren: true),
             ["reports.view"] = Define("reports.view", AuthorizationScopeType.System, AuthorizationScopeType.Building, systemChildren: true),
+            // Transitional controller-level permissions remain valid for existing target-role grants.
+            // System grants may manage child-building resources; building grants stay building-scoped.
+            ["categories.manage"] = Define("categories.manage", AuthorizationScopeType.System, AuthorizationScopeType.Building, systemChildren: true),
             ["polls.manage"] = Define("polls.manage", AuthorizationScopeType.System, AuthorizationScopeType.Building, systemChildren: true),
             ["maintenance.manage"] = Define("maintenance.manage", AuthorizationScopeType.System, AuthorizationScopeType.Building, systemChildren: true),
             ["audit.view.all"] = Define("audit.view.all", AuthorizationScopeType.System, mfa: true),
@@ -69,6 +72,7 @@ public sealed class DefaultAuthorizationPermissionCatalog : IAuthorizationPermis
             ["deposit.read"] = Define("deposit.read", AuthorizationScopeType.System, AuthorizationScopeType.Building, systemChildren: true),
             ["deposit.confirm"] = Define("deposit.confirm", AuthorizationScopeType.System, AuthorizationScopeType.Building, systemChildren: true, mfa: true),
             ["deposit.cancel"] = Define("deposit.cancel", AuthorizationScopeType.System, AuthorizationScopeType.Building, systemChildren: true, mfa: true),
+            ["deposit.update"] = Define("deposit.update", AuthorizationScopeType.System, AuthorizationScopeType.Building, systemChildren: true, mfa: true),
             ["wallet.adjust"] = Define("wallet.adjust", AuthorizationScopeType.System, AuthorizationScopeType.Building, systemChildren: true, mfa: true),
             ["expense.read"] = Define("expense.read", AuthorizationScopeType.System, AuthorizationScopeType.Building, systemChildren: true),
             ["expense.post"] = Define("expense.post", AuthorizationScopeType.System, AuthorizationScopeType.Building, systemChildren: true),
@@ -81,7 +85,7 @@ public sealed class DefaultAuthorizationPermissionCatalog : IAuthorizationPermis
             ["finance.period.reopen"] = Define("finance.period.reopen", AuthorizationScopeType.System, AuthorizationScopeType.Building, systemChildren: true, mfa: true),
             ["notification.dispatch"] = Define("notification.dispatch", AuthorizationScopeType.System, AuthorizationScopeType.Building, systemChildren: true),
             ["notification.self.read"] = Define("notification.self.read", AuthorizationScopeType.Personal),
-            ["integration.whatsapp.send"] = Define("integration.whatsapp.send", AuthorizationScopeType.Building),
+            ["integration.whatsapp.send"] = Define("integration.whatsapp.send", AuthorizationScopeType.System, AuthorizationScopeType.Building, systemChildren: true),
             ["integration.whatsapp.configure"] = Define("integration.whatsapp.configure", AuthorizationScopeType.System, AuthorizationScopeType.Building, systemChildren: true, mfa: true),
             ["integration.whatsapp.secrets.manage"] = Define("integration.whatsapp.secrets.manage", AuthorizationScopeType.System, mfa: true),
             ["camera.credential.reveal"] = Define("camera.credential.reveal", AuthorizationScopeType.System, mfa: true),

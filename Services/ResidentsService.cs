@@ -1,4 +1,4 @@
-﻿using BuildingManagementMvc.Data;
+using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
 using Microsoft.EntityFrameworkCore;
@@ -10,19 +10,31 @@ public sealed class ResidentsService
 {
     private readonly IDbContextFactory<AppDbContext> _factory;
     private readonly IAuditLogger _audit;
-    private readonly IPasswordHasher _hasher;
     private readonly ILogger<ResidentsService> _logger;
 
     public ResidentsService(
         IDbContextFactory<AppDbContext> factory,
         IAuditLogger audit,
-        IPasswordHasher hasher,
         ILogger<ResidentsService> logger)
     {
         _factory = factory;
         _audit = audit;
-        _hasher = hasher;
         _logger = logger;
+    }
+
+    /// <summary>Lists active people already associated with a building, or all people for a SuperAdmin registration flow.</summary>
+    public async Task<List<PersonEntity>> GetPeopleForRegistrationAsync(string buildingId, bool includeAllBuildings = false)
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        var query = db.Persons.AsNoTracking().Where(person => !person.IsArchived);
+        if (!includeAllBuildings)
+        {
+            var personIds = db.ApartmentOccupancies.AsNoTracking()
+                .Where(item => item.BuildingId == buildingId)
+                .Select(item => item.PersonId).Distinct();
+            query = query.Where(person => personIds.Contains(person.PersonId));
+        }
+        return await query.OrderBy(person => person.DisplayName).Take(500).ToListAsync();
     }
 
     /// <summary> Gets or previews data through GetByBuildingAsync. </summary>
@@ -33,12 +45,15 @@ public sealed class ResidentsService
         var rows = await (
             from occupancy in db.ApartmentOccupancies.AsNoTracking()
             join person in db.Persons.AsNoTracking() on occupancy.PersonId equals person.PersonId
-            join account in db.UserAccounts.AsNoTracking() on person.PersonId equals account.PersonId
+            join accountRow in db.UserAccounts.AsNoTracking() on person.PersonId equals accountRow.PersonId into accountRows
+            from account in accountRows.DefaultIfEmpty()
             where occupancy.BuildingId == buildingId && !person.IsArchived
+                && occupancy.ValidFromUtc <= now && (occupancy.ValidToUtc == null || occupancy.ValidToUtc > now)
             orderby occupancy.ApartmentId, occupancy.IsPrimary descending, person.DisplayName
             select new { Occupancy = occupancy, Person = person, Account = account })
             .ToListAsync();
-        var assignments = await GetResidentAssignmentsAsync(db, rows.Select(row => row.Account.AccountId).Distinct().ToList(), now);
+        var accountIds = rows.Where(row => row.Account != null).Select(row => row.Account!.AccountId).Distinct().ToList();
+        var assignments = await GetResidentAssignmentsAsync(db, accountIds, now);
         return rows.Select(row => Map(row.Occupancy, row.Person, row.Account, assignments, now)).ToList();
     }
 
@@ -50,12 +65,15 @@ public sealed class ResidentsService
         var rows = await (
             from occupancy in db.ApartmentOccupancies.AsNoTracking()
             join person in db.Persons.AsNoTracking() on occupancy.PersonId equals person.PersonId
-            join account in db.UserAccounts.AsNoTracking() on person.PersonId equals account.PersonId
+            join accountRow in db.UserAccounts.AsNoTracking() on person.PersonId equals accountRow.PersonId into accountRows
+            from account in accountRows.DefaultIfEmpty()
             where occupancy.BuildingId == buildingId && occupancy.ApartmentId == apartmentId && !person.IsArchived
+                && occupancy.ValidFromUtc <= now && (occupancy.ValidToUtc == null || occupancy.ValidToUtc > now)
             orderby occupancy.IsPrimary descending, person.DisplayName
             select new { Occupancy = occupancy, Person = person, Account = account })
             .ToListAsync();
-        var assignments = await GetResidentAssignmentsAsync(db, rows.Select(row => row.Account.AccountId).Distinct().ToList(), now);
+        var accountIds = rows.Where(row => row.Account != null).Select(row => row.Account!.AccountId).Distinct().ToList();
+        var assignments = await GetResidentAssignmentsAsync(db, accountIds, now);
         return rows.Select(row => Map(row.Occupancy, row.Person, row.Account, assignments, now)).ToList();
     }
 
@@ -68,79 +86,133 @@ public sealed class ResidentsService
         var row = await (
             from occupancy in db.ApartmentOccupancies.AsNoTracking()
             join person in db.Persons.AsNoTracking() on occupancy.PersonId equals person.PersonId
-            join account in db.UserAccounts.AsNoTracking() on person.PersonId equals account.PersonId
+            join accountRow in db.UserAccounts.AsNoTracking() on person.PersonId equals accountRow.PersonId into accountRows
+            from account in accountRows.DefaultIfEmpty()
             where occupancy.OccupancyId == occupancyId && !person.IsArchived
             select new { Occupancy = occupancy, Person = person, Account = account })
             .SingleOrDefaultAsync();
         if (row is null) return null;
-        var assignments = await GetResidentAssignmentsAsync(db, new List<Guid> { row.Account.AccountId }, now);
+        var assignments = row.Account is null
+            ? new List<UserRoleAssignmentEntity>()
+            : await GetResidentAssignmentsAsync(db, new List<Guid> { row.Account.AccountId }, now);
         return Map(row.Occupancy, row.Person, row.Account, assignments, now);
     }
 
-    /// <summary> Creates or saves data through CreateAsync. </summary>
-    public async Task CreateAsync(
+    /// <summary>Registers a person and an effective-dated apartment occupancy.</summary>
+    /// <remarks>Phone numbers are contact attributes, never identity keys. A newly created login is pending and has no credential.</remarks>
+    public async Task<Guid> CreateAsync(
         string buildingId, string apartmentId,
-        string name, string phone, string whatsapp, string pin, string? email,
-        bool isPrimary, bool isOwner, string createdBy)
+        string name, string phone, string whatsapp, string? email,
+        bool isPrimary, bool isOwner, string createdBy,
+        Guid? existingPersonId = null, bool createLoginAccount = true, Guid? registrationPersonId = null, bool allowCrossBuildingReuse = false)
     {
-        var normalizedPhone = AuthHelpers.NormalizePhone(phone);
-        if (string.IsNullOrWhiteSpace(name) || name.Trim().Length < 2 ||
-            string.IsNullOrWhiteSpace(normalizedPhone) || !IsValidPin(pin))
-            throw new ArgumentException("Valid resident name, phone and PIN are required.");
+        if (!existingPersonId.HasValue && (string.IsNullOrWhiteSpace(name) || name.Trim().Length < 2))
+            throw new ArgumentException("A valid resident name is required for a new person.");
 
         var now = DateTime.UtcNow;
         var actorId = Guid.TryParse(createdBy, out var parsedActor) ? parsedActor : (Guid?)null;
+        var normalizedPhone = AuthHelpers.NormalizePhone(phone);
         await using var db = await _factory.CreateDbContextAsync();
         await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+
         if (!await db.Apartments.AnyAsync(item => item.BuildingId == buildingId && item.Id == apartmentId))
             throw new InvalidOperationException("apartment-not-found");
 
-        var matchingPeople = await db.Persons.Where(person => !person.IsArchived && person.PrimaryPhone != null)
-            .ToListAsync();
-        var personMatches = matchingPeople.Where(person =>
-            string.Equals(AuthHelpers.NormalizePhone(person.PrimaryPhone), normalizedPhone, StringComparison.Ordinal)).ToList();
-        if (personMatches.Count > 1) throw new InvalidOperationException("resident-phone-ambiguous");
-
-        PersonEntity person;
-        UserAccountEntity account;
-        var isNewAccount = false;
-        if (personMatches.Count == 1)
+        PersonEntity? person = null;
+        var personCreated = false;
+        if (existingPersonId.HasValue)
         {
-            person = personMatches[0];
-            account = await db.UserAccounts.SingleOrDefaultAsync(item => item.PersonId == person.PersonId)
-                ?? CreateAccount(person.PersonId, now);
-            if (db.Entry(account).State == EntityState.Detached)
-            {
-                db.UserAccounts.Add(account);
-                isNewAccount = true;
-            }
+            person = await db.Persons.SingleOrDefaultAsync(item => item.PersonId == existingPersonId.Value && !item.IsArchived)
+                ?? throw new InvalidOperationException("resident-person-not-found");
+            if (!allowCrossBuildingReuse && !await db.ApartmentOccupancies.AnyAsync(item => item.PersonId == person.PersonId
+                && item.BuildingId == buildingId))
+                throw new InvalidOperationException("resident-person-outside-building-scope");
         }
         else
         {
-            person = new PersonEntity
+            if (registrationPersonId.HasValue)
             {
-                PersonId = Guid.NewGuid(), DisplayName = name.Trim(), PrimaryPhone = normalizedPhone,
-                Whatsapp = AuthHelpers.NormalizePhone(string.IsNullOrWhiteSpace(whatsapp) ? normalizedPhone : whatsapp),
-                PrimaryEmail = email?.Trim(), CreatedAtUtc = now
-            };
-            db.Persons.Add(person);
-            account = CreateAccount(person.PersonId, now);
-            db.UserAccounts.Add(account);
-            isNewAccount = true;
+                person = await db.Persons.SingleOrDefaultAsync(item => item.PersonId == registrationPersonId.Value);
+                if (person?.IsArchived == true) throw new InvalidOperationException("resident-person-archived");
+                if (person is not null && !allowCrossBuildingReuse && !await db.ApartmentOccupancies.AnyAsync(item => item.PersonId == person.PersonId
+                    && item.BuildingId == buildingId))
+                    throw new InvalidOperationException("resident-person-outside-building-scope");
+            }
+            if (person is null)
+            {
+                if (string.IsNullOrWhiteSpace(name) || name.Trim().Length < 2)
+                    throw new ArgumentException("A valid resident name is required for a new person.");
+                person = new PersonEntity
+                {
+                    PersonId = registrationPersonId ?? Guid.NewGuid(), DisplayName = name.Trim(),
+                    PrimaryPhone = string.IsNullOrWhiteSpace(normalizedPhone) ? null : normalizedPhone,
+                    Whatsapp = AuthHelpers.NormalizePhone(string.IsNullOrWhiteSpace(whatsapp) ? normalizedPhone : whatsapp),
+                    PrimaryEmail = string.IsNullOrWhiteSpace(email) ? null : email.Trim(), CreatedAtUtc = now
+                };
+                db.Persons.Add(person);
+                personCreated = true;
+            }
         }
 
-        var duplicateOccupancy = await db.ApartmentOccupancies.AnyAsync(item =>
+        var existingOccupancy = await db.ApartmentOccupancies.SingleOrDefaultAsync(item =>
             item.PersonId == person.PersonId && item.BuildingId == buildingId && item.ApartmentId == apartmentId
             && item.ValidFromUtc <= now && (item.ValidToUtc == null || item.ValidToUtc > now));
-        if (duplicateOccupancy) throw new InvalidOperationException("resident-already-linked-to-apartment");
-
-        if (!await db.RoleDefinitions.AnyAsync(role => role.RoleKey == "resident"))
-            db.RoleDefinitions.Add(new RoleDefinitionEntity
+        if (!personCreated && (existingPersonId.HasValue || registrationPersonId.HasValue))
+        {
+            var profileChanged = false;
+            if (string.IsNullOrWhiteSpace(person.PrimaryPhone) && !string.IsNullOrWhiteSpace(normalizedPhone))
             {
-                RoleKey = "resident", DisplayName = "Resident", IsSystemRole = true, IsActive = true
-            });
+                person.PrimaryPhone = normalizedPhone;
+                profileChanged = true;
+            }
+            if (string.IsNullOrWhiteSpace(person.Whatsapp))
+            {
+                person.Whatsapp = AuthHelpers.NormalizePhone(string.IsNullOrWhiteSpace(whatsapp) ? normalizedPhone : whatsapp);
+                profileChanged = true;
+            }
+            if (string.IsNullOrWhiteSpace(person.PrimaryEmail) && !string.IsNullOrWhiteSpace(email))
+            {
+                person.PrimaryEmail = email.Trim();
+                profileChanged = true;
+            }
+            if (profileChanged) person.UpdatedAtUtc = now;
+        }
 
-        if (isPrimary)
+        UserAccountEntity? account = null;
+        var accountCreated = false;
+        if (createLoginAccount)
+        {
+            account = await db.UserAccounts.SingleOrDefaultAsync(item => item.PersonId == person.PersonId);
+            if (account is null)
+            {
+                account = CreateAccount(person.PersonId, now);
+                db.UserAccounts.Add(account);
+                accountCreated = true;
+            }
+            else if (account.AccountStatus == 3)
+            {
+                // A returning resident must re-enroll; do not silently reactivate an old credential.
+                account.AccountStatus = 0;
+                account.MustChangePin = true;
+                account.SecurityStamp = Guid.NewGuid().ToString("N");
+                var credentials = await db.UserCredentials.Where(item => item.AccountId == account.AccountId
+                    && item.RevokedAtUtc == null).ToListAsync();
+                foreach (var credential in credentials) credential.RevokedAtUtc = now;
+            }
+        }
+
+        var residentRole = await db.RoleDefinitions.SingleOrDefaultAsync(role => role.RoleKey == "resident");
+        if (residentRole is null)
+        {
+            residentRole = new RoleDefinitionEntity { RoleKey = "resident", DisplayName = "Resident", IsSystemRole = true, IsActive = true };
+            db.RoleDefinitions.Add(residentRole);
+        }
+        else if (!residentRole.IsActive)
+        {
+            throw new InvalidOperationException("resident-role-inactive");
+        }
+
+        if (existingOccupancy is null && isPrimary)
         {
             var existingPrimary = await db.ApartmentOccupancies.Where(item =>
                 item.BuildingId == buildingId && item.ApartmentId == apartmentId
@@ -148,40 +220,45 @@ public sealed class ResidentsService
             foreach (var item in existingPrimary) item.IsPrimary = false;
         }
 
-        if (isNewAccount || !await db.UserCredentials.AnyAsync(item =>
-                item.AccountId == account.AccountId && item.CredentialType == 0 && item.RevokedAtUtc == null))
-        {
-            db.UserCredentials.Add(new UserCredentialEntity
-            {
-                CredentialId = Guid.NewGuid(), AccountId = account.AccountId, CredentialType = 0,
-                CredentialHash = _hasher.HashPin(pin), HashAlgorithm = "BCrypt.Net-Next", CreatedAtUtc = now
-            });
-        }
-
-        db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
-        {
-            RoleAssignmentId = Guid.NewGuid(), AccountId = account.AccountId, RoleKey = "resident",
-            ScopeType = 2, ScopeBuildingId = buildingId, ScopeApartmentId = apartmentId,
-            ValidFromUtc = now, GrantedAtUtc = now, GrantedByAccountId = actorId,
-            GrantReason = "Resident occupancy created"
-        });
-        db.ApartmentOccupancies.Add(new ApartmentOccupancyEntity
+        var occupancy = existingOccupancy ?? new ApartmentOccupancyEntity
         {
             OccupancyId = Guid.NewGuid(), BuildingId = buildingId, ApartmentId = apartmentId,
             PersonId = person.PersonId, OccupancyType = isOwner ? (byte)1 : (byte)2,
             IsPrimary = isPrimary, ValidFromUtc = now, RecordedAtUtc = now, RecordedByAccountId = actorId
-        });
-        if (personMatches.Count == 1)
+        };
+        if (existingOccupancy is null) db.ApartmentOccupancies.Add(occupancy);
+
+        if (account is not null)
         {
-            person.DisplayName = name.Trim();
-            person.Whatsapp = AuthHelpers.NormalizePhone(string.IsNullOrWhiteSpace(whatsapp) ? normalizedPhone : whatsapp);
-            if (!string.IsNullOrWhiteSpace(email)) person.PrimaryEmail = email.Trim();
-            person.UpdatedAtUtc = now;
+            var hasScope = await db.UserRoleAssignments.AnyAsync(item => item.AccountId == account.AccountId
+                && item.RoleKey == "resident" && item.ScopeType == 2
+                && item.ScopeBuildingId == buildingId && item.ScopeApartmentId == apartmentId
+                && item.RevokedAtUtc == null && item.ValidFromUtc <= now
+                && (item.ValidToUtc == null || item.ValidToUtc > now));
+            if (!hasScope)
+            {
+                db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+                {
+                    RoleAssignmentId = Guid.NewGuid(), AccountId = account.AccountId, RoleKey = "resident",
+                    ScopeType = 2, ScopeBuildingId = buildingId, ScopeApartmentId = apartmentId,
+                    ValidFromUtc = now, GrantedAtUtc = now, GrantedByAccountId = actorId,
+                    GrantReason = "Resident occupancy created"
+                });
+            }
         }
-        AddAudit(db, actorId, createdBy, buildingId, apartmentId, "resident.create",
-            new { accountId = account.AccountId, personId = person.PersonId }, now);
+
+        if (personCreated)
+            AddAudit(db, actorId, createdBy, buildingId, apartmentId, "resident.person.create",
+                new { personId = person.PersonId }, now);
+        if (accountCreated)
+            AddAudit(db, actorId, createdBy, buildingId, apartmentId, "resident.account.pending.create",
+                new { accountId = account!.AccountId, personId = person.PersonId, accountStatus = account.AccountStatus, credentialIssued = false }, now);
+        if (existingOccupancy is null)
+            AddAudit(db, actorId, createdBy, buildingId, apartmentId, "resident.occupancy.create",
+                new { occupancyId = occupancy.OccupancyId, personId = person.PersonId, accountId = account?.AccountId }, now);
         await db.SaveChangesAsync();
         await transaction.CommitAsync();
+        return occupancy.OccupancyId;
     }
 
     /// <summary> Updates account or operational data through UpdateAsync. </summary>
@@ -200,11 +277,8 @@ public sealed class ResidentsService
         if (person is null) return;
 
         var normalizedPhone = AuthHelpers.NormalizePhone(phone);
-        if (string.IsNullOrWhiteSpace(name) || name.Trim().Length < 2 || string.IsNullOrWhiteSpace(normalizedPhone))
-            throw new ArgumentException("Valid resident name and phone are required.");
-        var duplicate = await db.Persons.AsNoTracking().AnyAsync(item =>
-            item.PersonId != person.PersonId && item.PrimaryPhone == normalizedPhone);
-        if (duplicate) throw new InvalidOperationException("resident-phone-already-in-use");
+        if (string.IsNullOrWhiteSpace(name) || name.Trim().Length < 2)
+            throw new ArgumentException("A valid resident name is required.");
 
         if (isPrimary)
         {
@@ -214,7 +288,7 @@ public sealed class ResidentsService
             foreach (var item in existingPrimary) item.IsPrimary = false;
         }
         person.DisplayName = name.Trim();
-        person.PrimaryPhone = normalizedPhone;
+        person.PrimaryPhone = string.IsNullOrWhiteSpace(normalizedPhone) ? null : normalizedPhone;
         person.Whatsapp = AuthHelpers.NormalizePhone(string.IsNullOrWhiteSpace(whatsapp) ? normalizedPhone : whatsapp);
         person.PrimaryEmail = email?.Trim();
         person.UpdatedAtUtc = now;
@@ -226,97 +300,19 @@ public sealed class ResidentsService
         await transaction.CommitAsync();
     }
 
-    /// <summary> Updates account or operational data through ChangePinAsync. </summary>
-    public async Task ChangePinAsync(string id, string newPin, string updatedBy)
-    {
-        if (!Guid.TryParse(id, out var occupancyId) || !IsValidPin(newPin))
-            throw new ArgumentException("A valid resident occupancy and four-digit PIN are required.");
-        var now = DateTime.UtcNow;
-        await using var db = await _factory.CreateDbContextAsync();
-        var occupancy = await db.ApartmentOccupancies.SingleOrDefaultAsync(item => item.OccupancyId == occupancyId)
-            ?? throw new InvalidOperationException("resident-not-found");
-        var accountId = await db.UserAccounts.Where(item => item.PersonId == occupancy.PersonId)
-            .Select(item => item.AccountId).SingleOrDefaultAsync();
-        if (accountId == Guid.Empty) throw new InvalidOperationException("resident-account-not-found");
-        await ReplacePinAsync(db, accountId, newPin, now);
-        var account = await db.UserAccounts.SingleAsync(item => item.AccountId == accountId);
-        account.SecurityStamp = Guid.NewGuid().ToString("N");
-        AddAudit(db, Guid.TryParse(updatedBy, out var actorId) ? actorId : null, updatedBy,
-            occupancy.BuildingId, occupancy.ApartmentId, "resident.pin.change", new { occupancyId }, now);
-        await db.SaveChangesAsync();
-    }
+    /// <summary>Rejects direct PIN changes from resident profile management.</summary>
+    /// <exception cref="NotSupportedException">Individual PINs must be issued through verified account enrollment.</exception>
+    public Task ChangePinAsync(string id, string newPin, string updatedBy)
+        => throw new NotSupportedException("Use the verified individual resident account enrollment workflow.");
 
-    /// <summary> Updates account or operational data through SetApartmentPinAsync. </summary>
-    public async Task SetApartmentPinAsync(string buildingId, string apartmentId, string newPin, string? updatedBy)
-    {
-        if (!IsValidPin(newPin)) throw new ArgumentException("PIN must contain four digits.");
-        var now = DateTime.UtcNow;
-        var actorId = Guid.TryParse(updatedBy, out var parsedActor) ? parsedActor : (Guid?)null;
-        await using var db = await _factory.CreateDbContextAsync();
-        await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
-        var apartment = await db.Apartments.SingleOrDefaultAsync(item =>
-            item.BuildingId == buildingId && item.Id == apartmentId)
-            ?? throw new InvalidOperationException("apartment-not-found");
-        var newAccounts = new Dictionary<Guid, UserAccountEntity>();
-        var accountIds = await (
-            from occupancy in db.ApartmentOccupancies
-            join account in db.UserAccounts on occupancy.PersonId equals account.PersonId
-            where occupancy.BuildingId == buildingId && occupancy.ApartmentId == apartmentId
-                && occupancy.ValidFromUtc <= now && (occupancy.ValidToUtc == null || occupancy.ValidToUtc > now)
-                && account.AccountStatus == 1
-            select account.AccountId).Distinct().ToListAsync();
-        if (accountIds.Count == 0)
-        {
-            var phone = AuthHelpers.NormalizePhone(apartment.Phone);
-            if (string.IsNullOrWhiteSpace(phone) || string.IsNullOrWhiteSpace(apartment.Owner))
-                throw new InvalidOperationException("apartment-primary-resident-details-missing");
-            var person = new PersonEntity
-            {
-                PersonId = Guid.NewGuid(), DisplayName = apartment.Owner, PrimaryPhone = phone,
-                Whatsapp = phone, PrimaryEmail = apartment.Email, CreatedAtUtc = now
-            };
-            var account = CreateAccount(person.PersonId, now);
-            db.Persons.Add(person);
-            db.UserAccounts.Add(account);
-            newAccounts[account.AccountId] = account;
-            if (!await db.RoleDefinitions.AnyAsync(role => role.RoleKey == "resident"))
-                db.RoleDefinitions.Add(new RoleDefinitionEntity
-                {
-                    RoleKey = "resident", DisplayName = "Resident", IsSystemRole = true, IsActive = true
-                });
-            db.ApartmentOccupancies.Add(new ApartmentOccupancyEntity
-            {
-                OccupancyId = Guid.NewGuid(), BuildingId = buildingId, ApartmentId = apartmentId,
-                PersonId = person.PersonId, OccupancyType = 1, IsPrimary = true,
-                ValidFromUtc = now, RecordedAtUtc = now, RecordedByAccountId = actorId
-            });
-            db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
-            {
-                RoleAssignmentId = Guid.NewGuid(), AccountId = account.AccountId, RoleKey = "resident",
-                ScopeType = 2, ScopeBuildingId = buildingId, ScopeApartmentId = apartmentId,
-                ValidFromUtc = now, GrantedAtUtc = now, GrantedByAccountId = actorId,
-                GrantReason = "Primary resident created from apartment profile"
-            });
-            accountIds.Add(account.AccountId);
-        }
-        foreach (var accountId in accountIds)
-        {
-            await ReplacePinAsync(db, accountId, newPin, now);
-            if (!newAccounts.TryGetValue(accountId, out var account))
-                account = await db.UserAccounts.SingleAsync(item => item.AccountId == accountId);
-            account.SecurityStamp = Guid.NewGuid().ToString("N");
-        }
-        AddAudit(db, actorId, updatedBy, buildingId, apartmentId, "resident.apartment_pin.reset",
-            new { affectedAccounts = accountIds.Count }, now);
-        await db.SaveChangesAsync();
-        await transaction.CommitAsync();
-        _logger.LogInformation("Resident PIN reset for apartment {ApartmentId} in building {BuildingId}; affected {Count} target accounts",
-            apartmentId, buildingId, accountIds.Count);
-    }
+    /// <summary>Apartment-wide PINs are intentionally unsupported; every resident has an individual credential.</summary>
+    /// <summary>Rejects apartment-wide PIN mutation because credentials are individual to each resident.</summary>
+    public Task SetApartmentPinAsync(string buildingId, string apartmentId, string newPin, string? updatedBy)
+        => throw new NotSupportedException("Shared apartment PINs are disabled. Issue an individual resident credential after identity verification.");
 
-    /// <summary> Updates account or operational data through UpdateResidentPinAsync. </summary>
-    public Task UpdateResidentPinAsync(string buildingId, string apartmentId, string newPin) =>
-        SetApartmentPinAsync(buildingId, apartmentId, newPin, "system");
+    /// <summary>Rejects the legacy apartment PIN alias.</summary>
+    public Task UpdateResidentPinAsync(string buildingId, string apartmentId, string newPin)
+        => SetApartmentPinAsync(buildingId, apartmentId, newPin, "system");
 
     /// <summary> Updates account or operational data through SetDisabledAsync. </summary>
     public async Task SetDisabledAsync(string id, bool disabled, string? reason, string updatedBy)
@@ -339,7 +335,7 @@ public sealed class ResidentsService
             foreach (var item in assignment)
             {
                 item.RevokedAtUtc = now;
-                item.RevokedByAccountId = actorId;
+                item.RevokedByAccountId = actorId ?? accountId;
                 item.RevocationReason = string.IsNullOrWhiteSpace(reason) ? "Resident access disabled" : reason.Trim();
             }
         }
@@ -356,6 +352,88 @@ public sealed class ResidentsService
         AddAudit(db, actorId, updatedBy, occupancy.BuildingId, occupancy.ApartmentId,
             disabled ? "resident.disable" : "resident.enable", new { occupancyId, reason }, now);
         await db.SaveChangesAsync();
+    }
+
+    /// <summary>Moves an existing person to another apartment in the same building without replacing the person or account.</summary>
+    public async Task<Guid> MoveAsync(string occupancyId, string targetApartmentId, string movedBy)
+    {
+        if (!Guid.TryParse(occupancyId, out var parsedOccupancyId))
+            throw new ArgumentException("A valid occupancy identifier is required.");
+        if (string.IsNullOrWhiteSpace(targetApartmentId))
+            throw new ArgumentException("A target apartment is required.");
+
+        var now = DateTime.UtcNow;
+        var actorId = Guid.TryParse(movedBy, out var parsedActor) ? parsedActor : (Guid?)null;
+        await using var db = await _factory.CreateDbContextAsync();
+        await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        var current = await db.ApartmentOccupancies.SingleOrDefaultAsync(item => item.OccupancyId == parsedOccupancyId)
+            ?? throw new InvalidOperationException("resident-occupancy-not-found");
+        if (current.ValidToUtc.HasValue && current.ValidToUtc <= now)
+            throw new InvalidOperationException("resident-occupancy-not-active");
+        if (!await db.Apartments.AnyAsync(item => item.BuildingId == current.BuildingId && item.Id == targetApartmentId))
+            throw new InvalidOperationException("target-apartment-not-found");
+        if (string.Equals(current.ApartmentId, targetApartmentId, StringComparison.Ordinal))
+            return current.OccupancyId;
+
+        var targetOccupancy = await db.ApartmentOccupancies.SingleOrDefaultAsync(item =>
+            item.PersonId == current.PersonId && item.BuildingId == current.BuildingId
+            && item.ApartmentId == targetApartmentId && item.ValidFromUtc <= now
+            && (item.ValidToUtc == null || item.ValidToUtc > now));
+        if (targetOccupancy is null)
+        {
+            if (current.IsPrimary)
+            {
+                var otherPrimary = await db.ApartmentOccupancies.Where(item => item.BuildingId == current.BuildingId
+                    && item.ApartmentId == targetApartmentId && item.IsPrimary && item.ValidToUtc == null).ToListAsync();
+                foreach (var item in otherPrimary) item.IsPrimary = false;
+            }
+            targetOccupancy = new ApartmentOccupancyEntity
+            {
+                OccupancyId = Guid.NewGuid(), BuildingId = current.BuildingId, ApartmentId = targetApartmentId,
+                PersonId = current.PersonId, OccupancyType = current.OccupancyType, IsPrimary = current.IsPrimary,
+                ValidFromUtc = now, RecordedAtUtc = now, RecordedByAccountId = actorId
+            };
+            db.ApartmentOccupancies.Add(targetOccupancy);
+        }
+
+        current.ValidToUtc = now;
+        var account = await db.UserAccounts.SingleOrDefaultAsync(item => item.PersonId == current.PersonId);
+        if (account is not null)
+        {
+            var oldScopes = await db.UserRoleAssignments.Where(item => item.AccountId == account.AccountId
+                && item.RoleKey == "resident" && item.ScopeBuildingId == current.BuildingId
+                && item.ScopeApartmentId == current.ApartmentId && item.RevokedAtUtc == null).ToListAsync();
+            foreach (var assignment in oldScopes)
+            {
+                assignment.RevokedAtUtc = now;
+                assignment.RevokedByAccountId = actorId ?? account.AccountId;
+                assignment.RevocationReason = "Resident occupancy moved";
+            }
+
+            var targetScopeExists = await db.UserRoleAssignments.AnyAsync(item => item.AccountId == account.AccountId
+                && item.RoleKey == "resident" && item.ScopeType == 2
+                && item.ScopeBuildingId == current.BuildingId && item.ScopeApartmentId == targetApartmentId
+                && item.RevokedAtUtc == null && item.ValidFromUtc <= now
+                && (item.ValidToUtc == null || item.ValidToUtc > now));
+            if (!targetScopeExists)
+            {
+                db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+                {
+                    RoleAssignmentId = Guid.NewGuid(), AccountId = account.AccountId, RoleKey = "resident",
+                    ScopeType = 2, ScopeBuildingId = current.BuildingId, ScopeApartmentId = targetApartmentId,
+                    ValidFromUtc = now, GrantedAtUtc = now, GrantedByAccountId = actorId,
+                    GrantReason = "Resident occupancy moved"
+                });
+            }
+        }
+
+        AddAudit(db, actorId, movedBy, current.BuildingId, targetApartmentId, "resident.occupancy.move",
+            new { personId = current.PersonId, accountId = account?.AccountId,
+                fromOccupancyId = current.OccupancyId, toOccupancyId = targetOccupancy.OccupancyId,
+                fromApartmentId = current.ApartmentId, toApartmentId = targetApartmentId }, now);
+        await db.SaveChangesAsync();
+        await transaction.CommitAsync();
+        return targetOccupancy.OccupancyId;
     }
 
     /// <summary> Removes or revokes data through DeleteAsync. </summary>
@@ -378,16 +456,18 @@ public sealed class ResidentsService
             foreach (var assignment in assignments)
             {
                 assignment.RevokedAtUtc = now;
-                assignment.RevokedByAccountId = actorId;
+                assignment.RevokedByAccountId = actorId ?? accountId;
                 assignment.RevocationReason = "Resident occupancy removed";
             }
+            var revokedAssignmentIds = assignments.Select(item => item.RoleAssignmentId).ToArray();
             var hasOtherRole = await db.UserRoleAssignments.AnyAsync(item => item.AccountId == accountId
+                && !revokedAssignmentIds.Contains(item.RoleAssignmentId)
                 && item.RevokedAtUtc == null && item.ValidFromUtc <= now
                 && (item.ValidToUtc == null || item.ValidToUtc > now));
             if (!hasOtherRole)
             {
                 var account = await db.UserAccounts.SingleAsync(item => item.AccountId == accountId);
-                account.AccountStatus = 0;
+                account.AccountStatus = 3;
                 account.SecurityStamp = Guid.NewGuid().ToString("N");
             }
         }
@@ -411,26 +491,9 @@ public sealed class ResidentsService
 
     private UserAccountEntity CreateAccount(Guid personId, DateTime now) => new()
     {
-        AccountId = Guid.NewGuid(), PersonId = personId, AccountStatus = 1,
-        MustChangePin = false, SecurityStamp = Guid.NewGuid().ToString("N"), CreatedAtUtc = now
+        AccountId = Guid.NewGuid(), PersonId = personId, AccountStatus = 0,
+        MustChangePin = true, SecurityStamp = Guid.NewGuid().ToString("N"), CreatedAtUtc = now
     };
-
-    private async Task ReplacePinAsync(AppDbContext db, Guid accountId, string pin, DateTime now)
-    {
-        var old = await db.UserCredentials.Where(item => item.AccountId == accountId
-            && item.CredentialType == 0 && item.RevokedAtUtc == null).ToListAsync();
-        var replacementId = Guid.NewGuid();
-        db.UserCredentials.Add(new UserCredentialEntity
-        {
-            CredentialId = replacementId, AccountId = accountId, CredentialType = 0,
-            CredentialHash = _hasher.HashPin(pin), HashAlgorithm = "BCrypt.Net-Next", CreatedAtUtc = now
-        });
-        foreach (var credential in old)
-        {
-            credential.RevokedAtUtc = now;
-            credential.ReplacedByCredentialId = replacementId;
-        }
-    }
 
     private static bool IsValidPin(string? pin) =>
         !string.IsNullOrWhiteSpace(pin) && pin.Length == 4 && pin.All(char.IsDigit)
@@ -444,18 +507,18 @@ public sealed class ResidentsService
             .ToListAsync();
 
     private static ResidentEntity Map(
-        ApartmentOccupancyEntity occupancy, PersonEntity person, UserAccountEntity account,
+        ApartmentOccupancyEntity occupancy, PersonEntity person, UserAccountEntity? account,
         IReadOnlyCollection<UserRoleAssignmentEntity> assignments, DateTime now)
     {
-        var activeAssignment = assignments.FirstOrDefault(item =>
+        var activeAssignment = account is null ? null : assignments.FirstOrDefault(item =>
             item.AccountId == account.AccountId && item.ScopeBuildingId == occupancy.BuildingId
             && (item.ScopeType == 1 || item.ScopeApartmentId == occupancy.ApartmentId));
-        var active = account.AccountStatus == 1 && activeAssignment is not null
+        var active = account?.AccountStatus == 1 && activeAssignment is not null
             && occupancy.ValidFromUtc <= now && (occupancy.ValidToUtc == null || occupancy.ValidToUtc > now);
         return new ResidentEntity
         {
             Id = occupancy.OccupancyId.ToString("D"),
-            Uid = account.AccountId.ToString("D"),
+            Uid = account?.AccountId.ToString("D") ?? "",
             BuildingId = occupancy.BuildingId,
             ApartmentId = occupancy.ApartmentId,
             Name = person.DisplayName,

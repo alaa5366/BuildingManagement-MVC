@@ -1,4 +1,4 @@
-﻿using BuildingManagementMvc.Attributes;
+using BuildingManagementMvc.Attributes;
 using BuildingManagementMvc.Models;
 using BuildingManagementMvc.Services;
 using ClosedXML.Excel;
@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace BuildingManagementMvc.Controllers;
 // ============================================================
-//  BackupController	نسخ احتياطي واستيراد (ZIP + Excel + Scheduled)
+//  BackupController	ظ†ط³ط® ط§ط­طھظٹط§ط·ظٹ ظˆط§ط³طھظٹط±ط§ط¯ (ZIP + Excel + Scheduled)
 // ============================================================
 
 /// <summary>
@@ -56,9 +56,9 @@ public class BackupController : Controller
     private string CurrentUserId =>
         User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // Index
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     /// <summary>
     /// Shows the main page of the backup screen.
     /// </summary>
@@ -93,9 +93,9 @@ public class BackupController : Controller
         return View();
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // Backup ZIP
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     /// <summary>
     /// Handles the create form submission of the backup screen.
     /// </summary>
@@ -134,9 +134,9 @@ public class BackupController : Controller
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // Restore
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     /// <summary>
     /// Previews the restore.
     /// </summary>
@@ -214,9 +214,9 @@ public class BackupController : Controller
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // Scheduled
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     /// <summary>
     /// Saves the scheduled settings.
     /// </summary>
@@ -285,7 +285,7 @@ public class BackupController : Controller
         var path = await _scheduled.GetBackupFilePathAsync(_env, fileName);
         if (path == null) return NotFound();
 
-        // الملف مشفّر على السيرفر — بنفكّه هنا عشان الأدمن ينزّل ZIP عادي (ويقدر يستعيده)
+        // ط§ظ„ظ…ظ„ظپ ظ…ط´ظپظ‘ط± ط¹ظ„ظ‰ ط§ظ„ط³ظٹط±ظپط± â€” ط¨ظ†ظپظƒظ‘ظ‡ ظ‡ظ†ط§ ط¹ط´ط§ظ† ط§ظ„ط£ط¯ظ…ظ† ظٹظ†ط²ظ‘ظ„ ZIP ط¹ط§ط¯ظٹ (ظˆظٹظ‚ط¯ط± ظٹط³طھط¹ظٹط¯ظ‡)
         var bytes = BackupFileProtector.Unprotect(await System.IO.File.ReadAllBytesAsync(path));
         return File(bytes, "application/zip", fileName);
     }
@@ -306,9 +306,9 @@ public class BackupController : Controller
         return RedirectToAction(nameof(Index), new { tab = "scheduled" });
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // Excel
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     /// <summary>
     /// Downloads the template.
     /// </summary>
@@ -447,7 +447,7 @@ public class BackupController : Controller
                 .ToList();
 
             int globalAptNumber = 1;
-            var importedPinAssignments = new List<(string ApartmentId, string Pin)>();
+            var importedResidents = new List<(string ApartmentId, string Name, string Phone, string? Email)>();
 
             foreach (var group in floorsGrouped)
             {
@@ -486,17 +486,22 @@ public class BackupController : Controller
                         Disabled = aptData.IsDisabled,
                         DisabledReason = aptData.IsDisabled ? aptData.ClosedReason : ""
                     });
-                    if (!string.IsNullOrWhiteSpace(aptData.Pin))
-                        importedPinAssignments.Add((aptId, aptData.Pin));
+                    if (!string.IsNullOrWhiteSpace(aptData.Owner) && aptData.Owner.Trim() != "0")
+                        importedResidents.Add((aptId, aptData.Owner.Trim(), phone, null));
                 }
             }
 
             await _buildings.SaveFullAsync(building);
 
-            // Create the primary resident account from the PIN explicitly supplied in the signed Excel template.
+            // Convert imported apartment contact records into individual Person + Occupancy + Pending Account rows.
+            // The legacy apartment PIN column is deliberately ignored and no credential is generated.
             var residentService = HttpContext.RequestServices.GetRequiredService<ResidentsService>();
-            foreach (var assignment in importedPinAssignments)
-                await residentService.SetApartmentPinAsync(buildingId, assignment.ApartmentId, assignment.Pin, CurrentUserId);
+            foreach (var resident in importedResidents)
+            {
+                await residentService.CreateAsync(buildingId, resident.ApartmentId,
+                    resident.Name, resident.Phone, resident.Phone, resident.Email,
+                    isPrimary: true, isOwner: true, createdBy: CurrentUserId);
+            }
 
             TempData["Message"] = Loc.T("Building_N_Imported_Successfully_N_Apartments",
                 data.Name, data.Apartments.Count);
@@ -510,9 +515,9 @@ public class BackupController : Controller
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // Export
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     /// <summary>
     /// Exports the JSON.
     /// </summary>
@@ -584,14 +589,14 @@ public class BackupController : Controller
         using var workbook = new XLWorkbook();
 
         var infoSheet = workbook.Worksheets.Add("Building Info");
-        infoSheet.Cell(1, 1).Value = "الحقل";
-        infoSheet.Cell(1, 2).Value = "القيمة";
+        infoSheet.Cell(1, 1).Value = "ط§ظ„ط­ظ‚ظ„";
+        infoSheet.Cell(1, 2).Value = "ط§ظ„ظ‚ظٹظ…ط©";
         infoSheet.Cell(2, 1).Value = "Building Name";
         infoSheet.Cell(2, 2).Value = building.Name;
         infoSheet.Cell(3, 1).Value = "Building Number";
         infoSheet.Cell(3, 2).Value = building.BuildingNumber;
         infoSheet.Cell(4, 1).Value = "Admin PIN";
-        infoSheet.Cell(4, 2).Value = ""; // لا نصدّر الـ PIN
+        infoSheet.Cell(4, 2).Value = ""; // ظ„ط§ ظ†طµط¯ظ‘ط± ط§ظ„ظ€ PIN
         infoSheet.Cell(5, 1).Value = "Admin WhatsApp";
         infoSheet.Cell(5, 2).Value = building.AdminWhatsapp;
         infoSheet.Cell(6, 1).Value = "Logo URL";
@@ -618,7 +623,7 @@ public class BackupController : Controller
                 aptsSheet.Cell(row, 3).Value = apt.Number;
                 aptsSheet.Cell(row, 4).Value = apt.Owner;
                 aptsSheet.Cell(row, 5).Value = apt.Phone;
-                aptsSheet.Cell(row, 6).Value = ""; // لا نصدّر الـ PIN
+                aptsSheet.Cell(row, 6).Value = ""; // ظ„ط§ ظ†طµط¯ظ‘ط± ط§ظ„ظ€ PIN
                 aptsSheet.Cell(row, 7).Value = apt.MonthlyFee;
                 aptsSheet.Cell(row, 8).Value = apt.Label;
                 aptsSheet.Cell(row, 9).Value = apt.Closed ? "closed" : "open";

@@ -1,4 +1,4 @@
-﻿@* =============================================================================
+@* =============================================================================
    View:        AdminApts/Edit
    Rendered by: AdminAptsController.Edit
    Model:       BuildingManagementMvc.Models.Apartment
@@ -87,32 +87,6 @@
             </div>
         </div>
 
-        @* ===== PIN ===== *@
-        <div class="card mb-3 border-0 shadow-sm">
-            <div class="card-header bg-danger text-white">
-                <strong>🔐 PIN</strong>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">
-                            PIN
-                        </label>
-                        <div class="input-group">
-                            <input name="pin" id="editPin" value=""
-                                   type="password" maxlength="4" inputmode="numeric"
-                                   pattern="\d*" autocomplete="new-password" class="form-control form-control-lg" />
-                            <button type="button" class="btn btn-outline-secondary toggle-pin"
-                                    data-target="editPin" tabindex="-1">
-                                👁
-                            </button>
-                        </div>
-                        <div class="form-text">@Loc.T("Leave_Empty_To_Keep_Current_Pin")</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         @* ===== Finance ===== *@
         <div class="card mb-3 border-0 shadow-sm">
             <div class="card-header bg-success text-white">
@@ -153,14 +127,14 @@
                     @if (Model.Closed)
                     {
                         <button type="button" class="btn btn-success"
-                                onclick="openApartment('@Model.Id', '@Model.Number')">
+                                data-apartment-action="open" data-apt-id="@Model.Id" data-apt-number="@Model.Number">
                             🔓 @Loc.T("Open_Apartment")
                         </button>
                     }
                     else
                     {
                         <button type="button" class="btn btn-outline-danger"
-                                onclick="closeApartment('@Model.Id', '@Model.Number')">
+                                data-apartment-action="close" data-apt-id="@Model.Id" data-apt-number="@Model.Number">
                             🔒 @Loc.T("Close_Apartment")
                         </button>
                     }
@@ -168,14 +142,14 @@
                     @if (Model.Disabled)
                     {
                         <button type="button" class="btn btn-success"
-                                onclick="enableApartment('@Model.Id', '@Model.Number')">
+                                data-apartment-action="enable" data-apt-id="@Model.Id" data-apt-number="@Model.Number">
                             ✅ @Loc.T("Enable_Apartment")
                         </button>
                     }
                     else
                     {
                         <button type="button" class="btn btn-outline-secondary"
-                                onclick="disableApartment('@Model.Id', '@Model.Number')">
+                                data-apartment-action="disable" data-apt-id="@Model.Id" data-apt-number="@Model.Number">
                             🚫 @Loc.T("Disable_Apartment")
                         </button>
                     }
@@ -198,86 +172,61 @@
 
 @section Scripts {
     <script>
-        // 👁 إظهار/إخفاء PIN
-        document.querySelectorAll('.toggle-pin').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const input = document.getElementById(btn.dataset.target);
-                if (!input) return;
-                input.type = input.type === 'password' ? 'text' : 'password';
-                btn.textContent = input.type === 'password' ? '👁' : '🙈';
+        function getAntiForgeryToken() {
+            const token = document.querySelector('input[name="__RequestVerificationToken"]');
+            return token?.value ?? '';
+        }
+
+        function submitApartmentAction(action, apartmentId, reason) {
+            const endpoints = {
+                open: '/AdminApts/OpenApartment',
+                close: '/AdminApts/CloseApartment',
+                disable: '/AdminApts/DisableApartment',
+                enable: '/AdminApts/EnableApartment'
+            };
+            const endpoint = endpoints[action];
+            if (!endpoint || !apartmentId) return;
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = endpoint;
+
+            const addHiddenField = (name, value) => {
+                const field = document.createElement('input');
+                field.type = 'hidden';
+                field.name = name;
+                field.value = String(value ?? '');
+                form.appendChild(field);
+            };
+
+            addHiddenField('aptId', apartmentId);
+            if (reason !== undefined) addHiddenField('reason', reason);
+            addHiddenField('__RequestVerificationToken', getAntiForgeryToken());
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        document.querySelectorAll('[data-apartment-action]').forEach(button => {
+            button.addEventListener('click', () => {
+                const action = button.dataset.apartmentAction;
+                const apartmentId = button.dataset.aptId;
+                const apartmentNumber = button.dataset.aptNumber ?? '';
+
+                let reason;
+                if (action === 'close' || action === 'disable' || action === 'enable') {
+                    const prompts = {
+                        close: '🔒 ',
+                        disable: '🚫 ',
+                        enable: '✅ '
+                    };
+                    reason = window.prompt(prompts[action] + apartmentNumber, '');
+                    if (reason === null) return;
+                }
+
+                if (!window.confirm('⚠️ ' + apartmentNumber)) return;
+                submitApartmentAction(action, apartmentId, reason);
             });
         });
-
-        // 🔢 امنع غير الأرقام في حقل PIN
-        document.getElementById('editPin')?.addEventListener('input', (e) => {
-            e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4);
-        });
-
-        // ✅ فتح/إغلاق/تعطيل/تفعيل
-        function getAntiForgeryToken() {
-            const el = document.querySelector('input[name="__RequestVerificationToken"]');
-            return el ? el.value : '';
-        }
-
-        function openApartment(aptId, aptNumber) {
-            if (!confirm('🔓 ' + aptNumber)) return;
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '/AdminApts/OpenApartment';
-            form.innerHTML = `
-                        <input type="hidden" name="aptId" value="${aptId}" />
-                        <input type="hidden" name="__RequestVerificationToken" value="${getAntiForgeryToken()}" />
-                    `;
-            document.body.appendChild(form);
-            form.submit();
-        }
-
-        function closeApartment(aptId, aptNumber) {
-            const reason = prompt('🔒 ' + aptNumber, '');
-            if (reason === null) return;
-            if (!confirm('⚠️ ' + aptNumber)) return;
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '/AdminApts/CloseApartment';
-            form.innerHTML = `
-                        <input type="hidden" name="aptId" value="${aptId}" />
-                        <input type="hidden" name="reason" value="${reason || ''}" />
-                        <input type="hidden" name="__RequestVerificationToken" value="${getAntiForgeryToken()}" />
-                    `;
-            document.body.appendChild(form);
-            form.submit();
-        }
-
-        function disableApartment(aptId, aptNumber) {
-            const reason = prompt('🚫 ' + aptNumber, '');
-            if (reason === null) return;
-            if (!confirm('⚠️ ' + aptNumber)) return;
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '/AdminApts/DisableApartment';
-            form.innerHTML = `
-                        <input type="hidden" name="aptId" value="${aptId}" />
-                        <input type="hidden" name="reason" value="${reason || ''}" />
-                        <input type="hidden" name="__RequestVerificationToken" value="${getAntiForgeryToken()}" />
-                    `;
-            document.body.appendChild(form);
-            form.submit();
-        }
-
-        function enableApartment(aptId, aptNumber) {
-            const reason = prompt('✅ ' + aptNumber, '');
-            if (reason === null) return;
-            if (!confirm('⚠️ ' + aptNumber)) return;
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '/AdminApts/EnableApartment';
-            form.innerHTML = `
-                        <input type="hidden" name="aptId" value="${aptId}" />
-                        <input type="hidden" name="reason" value="${reason || ''}" />
-                        <input type="hidden" name="__RequestVerificationToken" value="${getAntiForgeryToken()}" />
-                    `;
-            document.body.appendChild(form);
-            form.submit();
-        }
     </script>
 }

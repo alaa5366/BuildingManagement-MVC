@@ -169,6 +169,79 @@ public sealed class TargetDepositWorkflowServiceTests
 
 
     [Fact]
+    public async Task BuildingAdmin_CannotConfirmCancelOrEditAnotherBuildingsDeposit()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+        var now = DateTime.UtcNow;
+        var periodId = Guid.NewGuid();
+        var actorId = Guid.NewGuid();
+        var depositId = Guid.NewGuid();
+
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.FinancialPeriods.Add(new FinancialPeriodEntity
+            {
+                PeriodId = periodId,
+                BuildingId = "building-a",
+                PeriodKey = now.ToString("yyyy-MM"),
+                TimeZoneId = "Africa/Cairo",
+                Status = FinancialPeriodStatus.Open,
+                StartsAtUtc = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndsAtUtc = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1),
+                CreatedAtUtc = now
+            });
+            var personId = Guid.NewGuid();
+            seed.Persons.Add(new PersonEntity
+            {
+                PersonId = personId, DisplayName = "Building B admin", CreatedAtUtc = now
+            });
+            seed.UserAccounts.Add(new UserAccountEntity
+            {
+                AccountId = actorId, PersonId = personId, AccountStatus = 1,
+                SecurityStamp = "test", CreatedAtUtc = now
+            });
+            seed.RoleDefinitions.Add(new RoleDefinitionEntity
+            {
+                RoleKey = "building-admin", DisplayName = "Building Admin", IsActive = true
+            });
+            seed.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            {
+                RoleAssignmentId = Guid.NewGuid(), AccountId = actorId, RoleKey = "building-admin",
+                ScopeType = 1, ScopeBuildingId = "building-b",
+                ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now
+            });
+            seed.PaymentDeposits.Add(new PaymentDepositEntity
+            {
+                PaymentDepositId = depositId, PeriodId = periodId, BuildingId = "building-a",
+                ApartmentId = "A-101", Amount = 75m, CurrencyCode = "EGP",
+                Status = PaymentDepositStatus.Pending, SubmittedAtUtc = now, SourceSystem = "application"
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetDepositWorkflowService(new TestContextFactory(options), TimeProvider.System);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.ConfirmAsync(depositId, actorId, "building-b-admin"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.CancelAsync(depositId, actorId, "unauthorized cancellation"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.UpdatePendingAsync(depositId, actorId, 90m, "unauthorized edit",
+                "unauthorized cross-building attempt"));
+
+        await using var verify = new AppDbContext(options);
+        var deposit = await verify.PaymentDeposits.SingleAsync();
+        Assert.Equal(PaymentDepositStatus.Pending, deposit.Status);
+        Assert.Equal(75m, deposit.Amount);
+        Assert.Empty(await verify.LedgerTransactions.ToListAsync());
+        Assert.Empty(await verify.LedgerEntries.ToListAsync());
+        Assert.Empty(await verify.AuditEvents.ToListAsync());
+    }
+
+    [Fact]
     public async Task UpdatePending_PreservesSourceAndWritesAppendOnlyAuditEvidence()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()

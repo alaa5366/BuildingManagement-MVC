@@ -66,7 +66,8 @@ public class ImpersonationController : Controller
         var apt = building.Apartments.FirstOrDefault(a => a.Id == aptId);
         if (apt == null) return NotFound();
 
-        PushCurrentContext(targetBuildingId, isSuperAdmin: User.IsInRole("superadmin"));
+        if (!PushCurrentContext(targetBuildingId, isSuperAdmin: User.IsInRole("superadmin")))
+            return Conflict("Maximum impersonation depth reached. Exit an existing impersonation session first.");
 
         var claims = BuildResidentClaims(building, apt, CurrentUid);
         await SignInAsync(claims);
@@ -104,7 +105,8 @@ public class ImpersonationController : Controller
         var apt = building.Apartments.FirstOrDefault(a => a.Id == aptId);
         if (apt == null) return NotFound();
 
-        PushCurrentContext(targetBuildingId, isSuperAdmin: User.IsInRole("superadmin"));
+        if (!PushCurrentContext(targetBuildingId, isSuperAdmin: User.IsInRole("superadmin")))
+            return Conflict("Maximum impersonation depth reached. Exit an existing impersonation session first.");
 
         var claims = BuildResidentClaims(building, apt, CurrentUid);
         await SignInAsync(claims);
@@ -132,7 +134,8 @@ public class ImpersonationController : Controller
         var building = await _buildings.GetByIdAsync(buildingId);
         if (building == null) return NotFound();
 
-        PushCurrentContext(buildingId, isSuperAdmin: true);
+        if (!PushCurrentContext(buildingId, isSuperAdmin: true))
+            return Conflict("Maximum impersonation depth reached. Exit an existing impersonation session first.");
 
         var claims = new List<Claim>
         {
@@ -224,7 +227,7 @@ public class ImpersonationController : Controller
     // Helpers
     // ═══════════════════════════════════════════════════════════
 
-    private void PushCurrentContext(string buildingId, bool isSuperAdmin = false)
+    private bool PushCurrentContext(string buildingId, bool isSuperAdmin = false)
     {
         var stackBefore = _impersonation.ReadBackupStack(HttpContext);
 
@@ -244,7 +247,8 @@ public class ImpersonationController : Controller
             ImpersonationActorTwoFactorVerified = User.FindFirst("impersonationActorTwoFactorVerified")?.Value
                 ?? (User.HasClaim("twoFactorVerified", "true") ? "true" : "false"),
             ImpersonationActorSecurityStamp = User.FindFirst("impersonationActorSecurityStamp")?.Value
-                ?? User.FindFirst("legacySuperAdminSecurityStamp")?.Value ?? "",
+                ?? User.FindFirst("legacySuperAdminSecurityStamp")?.Value
+                ?? User.FindFirst("securityStamp")?.Value ?? "",
             TwoFactorVerified = User.HasClaim("twoFactorVerified", "true")
                 || User.HasClaim("impersonationActorTwoFactorVerified", "true"),
             StartedAt = DateTime.UtcNow.ToString("o")
@@ -257,13 +261,16 @@ public class ImpersonationController : Controller
             backup.Role,
             isSuperAdmin);
 
-        _impersonation.PushBackup(HttpContext, backup);
+        var pushed = _impersonation.PushBackup(HttpContext, backup);
+        if (!pushed)
+            return false;
 
         var stackAfter = _impersonation.ReadBackupStack(HttpContext);
         _logger.LogDebug(
             "[Impersonation] Push AFTER. Count={Count}, roles=[{Roles}]",
             stackAfter.Count,
             string.Join(", ", stackAfter.Select(s => s.Role)));
+        return true;
     }
 
     private List<Claim> BuildResidentClaims(Building building, Apartment apt, string impersonatedBy)
@@ -313,7 +320,8 @@ public class ImpersonationController : Controller
             : (User.HasClaim("twoFactorVerified", "true") ? "true" : "false");
         var actorSecurityStamp = User.HasClaim("impersonated", "true")
             ? User.FindFirst("impersonationActorSecurityStamp")?.Value
-            : User.FindFirst("legacySuperAdminSecurityStamp")?.Value;
+            : User.FindFirst("legacySuperAdminSecurityStamp")?.Value
+                ?? User.FindFirst("securityStamp")?.Value;
 
         if (!string.IsNullOrWhiteSpace(actorUid))
             claims.Add(new Claim("impersonationActorUid", actorUid));
@@ -378,7 +386,13 @@ public class ImpersonationController : Controller
                 claims.Add(new Claim("impersonationTargetBuildingId", backup.BuildingId));
         }
 
-        foreach (var bId in backup.BuildingIds)
+        var restoredBuildingIds = backup.BuildingIds
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .ToHashSet(StringComparer.Ordinal);
+        if (backup.Role == "admin" && !string.IsNullOrWhiteSpace(backup.BuildingId))
+            restoredBuildingIds.Add(backup.BuildingId);
+
+        foreach (var bId in restoredBuildingIds)
             claims.Add(new Claim("buildingId", bId));
 
         foreach (var p in backup.Permissions)

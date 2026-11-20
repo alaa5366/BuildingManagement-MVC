@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -6,29 +6,24 @@ using Microsoft.EntityFrameworkCore;
 namespace BuildingManagementMvc.Services;
 
 /// <summary>
-/// Produces a safe resident-account readiness report and provisions eligible accounts
+/// Produces a safe resident-account readiness report and provisions pending accounts
 /// in small, repeatable batches. Existing accounts and credentials are never modified.
 /// </summary>
 public sealed class ResidentAccountProvisioningService
 {
-    private const byte ActiveAccountStatus = 1;
-    private const byte PasswordCredentialType = 0;
+    private const byte PendingAccountStatus = 0;
     private const int MaximumBatchSize = 50;
-    private const string InitialPin = "1234";
 
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
-    private readonly IPasswordHasher _hasher;
     private readonly IAuditLogger _audit;
     private readonly ILogger<ResidentAccountProvisioningService> _logger;
 
     public ResidentAccountProvisioningService(
         IDbContextFactory<AppDbContext> dbFactory,
-        IPasswordHasher hasher,
         IAuditLogger audit,
         ILogger<ResidentAccountProvisioningService> logger)
     {
         _dbFactory = dbFactory;
-        _hasher = hasher;
         _audit = audit;
         _logger = logger;
     }
@@ -76,26 +71,13 @@ public sealed class ResidentAccountProvisioningService
             {
                 status = "Existing";
                 var account = accountByPerson[person.PersonId];
-                reason = account.AccountStatus == ActiveAccountStatus
-                    ? (duplicatePhonePersonIds.Contains(person.PersonId)
-                        ? "Existing account; primary phone is duplicated and requires review"
-                        : account.MustChangePin ? "Existing account; PIN change required" : "Existing account")
-                    : "Existing account is inactive; review manually";
-            }
-            else if (string.IsNullOrWhiteSpace(person.PrimaryPhone))
-            {
-                status = "MissingPhone";
-                reason = "No primary phone number";
-            }
-            else if (!IsPlausibleE164(normalizedPhone))
-            {
-                status = "InvalidPhone";
-                reason = "Primary phone cannot be normalized";
-            }
-            else if (!phoneCounts.TryGetValue(normalizedPhone, out var count) || count != 1)
-            {
-                status = "DuplicatePhone";
-                reason = "Primary phone is shared by more than one person record";
+                reason = account.AccountStatus == 0
+                    ? "Existing pending account; issue an individual PIN before activation"
+                    : account.AccountStatus == 1
+                        ? (duplicatePhonePersonIds.Contains(person.PersonId)
+                            ? "Existing account; primary phone is duplicated and requires review"
+                            : account.MustChangePin ? "Existing account; PIN change required" : "Existing account")
+                        : "Existing account is locked or disabled; review manually";
             }
             else if (!occupancySet.Contains(person.PersonId))
             {
@@ -107,10 +89,25 @@ public sealed class ResidentAccountProvisioningService
                 status = "RoleUnavailable";
                 reason = "The resident role is missing or inactive";
             }
+            else if (string.IsNullOrWhiteSpace(person.PrimaryPhone))
+            {
+                status = "MissingPhone";
+                reason = "A pending personal account can be created, but a unique phone is required before issuing a PIN";
+            }
+            else if (!IsPlausibleE164(normalizedPhone))
+            {
+                status = "InvalidPhone";
+                reason = "A pending personal account can be created, but the phone must be corrected before issuing a PIN";
+            }
+            else if (!phoneCounts.TryGetValue(normalizedPhone, out var count) || count != 1)
+            {
+                status = "DuplicatePhone";
+                reason = "A pending personal account can be created; the shared phone must be resolved before issuing a PIN";
+            }
             else
             {
                 status = "Eligible";
-                reason = "Ready for secure account creation";
+                reason = "Ready for pending personal account creation; PIN issuance still requires identity verification";
             }
 
             rows.Add(new ResidentAccountProvisioningRow(
@@ -127,24 +124,26 @@ public sealed class ResidentAccountProvisioningService
             ActivePersons = activePeople.Count,
             ArchivedPersons = people.Count(x => x.IsArchived),
             TotalAccounts = accounts.Count,
-            ActiveAccounts = accounts.Count(x => x.AccountStatus == ActiveAccountStatus),
-            NonActiveAccounts = accounts.Count(x => x.AccountStatus != ActiveAccountStatus),
+            ActiveAccounts = accounts.Count(x => x.AccountStatus == 1),
+            NonActiveAccounts = accounts.Count(x => x.AccountStatus != 1),
             AccountsRequiringPinChange = accounts.Count(x => x.MustChangePin),
             Eligible = rows.Count(x => x.Status == "Eligible"),
+            Provisionable = rows.Count(x => x.Status is "Eligible" or "MissingPhone" or "InvalidPhone" or "DuplicatePhone"),
             MissingPhone = rows.Count(x => x.Status == "MissingPhone"),
             InvalidPhone = rows.Count(x => x.Status == "InvalidPhone"),
-            DuplicatePhone = activePeople.Count(x => duplicatePhonePersonIds.Contains(x.PersonId)),
+            DuplicatePhone = rows.Count(x => x.Status == "DuplicatePhone"),
             NoActiveOccupancy = rows.Count(x => x.Status == "NoActiveOccupancy"),
             ExistingAccounts = rows.Count(x => x.Status == "Existing"),
             RoleUnavailable = rows.Count(x => x.Status == "RoleUnavailable"),
-            Rows = rows.OrderBy(x => x.Status == "Eligible" ? 0 : 1)
+            Rows = rows.OrderBy(x => x.Status == "Eligible" ? 0
+                    : x.Status is "MissingPhone" or "InvalidPhone" or "DuplicatePhone" ? 1 : 2)
                 .ThenBy(x => x.DisplayName, StringComparer.CurrentCultureIgnoreCase)
                 .Take(500)
                 .ToList()
         };
     }
 
-    /// <summary>Provisions a batch of eligible resident accounts.</summary>
+    /// <summary>Provisions a batch of residents with verified active apartment occupancy.</summary>
     public async Task<ResidentAccountProvisioningBatchResult> ProvisionBatchAsync(
         int requestedBatchSize,
         string actorId,
@@ -153,7 +152,7 @@ public sealed class ResidentAccountProvisioningService
         var batchSize = Math.Clamp(requestedBatchSize, 1, MaximumBatchSize);
         var report = await GetReportAsync(cancellationToken);
         var candidates = report.Rows
-            .Where(x => x.Status == "Eligible")
+            .Where(x => x.Status is "Eligible" or "MissingPhone" or "InvalidPhone" or "DuplicatePhone")
             .Take(batchSize)
             .ToList();
 
@@ -178,13 +177,13 @@ public sealed class ResidentAccountProvisioningService
 
             result.Created++;
             await _audit.LogAsync(
-                action: "resident.account.provisioned",
+                action: "resident.account.provisioned.pending",
                 userId: actorId,
                 userRole: "superadmin",
-                metadata: new { personReference = candidate.PersonId, initialPinRequiresChange = true });
+                metadata: new { personReference = candidate.PersonId, credentialIssued = false, accountStatus = PendingAccountStatus });
         }
 
-        result.RemainingEligible = (await GetReportAsync(cancellationToken)).Eligible;
+        result.RemainingProvisionable = (await GetReportAsync(cancellationToken)).Provisionable;
         return result;
     }
 
@@ -204,21 +203,6 @@ public sealed class ResidentAccountProvisioningService
             var person = people.SingleOrDefault(x => x.PersonId == personId);
             if (person is null || person.IsArchived || await db.UserAccounts.AnyAsync(
                     x => x.PersonId == personId, cancellationToken))
-            {
-                await transaction.RollbackAsync(cancellationToken);
-                return false;
-            }
-
-            var normalizedPhone = AuthHelpers.NormalizePhone(person.PrimaryPhone);
-            if (!IsPlausibleE164(normalizedPhone))
-            {
-                await transaction.RollbackAsync(cancellationToken);
-                return false;
-            }
-
-            var phoneMatches = people.Count(x => string.Equals(
-                AuthHelpers.NormalizePhone(x.PrimaryPhone), normalizedPhone, StringComparison.Ordinal));
-            if (phoneMatches != 1)
             {
                 await transaction.RollbackAsync(cancellationToken);
                 return false;
@@ -244,7 +228,7 @@ public sealed class ResidentAccountProvisioningService
             {
                 AccountId = accountId,
                 PersonId = person.PersonId,
-                AccountStatus = ActiveAccountStatus,
+                AccountStatus = PendingAccountStatus,
                 MustChangePin = true,
                 NormalizedEmail = string.IsNullOrWhiteSpace(person.PrimaryEmail)
                     ? null
@@ -252,15 +236,9 @@ public sealed class ResidentAccountProvisioningService
                 SecurityStamp = Guid.NewGuid().ToString("N"),
                 CreatedAtUtc = now
             });
-            db.UserCredentials.Add(new UserCredentialEntity
-            {
-                CredentialId = Guid.NewGuid(),
-                AccountId = accountId,
-                CredentialType = PasswordCredentialType,
-                CredentialHash = _hasher.HashPin(InitialPin),
-                HashAlgorithm = "BCrypt.Net-Next",
-                CreatedAtUtc = now
-            });
+            // No credential is created here. A pending account must receive an
+            // individually issued credential through the controlled PIN-reset/enrollment
+            // workflow before it can be activated. Never seed a shared/default PIN.
 
             foreach (var occupancy in occupancies)
             {
@@ -309,6 +287,7 @@ public sealed class ResidentAccountProvisioningReport
     public int NonActiveAccounts { get; init; }
     public int AccountsRequiringPinChange { get; init; }
     public int Eligible { get; init; }
+    public int Provisionable { get; init; }
     public int MissingPhone { get; init; }
     public int InvalidPhone { get; init; }
     public int DuplicatePhone { get; init; }
@@ -332,5 +311,5 @@ public sealed class ResidentAccountProvisioningBatchResult
     public int Requested { get; set; }
     public int Created { get; set; }
     public int Skipped { get; set; }
-    public int RemainingEligible { get; set; }
+    public int RemainingProvisionable { get; set; }
 }
