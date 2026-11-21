@@ -60,6 +60,12 @@ public sealed class SessionRevalidatorRoleRoutingTests
                 ValidFromUtc = DateTime.UtcNow.AddMinutes(-1),
                 GrantedAtUtc = DateTime.UtcNow.AddMinutes(-1)
             });
+            db.UserTwoFactorSettings.Add(new UserTwoFactorSettingEntity
+            {
+                AccountId = accountId, IsEnabled = true,
+                SecretCiphertext = new byte[] { 1, 2, 3 }, KeyVersion = "aes-gcm-v1",
+                EnrolledAtUtc = DateTime.UtcNow.AddDays(-1)
+            });
             await db.SaveChangesAsync();
         }
 
@@ -73,12 +79,83 @@ public sealed class SessionRevalidatorRoleRoutingTests
             new Claim(ClaimTypes.Role, "admin"),
             new Claim(ClaimTypes.NameIdentifier, accountId.ToString("D")),
             new Claim("securityStamp", "building-admin-stamp"),
-            new Claim("buildingId", "building-1"));
+            new Claim("buildingId", "building-1"),
+            new Claim("twoFactorVerified", "true"));
 
         var result = await validator.ValidateAsync(principal);
 
         Assert.True(result.Valid);
         Assert.Contains("residents.manage", result.Permissions!);
+    }
+
+    [Fact]
+    public async Task Resident_context_for_account_also_assigned_as_admin_does_not_require_mfa()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .ConfigureWarnings(warnings => warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+        var accountId = Guid.NewGuid();
+        var personId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        await using (var db = new AppDbContext(options))
+        {
+            db.Persons.Add(new PersonEntity
+            {
+                PersonId = personId,
+                DisplayName = "Resident Administrator",
+                IsArchived = false,
+                CreatedAtUtc = now
+            });
+            db.UserAccounts.Add(new UserAccountEntity
+            {
+                AccountId = accountId,
+                PersonId = personId,
+                AccountStatus = 1,
+                SecurityStamp = "resident-admin-stamp",
+                CreatedAtUtc = now
+            });
+            db.RoleDefinitions.AddRange(
+                new RoleDefinitionEntity { RoleKey = "resident", DisplayName = "Resident", IsActive = true },
+                new RoleDefinitionEntity { RoleKey = "admin", DisplayName = "Administrator", IsActive = true });
+            db.UserRoleAssignments.AddRange(
+                new UserRoleAssignmentEntity
+                {
+                    RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "resident",
+                    ScopeType = 2, ScopeBuildingId = "building-resident", ScopeApartmentId = "apt-1",
+                    ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1)
+                },
+                new UserRoleAssignmentEntity
+                {
+                    RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "admin",
+                    ScopeType = 1, ScopeBuildingId = "building-admin",
+                    ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1)
+                });
+            db.ApartmentOccupancies.Add(new ApartmentOccupancyEntity
+            {
+                OccupancyId = Guid.NewGuid(), PersonId = personId,
+                BuildingId = "building-resident", ApartmentId = "apt-1",
+                OccupancyType = 1, IsPrimary = true,
+                ValidFromUtc = now.AddDays(-1), RecordedAtUtc = now.AddDays(-1)
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var validator = new SessionRevalidator(
+            new InMemoryFactory(options),
+            new MemoryCache(new MemoryCacheOptions()),
+            NullLogger<SessionRevalidator>.Instance);
+        var residentPrincipal = Principal(
+            new Claim("targetIdentityAccount", "true"),
+            new Claim(ClaimTypes.Role, "resident"),
+            new Claim(ClaimTypes.NameIdentifier, accountId.ToString("D")),
+            new Claim("securityStamp", "resident-admin-stamp"),
+            new Claim("buildingId", "building-resident"),
+            new Claim("apartmentId", "apt-1"));
+
+        var result = await validator.ValidateAsync(residentPrincipal);
+
+        Assert.True(result.Valid);
     }
 
     private sealed class InMemoryFactory : IDbContextFactory<AppDbContext>

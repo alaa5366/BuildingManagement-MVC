@@ -621,6 +621,7 @@ public sealed class IdentityAccountAuthenticationService
             {
                 userAccount.AccountStatus,
                 userAccount.SecurityStamp,
+                userAccount.NormalizedEmail,
                 userAccount.PersonId,
                 person.IsArchived
             }).SingleOrDefaultAsync(cancellationToken);
@@ -655,6 +656,24 @@ public sealed class IdentityAccountAuthenticationService
                             && assignment.ScopeApartmentId == null) ||
                         (assignment.ScopeType == 2 && assignment.ScopeBuildingId == buildingId
                             && assignment.ScopeApartmentId == apartmentId))
+                select assignment.RoleAssignmentId).AnyAsync(cancellationToken);
+        }
+
+        if (context.Role == "superadmin")
+        {
+            var email = context.Email?.Trim();
+            if (!SuperAdminIdentityPolicy.IsEmailAllowed(email) ||
+                !string.Equals(account.NormalizedEmail, email!.ToUpperInvariant(), StringComparison.Ordinal))
+                return false;
+
+            return await (
+                from assignment in db.UserRoleAssignments.AsNoTracking()
+                join definition in db.RoleDefinitions.AsNoTracking() on assignment.RoleKey equals definition.RoleKey
+                where assignment.AccountId == accountId && assignment.RoleKey == "superadmin"
+                    && definition.IsActive && assignment.ScopeType == 0
+                    && assignment.ScopeBuildingId == null && assignment.ScopeApartmentId == null
+                    && assignment.RevokedAtUtc == null && assignment.ValidFromUtc <= now
+                    && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
                 select assignment.RoleAssignmentId).AnyAsync(cancellationToken);
         }
 

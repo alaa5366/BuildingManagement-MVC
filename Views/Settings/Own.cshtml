@@ -150,21 +150,21 @@
                         <div class="fw-semibold">@(Model.LastLoginAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "No sign-in recorded")</div>
                     </div>
                     <div class="col-md-6">
-                        <div class="small text-muted">Two-factor authentication</div>
-                        <div class="fw-semibold">@(Model.TwoFactorEnabled ? "Enabled" : "Disabled")</div>
+                        <div class="small text-muted">@Loc.T("Mfa_Status_Label")</div>
+                        <div class="fw-semibold">@(Model.TwoFactorEnabled ? Loc.T("Mfa_Status_Enabled") : Loc.T("Mfa_Status_Disabled"))</div>
                     </div>
                     <div class="col-md-6">
-                        <div class="small text-muted">Unused recovery codes</div>
+                        <div class="small text-muted">@Loc.T("Mfa_Unused_Recovery_Codes")</div>
                         <div class="fw-semibold">@Model.UnusedRecoveryCodes</div>
                     </div>
                     @if (Model.TwoFactorEnabled)
                     {
                         <div class="col-md-6">
-                            <div class="small text-muted">Authenticator enrolled (UTC)</div>
+                            <div class="small text-muted">@Loc.T("Mfa_Enrolled_At_Utc")</div>
                             <div class="fw-semibold">@(Model.TwoFactorEnrolledAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "—")</div>
                         </div>
                         <div class="col-md-6">
-                            <div class="small text-muted">Last MFA verification (UTC)</div>
+                            <div class="small text-muted">@Loc.T("Mfa_Last_Verified_At_Utc")</div>
                             <div class="fw-semibold">@(Model.TwoFactorLastVerifiedAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "—")</div>
                         </div>
                     }
@@ -176,14 +176,8 @@
                     {
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
                             <div>
-                                <div class="fw-semibold text-success">Your administrator account is protected.</div>
-                                <div class="small text-muted">Disabling MFA requires a valid authenticator or unused recovery code.</div>
-                            </div>
-                            <div class="d-flex gap-2 align-items-end">
-                                <input name="Code" class="form-control" autocomplete="one-time-code"
-                                       maxlength="32" placeholder="Authenticator / recovery code" />
-                                <button type="submit" class="btn btn-outline-danger"
-                                        formaction="@Url.Action("DisableTwoFactor", "Account")" formmethod="post">Disable MFA</button>
+                                <div class="fw-semibold text-success">@Loc.T("Mfa_Administrator_Protected_Title")</div>
+                                <div class="small text-muted">@Loc.T("Mfa_Administrator_Protected_Description")</div>
                             </div>
                         </div>
                     }
@@ -191,11 +185,11 @@
                     {
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
                             <div>
-                                <div class="fw-semibold">Two-factor authentication is disabled.</div>
-                                <div class="small text-muted">Set up an authenticator app to protect your administrator account.</div>
+                                <div class="fw-semibold text-danger">@Loc.T("Mfa_Admin_Not_Enrolled_Title")</div>
+                                <div class="small text-muted">@Loc.T("Mfa_Admin_Enroll_Before_Access")</div>
                             </div>
                             <button type="submit" class="btn btn-primary"
-                                    formaction="@Url.Action("BeginTwoFactorSetup", "Account")" formmethod="post">Set up authenticator</button>
+                                    formaction="@Url.Action("BeginTwoFactorSetup", "Account")" formmethod="post">@Loc.T("Mfa_Setup_Authenticator_Button")</button>
                         </div>
                     }
                 }

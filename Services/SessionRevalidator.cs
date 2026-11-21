@@ -99,7 +99,7 @@ public class SessionRevalidator
 
             var twoFactorEnabled = await db.UserTwoFactorSettings.AsNoTracking()
                 .AnyAsync(item => item.AccountId == accountId && item.IsEnabled);
-            if (twoFactorEnabled && !user.HasClaim("twoFactorVerified", "true"))
+            if (!twoFactorEnabled || !user.HasClaim("twoFactorVerified", "true"))
                 return new Result(false, null);
 
             var permissions = await db.RolePermissions.AsNoTracking()
@@ -230,7 +230,7 @@ public class SessionRevalidator
 
             var twoFactorEnabled = await db.UserTwoFactorSettings.AsNoTracking()
                 .AnyAsync(item => item.AccountId == accountId && item.IsEnabled);
-            if (twoFactorEnabled && !user.HasClaim("twoFactorVerified", "true"))
+            if (!twoFactorEnabled || !user.HasClaim("twoFactorVerified", "true"))
                 return new Result(false, null);
 
             var basePermissions = await db.RolePermissions.AsNoTracking()

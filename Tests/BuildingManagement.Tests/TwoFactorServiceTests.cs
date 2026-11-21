@@ -61,7 +61,7 @@ public sealed class TwoFactorServiceTests
             ? cipher[5..] : throw new InvalidOperationException("Invalid test ciphertext.");
     }
 
-    private static async Task<(TwoFactorService Service, TestFactory Factory, Guid AccountId)> CreateAsync()
+    private static async Task<(TwoFactorService Service, TestFactory Factory, Guid AccountId)> CreateAsync(string roleKey = "admin")
     {
         var factory = new TestFactory(Guid.NewGuid().ToString("N"));
         var accountId = Guid.NewGuid();
@@ -85,15 +85,15 @@ public sealed class TwoFactorServiceTests
             });
             db.RoleDefinitions.Add(new RoleDefinitionEntity
             {
-                RoleKey = "admin", DisplayName = "Administrator", IsActive = true
+                RoleKey = roleKey, DisplayName = roleKey, IsActive = true
             });
             db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
             {
                 RoleAssignmentId = Guid.NewGuid(),
                 AccountId = accountId,
-                RoleKey = "admin",
-                ScopeType = 1,
-                ScopeBuildingId = "building-1",
+                RoleKey = roleKey,
+                ScopeType = (byte)(roleKey == "superadmin" ? 0 : 1),
+                ScopeBuildingId = roleKey == "superadmin" ? null : "building-1",
                 ValidFromUtc = now.AddDays(-1),
                 GrantedAtUtc = now.AddDays(-1)
             });
@@ -111,6 +111,20 @@ public sealed class TwoFactorServiceTests
         var secret = TwoFactorService.CreateSecret();
         var code = TotpAuthenticator.GenerateCode(secret, DateTimeOffset.UtcNow);
         Assert.NotNull(await service.EnableAsync(accountId.ToString("D"), secret, code));
+        Assert.True(await service.IsEnabledAsync(accountId.ToString("D")));
+    }
+
+    [Fact]
+    public async Task Super_admin_can_enroll_in_mfa_using_the_target_identity_tables()
+    {
+        var (service, _, accountId) = await CreateAsync("superadmin");
+        var secret = TwoFactorService.CreateSecret();
+        var code = TotpAuthenticator.GenerateCode(secret, DateTimeOffset.UtcNow);
+
+        var recovery = await service.EnableAsync(accountId.ToString("D"), secret, code);
+
+        Assert.NotNull(recovery);
+        Assert.Equal(10, recovery!.Count);
         Assert.True(await service.IsEnabledAsync(accountId.ToString("D")));
     }
 
@@ -160,7 +174,7 @@ public sealed class TwoFactorServiceTests
     }
 
     [Fact]
-    public async Task Recovery_code_can_disable_2FA_if_encrypted_secret_is_unreadable()
+    public async Task Recovery_code_cannot_disable_mandatory_admin_mfa_if_encrypted_secret_is_unreadable()
     {
         var (service, factory, accountId) = await CreateAsync();
         var secret = TwoFactorService.CreateSecret();
@@ -175,24 +189,26 @@ public sealed class TwoFactorServiceTests
             await db.SaveChangesAsync();
         }
 
-        Assert.True(await service.DisableAsync(accountId.ToString("D"), recovery![0]));
-        Assert.False(await service.IsEnabledAsync(accountId.ToString("D")));
+        Assert.False(await service.DisableAsync(accountId.ToString("D"), recovery![0]));
+        Assert.True(await service.IsEnabledAsync(accountId.ToString("D")));
+        Assert.True(await service.VerifyAndConsumeAsync(accountId.ToString("D"), recovery[0]));
     }
 
     [Fact]
-    public async Task Disable_requires_second_factor_and_clears_secret()
+    public async Task Active_administrator_cannot_disable_mfa_even_with_a_valid_recovery_code()
     {
         var (service, factory, accountId) = await CreateAsync();
         var secret = TwoFactorService.CreateSecret();
         var code = TotpAuthenticator.GenerateCode(secret, DateTimeOffset.UtcNow);
         var recovery = await service.EnableAsync(accountId.ToString("D"), secret, code);
         Assert.NotNull(recovery);
-        Assert.True(await service.DisableAsync(accountId.ToString("D"), recovery![0]));
-        Assert.False(await service.IsEnabledAsync(accountId.ToString("D")));
+        Assert.False(await service.DisableAsync(accountId.ToString("D"), recovery![0]));
+        Assert.True(await service.IsEnabledAsync(accountId.ToString("D")));
+        Assert.True(await service.VerifyAndConsumeAsync(accountId.ToString("D"), recovery[0]));
         await using var db = factory.CreateDbContext();
         var setting = await db.UserTwoFactorSettings.SingleAsync(x => x.AccountId == accountId);
-        Assert.False(setting.IsEnabled);
-        Assert.Null(setting.SecretCiphertext);
-        Assert.Null(setting.KeyVersion);
+        Assert.True(setting.IsEnabled);
+        Assert.NotNull(setting.SecretCiphertext);
+        Assert.NotNull(setting.KeyVersion);
     }
 }

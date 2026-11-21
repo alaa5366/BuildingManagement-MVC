@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BuildingManagementMvc.Services;
 
-/// <summary>Manages opt-in TOTP two-factor authentication for administrator accounts.</summary>
+/// <summary>Manages TOTP enrollment, verification and one-time recovery codes for administrator accounts.</summary>
 public sealed class TwoFactorService
 {
     private readonly IDbContextFactory<AppDbContext> _factory;
@@ -74,18 +74,20 @@ public sealed class TwoFactorService
         return await VerifyAndConsumeTargetAsync(accountId, code, cancellationToken);
     }
 
-    /// <summary>Disables two-factor authentication after consuming a valid TOTP or recovery code.</summary>
+    /// <summary>Rejects self-service MFA removal because active administrator roles require MFA.</summary>
     /// <param name="uid">The unique administrator identifier.</param>
-    /// <param name="code">A current authenticator code or unused recovery code.</param>
-    /// <param name="cancellationToken">A token used to cancel the database operation.</param>
-    /// <returns><see langword="true"/> when two-factor authentication was disabled; otherwise, <see langword="false"/>.</returns>
-    public async Task<bool> DisableAsync(
+    /// <param name="code">A current authenticator code or unused recovery code (not consumed).</param>
+    /// <param name="cancellationToken">A token used to cancel the operation.</param>
+    /// <returns>Always <see langword="false"/> while the mandatory administrator MFA policy is active.</returns>
+    public Task<bool> DisableAsync(
         string uid, string code, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(uid) || string.IsNullOrWhiteSpace(code)) return false;
-        if (!Guid.TryParse(uid, out var accountId) || !await IsTargetAccountAsync(accountId, cancellationToken))
-            return false;
-        return await DisableTargetAsync(accountId, code, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(uid) || string.IsNullOrWhiteSpace(code) || !Guid.TryParse(uid, out _))
+            return Task.FromResult(false);
+
+        _logger.LogWarning("MFA disable rejected by mandatory administrator policy for account {AccountId}", uid);
+        return Task.FromResult(false);
     }
 
     private async Task<bool> IsTargetAccountAsync(Guid accountId, CancellationToken cancellationToken)
@@ -219,58 +221,6 @@ public sealed class TwoFactorService
         }
         setting.LastVerifiedAtUtc = now;
         setting.UpdatedAtUtc = now;
-        await db.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-        return true;
-    }
-
-    private async Task<bool> DisableTargetAsync(Guid accountId, string code, CancellationToken cancellationToken)
-    {
-        using var gate = await KeyedLock.AcquireAsync("2fa:" + accountId.ToString("D"), cancellationToken);
-        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await db.Database.BeginTransactionAsync(
-            System.Data.IsolationLevel.Serializable, cancellationToken);
-        var now = DateTime.UtcNow;
-        var setting = await db.UserTwoFactorSettings.SingleOrDefaultAsync(
-            x => x.AccountId == accountId && x.IsEnabled, cancellationToken);
-        if (setting == null || !await IsEligibleTargetAdminAsync(db, accountId, now, cancellationToken))
-            return false;
-
-        var normalized = NormalizeRecoveryCode(code);
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(normalized));
-        var recovery = await db.UserRecoveryCodes
-            .Where(x => x.AccountId == accountId && x.UsedAtUtc == null)
-            .ToListAsync(cancellationToken);
-        var matched = recovery.FirstOrDefault(x => CryptographicOperations.FixedTimeEquals(x.CodeHash, hash));
-        if (matched != null) matched.UsedAtUtc = now;
-        else
-        {
-            if (setting.SecretCiphertext == null || setting.KeyVersion != "aes-gcm-v1") return false;
-            string secret;
-            try { secret = _encryption.Decrypt(Encoding.UTF8.GetString(setting.SecretCiphertext)); }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unable to decrypt target two-factor secret for account {AccountId}", accountId);
-                return false;
-            }
-            try
-            {
-                if (!TotpAuthenticator.TryVerify(secret, code, DateTimeOffset.UtcNow, out var step)
-                    || (setting.LastAcceptedTimeStep.HasValue && step <= setting.LastAcceptedTimeStep.Value))
-                    return false;
-                setting.LastAcceptedTimeStep = step;
-            }
-            catch (FormatException) { return false; }
-        }
-        setting.IsEnabled = false;
-        setting.SecretCiphertext = null;
-        setting.KeyVersion = null;
-        setting.EnrolledAtUtc = null;
-        setting.LastAcceptedTimeStep = null;
-        setting.LastVerifiedAtUtc = now;
-        setting.UpdatedAtUtc = now;
-        foreach (var unused in recovery.Where(x => x.UsedAtUtc == null))
-            unused.UsedAtUtc = now;
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return true;

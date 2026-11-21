@@ -4920,4 +4920,85 @@ This operation can take a few seconds.</value>
   <data name="Reversed_Reversed" xml:space="preserve">
     <value>&lt;strong&gt;Reversed&lt;/strong&gt; — a previously posted deposit was reversed; the original financial history remains available.</value>
   </data>
+  <data name="Mfa_Setup_Title" xml:space="preserve">
+    <value>Set up two-factor authentication</value>
+  </data>
+  <data name="Mfa_Setup_Authenticator_App" xml:space="preserve">
+    <value>Set up authenticator app</value>
+  </data>
+  <data name="Mfa_Admin_Security_Requirement" xml:space="preserve">
+    <value>Administrator security requirement</value>
+  </data>
+  <data name="Mfa_Mandatory_Enrollment_Notice" xml:space="preserve">
+    <value>MFA enrollment is required before administrator access is granted. Your account is not signed in yet.</value>
+  </data>
+  <data name="Mfa_Open_Authenticator_Instructions" xml:space="preserve">
+    <value>Open an authenticator app (for example, Microsoft Authenticator or Google Authenticator).</value>
+  </data>
+  <data name="Mfa_Scan_Qr_Instructions" xml:space="preserve">
+    <value>Scan this QR code, or enter the setup key manually.</value>
+  </data>
+  <data name="Mfa_Confirm_Setup_Instructions" xml:space="preserve">
+    <value>Enter the current six-digit code to confirm setup.</value>
+  </data>
+  <data name="Mfa_Manual_Setup_Key" xml:space="preserve">
+    <value>Manual setup key:</value>
+  </data>
+  <data name="Mfa_Six_Digit_Verification_Code" xml:space="preserve">
+    <value>Six-digit verification code</value>
+  </data>
+  <data name="Mfa_Confirm_And_Enable" xml:space="preserve">
+    <value>Confirm and enable</value>
+  </data>
+  <data name="Mfa_Enrollment_Expiry_Notice" xml:space="preserve">
+    <value>This temporary enrollment expires after ten minutes. You must complete enrollment before continuing to the application.</value>
+  </data>
+  <data name="Mfa_Cancel_And_Return_To_Sign_In" xml:space="preserve">
+    <value>Cancel and return to sign in</value>
+  </data>
+  <data name="Mfa_Invalid_Code_Try_Again" xml:space="preserve">
+    <value>The code could not be verified. Check your authenticator app and try again.</value>
+  </data>
+  <data name="Mfa_Enrollment_Expired_Sign_In_Again" xml:space="preserve">
+    <value>The mandatory authenticator enrollment session expired. Sign in again.</value>
+  </data>
+  <data name="Mfa_Disable_Not_Allowed" xml:space="preserve">
+    <value>MFA is mandatory for active administrator accounts and cannot be disabled while the privileged role is assigned.</value>
+  </data>
+  <data name="Mfa_Administrator_Protected_Description" xml:space="preserve">
+    <value>MFA is mandatory for active administrator roles and cannot be disabled while this role remains assigned. Keep your recovery codes in a secure location.</value>
+  </data>
+  <data name="Mfa_Admin_Not_Enrolled_Title" xml:space="preserve">
+    <value>Required administrator protection is not enrolled.</value>
+  </data>
+  <data name="Mfa_Admin_Enroll_Before_Access" xml:space="preserve">
+    <value>Complete authenticator enrollment before administrator access can continue.</value>
+  </data>
+  <data name="Mfa_Authenticator_Setup_Qr_Alt" xml:space="preserve">
+    <value>Authenticator setup QR code</value>
+  </data>
+  <data name="Mfa_Administrator_Protected_Title" xml:space="preserve">
+    <value>Your administrator account is protected.</value>
+  </data>
+  <data name="Mfa_Setup_Authenticator_Button" xml:space="preserve">
+    <value>Set up authenticator</value>
+  </data>
+  <data name="Mfa_Status_Label" xml:space="preserve">
+    <value>Two-factor authentication</value>
+  </data>
+  <data name="Mfa_Status_Enabled" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="Mfa_Status_Disabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="Mfa_Unused_Recovery_Codes" xml:space="preserve">
+    <value>Unused recovery codes</value>
+  </data>
+  <data name="Mfa_Enrolled_At_Utc" xml:space="preserve">
+    <value>Authenticator enrolled (UTC)</value>
+  </data>
+  <data name="Mfa_Last_Verified_At_Utc" xml:space="preserve">
+    <value>Last MFA verification (UTC)</value>
+  </data>
 </root>

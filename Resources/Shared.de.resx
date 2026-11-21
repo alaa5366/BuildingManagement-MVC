@@ -1718,4 +1718,85 @@ Beispiel: Bewohner verreist – leere Wohnung – Wartung</value></data>
   <data name="Reversed_Reversed" xml:space="preserve">
     <value>&lt;strong&gt;Rückgängig gemacht&lt;/strong&gt; — eine bereits verbuchte Einzahlung wurde rückgängig gemacht; der ursprüngliche Finanzverlauf bleibt erhalten.</value>
   </data>
+  <data name="Mfa_Setup_Title" xml:space="preserve">
+    <value>Zwei-Faktor-Authentifizierung einrichten</value>
+  </data>
+  <data name="Mfa_Setup_Authenticator_App" xml:space="preserve">
+    <value>Authenticator-App einrichten</value>
+  </data>
+  <data name="Mfa_Admin_Security_Requirement" xml:space="preserve">
+    <value>Sicherheitsanforderung f?r Administratoren</value>
+  </data>
+  <data name="Mfa_Mandatory_Enrollment_Notice" xml:space="preserve">
+    <value>MFA muss eingerichtet werden, bevor Administratorzugriff gew?hrt wird. Sie sind noch nicht angemeldet.</value>
+  </data>
+  <data name="Mfa_Open_Authenticator_Instructions" xml:space="preserve">
+    <value>?ffnen Sie eine Authenticator-App, zum Beispiel Microsoft Authenticator oder Google Authenticator.</value>
+  </data>
+  <data name="Mfa_Scan_Qr_Instructions" xml:space="preserve">
+    <value>Scannen Sie diesen QR-Code oder geben Sie den Einrichtungsschl?ssel manuell ein.</value>
+  </data>
+  <data name="Mfa_Confirm_Setup_Instructions" xml:space="preserve">
+    <value>Geben Sie den aktuellen sechsstelligen Code ein, um die Einrichtung zu best?tigen.</value>
+  </data>
+  <data name="Mfa_Manual_Setup_Key" xml:space="preserve">
+    <value>Manueller Einrichtungsschl?ssel:</value>
+  </data>
+  <data name="Mfa_Six_Digit_Verification_Code" xml:space="preserve">
+    <value>Sechsstelliger Best?tigungscode</value>
+  </data>
+  <data name="Mfa_Confirm_And_Enable" xml:space="preserve">
+    <value>Best?tigen und aktivieren</value>
+  </data>
+  <data name="Mfa_Enrollment_Expiry_Notice" xml:space="preserve">
+    <value>Diese vorl?ufige Einrichtung l?uft nach zehn Minuten ab. Schlie?en Sie die Einrichtung ab, bevor Sie die Anwendung weiter verwenden.</value>
+  </data>
+  <data name="Mfa_Cancel_And_Return_To_Sign_In" xml:space="preserve">
+    <value>Abbrechen und zur Anmeldung zur?ckkehren</value>
+  </data>
+  <data name="Mfa_Invalid_Code_Try_Again" xml:space="preserve">
+    <value>Der Code konnte nicht ?berpr?ft werden. Pr?fen Sie Ihre Authenticator-App und versuchen Sie es erneut.</value>
+  </data>
+  <data name="Mfa_Enrollment_Expired_Sign_In_Again" xml:space="preserve">
+    <value>Die Sitzung zur obligatorischen Authenticator-Einrichtung ist abgelaufen. Melden Sie sich erneut an.</value>
+  </data>
+  <data name="Mfa_Disable_Not_Allowed" xml:space="preserve">
+    <value>MFA ist f?r aktive Administratorkonten verpflichtend und kann nicht deaktiviert werden, solange die privilegierte Rolle zugewiesen ist.</value>
+  </data>
+  <data name="Mfa_Administrator_Protected_Description" xml:space="preserve">
+    <value>MFA ist f?r aktive Administratorrollen verpflichtend und kann nicht deaktiviert werden, solange diese Rolle zugewiesen ist. Bewahren Sie Ihre Wiederherstellungscodes sicher auf.</value>
+  </data>
+  <data name="Mfa_Admin_Not_Enrolled_Title" xml:space="preserve">
+    <value>Der erforderliche Administratorschutz ist nicht eingerichtet.</value>
+  </data>
+  <data name="Mfa_Admin_Enroll_Before_Access" xml:space="preserve">
+    <value>Richten Sie die Authenticator-App ein, bevor Sie den Administratorzugriff fortsetzen.</value>
+  </data>
+  <data name="Mfa_Authenticator_Setup_Qr_Alt" xml:space="preserve">
+    <value>QR-Code zur Authenticator-Einrichtung</value>
+  </data>
+  <data name="Mfa_Administrator_Protected_Title" xml:space="preserve">
+    <value>Ihr Administratorkonto ist gesch?tzt.</value>
+  </data>
+  <data name="Mfa_Setup_Authenticator_Button" xml:space="preserve">
+    <value>Authenticator-App einrichten</value>
+  </data>
+  <data name="Mfa_Status_Label" xml:space="preserve">
+    <value>Zwei-Faktor-Authentifizierung</value>
+  </data>
+  <data name="Mfa_Status_Enabled" xml:space="preserve">
+    <value>Aktiviert</value>
+  </data>
+  <data name="Mfa_Status_Disabled" xml:space="preserve">
+    <value>Deaktiviert</value>
+  </data>
+  <data name="Mfa_Unused_Recovery_Codes" xml:space="preserve">
+    <value>Unbenutzte Wiederherstellungscodes</value>
+  </data>
+  <data name="Mfa_Enrolled_At_Utc" xml:space="preserve">
+    <value>Authenticator eingerichtet (UTC)</value>
+  </data>
+  <data name="Mfa_Last_Verified_At_Utc" xml:space="preserve">
+    <value>Letzte MFA-Pr?fung (UTC)</value>
+  </data>
 </root>

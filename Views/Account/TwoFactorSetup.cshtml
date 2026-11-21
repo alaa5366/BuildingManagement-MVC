@@ -1,15 +1,27 @@
 @model TwoFactorVerifyVm
-@{ ViewData["Title"] = "Set up two-factor authentication"; }
+@{ ViewData["Title"] = Loc.T("Mfa_Setup_Title"); }
 <div class="container py-4" style="max-width:680px">
- <h2>Set up authenticator app</h2>
- <ol><li>Open an authenticator app (for example, Microsoft Authenticator or Google Authenticator).</li><li>Scan this QR code, or enter the setup key manually.</li><li>Enter the current six-digit code to confirm setup.</li></ol>
- <div class="text-center my-3"><img src="@ViewBag.QrDataUri" alt="Authenticator setup QR code" style="max-width:240px;width:100%" /></div>
- <p><strong>Manual setup key:</strong></p><code class="user-select-all">@ViewBag.Secret</code>
+ <h2>@Loc.T("Mfa_Setup_Authenticator_App")</h2>
+ @if (ViewBag.MandatoryEnrollment is bool mandatory && mandatory)
+ {
+  <div class="alert alert-warning" role="alert"><strong>@Loc.T("Mfa_Admin_Security_Requirement"):</strong> @Loc.T("Mfa_Mandatory_Enrollment_Notice")</div>
+ }
+ <ol><li>@Loc.T("Mfa_Open_Authenticator_Instructions")</li><li>@Loc.T("Mfa_Scan_Qr_Instructions")</li><li>@Loc.T("Mfa_Confirm_Setup_Instructions")</li></ol>
+ <div class="text-center my-3"><img src="@ViewBag.QrDataUri" alt="@Loc.T("Mfa_Authenticator_Setup_Qr_Alt")" style="max-width:240px;width:100%" /></div>
+ <p><strong>@Loc.T("Mfa_Manual_Setup_Key")</strong></p><code class="user-select-all">@ViewBag.Secret</code>
  @if(ViewBag.Error != null){<div class="alert alert-danger mt-3">@ViewBag.Error</div>}
  <form asp-action="EnableTwoFactor" method="post" class="mt-4">
   @Html.AntiForgeryToken()
-  <label class="form-label">Six-digit verification code</label>
+  <label class="form-label">@Loc.T("Mfa_Six_Digit_Verification_Code")</label>
   <input asp-for="Code" class="form-control" required autocomplete="one-time-code" inputmode="numeric" />
-  <button class="btn btn-primary mt-3" type="submit">Confirm and enable</button>
+  <button class="btn btn-primary mt-3" type="submit">@Loc.T("Mfa_Confirm_And_Enable")</button>
  </form>
+ @if (ViewBag.MandatoryEnrollment is bool required && required)
+ {
+  <p class="small text-muted mt-3">@Loc.T("Mfa_Enrollment_Expiry_Notice")</p>
+  <form asp-action="CancelTwoFactor" method="post" class="mt-2">
+   @Html.AntiForgeryToken()
+   <button class="btn btn-link" type="submit">@Loc.T("Mfa_Cancel_And_Return_To_Sign_In")</button>
+  </form>
+ }
 </div>

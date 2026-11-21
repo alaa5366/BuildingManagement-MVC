@@ -5454,4 +5454,85 @@ Cette opération peut prendre quelques secondes.</value>
   <data name="Reversed_Reversed" xml:space="preserve">
     <value>&lt;strong&gt;Contrepassé&lt;/strong&gt; — un dépôt déjà comptabilisé a été contrepassé ; l’historique financier d’origine reste disponible.</value>
   </data>
+  <data name="Mfa_Setup_Title" xml:space="preserve">
+    <value>Configurer l?authentification ? deux facteurs</value>
+  </data>
+  <data name="Mfa_Setup_Authenticator_App" xml:space="preserve">
+    <value>Configurer l?application d?authentification</value>
+  </data>
+  <data name="Mfa_Admin_Security_Requirement" xml:space="preserve">
+    <value>Exigence de s?curit? administrateur</value>
+  </data>
+  <data name="Mfa_Mandatory_Enrollment_Notice" xml:space="preserve">
+    <value>L?inscription MFA est obligatoire avant d?accorder l?acc?s administrateur. Vous n??tes pas encore connect?.</value>
+  </data>
+  <data name="Mfa_Open_Authenticator_Instructions" xml:space="preserve">
+    <value>Ouvrez une application d?authentification, par exemple Microsoft Authenticator ou Google Authenticator.</value>
+  </data>
+  <data name="Mfa_Scan_Qr_Instructions" xml:space="preserve">
+    <value>Scannez ce code QR ou saisissez manuellement la cl? de configuration.</value>
+  </data>
+  <data name="Mfa_Confirm_Setup_Instructions" xml:space="preserve">
+    <value>Saisissez le code actuel ? six chiffres pour confirmer la configuration.</value>
+  </data>
+  <data name="Mfa_Manual_Setup_Key" xml:space="preserve">
+    <value>Cl? de configuration manuelle :</value>
+  </data>
+  <data name="Mfa_Six_Digit_Verification_Code" xml:space="preserve">
+    <value>Code de v?rification ? six chiffres</value>
+  </data>
+  <data name="Mfa_Confirm_And_Enable" xml:space="preserve">
+    <value>Confirmer et activer</value>
+  </data>
+  <data name="Mfa_Enrollment_Expiry_Notice" xml:space="preserve">
+    <value>Cette inscription temporaire expire apr?s dix minutes. Vous devez la terminer avant de continuer vers l?application.</value>
+  </data>
+  <data name="Mfa_Cancel_And_Return_To_Sign_In" xml:space="preserve">
+    <value>Annuler et revenir ? la connexion</value>
+  </data>
+  <data name="Mfa_Invalid_Code_Try_Again" xml:space="preserve">
+    <value>Le code n?a pas pu ?tre v?rifi?. V?rifiez votre application d?authentification et r?essayez.</value>
+  </data>
+  <data name="Mfa_Enrollment_Expired_Sign_In_Again" xml:space="preserve">
+    <value>La session d?inscription obligatoire ? l?authentification a expir?. Connectez-vous ? nouveau.</value>
+  </data>
+  <data name="Mfa_Disable_Not_Allowed" xml:space="preserve">
+    <value>La MFA est obligatoire pour les comptes administrateur actifs et ne peut pas ?tre d?sactiv?e tant que le r?le privil?gi? est attribu?.</value>
+  </data>
+  <data name="Mfa_Administrator_Protected_Description" xml:space="preserve">
+    <value>La MFA est obligatoire pour les r?les administrateur actifs et ne peut pas ?tre d?sactiv?e tant que ce r?le est attribu?. Conservez vos codes de r?cup?ration en lieu s?r.</value>
+  </data>
+  <data name="Mfa_Admin_Not_Enrolled_Title" xml:space="preserve">
+    <value>La protection administrateur obligatoire n?est pas configur?e.</value>
+  </data>
+  <data name="Mfa_Admin_Enroll_Before_Access" xml:space="preserve">
+    <value>Terminez la configuration de l?application d?authentification avant de poursuivre l?acc?s administrateur.</value>
+  </data>
+  <data name="Mfa_Authenticator_Setup_Qr_Alt" xml:space="preserve">
+    <value>Code QR de configuration de l?authentificateur</value>
+  </data>
+  <data name="Mfa_Administrator_Protected_Title" xml:space="preserve">
+    <value>Votre compte administrateur est prot?g?.</value>
+  </data>
+  <data name="Mfa_Setup_Authenticator_Button" xml:space="preserve">
+    <value>Configurer l?application d?authentification</value>
+  </data>
+  <data name="Mfa_Status_Label" xml:space="preserve">
+    <value>Authentification ? deux facteurs</value>
+  </data>
+  <data name="Mfa_Status_Enabled" xml:space="preserve">
+    <value>Activ?e</value>
+  </data>
+  <data name="Mfa_Status_Disabled" xml:space="preserve">
+    <value>D?sactiv?e</value>
+  </data>
+  <data name="Mfa_Unused_Recovery_Codes" xml:space="preserve">
+    <value>Codes de r?cup?ration inutilis?s</value>
+  </data>
+  <data name="Mfa_Enrolled_At_Utc" xml:space="preserve">
+    <value>Inscription de l?authentificateur (UTC)</value>
+  </data>
+  <data name="Mfa_Last_Verified_At_Utc" xml:space="preserve">
+    <value>Derni?re v?rification MFA (UTC)</value>
+  </data>
 </root>

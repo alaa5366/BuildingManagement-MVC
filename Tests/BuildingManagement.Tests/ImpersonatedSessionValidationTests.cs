@@ -106,6 +106,17 @@ public sealed class ImpersonatedSessionValidationTests
     }
 
     [Fact]
+    public async Task Target_admin_session_without_enrollment_is_rejected()
+    {
+        var factory = new TestDbContextFactory();
+        await using var db = factory.CreateDbContext();
+        var identity = await AddAdminAsync(db, twoFactorEnabled: false);
+        var validator = CreateValidator(factory);
+
+        Assert.False((await validator.ValidateAsync(AdminPrincipal(identity.AccountId, identity.SecurityStamp))).Valid);
+    }
+
+    [Fact]
     public async Task Super_admin_session_requires_allow_list_target_assignment_and_current_stamp()
     {
         SuperAdminIdentityPolicy.Configure("root@example.test");
@@ -134,6 +145,12 @@ public sealed class ImpersonatedSessionValidationTests
             RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "superadmin",
             ScopeType = 0, ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1)
         });
+        db.UserTwoFactorSettings.Add(new UserTwoFactorSettingEntity
+        {
+            AccountId = accountId, IsEnabled = true,
+            SecretCiphertext = new byte[] { 1, 2, 3 }, KeyVersion = "aes-gcm-v1",
+            EnrolledAtUtc = now.AddDays(-1)
+        });
         await db.SaveChangesAsync();
 
         var principal = Principal(
@@ -141,14 +158,62 @@ public sealed class ImpersonatedSessionValidationTests
             new Claim(ClaimTypes.Role, "superadmin"),
             new Claim(ClaimTypes.Email, "root@example.test"),
             new Claim("targetIdentityAccount", "true"),
-            new Claim("securityStamp", stamp));
+            new Claim("securityStamp", stamp),
+            new Claim("twoFactorVerified", "true"));
         var validator = CreateValidator(factory);
         Assert.True((await validator.ValidateAsync(principal)).Valid);
+
+        var unverifiedPrincipal = new ClaimsPrincipal(new ClaimsIdentity(
+            principal.Claims.Where(claim => claim.Type != "twoFactorVerified")
+                .Append(new Claim("twoFactorVerified", "false")),
+            "Cookies"));
+        Assert.False((await validator.ValidateAsync(unverifiedPrincipal)).Valid);
 
         var account = await db.UserAccounts.SingleAsync(x => x.AccountId == accountId);
         account.SecurityStamp = Guid.NewGuid().ToString("N");
         await db.SaveChangesAsync();
         Assert.False((await validator.ValidateAsync(principal)).Valid);
+    }
+
+    [Fact]
+    public async Task Super_admin_pending_sign_in_rechecks_allow_list_email_and_active_system_assignment()
+    {
+        SuperAdminIdentityPolicy.Configure("root-context@example.test");
+        var factory = new TestDbContextFactory();
+        await using var db = factory.CreateDbContext();
+        var now = DateTime.UtcNow;
+        var personId = Guid.NewGuid();
+        var accountId = Guid.NewGuid();
+        var stamp = Guid.NewGuid().ToString("N");
+        db.Persons.Add(new PersonEntity { PersonId = personId, DisplayName = "Root", CreatedAtUtc = now });
+        db.UserAccounts.Add(new UserAccountEntity
+        {
+            AccountId = accountId, PersonId = personId, AccountStatus = 1,
+            NormalizedEmail = "ROOT-CONTEXT@EXAMPLE.TEST", SecurityStamp = stamp, CreatedAtUtc = now
+        });
+        db.RoleDefinitions.Add(new RoleDefinitionEntity
+        {
+            RoleKey = "superadmin", DisplayName = "Super Administrator", IsSystemRole = true, IsActive = true
+        });
+        var assignment = new UserRoleAssignmentEntity
+        {
+            RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "superadmin",
+            ScopeType = 0, ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1)
+        };
+        db.UserRoleAssignments.Add(assignment);
+        await db.SaveChangesAsync();
+
+        var context = new AuthResult
+        {
+            Success = true, UsesTargetIdentity = true, Role = "superadmin",
+            Uid = accountId.ToString("D"), Email = "root-context@example.test", SecurityStamp = stamp
+        };
+        var service = new IdentityAccountAuthenticationService(factory, new BcryptPasswordHasher());
+
+        Assert.True(await service.IsRoleContextStillAuthorizedAsync(context));
+        assignment.RevokedAtUtc = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        Assert.False(await service.IsRoleContextStillAuthorizedAsync(context));
     }
 
     [Fact]
@@ -159,7 +224,7 @@ public sealed class ImpersonatedSessionValidationTests
         db.Buildings.Add(new BuildingEntity { Id = BuildingId, Name = "Test", BuildingNumber = "T-1" });
         db.Floors.Add(new FloorEntity { BuildingId = BuildingId, Id = "floor-1", Label = "Floor 1" });
         db.Apartments.Add(new ApartmentEntity { BuildingId = BuildingId, Id = ApartmentId, FloorId = "floor-1" });
-        var identity = await AddAdminAsync(db);
+        var identity = await AddAdminAsync(db, twoFactorEnabled: true);
         var validator = CreateValidator(factory);
         var permissions = JsonSerializer.Serialize(new[] { "residents.manage" });
         var principal = Principal(

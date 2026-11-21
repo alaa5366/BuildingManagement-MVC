@@ -782,6 +782,9 @@ By: {userId}
                     else db.ChangeTracker.Clear(); // no SaveChanges occurred for non-relational providers
                     result.Success = false;
                     result.Restored = 0;
+                    result.Skipped = 0;
+                    for (var index = 0; index < result.Details.Count; index++)
+                        result.Details[index] = "Not committed: " + result.Details[index];
                     result.Details.Add("Rolled back: no changes were saved because of the errors above");
                 }
                 else
@@ -806,6 +809,13 @@ By: {userId}
         {
             _log.LogError(ex, "Backup restore failed for user {UserId}", userId);
             result.Success = false;
+            // A failed restore is not committed. Preserve per-collection diagnostics,
+            // but label them clearly so attempted rows are never mistaken for persisted rows.
+            result.Restored = 0;
+            result.Skipped = 0;
+            for (var index = 0; index < result.Details.Count; index++)
+                result.Details[index] = "Not committed: " + result.Details[index];
+            result.Details.Add("Rolled back: no changes were committed because the restore failed.");
             result.Errors.Add("The restore could not be completed. Please contact an administrator.");
         }
         finally

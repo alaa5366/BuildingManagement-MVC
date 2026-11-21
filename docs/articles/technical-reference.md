@@ -155,3 +155,19 @@ Record each validation run with branch, commit/worktree state, exact command, ex
 - Documentation relative-link audit: 0 broken relative links.
 - DocFX 2.81.0 was installed and the documentation site build completed successfully with zero warnings and zero errors; the missing API navigation TOC was added at docs/api/toc.yml.
 - No database connection, migration or data mutation was performed during this documentation/OCR pass.
+
+## Mandatory administrator MFA and SQL Server restore validation
+
+The privileged sign-in policy requires TOTP MFA for active Admin and SuperAdmin role contexts. A privileged sign-in does not receive an authentication cookie until an unenrolled account completes the ten-minute enrollment flow or an enrolled account completes the five-minute verification challenge. The pending sign-in is held in server-side session state. Role assignments are revalidated before enrollment completes, including the SuperAdmin allow-list and active system-scope assignment.
+
+Session revalidation rejects privileged sessions without both an enabled target-schema MFA record and the twoFactorVerified claim. This also applies to the original actor session during impersonation. Self-service MFA disable is blocked in both the controller and service layer while this policy is active. Accounts with resident and administrator roles retain resident-only sign-in behavior; MFA is required when selecting the administrator context.
+
+Real SQL Server backup/restore tests live in Tests/BuildingManagement.SqlServerIntegration, separate from the fast InMemory unit suite. They use the BM_SQLSERVER_TEST_CONNECTION environment variable and must target an isolated, migration-updated TEST database only. The current integration coverage verifies a persisted backup/restore round trip and a later-collection foreign-key failure that rolls back earlier writes and reports zero restored rows.
+
+Validation baseline for this change:
+- Release application, unit-test, and SQL Server integration project builds: zero warnings and zero errors.
+- Unit suite: 728 passed, zero failed, zero skipped, including resident-plus-admin and SuperAdmin MFA enforcement regressions.
+- SQL Server integration suite: 2 passed, zero failed, zero skipped when BM_SQLSERVER_TEST_CONNECTION targets the isolated test database; both tests are automatically skipped when that variable is absent.
+- SQL Server migration chain was applied to the isolated LocalDB instance BM_QA_20261121 and database BM_QA_Restore_20261121; no production database was used.
+- DocFX 2.81.0 documentation build: zero warnings and zero errors.
+- MFA resource audit: 27 MFA keys in each of the five resource files, with no duplicate keys or empty values.

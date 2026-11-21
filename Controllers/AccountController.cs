@@ -250,9 +250,13 @@ public class AccountController : Controller
     [HttpGet]
     public IActionResult UnifiedLogin(string? returnUrl = null)
     {
+        var pending = GetPendingTwoFactorSignIn();
+        if (pending?.RequiresEnrollment == true)
+            return RedirectToAction(nameof(TwoFactorSetup));
+
         ViewBag.ReturnUrl = returnUrl;
         ViewBag.Error = TempData["Error"];
-        ViewBag.TwoFactorStep = GetPendingTwoFactorSignIn() != null;
+        ViewBag.TwoFactorStep = pending != null;
         return View(new UnifiedLoginVm());
     }
 
@@ -269,8 +273,11 @@ public class AccountController : Controller
     {
         // Once primary credentials have been accepted, every POST in this session must
         // complete the pending second factor; it cannot fall back to primary login.
-        if (GetPendingTwoFactorSignIn() != null)
-            return await CompleteTwoFactorVerificationAsync(vm.TwoFactorCode);
+        var pendingSignIn = GetPendingTwoFactorSignIn();
+        if (pendingSignIn != null)
+            return pendingSignIn.RequiresEnrollment
+                ? RedirectToAction(nameof(TwoFactorSetup))
+                : await CompleteTwoFactorVerificationAsync(vm.TwoFactorCode);
 
         if (!ModelState.IsValid) return View(vm);
 
@@ -619,6 +626,7 @@ public class AccountController : Controller
         public AuthResult Result { get; set; } = new();
         public string? ThrottleKey { get; set; }
         public DateTimeOffset ExpiresAt { get; set; }
+        public bool RequiresEnrollment { get; set; }
     }
 
     private PendingTwoFactorSignIn? GetPendingTwoFactorSignIn()
@@ -630,14 +638,14 @@ public class AccountController : Controller
             var pending = System.Text.Json.JsonSerializer.Deserialize<PendingTwoFactorSignIn>(json);
             if (pending == null || pending.ExpiresAt <= DateTimeOffset.UtcNow)
             {
-                HttpContext.Session.Remove("2fa_pending");
+                ClearPendingTwoFactorState();
                 return null;
             }
             return pending;
         }
         catch (System.Text.Json.JsonException)
         {
-            HttpContext.Session.Remove("2fa_pending");
+            ClearPendingTwoFactorState();
             return null;
         }
     }
@@ -746,16 +754,35 @@ public class AccountController : Controller
 
     private async Task<IActionResult> CompleteSignInAsync(AuthResult result, string? throttleKey)
     {
-        if ((result.Role is "admin" or "superadmin")
-            && await _twoFactor.IsEnabledAsync(result.Uid!))
+        if (AdministratorMfaPolicy.RequiresMfa(result.Role))
         {
+            if (!result.UsesTargetIdentity || !Guid.TryParse(result.Uid, out _))
+            {
+                _log.LogError("Refusing privileged sign-in without a canonical target identity for role {Role}", result.Role);
+                TempData["Error"] = Loc.T("Invalid_Login_Details");
+                return RedirectToAction(nameof(UnifiedLogin));
+            }
+
+            var mfaEnabled = await _twoFactor.IsEnabledAsync(result.Uid!);
+            HttpContext.Session.Clear();
             var pending = new PendingTwoFactorSignIn
             {
                 Result = result,
                 ThrottleKey = throttleKey ?? AcctKey(result.Email ?? result.Uid),
-                ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(5)
+                ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(mfaEnabled ? 5 : 10),
+                RequiresEnrollment = !mfaEnabled
             };
             HttpContext.Session.SetString("2fa_pending", System.Text.Json.JsonSerializer.Serialize(pending));
+
+            if (!mfaEnabled)
+            {
+                HttpContext.Session.SetString("2fa_setup_secret", TwoFactorService.CreateSecret());
+                HttpContext.Session.SetString(
+                    "2fa_setup_expires",
+                    pending.ExpiresAt.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture));
+                return RedirectToAction(nameof(TwoFactorSetup));
+            }
+
             return RedirectToAction(nameof(UnifiedLogin));
         }
 
@@ -784,6 +811,8 @@ public class AccountController : Controller
     public IActionResult CancelTwoFactor()
     {
         HttpContext.Session.Remove("2fa_pending");
+        HttpContext.Session.Remove("2fa_setup_secret");
+        HttpContext.Session.Remove("2fa_setup_expires");
         return RedirectToAction(nameof(UnifiedLogin));
     }
 
@@ -791,6 +820,7 @@ public class AccountController : Controller
     {
         var pending = GetPendingTwoFactorSignIn();
         if (pending == null) return RedirectToAction(nameof(UnifiedLogin));
+        if (pending.RequiresEnrollment) return RedirectToAction(nameof(TwoFactorSetup));
 
         var throttleKey = pending.ThrottleKey ?? AcctKey(pending.Result.Email ?? pending.Result.Uid);
         ViewBag.TwoFactorStep = true;
@@ -806,11 +836,12 @@ public class AccountController : Controller
         {
             _log.LogWarning("Two-factor verification failed for account {Uid}", pending.Result.Uid);
             _throttle.RegisterFailure(throttleKey, ClientIp);
-            ViewBag.Error = "The verification code is invalid or has already been used.";
+            ViewBag.Error = Loc.T("Mfa_Invalid_Code_Try_Again");
             return View("UnifiedLogin", new UnifiedLoginVm());
         }
 
-        if (pending.Result.UsesTargetIdentity && (pending.Result.Role is "admin" or "resident") &&
+        if (pending.Result.UsesTargetIdentity &&
+            (pending.Result.Role is "admin" or "resident" or "superadmin") &&
             !await _identityAuth.IsRoleContextStillAuthorizedAsync(pending.Result, HttpContext.RequestAborted))
         {
             HttpContext.Session.Remove("2fa_pending");
@@ -855,15 +886,41 @@ public class AccountController : Controller
 
     /// <summary>Displays the authenticator provisioning details for the current setup session.</summary>
     [HttpGet]
-    public IActionResult TwoFactorSetup()
+    public async Task<IActionResult> TwoFactorSetup()
     {
+        var pending = GetPendingTwoFactorSignIn();
+        if (pending?.RequiresEnrollment == true)
+        {
+            var secret = HttpContext.Session.GetString("2fa_setup_secret");
+            var expiresText = HttpContext.Session.GetString("2fa_setup_expires");
+            if (!AdministratorMfaPolicy.RequiresMfa(pending.Result.Role) ||
+                !pending.Result.UsesTargetIdentity ||
+                string.IsNullOrWhiteSpace(secret) ||
+                !long.TryParse(expiresText, out var expires) ||
+                expires <= DateTimeOffset.UtcNow.ToUnixTimeSeconds())
+            {
+                ClearPendingTwoFactorState();
+                TempData["Error"] = Loc.T("Mfa_Enrollment_Expired_Sign_In_Again");
+                return RedirectToAction(nameof(UnifiedLogin));
+            }
+
+            if (!await _identityAuth.IsRoleContextStillAuthorizedAsync(pending.Result, HttpContext.RequestAborted))
+            {
+                ClearPendingTwoFactorState();
+                TempData["Error"] = Loc.T("Invalid_Login_Details");
+                return RedirectToAction(nameof(UnifiedLogin));
+            }
+
+            return RenderTwoFactorSetup(secret, pending.Result.Email ?? pending.Result.Name ?? "administrator", mandatory: true);
+        }
+
         var access = EnsureAdministratorTwoFactorAccess();
         if (access != null) return access;
-        var secret = HttpContext.Session.GetString("2fa_setup_secret");
-        var expiresText = HttpContext.Session.GetString("2fa_setup_expires");
-        if (string.IsNullOrWhiteSpace(secret)
-            || !long.TryParse(expiresText, out var expires)
-            || expires <= DateTimeOffset.UtcNow.ToUnixTimeSeconds())
+        var setupSecret = HttpContext.Session.GetString("2fa_setup_secret");
+        var setupExpiresText = HttpContext.Session.GetString("2fa_setup_expires");
+        if (string.IsNullOrWhiteSpace(setupSecret)
+            || !long.TryParse(setupExpiresText, out var setupExpires)
+            || setupExpires <= DateTimeOffset.UtcNow.ToUnixTimeSeconds())
         {
             HttpContext.Session.Remove("2fa_setup_secret");
             HttpContext.Session.Remove("2fa_setup_expires");
@@ -872,10 +929,68 @@ public class AccountController : Controller
 
         var account = User.FindFirstValue(ClaimTypes.Email);
         if (string.IsNullOrWhiteSpace(account)) account = User.FindFirstValue(ClaimTypes.Name) ?? "administrator";
+        return RenderTwoFactorSetup(setupSecret, account, mandatory: false);
+    }
+
+    private IActionResult RenderTwoFactorSetup(string secret, string account, bool mandatory, TwoFactorVerifyVm? model = null)
+    {
         var uri = TwoFactorService.CreateProvisioningUri(secret, account);
         ViewBag.Secret = secret;
         ViewBag.QrDataUri = "data:image/png;base64," + Convert.ToBase64String(_qrGenerator.GeneratePng(uri));
-        return View(new TwoFactorVerifyVm());
+        ViewBag.MandatoryEnrollment = mandatory;
+        return View("TwoFactorSetup", model ?? new TwoFactorVerifyVm());
+    }
+
+    private void ClearPendingTwoFactorState()
+    {
+        HttpContext.Session.Remove("2fa_pending");
+        HttpContext.Session.Remove("2fa_setup_secret");
+        HttpContext.Session.Remove("2fa_setup_expires");
+    }
+
+    private async Task<IActionResult> CompleteMandatoryTwoFactorEnrollmentAsync(TwoFactorVerifyVm vm)
+    {
+        var pending = GetPendingTwoFactorSignIn();
+        var secret = HttpContext.Session.GetString("2fa_setup_secret");
+        var expiresText = HttpContext.Session.GetString("2fa_setup_expires");
+        if (pending?.RequiresEnrollment != true ||
+            string.IsNullOrWhiteSpace(secret) ||
+            !long.TryParse(expiresText, out var expires) ||
+            expires <= DateTimeOffset.UtcNow.ToUnixTimeSeconds())
+        {
+            ClearPendingTwoFactorState();
+            TempData["Error"] = Loc.T("Mfa_Enrollment_Expired_Sign_In_Again");
+            return RedirectToAction(nameof(UnifiedLogin));
+        }
+
+        if (!AdministratorMfaPolicy.RequiresMfa(pending.Result.Role) ||
+            !pending.Result.UsesTargetIdentity ||
+            !await _identityAuth.IsRoleContextStillAuthorizedAsync(pending.Result, HttpContext.RequestAborted))
+        {
+            ClearPendingTwoFactorState();
+            TempData["Error"] = Loc.T("Invalid_Login_Details");
+            return RedirectToAction(nameof(UnifiedLogin));
+        }
+
+        var throttleKey = pending.ThrottleKey ?? AcctKey(pending.Result.Email ?? pending.Result.Uid);
+        if (_throttle.IsLocked(throttleKey, ClientIp))
+        {
+            ViewBag.Error = LockedMsg;
+            return RenderTwoFactorSetup(secret, pending.Result.Email ?? pending.Result.Name ?? "administrator", mandatory: true, vm);
+        }
+
+        var codes = await _twoFactor.EnableAsync(pending.Result.Uid!, secret, vm.Code, HttpContext.RequestAborted);
+        if (codes == null)
+        {
+            _throttle.RegisterFailure(throttleKey, ClientIp);
+            ViewBag.Error = Loc.T("Mfa_Invalid_Code_Try_Again");
+            return RenderTwoFactorSetup(secret, pending.Result.Email ?? pending.Result.Name ?? "administrator", mandatory: true, vm);
+        }
+
+        _throttle.Reset(throttleKey);
+        TempData["TwoFactorRecoveryCodes"] = System.Text.Json.JsonSerializer.Serialize(codes);
+        await SignInCookieAsync(pending.Result, twoFactorVerified: true);
+        return RedirectToAction(nameof(TwoFactorRecoveryCodes));
     }
 
     /// <summary>Validates the first authenticator code and enables two-factor authentication.</summary>
@@ -885,6 +1000,9 @@ public class AccountController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EnableTwoFactor(TwoFactorVerifyVm vm)
     {
+        if (GetPendingTwoFactorSignIn()?.RequiresEnrollment == true)
+            return await CompleteMandatoryTwoFactorEnrollmentAsync(vm);
+
         var access = EnsureAdministratorTwoFactorAccess();
         if (access != null) return access;
         var secret = HttpContext.Session.GetString("2fa_setup_secret");
@@ -900,7 +1018,7 @@ public class AccountController : Controller
         var codes = await _twoFactor.EnableAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!, secret, vm.Code);
         if (codes == null)
         {
-            ViewBag.Error = "The code could not be verified. Check your authenticator app and try again.";
+            ViewBag.Error = Loc.T("Mfa_Invalid_Code_Try_Again");
             var uri = TwoFactorService.CreateProvisioningUri(secret, User.FindFirstValue(ClaimTypes.Email) ?? "administrator");
             ViewBag.Secret = secret;
             ViewBag.QrDataUri = "data:image/png;base64," + Convert.ToBase64String(_qrGenerator.GeneratePng(uri));
@@ -942,13 +1060,7 @@ public class AccountController : Controller
     {
         var access = EnsureAdministratorTwoFactorAccess();
         if (access != null) return access;
-        var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        if (!await _twoFactor.DisableAsync(uid, vm.Code))
-        {
-            TempData["Error"] = "The verification code is invalid. Two-factor authentication remains enabled.";
-            return RedirectToAction("Own", "Settings");
-        }
-        TempData["Message"] = "Two-factor authentication has been disabled.";
+        TempData["Error"] = Loc.T("Mfa_Disable_Not_Allowed");
         return RedirectToAction("Own", "Settings");
     }
 
