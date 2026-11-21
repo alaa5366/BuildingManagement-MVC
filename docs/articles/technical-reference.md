@@ -1,4 +1,4 @@
-# Technical Reference
+﻿# Technical Reference
 
 This document is the implementation-oriented reference for the current ASP.NET Core 8 MVC application. It describes the observed source structure and current workflows; it is not a promise that every legacy subsystem has already been retired.
 
@@ -153,5 +153,5 @@ Record each validation run with branch, commit/worktree state, exact command, ex
 - Publish verification: English, Arabic and orientation models were present in the published `App_Data/tessdata` directory, including the fast-model set.
 - Localization audit: 91 Razor views, 1,057 distinct literal `Loc.T`/`Loc.Js` keys; all five resource files have zero missing keys, duplicate keys or replacement characters.
 - Documentation relative-link audit: 0 broken relative links.
-- DocFX site generation was not run because the DocFX tool is not installed on the development machine.
+- DocFX 2.81.0 was installed and the documentation site build completed successfully with zero warnings and zero errors; the missing API navigation TOC was added at docs/api/toc.yml.
 - No database connection, migration or data mutation was performed during this documentation/OCR pass.

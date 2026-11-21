@@ -1,4 +1,4 @@
-# ============ .NET ============
+﻿# ============ .NET ============
 bin/
 obj/
 .vs/
@@ -17,16 +17,16 @@ Properties/PublishProfiles/*.pubxml
 # Tesseract language models under App_Data/tessdata are licensed application assets and are versioned.
 
 # ============ Serilog ============
-# ✅ logs/serilog/ داخل المشروع (من التطوير المحلي)
+# âœ… logs/serilog/ ط¯ط§ط®ظ„ ط§ظ„ظ…ط´ط±ظˆط¹ (ظ…ظ† ط§ظ„طھط·ظˆظٹط± ط§ظ„ظ…ط­ظ„ظٹ)
 logs/serilog/*
 !logs/serilog/.gitkeep
 
 # Local QA traces may contain environment/session data; preserve them locally, not in Git.
- /logs/*
+/logs/*
 !/logs/serilog/
 !/logs/serilog/.gitkeep
 
-# ============ App_Data (لو استخدمناه لاحقاً) ============
+# ============ App_Data (ظ„ظˆ ط§ط³طھط®ط¯ظ…ظ†ط§ظ‡ ظ„ط§ط­ظ‚ط§ظ‹) ============
 App_Data/logs/*
 !App_Data/logs/.gitkeep
 
