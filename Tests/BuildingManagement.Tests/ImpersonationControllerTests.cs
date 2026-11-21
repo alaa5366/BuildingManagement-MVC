@@ -50,6 +50,8 @@ public sealed class ImpersonationControllerTests
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "test"));
 
         Assert.Equal("admin", principal.FindFirst(ClaimTypes.Role)?.Value);
+        Assert.Equal("true", principal.FindFirst("targetIdentityAccount")?.Value);
+        Assert.Equal("root-stamp", principal.FindFirst("securityStamp")?.Value);
         Assert.Contains(principal.FindAll("buildingId"), claim => claim.Value == buildingId);
         Assert.Equal(adminPermission, principal.FindFirst("perm")?.Value);
         Assert.Equal("true", principal.FindFirst("impersonated")?.Value);
@@ -71,15 +73,44 @@ public sealed class ImpersonationControllerTests
             Email = "root@example.test",
             Role = "superadmin",
             BuildingId = "building-a",
+            ImpersonationActorSecurityStamp = "original-superadmin-stamp",
             TwoFactorVerified = true
         }, stillImpersonating: false);
 
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "test"));
 
         Assert.Equal("superadmin", principal.FindFirst(ClaimTypes.Role)?.Value);
+        Assert.Equal("true", principal.FindFirst("targetIdentityAccount")?.Value);
+        Assert.Equal("original-superadmin-stamp", principal.FindFirst("securityStamp")?.Value);
         Assert.Null(principal.FindFirst("impersonated"));
         Assert.Null(principal.FindFirst("impersonationActorUid"));
         Assert.Null(principal.FindFirst("impersonationTargetBuildingId"));
+    }
+
+    [Fact]
+    public void Returning_to_original_admin_restores_canonical_identity_and_security_stamp()
+    {
+        var claims = Restore(new AdminBackupData
+        {
+            Uid = "44444444-4444-4444-4444-444444444444",
+            Name = "Building Admin",
+            Email = "admin@example.test",
+            Role = "admin",
+            BuildingId = "building-a",
+            BuildingIds = new List<string> { "building-a" },
+            Permissions = new List<string> { "residents.manage" },
+            ImpersonationActorSecurityStamp = "admin-security-stamp",
+            TwoFactorVerified = true
+        }, stillImpersonating: false);
+
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "test"));
+
+        Assert.Equal("admin", principal.FindFirst(ClaimTypes.Role)?.Value);
+        Assert.Equal("true", principal.FindFirst("targetIdentityAccount")?.Value);
+        Assert.Equal("admin-security-stamp", principal.FindFirst("securityStamp")?.Value);
+        Assert.Null(principal.FindFirst("impersonated"));
+        Assert.Contains(principal.FindAll("buildingId"), claim => claim.Value == "building-a");
+        Assert.Contains(principal.FindAll("perm"), claim => claim.Value == "residents.manage");
     }
 
     [Theory]

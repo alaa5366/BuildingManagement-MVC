@@ -10,6 +10,7 @@
     string month = ViewBag.Month;
     var balances = (BuildingManagementMvc.Models.PagedResult<(BuildingManagementMvc.Models.Apartment Apt, decimal Balance)>)ViewBag.Balances;
     var pending = (BuildingManagementMvc.Models.PagedResult<(BuildingManagementMvc.Models.Apartment Apt, BuildingManagementMvc.Models.Deposit Deposit, string MonthKey)>)ViewBag.Pending;
+    var depositHistory = (List<(BuildingManagementMvc.Models.Apartment, BuildingManagementMvc.Models.Deposit, string)>)ViewBag.DepositHistory;
     var totals = ((decimal Collected, decimal Expenses, decimal Revenues, int OpenCount, int ClosedCount, decimal Balance, decimal TotalWallet))ViewBag.Totals;
     var routeValues = ViewBag.RouteValues as Dictionary<string, string?> ?? new();
     var routeValuesStr = new Dictionary<string, string>();
@@ -71,7 +72,7 @@
                             }
                         </td>
                         <td>
-                            @if (dep.Receipt?.Success == true)
+                            @if (!string.IsNullOrWhiteSpace(dep.Receipt?.Url))
                             {
                                 <button type="button" class="btn btn-sm btn-outline-primary"
                                         data-bs-toggle="modal" data-bs-target="#receiptModal"
@@ -115,6 +116,71 @@
                 }
             </tbody>
         </table>
+    </div>
+}
+
+@* ============================================================ *@
+@* إيصالات الدفعات التي خرجت من قائمة الانتظار                  *@
+@* ============================================================ *@
+@if (depositHistory.Count > 0)
+{
+    <div class="ui-panel p-3 mb-3">
+        <h5>@Loc.T("Payment_Receipt") — @Loc.T("History")</h5>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>@Loc.T("Apartment")</th>
+                        <th>@Loc.T("Month")</th>
+                        <th>@Loc.T("Payment_Number")</th>
+                        <th>@Loc.T("Amount")</th>
+                        <th>@Loc.T("Status")</th>
+                        <th>@Loc.T("Receipt")</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var (apt, dep, depMonth) in depositHistory)
+                    {
+                        <tr>
+                            <td>@Loc.T("Apartment_N", apt.Number)</td>
+                            <td><span class="badge bg-secondary">@depMonth</span></td>
+                            <td>@dep.Number</td>
+                            <td>@dep.Amount.ToString("0.##")</td>
+                            <td>
+                                @if (dep.Status == "confirmed")
+                                {
+                                    <span class="text-success">✅ @Loc.T("Confirmed")</span>
+                                }
+                                else if (dep.Status == "reversed")
+                                {
+                                    <span class="text-warning">↩ @Loc.T("Reversed")</span>
+                                }
+                                else
+                                {
+                                    <span class="text-danger">❌ @Loc.T("Cancelled")</span>
+                                }
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(dep.Receipt?.Url))
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-primary"
+                                            data-bs-toggle="modal" data-bs-target="#receiptModal"
+                                            data-receipt-url="@dep.Receipt.Url"
+                                            data-receipt-name="@Loc.T("N_Apartment_N", apt.Number, dep.Number)"
+                                            title="@Loc.T("View_Receipt")">
+                                        📎 @Loc.T("View_3")
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">—</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
 }
 

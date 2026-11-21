@@ -1,0 +1,45 @@
+@model BuildingManagementMvc.Models.InvoiceVerificationViewModel
+@{
+    ViewData["Title"] = "التحقق من الفاتورة";
+}
+
+<div class="container py-4" dir="rtl">
+    <div class="card border-0 shadow-sm mx-auto" style="max-width: 720px;">
+        <div class="card-body p-4 p-md-5">
+            <div class="d-flex align-items-center gap-3 mb-4">
+                <span class="rounded-circle bg-success-subtle text-success d-inline-flex align-items-center justify-content-center" style="width:52px;height:52px;">
+                    <i class="bi bi-shield-check fs-3" aria-hidden="true"></i>
+                </span>
+                <div>
+                    <h1 class="h4 mb-1">فاتورة إلكترونية موثّقة</h1>
+                    <p class="text-success mb-0">تم التحقق من التوقيع ومطابقة سجل الفاتورة المحفوظ</p>
+                </div>
+            </div>
+
+            <div class="alert alert-info" role="status">
+                هذه الصفحة تؤكد أصالة رقم الفاتورة والبيانات الأساسية المحفوظة وقت الإصدار، ولا تُعد إثباتًا لسداد أي مبلغ.
+            </div>
+
+            <dl class="row mb-0">
+                <dt class="col-sm-4 text-muted">رقم الفاتورة</dt>
+                <dd class="col-sm-8 fw-semibold text-break">@Model.InvoiceNo</dd>
+
+                <dt class="col-sm-4 text-muted">العمارة</dt>
+                <dd class="col-sm-8">@Model.BuildingName <span class="text-muted">(@Model.BuildingNumber)</span></dd>
+
+                <dt class="col-sm-4 text-muted">الشقة</dt>
+                <dd class="col-sm-8">@Model.ApartmentNumber</dd>
+
+                <dt class="col-sm-4 text-muted">الفترة</dt>
+                <dd class="col-sm-8">@Model.MonthLabel</dd>
+
+                <dt class="col-sm-4 text-muted">تاريخ الإصدار</dt>
+                <dd class="col-sm-8">@Model.IssueDate</dd>
+
+            </dl>
+
+            <hr class="my-4" />
+            <p class="small text-muted mb-0">لا تعرض صفحة التحقق اسم الساكن أو رقم هاتفه أو تفاصيل حسابه حفاظًا على الخصوصية.</p>
+        </div>
+    </div>
+</div>

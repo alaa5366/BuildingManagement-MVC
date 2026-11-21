@@ -138,4 +138,18 @@ public class QrSecurityServiceTests
         Assert.False(qr.VerifyStableQr("/Account/Qr", "b=1&a=3", sig));
         Assert.False(qr.VerifyStableQr("/Account/Qr", "b=1&a=2", ""));
     }
+
+    [Fact]
+    public void Invoice_verification_signature_is_full_length_and_rejects_tampering()
+    {
+        var qr = Create();
+        var invoiceNo = "INV-BLD-001-12-20261121-000001";
+        var signature = qr.SignInvoiceVerification(invoiceNo);
+
+        Assert.Equal(64, signature.Length);
+        Assert.True(qr.VerifyInvoiceVerification(invoiceNo, signature));
+        Assert.False(qr.VerifyInvoiceVerification(invoiceNo + "-tampered", signature));
+        Assert.False(qr.VerifyInvoiceVerification(invoiceNo, "not-a-signature"));
+        Assert.False(qr.VerifyInvoiceVerification(invoiceNo, null));
+    }
 }

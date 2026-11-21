@@ -350,8 +350,15 @@ public class ImpersonationController : Controller
             new(ClaimTypes.NameIdentifier, backup.Uid),
             new(ClaimTypes.Name, backup.Name),
             new(ClaimTypes.Email, backup.Email),
-            new(ClaimTypes.Role, isSuperAdmin ? "superadmin" : backup.Role)
+            new(ClaimTypes.Role, isSuperAdmin ? "superadmin" : backup.Role),
+            // Restored first-party sessions must satisfy the same canonical identity
+            // contract as a normal login; otherwise SessionRevalidator rejects the
+            // newly issued cookie on the very next request and redirects to login.
+            new("targetIdentityAccount", "true")
         };
+
+        if (!string.IsNullOrWhiteSpace(backup.ImpersonationActorSecurityStamp))
+            claims.Add(new Claim("securityStamp", backup.ImpersonationActorSecurityStamp));
 
         if (backup.Role is "admin" or "superadmin")
             claims.Add(new Claim("twoFactorVerified", backup.TwoFactorVerified ? "true" : "false"));

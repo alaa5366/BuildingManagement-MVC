@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Data;
+﻿using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Services;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +25,7 @@ public sealed class IdentityAccountAuthenticationServiceTests
                 PersonId = personId,
                 DisplayName = "Synthetic Identity Resident",
                 PrimaryEmail = "identity-smoke@example.invalid",
+                PrimaryPhone = "+201000000041",
                 IsArchived = false,
                 CreatedAtUtc = now
             });
@@ -60,7 +61,7 @@ public sealed class IdentityAccountAuthenticationServiceTests
         }
 
         var service = new IdentityAccountAuthenticationService(factory, hasher);
-        var result = await service.AuthenticateResidentAsync("identity-smoke@example.invalid", "Synthetic-Test-Password-42!");
+        var result = await service.AuthenticateResidentAsync("+201000000041", "Synthetic-Test-Password-42!");
 
         Assert.NotNull(result);
         Assert.True(result.Success);
@@ -80,7 +81,7 @@ public sealed class IdentityAccountAuthenticationServiceTests
         var accountId = Guid.NewGuid();
         await using (var db = await factory.CreateDbContextAsync())
         {
-            db.Persons.Add(new PersonEntity { PersonId = personId, DisplayName = "Synthetic", CreatedAtUtc = now });
+            db.Persons.Add(new PersonEntity { PersonId = personId, DisplayName = "Synthetic", PrimaryPhone = "+201000000042", CreatedAtUtc = now });
             db.UserAccounts.Add(new UserAccountEntity
             {
                 AccountId = accountId, PersonId = personId, AccountStatus = 1,
@@ -100,7 +101,7 @@ public sealed class IdentityAccountAuthenticationServiceTests
         }
 
         var result = await new IdentityAccountAuthenticationService(factory, hasher)
-            .AuthenticateResidentAsync("locked-test@example.invalid", "wrong");
+            .AuthenticateResidentAsync("+201000000042", "wrong");
 
         Assert.NotNull(result);
         Assert.False(result.Success);
@@ -361,7 +362,7 @@ public sealed class IdentityAccountAuthenticationServiceTests
                 new PersonEntity
                 {
                     PersonId = Guid.NewGuid(), DisplayName = "Duplicate Phone B",
-                    PrimaryPhone = "01000000088", IsArchived = true, ArchivedAtUtc = now, CreatedAtUtc = now
+                    PrimaryPhone = "01000000088", IsArchived = false, CreatedAtUtc = now
                 });
             await db.SaveChangesAsync();
         }
@@ -377,6 +378,14 @@ public sealed class IdentityAccountAuthenticationServiceTests
         Assert.Empty(await verify.UserCredentials.ToListAsync());
     }
 
+    [Fact]
+    public async Task AuthenticateResidentAsync_DoesNotAcceptEmailAsLoginIdentifier()
+    {
+        var factory = new TestContextFactory();
+        var result = await new IdentityAccountAuthenticationService(factory, new BcryptPasswordHasher())
+            .AuthenticateResidentAsync("resident@example.invalid", "123456");
+        Assert.Null(result);
+    }
     [Theory]
     [InlineData("01000000077", "+201000000077")]
     [InlineData("٠١٠٠٠٠٠٠٠٧٧", "+201000000077")]
@@ -565,6 +574,127 @@ public sealed class IdentityAccountAuthenticationServiceTests
         Assert.Null(credential.RevokedAtUtc);
         Assert.Equal(oldHash, credential.CredentialHash);
         Assert.Equal("before", (await verify.UserAccounts.SingleAsync(x => x.AccountId == accountId)).SecurityStamp);
+    }
+
+    [Fact]
+    public async Task AuthenticateResidentAsync_ReturnsEveryActiveApartmentScopeAuthorizedForTheAccount()
+    {
+        var factory = new TestContextFactory();
+        var hasher = new BcryptPasswordHasher();
+        var accountId = Guid.NewGuid();
+        var personId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        var scopes = new[]
+        {
+            (Building: "building-one", Apartment: "apartment-one"),
+            (Building: "building-two", Apartment: "apartment-two")
+        };
+
+        await using (var db = await factory.CreateDbContextAsync())
+        {
+            db.Persons.Add(new PersonEntity
+            {
+                PersonId = personId, DisplayName = "Multi Scope Resident",
+                PrimaryPhone = "+201000000733", CreatedAtUtc = now
+            });
+            db.UserAccounts.Add(new UserAccountEntity
+            {
+                AccountId = accountId, PersonId = personId, AccountStatus = 1,
+                SecurityStamp = "multi-scope-stamp", CreatedAtUtc = now
+            });
+            db.RoleDefinitions.Add(new RoleDefinitionEntity
+            {
+                RoleKey = "resident", DisplayName = "Resident", IsActive = true
+            });
+            foreach (var scope in scopes)
+            {
+                db.ApartmentOccupancies.Add(new ApartmentOccupancyEntity
+                {
+                    OccupancyId = Guid.NewGuid(), BuildingId = scope.Building,
+                    ApartmentId = scope.Apartment, PersonId = personId, OccupancyType = 1,
+                    IsPrimary = scope.Building == "building-one",
+                    ValidFromUtc = now.AddDays(-1), RecordedAtUtc = now.AddDays(-1)
+                });
+                db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+                {
+                    RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "resident",
+                    ScopeType = 2, ScopeBuildingId = scope.Building, ScopeApartmentId = scope.Apartment,
+                    ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1)
+                });
+            }
+            db.UserCredentials.Add(new UserCredentialEntity
+            {
+                CredentialId = Guid.NewGuid(), AccountId = accountId, CredentialType = 0,
+                CredentialHash = hasher.Hash("Multi-Scope-Resident-42!"),
+                HashAlgorithm = "BCrypt.Net-Next", CreatedAtUtc = now
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var result = await new IdentityAccountAuthenticationService(factory, hasher)
+            .AuthenticateResidentAsync("+201000000733", "Multi-Scope-Resident-42!");
+
+        Assert.NotNull(result);
+        Assert.True(result.Success);
+        Assert.Equal(2, result.ResidentScopes.Count);
+        Assert.Contains(result.ResidentScopes, scope =>
+            scope.BuildingId == "building-one" && scope.ApartmentId == "apartment-one");
+        Assert.Contains(result.ResidentScopes, scope =>
+            scope.BuildingId == "building-two" && scope.ApartmentId == "apartment-two");
+    }
+
+    [Fact]
+    public async Task IsRoleContextStillAuthorizedAsync_RejectsRevokedOrExpiredBuildingAdminScope()
+    {
+        var factory = new TestContextFactory();
+        var accountId = Guid.NewGuid();
+        var personId = Guid.NewGuid();
+        var assignmentId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        await using (var db = await factory.CreateDbContextAsync())
+        {
+            db.Persons.Add(new PersonEntity
+            {
+                PersonId = personId, DisplayName = "Scoped Building Admin",
+                PrimaryPhone = "+201000000744", CreatedAtUtc = now
+            });
+            db.UserAccounts.Add(new UserAccountEntity
+            {
+                AccountId = accountId, PersonId = personId, AccountStatus = 1,
+                SecurityStamp = "scope-validation-stamp", CreatedAtUtc = now
+            });
+            db.RoleDefinitions.Add(new RoleDefinitionEntity
+            {
+                RoleKey = "building-admin", DisplayName = "Building Administrator", IsActive = true
+            });
+            db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            {
+                RoleAssignmentId = assignmentId, AccountId = accountId, RoleKey = "building-admin",
+                ScopeType = 1, ScopeBuildingId = "authorized-building",
+                ValidFromUtc = now.AddMinutes(-1), GrantedAtUtc = now.AddMinutes(-1)
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var service = new IdentityAccountAuthenticationService(factory, new BcryptPasswordHasher());
+        var context = new AuthResult
+        {
+            Success = true, UsesTargetIdentity = true, Uid = accountId.ToString("D"),
+            Role = "admin", SecurityStamp = "scope-validation-stamp",
+            BuildingIds = new List<string> { "authorized-building" }
+        };
+
+        Assert.True(await service.IsRoleContextStillAuthorizedAsync(context));
+
+        await using (var db = await factory.CreateDbContextAsync())
+        {
+            var assignment = await db.UserRoleAssignments.SingleAsync(item =>
+                item.RoleAssignmentId == assignmentId);
+            assignment.ValidToUtc = DateTime.UtcNow.AddMinutes(-1);
+            await db.SaveChangesAsync();
+        }
+
+        Assert.False(await service.IsRoleContextStillAuthorizedAsync(context));
     }
 
     private sealed class TestContextFactory : IDbContextFactory<AppDbContext>

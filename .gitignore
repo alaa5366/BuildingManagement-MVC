@@ -14,12 +14,17 @@ appsettings.Production.json
 Properties/PublishProfiles/*.pubxml
 
 # ============ OCR ============
-tessdata/*.traineddata
+# Tesseract language models under App_Data/tessdata are licensed application assets and are versioned.
 
 # ============ Serilog ============
 # ✅ logs/serilog/ داخل المشروع (من التطوير المحلي)
 logs/serilog/*
 !logs/serilog/.gitkeep
+
+# Local QA traces may contain environment/session data; preserve them locally, not in Git.
+ /logs/*
+!/logs/serilog/
+!/logs/serilog/.gitkeep
 
 # ============ App_Data (لو استخدمناه لاحقاً) ============
 App_Data/logs/*

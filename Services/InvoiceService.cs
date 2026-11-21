@@ -79,18 +79,35 @@ public sealed class InvoiceService
         if (building is null || apartment is null) return null;
         var floor = building.Floors.FirstOrDefault(item => item.Id == apartment.FloorId);
 
+        var period = await db.FinancialPeriods.AsNoTracking()
+            .Where(item => item.BuildingId == buildingId && item.PeriodKey == monthKey)
+            .Select(item => new { item.PeriodId, item.TimeZoneId })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        // The current month is provisioned on demand so an invoice link that
+        // explicitly supplies yyyy-MM behaves the same as one with no month.
+        if (period is null)
+        {
+            var currentPeriodKey = await _wallet.GetCurrentPeriodKeyAsync(
+                buildingId, cancellationToken: cancellationToken);
+            if (string.Equals(currentPeriodKey, monthKey, StringComparison.Ordinal))
+            {
+                period = await db.FinancialPeriods.AsNoTracking()
+                    .Where(item => item.BuildingId == buildingId && item.PeriodKey == monthKey)
+                    .Select(item => new { item.PeriodId, item.TimeZoneId })
+                    .SingleOrDefaultAsync(cancellationToken);
+            }
+        }
+
+        if (period is null)
+            throw new InvoiceFinancialPeriodMissingException(monthKey);
+
+        var periodIds = new[] { period.PeriodId };
         var previousMonth = ReportsService.ShiftMonth(monthKey, -1);
         var currentSnapshot = await _wallet.GetApartmentAsync(buildingId, apartmentId, monthKey, monthKey,
             cancellationToken: cancellationToken);
         var previousSnapshot = await _wallet.GetApartmentAsync(buildingId, apartmentId, null, previousMonth,
             cancellationToken: cancellationToken);
-
-        var period = await db.FinancialPeriods.AsNoTracking()
-            .Where(item => item.BuildingId == buildingId && item.PeriodKey == monthKey)
-            .Select(item => new { item.PeriodId, item.TimeZoneId })
-            .SingleOrDefaultAsync(cancellationToken)
-            ?? throw new InvalidOperationException("The invoice financial period does not exist.");
-        var periodIds = new[] { period.PeriodId };
 
         var currencyCode = await db.BuildingSettings.AsNoTracking()
             .Where(settings => settings.BuildingId == buildingId)
@@ -361,6 +378,41 @@ public sealed class InvoiceService
         return data;
     }
 
+    /// <summary>Reads the immutable snapshot of an issued invoice for public authenticity verification.</summary>
+    public async Task<InvoiceData?> GetIssuedInvoiceSnapshotAsync(
+        string invoiceNo, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(invoiceNo) || invoiceNo.Length > 128)
+            return null;
+
+        await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        var snapshotJson = await db.InvoiceIssues.AsNoTracking()
+            .Where(item => item.InvoiceNo == invoiceNo)
+            .Select(item => item.SnapshotJson)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(snapshotJson))
+            return null;
+
+        try
+        {
+            var snapshot = JsonSerializer.Deserialize<InvoiceData>(snapshotJson);
+            return snapshot is not null && string.Equals(snapshot.InvoiceNo, invoiceNo, StringComparison.Ordinal)
+                ? snapshot
+                : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     private static string NormalizeSourceKey(string? key) =>
         Guid.TryParse(key, out var id) ? id.ToString("N") : key ?? "";
+}
+
+/// <summary>Indicates that an invoice was requested for a month without a configured financial period.</summary>
+public sealed class InvoiceFinancialPeriodMissingException(string periodKey)
+    : InvalidOperationException($"No financial period is configured for {periodKey}.")
+{
+    public string PeriodKey { get; } = periodKey;
 }

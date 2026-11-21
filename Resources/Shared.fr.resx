@@ -1560,7 +1560,7 @@
     <value>Bienvenue dans le système de gestion d'immeuble ! Ce guide vous explique étape par étape tout ce que vous devez savoir sur le système — de la connexion à l'émission de factures et à la gestion des portefeuilles.</value>
   </data>
   <data name="When_You_Open_The_System_You" xml:space="preserve">
-    <value>Lorsque vous ouvrez le système, vous trouverez un écran de connexion unifié. Suivez ces étapes :</value>
+    <value>Le système utilise une méthode de connexion selon le rôle. Les résidents et administrateurs d’immeuble utilisent le numéro de téléphone enregistré et leur code PIN personnel ; SuperAdmin utilise une adresse e-mail autorisée et un mot de passe.</value>
   </data>
   <data name="1_Enter_The_Mobile_Number_You" xml:space="preserve">
     <value>&lt;span class="badge-step"&gt;1&lt;/span&gt; Entrez le &lt;strong&gt;numéro de mobile&lt;/strong&gt; avec lequel vous êtes enregistré (par ex. &lt;code&gt;+201119221000&lt;/code&gt;)</value>
@@ -1575,7 +1575,7 @@
     <value>&lt;span class="badge-step"&gt;4&lt;/span&gt; Si vous avez plus d'un rôle (administrateur + résident), la &lt;strong&gt;sélection du contexte&lt;/strong&gt; apparaîtra — choisissez celui avec lequel vous voulez entrer</value>
   </data>
   <data name="Tip_If_You_Forgot_Your_PIN" xml:space="preserve">
-    <value>💡 &lt;strong&gt;Astuce&lt;/strong&gt; : Si vous avez oublié votre code PIN, demandez à l'administrateur d'en définir un nouveau pour vous.</value>
+    <value>💡 &lt;strong&gt;Conseil&lt;/strong&gt; : code PIN oublié ? Contactez un responsable autorisé de la gestion des comptes. Après vérification de votre identité, un nouveau code peut être émis via le processus autorisé ; le code existant ne peut pas être affiché.</value>
   </data>
   <data name="Login_With_QR" xml:space="preserve">
     <value>Connexion avec QR</value>
@@ -1776,7 +1776,7 @@
     <value>👥 Gestion des administrateurs et des autorisations</value>
   </data>
   <data name="You_Have_22_Permissions_Grouped_Into" xml:space="preserve">
-    <value>Vous avez &lt;strong&gt;22 autorisations&lt;/strong&gt; regroupées en 4 catégories :</value>
+    <value>Le catalogue des autorisations regroupe les accès par domaine opérationnel. N’accordez que les capacités minimales nécessaires ; le périmètre de l’immeuble et le contexte de rôle sélectionné restent applicables.</value>
   </data>
   <data name="Management_Buildings_Admins_Residents" xml:space="preserve">
     <value>🏢 &lt;strong&gt;Gestion&lt;/strong&gt; — immeubles, administrateurs, résidents</value>
@@ -1791,7 +1791,7 @@
     <value>🛠️ &lt;strong&gt;Système&lt;/strong&gt; — journal, paramètres, outils, sauvegarde</value>
   </data>
   <data name="There_Are_4_Ready_Made_Templates" xml:space="preserve">
-    <value>Il existe &lt;strong&gt;4 modèles prêts à l'emploi&lt;/strong&gt; :</value>
+    <value>Les modèles de rôle disponibles servent de point de départ et n’accordent pas automatiquement des droits. Vérifiez chaque autorisation et chaque périmètre avant d’attribuer un modèle.</value>
   </data>
   <data name="Full_12_Permissions_The_Basics" xml:space="preserve">
     <value>&lt;strong&gt;Complet&lt;/strong&gt; — 12 autorisations (les bases)</value>
@@ -1809,7 +1809,7 @@
     <value>💾 Sauvegarde</value>
   </data>
   <data name="The_Backup_Page_Gives_You_4" xml:space="preserve">
-    <value>La page &lt;code&gt;/Backup&lt;/code&gt; vous donne 4 onglets :</value>
+    <value>La page &lt;code&gt;/Backup&lt;/code&gt; permet aux opérateurs autorisés de créer des sauvegardes, valider les archives, prévisualiser une restauration et consulter l’historique. Vérifiez toujours l’environnement cible avant toute restauration.</value>
   </data>
   <data name="Overview_Document_Statistics_For_Each_Collection" xml:space="preserve">
     <value>&lt;strong&gt;Aperçu&lt;/strong&gt; — statistiques des documents pour chaque collection</value>
@@ -1827,7 +1827,7 @@
     <value>J'ai oublié mon code PIN, que faire ?</value>
   </data>
   <data name="Contact_The_Admin_They_Can_Set" xml:space="preserve">
-    <value>Contactez l'administrateur. Il peut définir un nouveau code PIN pour vous depuis la page des appartements ou depuis ses paramètres.</value>
+    <value>Contactez votre administrateur d’immeuble ou un opérateur autorisé de gestion des comptes. Votre identité doit être vérifiée avant l’émission d’un nouveau code PIN via le processus autorisé ; personne ne peut consulter votre code existant.</value>
   </data>
   <data name="My_Pending_Payment_Doesn_T_Show" xml:space="preserve">
     <value>Mon paiement en attente n'apparaît pas en tant que résident, pourquoi ?</value>
@@ -1908,13 +1908,13 @@
     <value>Statuts de paiement</value>
   </data>
   <data name="Pending_Awaiting_Confirmation" xml:space="preserve">
-    <value>⏳ &lt;strong&gt;en attente&lt;/strong&gt; — en attente de confirmation</value>
+    <value>&lt;strong&gt;En attente&lt;/strong&gt; — en attente d’une vérification autorisée ; l’opération n’est pas encore comptabilisée.</value>
   </data>
   <data name="Confirmed_Confirmed" xml:space="preserve">
-    <value>✅ &lt;strong&gt;confirmé&lt;/strong&gt; — confirmé</value>
+    <value>&lt;strong&gt;Confirmé&lt;/strong&gt; — approuvé et comptabilisé dans le grand livre financier.</value>
   </data>
   <data name="Cancelled_Cancelled" xml:space="preserve">
-    <value>❌ &lt;strong&gt;annulé&lt;/strong&gt; — annulé</value>
+    <value>&lt;strong&gt;Annulé&lt;/strong&gt; — un dépôt en attente a été annulé avant sa comptabilisation.</value>
   </data>
   <data name="Support" xml:space="preserve">
     <value>Support</value>
@@ -5187,4 +5187,271 @@ Cette opération peut prendre quelques secondes.</value>
   <data name="Backup_Collection_pollEligibility" xml:space="preserve"><value>Éligibilité au vote</value></data>
   <data name="Backup_Collection_pollBallots" xml:space="preserve"><value>Bulletins anonymes</value></data>
   <data name="Backup_Collection_pollLifecycleEvents" xml:space="preserve"><value>Événements du cycle de vie du sondage</value></data>
+  <data name="Resident_Change_PIN" xml:space="preserve">
+    <value>Modification du code PIN du résident</value>
+  </data>
+  <data name="Temporary_PIN_Replace_Notice" xml:space="preserve">
+    <value>Remplacez le PIN temporaire par un code personnel et confidentiel.</value>
+  </data>
+  <data name="PIN_4_12_Digits" xml:space="preserve">
+    <value>Le code PIN doit contenir de 4 à 12 chiffres.</value>
+  </data>
+  <data name="Temporary_PIN_1234_Not_Allowed" xml:space="preserve">
+    <value>Le PIN temporaire 1234 n’est pas autorisé.</value>
+  </data>
+  <data name="Save_New_PIN" xml:space="preserve">
+    <value>Enregistrer le nouveau PIN</value>
+  </data>
+  <data name="Phone_Number" xml:space="preserve">
+    <value>Numéro de téléphone</value>
+  </data>
+  <data name="Select_Apartment" xml:space="preserve">
+    <value>Sélectionner un appartement</value>
+  </data>
+  <data name="Application_Logs" xml:space="preserve">
+    <value>Journaux de l’application</value>
+  </data>
+  <data name="Log_Center_Eyebrow" xml:space="preserve">
+    <value>OBSERVABILITÉ DE L’APPLICATION</value>
+  </data>
+  <data name="Log_Center_Subtitle" xml:space="preserve">
+    <value>Surveillez l’activité, examinez les erreurs et suivez les événements de l’application.</value>
+  </data>
+  <data name="Log_Dates_Are_UTC_And_Redacted" xml:space="preserve">
+    <value>Les dates sont en UTC. Les données sensibles sont masquées avant affichage.</value>
+  </data>
+  <data name="Log_Total_Matching" xml:space="preserve">
+    <value>Total des événements correspondants</value>
+  </data>
+  <data name="Events" xml:space="preserve">
+    <value>Événements</value>
+  </data>
+  <data name="Invalid_Date_Range" xml:space="preserve">
+    <value>La date de début doit être antérieure ou égale à la date de fin.</value>
+  </data>
+  <data name="Log_Overview" xml:space="preserve">
+    <value>Vue d’ensemble des journaux</value>
+  </data>
+  <data name="Log_Visible_On_Page" xml:space="preserve">
+    <value>Événements visibles</value>
+  </data>
+  <data name="Log_Current_Page" xml:space="preserve">
+    <value>Sur cette page</value>
+  </data>
+  <data name="Log_Errors_On_Page" xml:space="preserve">
+    <value>Erreurs sur la page</value>
+  </data>
+  <data name="Log_Error_Fatal" xml:space="preserve">
+    <value>Erreur / Critique</value>
+  </data>
+  <data name="Log_Exceptions_On_Page" xml:space="preserve">
+    <value>Exceptions sur la page</value>
+  </data>
+  <data name="Log_With_Exception" xml:space="preserve">
+    <value>Événements avec exception</value>
+  </data>
+  <data name="Log_Sources_On_Page" xml:space="preserve">
+    <value>Sources sur la page</value>
+  </data>
+  <data name="Log_Distinct_Sources" xml:space="preserve">
+    <value>Contextes sources distincts</value>
+  </data>
+  <data name="Log_Explore" xml:space="preserve">
+    <value>EXPLORER</value>
+  </data>
+  <data name="Log_Search_Anything" xml:space="preserve">
+    <value>Rechercher dans les journaux</value>
+  </data>
+  <data name="Log_Search_Placeholder" xml:space="preserve">
+    <value>Rechercher des messages, exceptions ou détails…</value>
+  </data>
+  <data name="Level" xml:space="preserve">
+    <value>Niveau</value>
+  </data>
+  <data name="All_Levels" xml:space="preserve">
+    <value>Tous les niveaux</value>
+  </data>
+  <data name="From_Date_UTC" xml:space="preserve">
+    <value>À partir du (UTC)</value>
+  </data>
+  <data name="To_Date_UTC" xml:space="preserve">
+    <value>Jusqu’au (UTC)</value>
+  </data>
+  <data name="Log_Advanced_Filters" xml:space="preserve">
+    <value>Filtres avancés</value>
+  </data>
+  <data name="Source_Context" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="Log_Source_Placeholder" xml:space="preserve">
+    <value>Espace de noms ou composant</value>
+  </data>
+  <data name="Correlation_ID" xml:space="preserve">
+    <value>ID de corrélation</value>
+  </data>
+  <data name="Exception" xml:space="preserve">
+    <value>Exception</value>
+  </data>
+  <data name="All_Events" xml:space="preserve">
+    <value>Tous les événements</value>
+  </data>
+  <data name="With_Exception" xml:space="preserve">
+    <value>Avec exception</value>
+  </data>
+  <data name="Without_Exception" xml:space="preserve">
+    <value>Sans exception</value>
+  </data>
+  <data name="Log_Activity" xml:space="preserve">
+    <value>ACTIVITÉ</value>
+  </data>
+  <data name="Log_Results" xml:space="preserve">
+    <value>Événements du journal</value>
+  </data>
+  <data name="Log_Results_Description" xml:space="preserve">
+    <value>Événements applicatifs assainis correspondant à vos critères.</value>
+  </data>
+  <data name="Log_Warnings" xml:space="preserve">
+    <value>Avertissements</value>
+  </data>
+  <data name="Log_Information" xml:space="preserve">
+    <value>Information</value>
+  </data>
+  <data name="Log_Current_Page_Only" xml:space="preserve">
+    <value>Les compteurs concernent uniquement la page actuelle</value>
+  </data>
+  <data name="Log_UTC_Time" xml:space="preserve">
+    <value>Horodatage (UTC)</value>
+  </data>
+  <data name="Message" xml:space="preserve">
+    <value>Message</value>
+  </data>
+  <data name="Log_Empty_Title" xml:space="preserve">
+    <value>Aucun événement à afficher</value>
+  </data>
+  <data name="No_Log_Events_Found" xml:space="preserve">
+    <value>Aucun événement ne correspond aux filtres sélectionnés.</value>
+  </data>
+  <data name="Log_Clear_Filters" xml:space="preserve">
+    <value>Effacer les filtres</value>
+  </data>
+  <data name="Log_Filter_By_Correlation" xml:space="preserve">
+    <value>Rechercher tous les événements avec cet ID de corrélation</value>
+  </data>
+  <data name="Log_Inspect" xml:space="preserve">
+    <value>Examiner</value>
+  </data>
+  <data name="Log_Of" xml:space="preserve">
+    <value>sur</value>
+  </data>
+  <data name="Phone_Correction_Requests" xml:space="preserve">
+    <value>Demandes de correction du téléphone</value>
+  </data>
+  <data name="History" xml:space="preserve">
+    <value>Historique</value>
+  </data>
+  <data name="Reversed" xml:space="preserve">
+    <value>Contrepassé</value>
+  </data>
+  <data name="UserGuide_AccountAccess" xml:space="preserve">
+    <value>Comptes, rôles et accès sécurisé</value>
+  </data>
+  <data name="UserGuide_ResidentSignIn" xml:space="preserve">
+    <value>Connexion du résident</value>
+  </data>
+  <data name="UserGuide_ResidentSignInDetails" xml:space="preserve">
+    <value>Le résident se connecte avec son numéro de téléphone enregistré et son code PIN personnel. L’accès est limité à un rôle résident actif et à l’occupation du logement associée au compte.</value>
+  </data>
+  <data name="UserGuide_AdminSignIn" xml:space="preserve">
+    <value>Connexion de l’administrateur de l’immeuble</value>
+  </data>
+  <data name="UserGuide_AdminSignInDetails" xml:space="preserve">
+    <value>L’administrateur se connecte avec son numéro de téléphone enregistré et son code PIN. Le compte est limité à l’immeuble qui lui est attribué et aux autorisations accordées.</value>
+  </data>
+  <data name="UserGuide_SuperAdminSignIn" xml:space="preserve">
+    <value>Connexion du SuperAdmin</value>
+  </data>
+  <data name="UserGuide_SuperAdminSignInDetails" xml:space="preserve">
+    <value>Le SuperAdmin se connecte avec une adresse e-mail autorisée et un mot de passe. Si l’authentification à deux facteurs est activée ou exigée pour le compte, terminez le défi de l’application d’authentification avant l’ouverture de session.</value>
+  </data>
+  <data name="UserGuide_MultipleRoles" xml:space="preserve">
+    <value>Un compte, plusieurs rôles</value>
+  </data>
+  <data name="UserGuide_MultipleRolesDetails" xml:space="preserve">
+    <value>Une personne peut être résidente d’un appartement et administratrice d’un ou plusieurs immeubles. Choisissez le rôle et le périmètre souhaités lorsque cela est demandé. L’accès résident reste limité à l’appartement et l’accès administrateur à l’immeuble. Les périmètres ne doivent pas être fusionnés et aucune identité en double ne doit être créée pour ajouter un rôle.</value>
+  </data>
+  <data name="UserGuide_IdentityGovernance" xml:space="preserve">
+    <value>Activation du compte et sécurité du PIN</value>
+  </data>
+  <data name="UserGuide_IdentityGovernanceDetails" xml:space="preserve">
+    <value>L’accès résident nécessite une identité vérifiée, une occupation active, une attribution de rôle valide et un numéro de téléphone enregistré unique. Les comptes en attente de vérification ne peuvent pas se connecter. Remplacez le PIN initial ou de récupération lorsque le système le demande. Ne partagez jamais votre PIN, vos codes de récupération ou le secret de l’application d’authentification.</value>
+  </data>
+  <data name="UserGuide_TwoFactor" xml:space="preserve">
+    <value>Authentification à deux facteurs</value>
+  </data>
+  <data name="UserGuide_TwoFactorDetails" xml:space="preserve">
+    <value>Lorsqu’elle est activée pour un compte administrateur, utilisez le code actuel de votre application d’authentification après vos identifiants. Les codes de récupération sont à usage unique ; conservez-les hors ligne en lieu sûr et ne les envoyez pas au support.</value>
+  </data>
+  <data name="UserGuide_Impersonation" xml:space="preserve">
+    <value>Accès d’assistance (Impersonation)</value>
+  </data>
+  <data name="UserGuide_ImpersonationDetails" xml:space="preserve">
+    <value>Les administrateurs autorisés peuvent ouvrir temporairement un contexte résident ou immeuble autorisé pour examiner un problème. La bannière indique le mode d’impersonation. Utilisez « Retour à mon compte » pour restaurer l’identité précédente ; les sessions imbriquées reviennent niveau par niveau. Les contrôles de périmètre et la journalisation restent actifs.</value>
+  </data>
+  <data name="UserGuide_ReceiptImages" xml:space="preserve">
+    <value>Reçus de transfert et OCR</value>
+  </data>
+  <data name="UserGuide_ReceiptImagesDetails" xml:space="preserve">
+    <value>L’image du reçu aide à extraire des informations candidates : montant, date, référence et statut du transfert. L’OCR n’est qu’une aide et peut se tromper sur les images compressées, recadrées, inclinées ou de faible qualité. Un message de réussite reconnu ne prouve pas le règlement. L’administrateur autorisé doit vérifier le transfert auprès d’une source de paiement fiable avant de confirmer le dépôt.</value>
+  </data>
+  <data name="UserGuide_ReceiptImageQuality" xml:space="preserve">
+    <value>Comment obtenir une image de reçu lisible</value>
+  </data>
+  <data name="UserGuide_ReceiptImageQualityDetails" xml:space="preserve">
+    <value>Téléversez la capture ou l’image originale dans la meilleure résolution disponible. Gardez visibles tous les détails de la transaction, le montant, la devise, la date, la référence et le statut. Évitez les reflets, le flou, la compression forte, les filtres et les recadrages serrés. Pour une photo, gardez le téléphone parallèle à l’écran ou au document, avec un éclairage uniforme. Ne modifiez pas le montant ni les détails de la transaction.</value>
+  </data>
+  <data name="UserGuide_DepositHistory" xml:space="preserve">
+    <value>Vérification et historique des dépôts</value>
+  </data>
+  <data name="UserGuide_DepositHistoryDetails" xml:space="preserve">
+    <value>Les nouveaux dépôts restent en attente jusqu’à leur examen et confirmation par un administrateur autorisé. La confirmation, l’annulation et la contrepassation sont des états financiers distincts. Les enregistrements historiques et les liens de reçus disponibles restent visibles dans les vues de portefeuille ou de relevé appropriées ; une image seule n’inscrit pas d’argent dans le grand livre.</value>
+  </data>
+  <data name="UserGuide_InvoiceQR" xml:space="preserve">
+    <value>Factures et vérification QR</value>
+  </data>
+  <data name="UserGuide_InvoiceQRDetails" xml:space="preserve">
+    <value>Les PDF des factures émises contiennent un lien de vérification signé dans un QR code. Le scan ouvre une page publique qui affiche uniquement des informations limitées : immeuble, numéro d’appartement, période et date d’émission. Les coordonnées du résident et les soldes ne sont pas exposés. Une signature invalide ou une facture inconnue est rejetée.</value>
+  </data>
+  <data name="UserGuide_AuditLogs" xml:space="preserve">
+    <value>Journaux d’audit et journaux applicatifs</value>
+  </data>
+  <data name="UserGuide_AuditLogsDetails" xml:space="preserve">
+    <value>Les journaux d’audit enregistrent les actions importantes des utilisateurs et les opérations financières ; les journaux applicatifs servent au diagnostic. Les résultats sont limités au périmètre d’immeuble ou d’appartement autorisé et les données sensibles sont masquées. Indiquez l’ID de corrélation lors d’un signalement. Les journaux ne remplacent pas les justificatifs financiers.</value>
+  </data>
+  <data name="UserGuide_BackupRestore" xml:space="preserve">
+    <value>Sauvegarde et restauration</value>
+  </data>
+  <data name="UserGuide_BackupRestoreDetails" xml:space="preserve">
+    <value>Créez et conservez des sauvegardes avant les changements importants. Examinez attentivement l’aperçu de restauration et les collections sélectionnées. Une session de restauration est liée au compte qui a effectué l’aperçu, expire, est à usage unique et vérifie l’empreinte de l’archive avant une application transactionnelle. Ne restaurez qu’après autorisation et dans l’environnement prévu ; n’effectuez jamais d’essais en production.</value>
+  </data>
+  <data name="UserGuide_FinancialPeriods" xml:space="preserve">
+    <value>Périodes financières et périodes clôturées</value>
+  </data>
+  <data name="UserGuide_FinancialPeriodsDetails" xml:space="preserve">
+    <value>Les écritures financières appartiennent à un immeuble et à une période définis. Une période clôturée ou inexistante bloque les modifications financières protégées, y compris l’annulation d’un dépôt en attente. Ne modifiez pas une période historique pour forcer une opération ; utilisez la procédure autorisée de gestion et de correction des périodes.</value>
+  </data>
+  <data name="UserGuide_ResidentAdminLoginStep" xml:space="preserve">
+    <value>Résidents et administrateurs d’immeuble : connectez-vous avec le numéro de téléphone enregistré et votre code PIN personnel.</value>
+  </data>
+  <data name="UserGuide_SuperAdminLoginStep" xml:space="preserve">
+    <value>SuperAdmin : utilisez l’adresse e-mail autorisée et le mot de passe, puis effectuez la vérification à deux facteurs si elle est demandée.</value>
+  </data>
+  <data name="UserGuide_RoleContextStep" xml:space="preserve">
+    <value>Si votre compte possède plusieurs rôles ou périmètres d’immeuble, choisissez le contexte souhaité. L’accès résident reste limité à l’appartement ; l’accès administrateur reste limité à l’immeuble.</value>
+  </data>
+  <data name="UserGuide_InitialPinStep" xml:space="preserve">
+    <value>Lors de la première connexion, changez le code PIN attribué lorsque le système vous le demande. Ne partagez jamais votre code PIN et n’utilisez pas les identifiants d’une autre personne.</value>
+  </data>
+  <data name="Reversed_Reversed" xml:space="preserve">
+    <value>&lt;strong&gt;Contrepassé&lt;/strong&gt; — un dépôt déjà comptabilisé a été contrepassé ; l’historique financier d’origine reste disponible.</value>
+  </data>
 </root>

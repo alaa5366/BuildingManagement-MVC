@@ -22,7 +22,7 @@ internal sealed class ResidentsServiceTestContext : IAsyncDisposable
             .Options;
         Db = new AppDbContext(_options);
         var factory = new TestFactory(_options);
-        Service = new ResidentsService(factory, new Mock<IAuditLogger>().Object, NullLogger<ResidentsService>.Instance);
+        Service = new ResidentsService(factory, new Mock<IAuditLogger>().Object, new BcryptPasswordHasher(), NullLogger<ResidentsService>.Instance);
     }
 
     public async Task SeedApartmentAsync(string buildingId = "b1", string apartmentId = "a1",

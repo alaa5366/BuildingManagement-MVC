@@ -122,13 +122,14 @@ public class TransactionParserTests
     }
 
     [Fact]
-    public void Parse_TransactionDetailsWithoutSuccessful_SetsIsFailed()
+    public void Parse_TransactionDetailsWithoutStatus_DoesNotAssumeFailure()
     {
         var text = "Transaction Details";
         var result = _parser.Parse(text);
         Assert.NotNull(result);
         Assert.False(result.IsSuccessful);
-        Assert.True(result.IsFailed);
+        Assert.False(result.IsFailed);
+        Assert.Equal("UNKNOWN", result.Status);
     }
 
     [Fact]
@@ -191,8 +192,7 @@ public class TransactionParserTests
         var text = "From: Sara Mohamed";
         var result = _parser.Parse(text);
         Assert.NotNull(result);
-        // Regex بيشتغل على "From\s*\n?\s*" — يعني نفس السطر برضه شغال
-        Assert.Equal(": Sara Mohamed", result.From);
+        Assert.Equal("Sara Mohamed", result.From);
     }
 
     // ================================================================

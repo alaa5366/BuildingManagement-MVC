@@ -7,6 +7,15 @@
 // =====================================================================
 namespace BuildingManagementMvc.Services;
 
+/// <summary>A currently active resident occupancy authorized by an active Resident role assignment.</summary>
+public sealed class ResidentLoginScope
+{
+    /// <summary>Gets or sets the authorized building identifier.</summary>
+    public string BuildingId { get; set; } = "";
+    /// <summary>Gets or sets the active apartment identifier.</summary>
+    public string ApartmentId { get; set; } = "";
+}
+
 /// <summary>
 /// Outcome of a sign-in attempt: success with the identity data, or failure with a reason code.
 /// </summary>
@@ -54,6 +63,8 @@ public class AuthResult
     public List<string> BuildingIds { get; set; } = new();
     /// <summary>Explicit permission keys loaded from the authoritative account grant store.</summary>
     public List<string> Permissions { get; set; } = new();
+    /// <summary>Every active apartment scope authorized for this resident identity at authentication time.</summary>
+    public List<ResidentLoginScope> ResidentScopes { get; set; } = new();
     /// <summary>
     /// Gets or sets the identifier of the apartment.
     /// </summary>

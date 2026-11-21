@@ -49,6 +49,7 @@
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="Tesseract" Version="5.2.0" />
+    <PackageReference Include="SkiaSharp" Version="4.153.1" />
     <PackageReference Include="CloudinaryDotNet" Version="1.26.2" />
     <PackageReference Include="ClosedXML" Version="0.104.1" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
@@ -106,5 +107,13 @@
   <!-- ✅ App_Data: بيتنشر مع التطبيق (مجلد logs + files محمية) -->
   <ItemGroup>
     <Content Include="App_Data\**" CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="App_Data\tessdata\**\*.traineddata">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Update="App_Data\tessdata\LICENSE-2.0.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
 </Project>

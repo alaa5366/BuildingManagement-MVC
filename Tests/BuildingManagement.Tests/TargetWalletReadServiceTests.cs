@@ -132,6 +132,71 @@ public sealed class TargetWalletReadServiceTests
     }
 
     [Fact]
+    public async Task GetCurrentPeriodKeyAsync_CreatesMissingMonthInBuildingTimeZone_AndIsIdempotent()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.Buildings.Add(new BuildingEntity
+            {
+                Id = "B1", Name = "Target Building", BuildingNumber = "01"
+            });
+            seed.FinancialPeriods.Add(new FinancialPeriodEntity
+            {
+                PeriodId = Guid.NewGuid(), BuildingId = "B1", PeriodKey = "2026-10",
+                TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Open,
+                StartsAtUtc = new DateTime(2026, 9, 30, 21, 0, 0, DateTimeKind.Utc),
+                EndsAtUtc = new DateTime(2026, 10, 31, 22, 0, 0, DateTimeKind.Utc),
+                CreatedAtUtc = new DateTime(2026, 9, 30, 20, 0, 0, DateTimeKind.Utc)
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetWalletReadService(new TestContextFactory(options));
+        var now = new DateTimeOffset(2026, 11, 20, 0, 30, 0, TimeSpan.FromHours(2));
+
+        Assert.Equal("2026-11", await service.GetCurrentPeriodKeyAsync("B1", now));
+        Assert.Equal("2026-11", await service.GetCurrentPeriodKeyAsync("B1", now));
+
+        await using var verify = new AppDbContext(options);
+        var period = await verify.FinancialPeriods.SingleAsync(
+            item => item.BuildingId == "B1" && item.PeriodKey == "2026-11");
+        Assert.Equal("Africa/Cairo", period.TimeZoneId);
+        Assert.Equal(FinancialPeriodStatus.Open, period.Status);
+        Assert.Equal(new DateTime(2026, 10, 31, 22, 0, 0, DateTimeKind.Utc), period.StartsAtUtc);
+        Assert.Equal(new DateTime(2026, 11, 30, 22, 0, 0, DateTimeKind.Utc), period.EndsAtUtc);
+    }
+
+    [Fact]
+    public async Task GetCurrentPeriodKeyAsync_CreatesFirstPeriodForNewBuildingUsingDefaultTimeZone()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.Buildings.Add(new BuildingEntity
+            {
+                Id = "B1", Name = "New Building", BuildingNumber = "02"
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetWalletReadService(new TestContextFactory(options));
+        var month = await service.GetCurrentPeriodKeyAsync(
+            "B1", new DateTimeOffset(2026, 11, 20, 0, 30, 0, TimeSpan.FromHours(2)));
+
+        Assert.Equal("2026-11", month);
+        await using var verify = new AppDbContext(options);
+        var period = await verify.FinancialPeriods.SingleAsync(
+            item => item.BuildingId == "B1" && item.PeriodKey == "2026-11");
+        Assert.Equal("Africa/Cairo", period.TimeZoneId);
+        Assert.Equal(FinancialPeriodStatus.Open, period.Status);
+    }
+
+    [Fact]
     public async Task GetBuildingShellAsync_UsesTargetBuildingFloorAndApartmentRows()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -268,6 +333,9 @@ public sealed class TargetWalletReadServiceTests
         await using (var seed = new AppDbContext(options))
         {
             seed.BuildingSettings.Add(new BuildingSettingsEntity { BuildingId = "B1", Currency = "EGP" });
+            seed.Apartments.AddRange(
+                new ApartmentEntity { BuildingId = "B1", Id = "A1", FloorId = "F1", Number = 1, Label = "Unit 1" },
+                new ApartmentEntity { BuildingId = "B1", Id = "A2", FloorId = "F1", Number = 2, Label = "Unit 2" });
             seed.FinancialPeriods.AddRange(
                 new FinancialPeriodEntity
                 {
@@ -356,7 +424,9 @@ public sealed class TargetWalletReadServiceTests
                     PaymentDepositId = Guid.NewGuid(), PeriodId = currentPeriodId, BuildingId = "B1",
                     ApartmentId = "A1", PostedTransactionId = confirmedTransactionId,
                     Amount = 40m, CurrencyCode = "EGP", Status = PaymentDepositStatus.Confirmed,
-                    SubmittedAtUtc = now, ConfirmedAtUtc = now, SourceSystem = "application"
+                    SubmittedAtUtc = now, ConfirmedAtUtc = now,
+                    ReceiptMetadataJson = """{"Url":"https://example.test/admin-confirmed.png"}""",
+                    SourceSystem = "application"
                 },
                 new PaymentDepositEntity
                 {
@@ -380,6 +450,10 @@ public sealed class TargetWalletReadServiceTests
         Assert.Equal("2026-11", pending.MonthKey);
         Assert.Equal(75m, pending.Deposit.Amount);
         Assert.Equal(40m, snapshot.Totals.Collected);
+        var confirmedHistory = Assert.Single(snapshot.DepositHistory.Where(item => item.Deposit.Status == "confirmed"));
+        Assert.Equal("https://example.test/admin-confirmed.png", confirmedHistory.Deposit.Receipt?.Url);
+        Assert.Equal("A1", confirmedHistory.ApartmentId);
+        Assert.Contains(snapshot.DepositHistory, item => item.Deposit.Status == "reversed");
     }
 
 
@@ -512,6 +586,7 @@ public sealed class TargetWalletReadServiceTests
                 ApartmentId = "A1", Amount = 125m, CurrencyCode = "EGP",
                 Status = PaymentDepositStatus.Cancelled, SubmittedAtUtc = now.AddDays(-2),
                 CancelledAtUtc = now.AddDays(-1), ResolutionReason = "Duplicate transfer",
+                ReceiptMetadataJson = """{"Url":"https://example.test/cancelled-receipt.png","Success":true}""",
                 SourceSystem = "application"
             });
             await seed.SaveChangesAsync();
@@ -527,6 +602,8 @@ public sealed class TargetWalletReadServiceTests
         Assert.Equal("cancelled", cancelled.Status);
         Assert.Equal(125m, cancelled.Amount);
         Assert.Equal("Duplicate transfer", cancelled.Note);
+        Assert.Equal("https://example.test/cancelled-receipt.png", cancelled.ReceiptUrl);
+        Assert.True(cancelled.HasReceipt);
         Assert.Empty(snapshot.PendingDeposits);
     }
 

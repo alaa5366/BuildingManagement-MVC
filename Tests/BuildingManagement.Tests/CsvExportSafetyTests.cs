@@ -11,6 +11,10 @@ public class CsvExportSafetyTests
     [InlineData("@SUM(A1:A2)")]
     [InlineData("-2+3")]
     [InlineData("\t=1+1")]
+    [InlineData("\uFEFF=1+1")]
+    [InlineData("\u200B=1+1")]
+    [InlineData("\u000B=1+1")]
+    [InlineData("\u00A0=1+1")]
     public void Cell_PrefixesFormulaLikeValues(string input)
     {
         var cell = CsvExportSafety.Cell(input);

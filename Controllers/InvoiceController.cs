@@ -21,15 +21,18 @@ public class InvoiceController : Controller
     private readonly InvoiceService _invoice;
     private readonly InvoicePdfService _pdf;
     private readonly IAuditLogger _audit;
+    private readonly QrSecurityService _qrSecurity;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InvoiceController"/> class.
     /// </summary>
-    public InvoiceController(InvoiceService invoice, InvoicePdfService pdf, IAuditLogger audit)
+    public InvoiceController(
+        InvoiceService invoice, InvoicePdfService pdf, IAuditLogger audit, QrSecurityService qrSecurity)
     {
         _invoice = invoice;
         _pdf = pdf;
         _audit = audit;
+        _qrSecurity = qrSecurity;
     }
 
     // aptId اختياري: الأدمن يحدده لأي شقة في عمارته، الساكن بياخد شقته هو بس دايمًا
@@ -61,6 +64,34 @@ public class InvoiceController : Controller
         return await GenerateInvoiceAsync(buildingId, targetApartmentId, month, role);
     }
 
+    /// <summary>Publicly verifies an invoice using its signed QR link without exposing resident identity or contact data.</summary>
+    [AllowAnonymous]
+    [HttpGet]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("lookup")]
+    public async Task<IActionResult> Verify(string? invoiceNo, string? signature)
+    {
+        Response.Headers.CacheControl = "no-store, no-cache, max-age=0";
+        Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
+
+        if (string.IsNullOrWhiteSpace(invoiceNo) || invoiceNo.Length > 128 ||
+            !_qrSecurity.VerifyInvoiceVerification(invoiceNo, signature))
+            return NotFound();
+
+        var invoice = await _invoice.GetIssuedInvoiceSnapshotAsync(invoiceNo, HttpContext.RequestAborted);
+        if (invoice is null)
+            return NotFound();
+
+        return View("Verify", new InvoiceVerificationViewModel
+        {
+            InvoiceNo = invoice.InvoiceNo,
+            BuildingName = invoice.Building.Name,
+            BuildingNumber = invoice.Building.BuildingNumber,
+            ApartmentNumber = invoice.Apt.Number,
+            MonthLabel = invoice.MonthLabelText,
+            IssueDate = invoice.IssueDate
+        });
+    }
+
     /// <summary>Displays the QR code for the same immutable monthly invoice.</summary>
     [HttpGet]
     public async Task<IActionResult> Qr(string? aptId, string? month)
@@ -82,10 +113,19 @@ public class InvoiceController : Controller
         var monthKey = string.IsNullOrWhiteSpace(month)
             ? await _invoice.GetCurrentPeriodKeyAsync(buildingId, HttpContext.RequestAborted)
             : month;
-        var data = await _invoice.BuildInvoiceDataAsync(
-            buildingId, targetApartmentId, monthKey, HttpContext.RequestAborted);
+        InvoiceData? data;
+        try
+        {
+            data = await _invoice.BuildInvoiceDataAsync(
+                buildingId, targetApartmentId, monthKey, HttpContext.RequestAborted);
+        }
+        catch (InvoiceFinancialPeriodMissingException exception)
+        {
+            return FinancialPeriodConflict(exception);
+        }
         if (data is null) return NotFound();
 
+        data.QrPayload = CreateInvoiceVerificationUrl(data.InvoiceNo);
         byte[] qrPng;
         using (var generator = new QRCodeGenerator())
         {
@@ -126,8 +166,16 @@ public class InvoiceController : Controller
         var monthKey = string.IsNullOrWhiteSpace(month)
             ? await _invoice.GetCurrentPeriodKeyAsync(buildingId, HttpContext.RequestAborted)
             : month;
-        var data = await _invoice.BuildInvoiceDataAsync(
-            buildingId, aptId, monthKey, HttpContext.RequestAborted);
+        InvoiceData? data;
+        try
+        {
+            data = await _invoice.BuildInvoiceDataAsync(
+                buildingId, aptId, monthKey, HttpContext.RequestAborted);
+        }
+        catch (InvoiceFinancialPeriodMissingException exception)
+        {
+            return FinancialPeriodConflict(exception);
+        }
         if (data is null) return NotFound();
 
         var phone = AuthHelpers.NormalizePhone(data.Apt.Phone);
@@ -162,10 +210,19 @@ public class InvoiceController : Controller
         var monthKey = string.IsNullOrWhiteSpace(month)
             ? await _invoice.GetCurrentPeriodKeyAsync(buildingId, HttpContext.RequestAborted)
             : month;
-        var data = await _invoice.BuildInvoiceDataAsync(
-            buildingId, apartmentId, monthKey, HttpContext.RequestAborted);
+        InvoiceData? data;
+        try
+        {
+            data = await _invoice.BuildInvoiceDataAsync(
+                buildingId, apartmentId, monthKey, HttpContext.RequestAborted);
+        }
+        catch (InvoiceFinancialPeriodMissingException exception)
+        {
+            return FinancialPeriodConflict(exception);
+        }
         if (data is null) return NotFound();
 
+        data.QrPayload = CreateInvoiceVerificationUrl(data.InvoiceNo);
         var pdfBytes = _pdf.Generate(data);
         await _audit.LogAsync(
             action: "invoice_download",
@@ -191,4 +248,19 @@ public class InvoiceController : Controller
         var fileName = $"{safeInvoiceNo}.pdf";
         return File(pdfBytes, "application/pdf", fileName);
     }
+
+    private string CreateInvoiceVerificationUrl(string invoiceNo)
+    {
+        var signature = _qrSecurity.SignInvoiceVerification(invoiceNo);
+        return Url.Action(nameof(Verify), "Invoice", new { invoiceNo, signature }, Request.Scheme)
+            ?? throw new InvalidOperationException("Could not create the invoice verification URL.");
+    }
+
+    private IActionResult FinancialPeriodConflict(InvoiceFinancialPeriodMissingException exception) =>
+        Conflict(new ProblemDetails
+        {
+            Status = StatusCodes.Status409Conflict,
+            Title = "Financial period unavailable",
+            Detail = $"No financial period is configured for {exception.PeriodKey}. Ask the building administrator to open it."
+        });
 }

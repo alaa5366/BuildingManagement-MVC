@@ -87,6 +87,63 @@ public class AuditLoggerTests
     }
 
     [Fact]
+    public async Task QueryPage_EnrichesDepositReceiptsWithoutCrossingBuildingOrApartmentScope()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        var factory = new Mock<IDbContextFactory<AppDbContext>>();
+        factory.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new AppDbContext(options));
+        var depositId = Guid.NewGuid();
+        var receiptUrl = "https://res.cloudinary.com/example/image/upload/receipt.png";
+
+        await using (var db = new AppDbContext(options))
+        {
+            db.PaymentDeposits.Add(new PaymentDepositEntity
+            {
+                PaymentDepositId = depositId,
+                PeriodId = Guid.NewGuid(),
+                BuildingId = "b1",
+                ApartmentId = "a1",
+                Amount = 125m,
+                CurrencyCode = "EGP",
+                Status = PaymentDepositStatus.Pending,
+                SubmittedAtUtc = DateTime.UtcNow,
+                ReceiptMetadataJson = $$"""{"Url":"{{receiptUrl}}"}""",
+                SourceSystem = "application"
+            });
+
+            AuditEventEntity DepositEvent(string buildingId, string apartmentId)
+            {
+                var entry = Event(buildingId, apartmentId, 0, "PaymentDepositSubmitted");
+                entry.SafeDetailsJson = $$"""{"paymentDepositId":"{{depositId:D}}"}""";
+                return entry;
+            }
+
+            db.AuditEvents.AddRange(
+                DepositEvent("b1", "a1"),
+                DepositEvent("b1", "a2"),
+                DepositEvent("b2", "a1"));
+            await db.SaveChangesAsync();
+        }
+
+        var logger = new AuditLogger(factory.Object, NullLogger<AuditLogger>.Instance);
+        var page = await logger.QueryPageAsync(null, null, null, null, null, null, null, 1, 10);
+
+        var ownBuildingApartment = Assert.Single(page.Items.Where(item =>
+            item.BuildingId == "b1" && item.ApartmentId == "a1"));
+        Assert.Equal(receiptUrl, ownBuildingApartment.Metadata?["receiptUrl"]?.ToString());
+
+        var sameBuildingOtherApartment = Assert.Single(page.Items.Where(item =>
+            item.BuildingId == "b1" && item.ApartmentId == "a2"));
+        Assert.False(sameBuildingOtherApartment.Metadata?.ContainsKey("receiptUrl") == true);
+
+        var otherBuilding = Assert.Single(page.Items.Where(item =>
+            item.BuildingId == "b2" && item.ApartmentId == "a1"));
+        Assert.False(otherBuilding.Metadata?.ContainsKey("receiptUrl") == true);
+    }
+
+    [Fact]
     public async Task QueryPage_UsesOrderedTopWindowForStablePageBoundaries()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()

@@ -699,12 +699,12 @@
   <data name="Quick_Info" xml:space="preserve"><value>⌨️ Kurzinfo</value></data>
   <data name="Building_Management_System_User_Guide" xml:space="preserve"><value>📖 Benutzerhandbuch des Gebäudeverwaltungssystems</value></data>
   <data name="Welcome_To_The_Building_Management_System" xml:space="preserve"><value>Willkommen im Gebäudeverwaltungssystem! Dieses Handbuch führt Sie Schritt für Schritt durch alles, was Sie über das System wissen müssen — von der Anmeldung bis zur Rechnungsstellung und Verwaltung der Geldbörsen.</value></data>
-  <data name="When_You_Open_The_System_You" xml:space="preserve"><value>Wenn Sie das System öffnen, sehen Sie einen einheitlichen Anmeldebildschirm. Gehen Sie wie folgt vor:</value></data>
+  <data name="When_You_Open_The_System_You" xml:space="preserve"><value>Das System verwendet je nach Rolle unterschiedliche Anmeldemethoden. Bewohner und Gebäudeverwalter melden sich mit der registrierten Mobilnummer und persönlichen PIN an; SuperAdmin verwendet eine freigegebene E-Mail-Adresse und ein Passwort.</value></data>
   <data name="1_Enter_The_Mobile_Number_You" xml:space="preserve"><value>&lt;span class="badge-step"&gt;1&lt;/span&gt; Geben Sie die &lt;strong&gt;Handynummer&lt;/strong&gt; ein, mit der Sie registriert sind (z. B. &lt;code&gt;+201119221000&lt;/code&gt;)</value></data>
   <data name="2_Enter_Your_PIN_4_Digits" xml:space="preserve"><value>&lt;span class="badge-step"&gt;2&lt;/span&gt; Geben Sie Ihre &lt;strong&gt;PIN&lt;/strong&gt; ein (4 Ziffern)</value></data>
   <data name="3_Tap_Log_In" xml:space="preserve"><value>&lt;span class="badge-step"&gt;3&lt;/span&gt; Tippen Sie auf &lt;strong&gt;„Anmelden“&lt;/strong&gt;</value></data>
   <data name="4_If_You_Have_More_Than" xml:space="preserve"><value>&lt;span class="badge-step"&gt;4&lt;/span&gt; Wenn Sie mehr als eine Rolle haben (Admin + Bewohner), erscheint die &lt;strong&gt;Kontoauswahl&lt;/strong&gt; — wählen Sie das Konto, mit dem Sie sich anmelden möchten</value></data>
-  <data name="Tip_If_You_Forgot_Your_PIN" xml:space="preserve"><value>💡 &lt;strong&gt;Tipp&lt;/strong&gt;: Wenn Sie Ihre PIN vergessen haben, bitten Sie den Admin, eine neue PIN für Sie festzulegen.</value></data>
+  <data name="Tip_If_You_Forgot_Your_PIN" xml:space="preserve"><value>💡 &lt;strong&gt;Hinweis&lt;/strong&gt;: PIN vergessen? Wenden Sie sich an eine autorisierte Stelle der Kontoverwaltung. Nach Identitätsprüfung kann eine neue PIN über den genehmigten Prozess ausgestellt werden; die bestehende PIN kann nicht angezeigt werden.</value></data>
   <data name="Login_With_QR" xml:space="preserve"><value>Anmeldung mit QR</value></data>
   <data name="If_The_Admin_Sent_You_A" xml:space="preserve"><value>Wenn der Admin Ihnen einen QR-Code per WhatsApp geschickt hat, scannen Sie ihn mit einer beliebigen QR-App, und eine automatische Anmeldeseite öffnet sich.</value></data>
   <data name="Back_To_Top" xml:space="preserve"><value>↑ Nach oben</value></data>
@@ -770,24 +770,24 @@
   <data name="Add_Floors_And_Apartments_With_Automatic" xml:space="preserve"><value>&lt;strong&gt;Etagen und Wohnungen hinzufügen&lt;/strong&gt; — mit Anmeldedaten für jede Wohnung</value></data>
   <data name="Generate_QRs_For_The_Admin_And" xml:space="preserve"><value>&lt;strong&gt;QR-Codes erstellen&lt;/strong&gt; — für den Admin und jede Wohnung (PDF mit allen QR-Codes)</value></data>
   <data name="Managing_Admins_And_Permissions" xml:space="preserve"><value>👥 Admins und Berechtigungen verwalten</value></data>
-  <data name="You_Have_22_Permissions_Grouped_Into" xml:space="preserve"><value>Sie haben &lt;strong&gt;22 Berechtigungen&lt;/strong&gt;, gruppiert in 4 Kategorien:</value></data>
+  <data name="You_Have_22_Permissions_Grouped_Into" xml:space="preserve"><value>Der Berechtigungskatalog gruppiert Zugriffe nach Funktionsbereichen. Vergeben Sie nur die erforderlichen Mindestberechtigungen; Gebäudeumfang und ausgewählter Rollenkontext bleiben wirksam.</value></data>
   <data name="Management_Buildings_Admins_Residents" xml:space="preserve"><value>🏢 &lt;strong&gt;Verwaltung&lt;/strong&gt; — Gebäude, Admins, Bewohner</value></data>
   <data name="Finance_Wallets_Expenses_Revenues_Reports" xml:space="preserve"><value>💰 &lt;strong&gt;Finanzen&lt;/strong&gt; — Geldbörsen, Ausgaben, Einnahmen, Berichte</value></data>
   <data name="Services_Polls_Maintenance_Notifications_WhatsAp" xml:space="preserve"><value>🛎️ &lt;strong&gt;Dienste&lt;/strong&gt; — Abstimmungen, Wartung, Benachrichtigungen, WhatsApp</value></data>
   <data name="System_Log_Settings_Tools_Backup" xml:space="preserve"><value>🛠️ &lt;strong&gt;System&lt;/strong&gt; — Protokoll, Einstellungen, Werkzeuge, Sicherung</value></data>
-  <data name="There_Are_4_Ready_Made_Templates" xml:space="preserve"><value>Es gibt &lt;strong&gt;4 fertige Vorlagen&lt;/strong&gt;:</value></data>
+  <data name="There_Are_4_Ready_Made_Templates" xml:space="preserve"><value>Verfügbare Rollenvorlagen sind Ausgangspunkte und vergeben keine Rechte automatisch. Prüfen Sie vor der Zuweisung jede Berechtigung und jeden Geltungsbereich.</value></data>
   <data name="Full_12_Permissions_The_Basics" xml:space="preserve"><value>&lt;strong&gt;Vollständig&lt;/strong&gt; — 12 Berechtigungen (die Grundlagen)</value></data>
   <data name="Super_22_Permissions_Everything" xml:space="preserve"><value>&lt;strong&gt;Super&lt;/strong&gt; — 22 Berechtigungen (alles)</value></data>
   <data name="Financial_7_Permissions_Finance_Only" xml:space="preserve"><value>&lt;strong&gt;Finanzen&lt;/strong&gt; — 7 Berechtigungen (nur Finanzen)</value></data>
   <data name="Maintenance_4_Permissions_Maintenance_Only" xml:space="preserve"><value>&lt;strong&gt;Wartung&lt;/strong&gt; — 4 Berechtigungen (nur Wartung)</value></data>
   <data name="Backup_3" xml:space="preserve"><value>💾 Sicherung</value></data>
-  <data name="The_Backup_Page_Gives_You_4" xml:space="preserve"><value>Die Seite &lt;code&gt;/Backup&lt;/code&gt; bietet Ihnen 4 Registerkarten:</value></data>
+  <data name="The_Backup_Page_Gives_You_4" xml:space="preserve"><value>Die Seite &lt;code&gt;/Backup&lt;/code&gt; bietet berechtigten Betreibern Funktionen zum Erstellen von Sicherungen, Prüfen von Archiven, Vorschauen von Wiederherstellungen und Anzeigen des Wiederherstellungsverlaufs. Prüfen Sie vor jeder Wiederherstellung die Zielumgebung.</value></data>
   <data name="Overview_Document_Statistics_For_Each_Collection" xml:space="preserve"><value>&lt;strong&gt;Übersicht&lt;/strong&gt; — Dokumentstatistik pro Sammlung</value></data>
   <data name="Backup_Choose_Collections_And_Download_A" xml:space="preserve"><value>&lt;strong&gt;Sicherung&lt;/strong&gt; — Sammlungen wählen und eine ZIP-Datei herunterladen</value></data>
   <data name="Restore_Upload_A_ZIP_And_Choose" xml:space="preserve"><value>&lt;strong&gt;Wiederherstellung&lt;/strong&gt; — ZIP-Datei hochladen und Sammlungen wählen</value></data>
   <data name="Scheduled_Backups_Automatic_Daily_Weekly_Monthly" xml:space="preserve"><value>&lt;strong&gt;Geplante Sicherungen&lt;/strong&gt; — automatisch täglich/wöchentlich/monatlich</value></data>
   <data name="I_Forgot_My_PIN_What_Should" xml:space="preserve"><value>Ich habe meine PIN vergessen, was soll ich tun?</value></data>
-  <data name="Contact_The_Admin_They_Can_Set" xml:space="preserve"><value>Wenden Sie sich an den Admin. Er kann auf der Wohnungsseite oder in seinen Einstellungen eine neue PIN für Sie festlegen.</value></data>
+  <data name="Contact_The_Admin_They_Can_Set" xml:space="preserve"><value>Wenden Sie sich an Ihren Gebäudeverwalter oder eine autorisierte Stelle der Kontoverwaltung. Vor der Ausstellung einer Ersatz-PIN muss Ihre Identität geprüft werden; niemand kann Ihre bestehende PIN einsehen.</value></data>
   <data name="My_Pending_Payment_Doesn_T_Show" xml:space="preserve"><value>Meine ausstehende Zahlung wird als Bewohner nicht angezeigt, warum?</value></data>
   <data name="Make_Sure_You_Are_In_The" xml:space="preserve"><value>Stellen Sie sicher, dass Sie sich im &lt;strong&gt;selben Monat&lt;/strong&gt; befinden, in dem Sie die Zahlung eingereicht haben. Wenn sie weiterhin fehlt, aktualisieren Sie die Seite.</value></data>
   <data name="When_I_Refresh_The_Page_I" xml:space="preserve"><value>Beim Aktualisieren der Seite erscheint eine rote Meldung „Speichern fehlgeschlagen“</value></data>
@@ -814,9 +814,9 @@
   <data name="Warning_Needs_Attention" xml:space="preserve"><value>Warnung / benötigt Aufmerksamkeit</value></data>
   <data name="Neutral_Locked" xml:space="preserve"><value>Neutral / gesperrt</value></data>
   <data name="Payment_Statuses" xml:space="preserve"><value>Zahlungsstatus</value></data>
-  <data name="Pending_Awaiting_Confirmation" xml:space="preserve"><value>⏳ &lt;strong&gt;ausstehend&lt;/strong&gt; — wartet auf Bestätigung</value></data>
-  <data name="Confirmed_Confirmed" xml:space="preserve"><value>✅ &lt;strong&gt;bestätigt&lt;/strong&gt; — bestätigt</value></data>
-  <data name="Cancelled_Cancelled" xml:space="preserve"><value>❌ &lt;strong&gt;storniert&lt;/strong&gt; — storniert</value></data>
+  <data name="Pending_Awaiting_Confirmation" xml:space="preserve"><value>&lt;strong&gt;Ausstehend&lt;/strong&gt; — wartet auf eine autorisierte Prüfung; noch nicht verbucht.</value></data>
+  <data name="Confirmed_Confirmed" xml:space="preserve"><value>&lt;strong&gt;Bestätigt&lt;/strong&gt; — genehmigt und im Finanzbuch verbucht.</value></data>
+  <data name="Cancelled_Cancelled" xml:space="preserve"><value>&lt;strong&gt;Storniert&lt;/strong&gt; — eine ausstehende Einzahlung wurde vor der Verbuchung storniert.</value></data>
   <data name="Support" xml:space="preserve"><value>Support</value></data>
   <data name="If_You_Have_A_Problem_Contact" xml:space="preserve"><value>Wenn Sie ein Problem haben, wenden Sie sich zuerst an den &lt;strong&gt;Admin Ihres Gebäudes&lt;/strong&gt;. Bei größeren Problemen kontaktieren Sie den &lt;strong&gt;Super-Admin&lt;/strong&gt;.</value></data>
   <data name="For_Technical_Support" xml:space="preserve"><value>📧 Für technischen Support:</value></data>
@@ -1451,4 +1451,271 @@ Beispiel: Bewohner verreist – leere Wohnung – Wartung</value></data>
   <data name="Backup_Collection_pollEligibility" xml:space="preserve"><value>Wahlberechtigungen</value></data>
   <data name="Backup_Collection_pollBallots" xml:space="preserve"><value>Anonyme Stimmzettel</value></data>
   <data name="Backup_Collection_pollLifecycleEvents" xml:space="preserve"><value>Umfrage-Lebenszyklusereignisse</value></data>
+  <data name="Resident_Change_PIN" xml:space="preserve">
+    <value>PIN-Änderung des Bewohners</value>
+  </data>
+  <data name="Temporary_PIN_Replace_Notice" xml:space="preserve">
+    <value>Ersetzen Sie die temporäre PIN durch eine persönliche, vertrauliche PIN.</value>
+  </data>
+  <data name="PIN_4_12_Digits" xml:space="preserve">
+    <value>Die PIN muss aus 4 bis 12 Ziffern bestehen.</value>
+  </data>
+  <data name="Temporary_PIN_1234_Not_Allowed" xml:space="preserve">
+    <value>Die temporäre PIN 1234 ist nicht zulässig.</value>
+  </data>
+  <data name="Save_New_PIN" xml:space="preserve">
+    <value>Neue PIN speichern</value>
+  </data>
+  <data name="Phone_Number" xml:space="preserve">
+    <value>Telefonnummer</value>
+  </data>
+  <data name="Select_Apartment" xml:space="preserve">
+    <value>Wohnung auswählen</value>
+  </data>
+  <data name="Application_Logs" xml:space="preserve">
+    <value>Anwendungsprotokolle</value>
+  </data>
+  <data name="Log_Center_Eyebrow" xml:space="preserve">
+    <value>ANWENDUNGSÜBERWACHUNG</value>
+  </data>
+  <data name="Log_Center_Subtitle" xml:space="preserve">
+    <value>Überwachen Sie Laufzeitaktivitäten, untersuchen Sie Fehler und verfolgen Sie Anwendungsereignisse.</value>
+  </data>
+  <data name="Log_Dates_Are_UTC_And_Redacted" xml:space="preserve">
+    <value>Datumsangaben verwenden UTC. Sensible Werte werden vor der Anzeige maskiert.</value>
+  </data>
+  <data name="Log_Total_Matching" xml:space="preserve">
+    <value>Übereinstimmende Ereignisse insgesamt</value>
+  </data>
+  <data name="Events" xml:space="preserve">
+    <value>Ereignisse</value>
+  </data>
+  <data name="Invalid_Date_Range" xml:space="preserve">
+    <value>Das Startdatum darf nicht nach dem Enddatum liegen.</value>
+  </data>
+  <data name="Log_Overview" xml:space="preserve">
+    <value>Protokollübersicht</value>
+  </data>
+  <data name="Log_Visible_On_Page" xml:space="preserve">
+    <value>Sichtbare Ereignisse</value>
+  </data>
+  <data name="Log_Current_Page" xml:space="preserve">
+    <value>Auf dieser Seite</value>
+  </data>
+  <data name="Log_Errors_On_Page" xml:space="preserve">
+    <value>Fehler auf der Seite</value>
+  </data>
+  <data name="Log_Error_Fatal" xml:space="preserve">
+    <value>Fehler / Schwerwiegend</value>
+  </data>
+  <data name="Log_Exceptions_On_Page" xml:space="preserve">
+    <value>Ausnahmen auf der Seite</value>
+  </data>
+  <data name="Log_With_Exception" xml:space="preserve">
+    <value>Ereignisse mit Ausnahme</value>
+  </data>
+  <data name="Log_Sources_On_Page" xml:space="preserve">
+    <value>Quellen auf der Seite</value>
+  </data>
+  <data name="Log_Distinct_Sources" xml:space="preserve">
+    <value>Unterschiedliche Quellkontexte</value>
+  </data>
+  <data name="Log_Explore" xml:space="preserve">
+    <value>ERKUNDEN</value>
+  </data>
+  <data name="Log_Search_Anything" xml:space="preserve">
+    <value>Protokolle durchsuchen</value>
+  </data>
+  <data name="Log_Search_Placeholder" xml:space="preserve">
+    <value>Nach Nachrichten, Ausnahmen oder Details suchen…</value>
+  </data>
+  <data name="Level" xml:space="preserve">
+    <value>Ebene</value>
+  </data>
+  <data name="All_Levels" xml:space="preserve">
+    <value>Alle Ebenen</value>
+  </data>
+  <data name="From_Date_UTC" xml:space="preserve">
+    <value>Von-Datum (UTC)</value>
+  </data>
+  <data name="To_Date_UTC" xml:space="preserve">
+    <value>Bis-Datum (UTC)</value>
+  </data>
+  <data name="Log_Advanced_Filters" xml:space="preserve">
+    <value>Erweiterte Filter</value>
+  </data>
+  <data name="Source_Context" xml:space="preserve">
+    <value>Quelle</value>
+  </data>
+  <data name="Log_Source_Placeholder" xml:space="preserve">
+    <value>Namespace oder Komponentenname</value>
+  </data>
+  <data name="Correlation_ID" xml:space="preserve">
+    <value>Korrelations-ID</value>
+  </data>
+  <data name="Exception" xml:space="preserve">
+    <value>Ausnahme</value>
+  </data>
+  <data name="All_Events" xml:space="preserve">
+    <value>Alle Ereignisse</value>
+  </data>
+  <data name="With_Exception" xml:space="preserve">
+    <value>Mit Ausnahme</value>
+  </data>
+  <data name="Without_Exception" xml:space="preserve">
+    <value>Ohne Ausnahme</value>
+  </data>
+  <data name="Log_Activity" xml:space="preserve">
+    <value>AKTIVITÄT</value>
+  </data>
+  <data name="Log_Results" xml:space="preserve">
+    <value>Protokollereignisse</value>
+  </data>
+  <data name="Log_Results_Description" xml:space="preserve">
+    <value>Bereinigte Anwendungsereignisse, die Ihren Suchkriterien entsprechen.</value>
+  </data>
+  <data name="Log_Warnings" xml:space="preserve">
+    <value>Warnungen</value>
+  </data>
+  <data name="Log_Information" xml:space="preserve">
+    <value>Information</value>
+  </data>
+  <data name="Log_Current_Page_Only" xml:space="preserve">
+    <value>Die Zähler beziehen sich nur auf die aktuelle Seite</value>
+  </data>
+  <data name="Log_UTC_Time" xml:space="preserve">
+    <value>Zeitstempel (UTC)</value>
+  </data>
+  <data name="Message" xml:space="preserve">
+    <value>Nachricht</value>
+  </data>
+  <data name="Log_Empty_Title" xml:space="preserve">
+    <value>Keine Ereignisse vorhanden</value>
+  </data>
+  <data name="No_Log_Events_Found" xml:space="preserve">
+    <value>Keine Protokollereignisse entsprechen den ausgewählten Filtern.</value>
+  </data>
+  <data name="Log_Clear_Filters" xml:space="preserve">
+    <value>Filter zurücksetzen</value>
+  </data>
+  <data name="Log_Filter_By_Correlation" xml:space="preserve">
+    <value>Alle Ereignisse mit dieser Korrelations-ID suchen</value>
+  </data>
+  <data name="Log_Inspect" xml:space="preserve">
+    <value>Prüfen</value>
+  </data>
+  <data name="Log_Of" xml:space="preserve">
+    <value>von</value>
+  </data>
+  <data name="Phone_Correction_Requests" xml:space="preserve">
+    <value>Anträge zur Korrektur der Telefonnummer</value>
+  </data>
+  <data name="History" xml:space="preserve">
+    <value>Verlauf</value>
+  </data>
+  <data name="Reversed" xml:space="preserve">
+    <value>Storniert</value>
+  </data>
+  <data name="UserGuide_AccountAccess" xml:space="preserve">
+    <value>Konten, Rollen und sicherer Zugriff</value>
+  </data>
+  <data name="UserGuide_ResidentSignIn" xml:space="preserve">
+    <value>Anmeldung für Bewohner</value>
+  </data>
+  <data name="UserGuide_ResidentSignInDetails" xml:space="preserve">
+    <value>Bewohner melden sich mit ihrer registrierten Mobilnummer und persönlichen PIN an. Der Zugriff ist auf eine aktive Bewohnerrolle und das dem Konto zugeordnete Wohnungsverhältnis beschränkt.</value>
+  </data>
+  <data name="UserGuide_AdminSignIn" xml:space="preserve">
+    <value>Anmeldung für Gebäudeadministratoren</value>
+  </data>
+  <data name="UserGuide_AdminSignInDetails" xml:space="preserve">
+    <value>Gebäudeadministratoren melden sich mit ihrer registrierten Mobilnummer und PIN an. Das Konto ist auf das zugewiesene Gebäude und die erteilten Berechtigungen beschränkt.</value>
+  </data>
+  <data name="UserGuide_SuperAdminSignIn" xml:space="preserve">
+    <value>SuperAdmin-Anmeldung</value>
+  </data>
+  <data name="UserGuide_SuperAdminSignInDetails" xml:space="preserve">
+    <value>SuperAdmins melden sich mit einer zugelassenen E-Mail-Adresse und einem Passwort an. Wenn die Zwei-Faktor-Authentifizierung für das Konto aktiviert oder erforderlich ist, muss die Authenticator-Abfrage vor Ausstellung der Sitzung abgeschlossen werden.</value>
+  </data>
+  <data name="UserGuide_MultipleRoles" xml:space="preserve">
+    <value>Ein Konto, mehrere Rollen</value>
+  </data>
+  <data name="UserGuide_MultipleRolesDetails" xml:space="preserve">
+    <value>Eine Person kann Bewohner einer Wohnung und zugleich Administrator eines oder mehrerer Gebäude sein. Wählen Sie bei Aufforderung die gewünschte Rolle und den passenden Geltungsbereich. Der Bewohnerzugriff bleibt wohnungsbezogen, der Administratorzugriff gebäudebezogen. Die Bereiche dürfen nicht zusammengeführt und für zusätzliche Rollen keine doppelten Identitäten angelegt werden.</value>
+  </data>
+  <data name="UserGuide_IdentityGovernance" xml:space="preserve">
+    <value>Kontoaktivierung und PIN-Sicherheit</value>
+  </data>
+  <data name="UserGuide_IdentityGovernanceDetails" xml:space="preserve">
+    <value>Der Bewohnerzugriff setzt eine verifizierte Identität, ein aktives Wohnverhältnis, eine gültige Rollenzuweisung und eine eindeutige registrierte Telefonnummer voraus. Konten mit ausstehender Prüfung können sich nicht anmelden. Ersetzen Sie die anfängliche oder wiederhergestellte PIN, wenn Sie dazu aufgefordert werden. Geben Sie niemals PIN, Wiederherstellungscodes oder Authenticator-Geheimnisse weiter.</value>
+  </data>
+  <data name="UserGuide_TwoFactor" xml:space="preserve">
+    <value>Zwei-Faktor-Authentifizierung</value>
+  </data>
+  <data name="UserGuide_TwoFactorDetails" xml:space="preserve">
+    <value>Wenn sie für ein Administratorkonto aktiviert ist, verwenden Sie nach den Anmeldedaten den aktuellen Code Ihrer Authenticator-App. Wiederherstellungscodes sind einmalig; bewahren Sie sie sicher offline auf und senden Sie sie nicht an den Support.</value>
+  </data>
+  <data name="UserGuide_Impersonation" xml:space="preserve">
+    <value>Supportzugriff (Impersonation)</value>
+  </data>
+  <data name="UserGuide_ImpersonationDetails" xml:space="preserve">
+    <value>Autorisierte Administratoren können vorübergehend einen zulässigen Bewohner- oder Gebäudekontext öffnen, um ein Problem zu untersuchen. Das Banner kennzeichnet den Impersonation-Modus. Mit „Zurück zu meinem Konto“ wird die vorherige Identität wiederhergestellt; verschachtelte Sitzungen kehren schrittweise jeweils eine Ebene zurück. Bereichsprüfungen und Audit-Protokollierung bleiben aktiv.</value>
+  </data>
+  <data name="UserGuide_ReceiptImages" xml:space="preserve">
+    <value>Überweisungsbelege und OCR</value>
+  </data>
+  <data name="UserGuide_ReceiptImagesDetails" xml:space="preserve">
+    <value>Ein Belegbild hilft dabei, mögliche Angaben wie Betrag, Datum, Referenz und Überweisungsstatus auszulesen. OCR ist nur eine Hilfestellung und kann komprimierte, zugeschnittene, gedrehte oder unscharfe Bilder falsch lesen. Ein erkannter Erfolgstext beweist keine endgültige Gutschrift. Der zuständige Administrator muss die Überweisung anhand einer vertrauenswürdigen Zahlungsquelle prüfen, bevor er die Einzahlung bestätigt.</value>
+  </data>
+  <data name="UserGuide_ReceiptImageQuality" xml:space="preserve">
+    <value>So erstellen Sie ein gut lesbares Belegbild</value>
+  </data>
+  <data name="UserGuide_ReceiptImageQualityDetails" xml:space="preserve">
+    <value>Laden Sie den ursprünglichen Screenshot oder das Originalbild in der bestmöglichen Auflösung hoch. Betrag, Währung, Datum, Referenz und Status müssen vollständig sichtbar sein. Vermeiden Sie Spiegelungen, Unschärfe, starke Komprimierung, Filter und enge Zuschnitte. Halten Sie das Telefon bei Fotos parallel zum Bildschirm oder Dokument und sorgen Sie für gleichmäßiges Licht. Ändern Sie niemals Beträge oder Transaktionsangaben.</value>
+  </data>
+  <data name="UserGuide_DepositHistory" xml:space="preserve">
+    <value>Prüfung und Verlauf von Einzahlungen</value>
+  </data>
+  <data name="UserGuide_DepositHistoryDetails" xml:space="preserve">
+    <value>Neue Einzahlungen bleiben ausstehend, bis ein berechtigter Administrator sie geprüft und bestätigt hat. Bestätigung, Stornierung und Rückbuchung sind unterschiedliche Finanzstatus. Historische Datensätze und verfügbare Beleglinks bleiben in den entsprechenden Wallet- oder Kontoauszugsansichten sichtbar; ein Bild allein bucht kein Geld im Hauptbuch.</value>
+  </data>
+  <data name="UserGuide_InvoiceQR" xml:space="preserve">
+    <value>Rechnungen und QR-Verifizierung</value>
+  </data>
+  <data name="UserGuide_InvoiceQRDetails" xml:space="preserve">
+    <value>Ausgestellte PDF-Rechnungen enthalten einen signierten QR-Verifizierungslink. Der Scan öffnet eine öffentliche Seite mit begrenzten Rechnungsangaben wie Gebäude, Wohnungsnummer, Zeitraum und Ausstellungsdatum. Kontaktdaten der Bewohner und Kontostände werden nicht offengelegt. Ungültige Signaturen oder unbekannte Rechnungen werden abgewiesen.</value>
+  </data>
+  <data name="UserGuide_AuditLogs" xml:space="preserve">
+    <value>Audit- und Anwendungsprotokolle</value>
+  </data>
+  <data name="UserGuide_AuditLogsDetails" xml:space="preserve">
+    <value>Audit-Protokolle erfassen wichtige Benutzeraktionen und Finanzvorgänge; Anwendungsprotokolle unterstützen die Laufzeitdiagnose. Ergebnisse sind auf den zulässigen Gebäude- oder Wohnungsbereich beschränkt, sensible Werte werden maskiert. Geben Sie bei einer Fehlermeldung die Korrelations-ID an. Protokolle ersetzen keine Finanzbelege.</value>
+  </data>
+  <data name="UserGuide_BackupRestore" xml:space="preserve">
+    <value>Sicherung und Wiederherstellung</value>
+  </data>
+  <data name="UserGuide_BackupRestoreDetails" xml:space="preserve">
+    <value>Erstellen und bewahren Sie vor größeren Änderungen Sicherungen auf. Prüfen Sie die Wiederherstellungsvorschau und die ausgewählten Sammlungen sorgfältig. Eine Wiederherstellungssitzung ist an das Konto gebunden, das die Vorschau erstellt hat, läuft ab, ist einmalig und prüft vor der transaktionalen Anwendung den Archiv-Hash. Stellen Sie nur nach autorisierter Prüfung in der vorgesehenen Umgebung wieder her; testen Sie niemals in Produktion.</value>
+  </data>
+  <data name="UserGuide_FinancialPeriods" xml:space="preserve">
+    <value>Finanzperioden und geschlossene Perioden</value>
+  </data>
+  <data name="UserGuide_FinancialPeriodsDetails" xml:space="preserve">
+    <value>Finanzbuchungen gehören zu einem festgelegten Gebäude und Zeitraum. Geschlossene oder fehlende Perioden verhindern geschützte Finanzänderungen, einschließlich der Stornierung ausstehender Einzahlungen. Ändern Sie keine historischen Perioden, um eine Buchung zu erzwingen; verwenden Sie den autorisierten Prozess zur Periodenverwaltung und Korrektur.</value>
+  </data>
+  <data name="UserGuide_ResidentAdminLoginStep" xml:space="preserve">
+    <value>Bewohner und Gebäudeverwalter: Melden Sie sich mit der registrierten Mobilnummer und Ihrer persönlichen PIN an.</value>
+  </data>
+  <data name="UserGuide_SuperAdminLoginStep" xml:space="preserve">
+    <value>SuperAdmin: Verwenden Sie die freigegebene E-Mail-Adresse und das Passwort und schließen Sie die Zwei-Faktor-Prüfung ab, falls Sie dazu aufgefordert werden.</value>
+  </data>
+  <data name="UserGuide_RoleContextStep" xml:space="preserve">
+    <value>Wenn Ihr Konto mehrere Rollen oder Gebäude-Bereiche hat, wählen Sie den gewünschten Kontext. Der Bewohnerzugriff bleibt auf die Wohnung beschränkt; der Verwalterzugriff bleibt auf das Gebäude beschränkt.</value>
+  </data>
+  <data name="UserGuide_InitialPinStep" xml:space="preserve">
+    <value>Ändern Sie bei der ersten Anmeldung die ausgegebene PIN, wenn das System Sie dazu auffordert. Teilen Sie Ihre PIN niemals und verwenden Sie keine Zugangsdaten einer anderen Person.</value>
+  </data>
+  <data name="Reversed_Reversed" xml:space="preserve">
+    <value>&lt;strong&gt;Rückgängig gemacht&lt;/strong&gt; — eine bereits verbuchte Einzahlung wurde rückgängig gemacht; der ursprüngliche Finanzverlauf bleibt erhalten.</value>
+  </data>
 </root>

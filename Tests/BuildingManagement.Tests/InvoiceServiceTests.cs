@@ -1,6 +1,8 @@
 using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Services;
+using BuildingManagementMvc.Models;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
@@ -265,6 +267,48 @@ public sealed class InvoiceServiceTests
     }
 
     [Fact]
+    public async Task BuildInvoiceDataAsync_ProvisionsMissingCurrentPeriodWhenMonthIsExplicit()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.Buildings.Add(new BuildingEntity
+            {
+                Id = "B1", Name = "Target Building", BuildingNumber = "01",
+                PaymentLabel = "Bank", PaymentAccountNumber = "12345"
+            });
+            seed.BuildingSettings.Add(new BuildingSettingsEntity { BuildingId = "B1", Currency = "EGP" });
+            seed.Floors.Add(new FloorEntity
+            {
+                BuildingId = "B1", Id = "F1", Label = "First Floor", SortOrder = 1
+            });
+            seed.Apartments.Add(new ApartmentEntity
+            {
+                BuildingId = "B1", Id = "A1", FloorId = "F1", Number = 101,
+                MonthlyFee = 100m, IsClosed = false, IsDisabled = false
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var factory = new TestContextFactory(options);
+        var service = new InvoiceService(factory, new TargetWalletReadService(factory));
+        var timeZone = TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo");
+        var monthKey = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, timeZone).ToString("yyyy-MM");
+
+        var invoice = await service.BuildInvoiceDataAsync("B1", "A1", monthKey);
+
+        Assert.NotNull(invoice);
+        Assert.Equal(monthKey, invoice!.MonthKey);
+        await using var verify = new AppDbContext(options);
+        var period = await verify.FinancialPeriods.SingleAsync(
+            item => item.BuildingId == "B1" && item.PeriodKey == monthKey);
+        Assert.Equal("Africa/Cairo", period.TimeZoneId);
+        Assert.Equal(FinancialPeriodStatus.Open, period.Status);
+    }
+
+    [Fact]
     public async Task FindBuildingIdByApartmentAsync_ReturnsNullWhenApartmentIdIsAmbiguous()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -282,6 +326,49 @@ public sealed class InvoiceServiceTests
             new TestContextFactory(options),
             new TargetWalletReadService(new TestContextFactory(options)));
         Assert.Null(await service.FindBuildingIdByApartmentAsync("A1"));
+    }
+
+    [Fact]
+    public async Task GetIssuedInvoiceSnapshotAsync_ReturnsOnlyTheMatchingImmutableInvoice()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        const string invoiceNo = "INV-BLD-001-12-20261121-000001";
+        var snapshot = new InvoiceData
+        {
+            InvoiceNo = invoiceNo,
+            Building = new Building { Id = "B1", BuildingNumber = "BLD-001", Name = "Building" },
+            Apt = new Apartment { Id = "A1", Number = 12 },
+            MonthKey = "2026-11",
+            MonthLabelText = "November 2026",
+            CurrencyCode = "EGP",
+            Balance = 5119m
+        };
+
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.InvoiceIssues.Add(new InvoiceIssueEntity
+            {
+                BuildingId = "B1",
+                ApartmentId = "A1",
+                MonthKey = "2026-11",
+                InvoiceNo = invoiceNo,
+                IssuedAtUtc = DateTime.UtcNow,
+                SnapshotJson = JsonSerializer.Serialize(snapshot)
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new InvoiceService(
+            new TestContextFactory(options),
+            new TargetWalletReadService(new TestContextFactory(options)));
+
+        var result = await service.GetIssuedInvoiceSnapshotAsync(invoiceNo);
+        Assert.NotNull(result);
+        Assert.Equal(invoiceNo, result!.InvoiceNo);
+        Assert.Equal(5119m, result.Balance);
+        Assert.Null(await service.GetIssuedInvoiceSnapshotAsync(invoiceNo + "-tampered"));
     }
 
     private sealed class TestContextFactory(DbContextOptions<AppDbContext> options)

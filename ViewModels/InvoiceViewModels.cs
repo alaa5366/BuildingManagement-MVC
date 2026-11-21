@@ -77,6 +77,17 @@ public class InvoiceData
     public string QrPayload { get; set; } = "";
 }
 
+/// <summary>Public, privacy-minimized result of verifying an issued invoice.</summary>
+public sealed class InvoiceVerificationViewModel
+{
+    public string InvoiceNo { get; init; } = "";
+    public string BuildingName { get; init; } = "";
+    public string BuildingNumber { get; init; } = "";
+    public int ApartmentNumber { get; init; }
+    public string MonthLabel { get; init; } = "";
+    public string IssueDate { get; init; } = "";
+}
+
 /// <summary>
 /// An apartment's share of one expense category on an invoice.
 /// </summary>

@@ -227,6 +227,8 @@
         <a href="#superadmin-buildings" class="sub">@Loc.T("Buildings_2")</a>
         <a href="#superadmin-admins" class="sub">@Loc.T("Admins")</a>
         <a href="#superadmin-backup" class="sub">@Loc.T("Backup_2")</a>
+        <a href="#account-security">@Loc.T("UserGuide_AccountAccess")</a>
+        <a href="#receipt-quality" class="sub">@Loc.T("UserGuide_ReceiptImageQuality")</a>
         <a href="#faq">@Loc.T("FAQ")</a>
         <a href="#shortcuts">@Loc.T("Quick_Info")</a>
     </aside>
@@ -251,10 +253,10 @@
         <p>@Loc.T("When_You_Open_The_System_You")</p>
 
         <ol>
-            <li>@Html.Raw(Loc.T("1_Enter_The_Mobile_Number_You"))</li>
-            <li>@Html.Raw(Loc.T("2_Enter_Your_PIN_4_Digits"))</li>
-            <li>@Html.Raw(Loc.T("3_Tap_Log_In"))</li>
-            <li>@Html.Raw(Loc.T("4_If_You_Have_More_Than"))</li>
+            <li>@Loc.T("UserGuide_ResidentAdminLoginStep")</li>
+            <li>@Loc.T("UserGuide_SuperAdminLoginStep")</li>
+            <li>@Loc.T("UserGuide_RoleContextStep")</li>
+            <li>@Loc.T("UserGuide_InitialPinStep")</li>
         </ol>
 
         <div class="alert-tip">@Html.Raw(Loc.T("Tip_If_You_Forgot_Your_PIN"))</div>
@@ -420,7 +422,56 @@
         <a href="#" class="back-top">@Loc.T("Back_To_Top")</a>
 
         @* ============================================================ *@
-        @* 5. FAQ                                                        *@
+        @* 5. Accounts, security and operational guidance                *@
+        @* ============================================================ *@
+        <h2 id="account-security">@Loc.T("UserGuide_AccountAccess")</h2>
+
+        <h3>@Loc.T("UserGuide_ResidentSignIn")</h3>
+        <p>@Loc.T("UserGuide_ResidentSignInDetails")</p>
+
+        <h3>@Loc.T("UserGuide_AdminSignIn")</h3>
+        <p>@Loc.T("UserGuide_AdminSignInDetails")</p>
+
+        <h3>@Loc.T("UserGuide_SuperAdminSignIn")</h3>
+        <p>@Loc.T("UserGuide_SuperAdminSignInDetails")</p>
+
+        <h3>@Loc.T("UserGuide_MultipleRoles")</h3>
+        <p>@Loc.T("UserGuide_MultipleRolesDetails")</p>
+
+        <h3>@Loc.T("UserGuide_IdentityGovernance")</h3>
+        <p>@Loc.T("UserGuide_IdentityGovernanceDetails")</p>
+
+        <h3>@Loc.T("UserGuide_TwoFactor")</h3>
+        <p>@Loc.T("UserGuide_TwoFactorDetails")</p>
+
+        <h3>@Loc.T("UserGuide_Impersonation")</h3>
+        <p>@Loc.T("UserGuide_ImpersonationDetails")</p>
+
+        <h3>@Loc.T("UserGuide_ReceiptImages")</h3>
+        <p>@Loc.T("UserGuide_ReceiptImagesDetails")</p>
+
+        <h3 id="receipt-quality">@Loc.T("UserGuide_ReceiptImageQuality")</h3>
+        <p>@Loc.T("UserGuide_ReceiptImageQualityDetails")</p>
+
+        <h3>@Loc.T("UserGuide_DepositHistory")</h3>
+        <p>@Loc.T("UserGuide_DepositHistoryDetails")</p>
+
+        <h3>@Loc.T("UserGuide_InvoiceQR")</h3>
+        <p>@Loc.T("UserGuide_InvoiceQRDetails")</p>
+
+        <h3>@Loc.T("UserGuide_AuditLogs")</h3>
+        <p>@Loc.T("UserGuide_AuditLogsDetails")</p>
+
+        <h3>@Loc.T("UserGuide_BackupRestore")</h3>
+        <p>@Loc.T("UserGuide_BackupRestoreDetails")</p>
+
+        <h3>@Loc.T("UserGuide_FinancialPeriods")</h3>
+        <p>@Loc.T("UserGuide_FinancialPeriodsDetails")</p>
+
+        <a href="#" class="back-top">@Loc.T("Back_To_Top")</a>
+
+        @* ============================================================ *@
+        @* 6. FAQ                                                        *@
         @* ============================================================ *@
         <h2 id="faq">@Loc.T("FAQ")</h2>
 
@@ -488,6 +539,7 @@
             <li>@Html.Raw(Loc.T("Pending_Awaiting_Confirmation"))</li>
             <li>@Html.Raw(Loc.T("Confirmed_Confirmed"))</li>
             <li>@Html.Raw(Loc.T("Cancelled_Cancelled"))</li>
+                <li>@Html.Raw(Loc.T("Reversed_Reversed"))</li>
         </ul>
 
         <h3>@Loc.T("Support")</h3>

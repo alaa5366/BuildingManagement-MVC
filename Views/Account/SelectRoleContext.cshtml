@@ -1,0 +1,66 @@
+@model RoleContextSelectionVm
+@{
+    ViewData["Title"] = "اختيار مساحة العمل";
+    var residents = Model.Contexts.Where(x => x.Role == "resident").GroupBy(x => x.GroupTitle).ToList();
+    var admins = Model.Contexts.Where(x => x.Role == "admin").ToList();
+}
+<div class="context-page">
+    <header class="context-header">
+        <div class="context-mark"><i class="bi bi-shield-lock"></i></div>
+        <div><small>SECURE WORKSPACE</small><h1>أهلاً @Model.FullName</h1><p>تم التحقق من هويتك. اختر مساحة العمل التي تريد المتابعة إليها.</p></div>
+    </header>
+    @if (residents.Count > 0)
+    {
+        <section class="context-section">
+            <div class="context-heading"><span class="resident"><i class="bi bi-house-door"></i></span><div><h2>حساب الساكن</h2><p>اختر الشقة التي تريد الدخول إليها</p></div><b>@Model.Contexts.Count(x => x.Role == "resident") شقق</b></div>
+            @foreach (var group in residents)
+            {
+                <div class="context-building"><div class="building-title"><i class="bi bi-buildings"></i><strong>@group.Key</strong><small>@group.Count() شقق</small></div>
+                    <div class="context-grid">
+                    @foreach (var item in group)
+                    {
+                        <form method="post" asp-action="SelectRoleContext">
+                            @Html.AntiForgeryToken()<input type="hidden" name="sessionToken" value="@Model.SessionToken" /><input type="hidden" name="contextId" value="@item.Id" />
+                            <button type="submit" class="context-choice resident-choice"><span class="choice-icon"><i class="bi bi-door-open"></i></span><span><strong>@item.Title</strong><small>@item.Description</small></span><i class="bi bi-arrow-left-circle"></i></button>
+                        </form>
+                    }
+                    </div>
+                </div>
+            }
+        </section>
+    }
+    @if (admins.Count > 0)
+    {
+        <section class="context-section">
+            <div class="context-heading"><span class="admin"><i class="bi bi-building-gear"></i></span><div><h2>إدارة العمارات</h2><p>كل عمارة لها مساحة إدارة وصلاحيات مستقلة</p></div><b>@admins.Count عمارات</b></div>
+            <div class="context-grid">
+            @foreach (var item in admins)
+            {
+                <form method="post" asp-action="SelectRoleContext">
+                    @Html.AntiForgeryToken()<input type="hidden" name="sessionToken" value="@Model.SessionToken" /><input type="hidden" name="contextId" value="@item.Id" />
+                    <button type="submit" class="context-choice admin-choice"><span class="choice-icon"><i class="bi bi-buildings"></i></span><span><strong>@item.GroupTitle</strong><small>@item.Description</small></span><i class="bi bi-arrow-left-circle"></i></button>
+                </form>
+            }
+            </div>
+        </section>
+    }
+    <footer class="context-footer"><span><i class="bi bi-clock-history"></i> الاختيار صالح لمدة 5 دقائق</span><a asp-action="UnifiedLogin">العودة لتسجيل الدخول</a></footer>
+</div>
+<style>
+.context-page{max-width:1000px;margin:38px auto;padding:0 20px;color:var(--bs-body-color)}
+.context-header{display:flex;align-items:center;gap:18px;padding:26px;border:1px solid var(--bs-border-color);border-radius:20px;background:var(--bs-tertiary-bg);margin-bottom:24px}
+.context-mark{width:58px;height:58px;display:grid;place-items:center;border-radius:16px;background:rgba(25,135,84,.12);color:#198754;font-size:26px}
+.context-header small{font-size:10px;letter-spacing:1.5px;color:var(--bs-secondary-color);font-weight:800}
+.context-header h1{font-size:24px;font-weight:850;margin:5px 0}.context-header p,.context-heading p{font-size:12px;color:var(--bs-secondary-color);margin:0}
+.context-section{padding:22px;margin-bottom:20px;border:1px solid var(--bs-border-color);border-radius:18px;background:var(--bs-body-bg)}
+.context-heading{display:flex;align-items:center;gap:13px;margin-bottom:18px}.context-heading>span{width:46px;height:46px;display:grid;place-items:center;border-radius:13px;font-size:21px}.context-heading .resident{background:rgba(13,110,253,.1);color:#0d6efd}.context-heading .admin{background:rgba(25,135,84,.12);color:#198754}.context-heading h2{font-size:17px;font-weight:800;margin:0 0 4px}.context-heading>b{margin-inline-start:auto;background:var(--bs-tertiary-bg);border-radius:30px;padding:6px 10px;font-size:11px}
+.context-building{margin-top:18px}.building-title{display:flex;align-items:center;gap:9px;margin-bottom:10px;color:var(--bs-secondary-color);font-size:12px}.building-title strong{color:var(--bs-body-color);font-size:13px}.building-title small{margin-inline-start:auto}
+.context-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:11px}.context-grid form{margin:0}
+.context-choice{width:100%;min-height:78px;display:flex;align-items:center;gap:12px;padding:14px;text-align:start;border:1px solid var(--bs-border-color);border-radius:14px;background:var(--bs-body-bg);color:var(--bs-body-color);transition:.15s}
+.context-choice:hover{transform:translateY(-2px);border-color:#198754;box-shadow:0 7px 20px rgba(0,0,0,.07)}
+.choice-icon{width:40px;height:40px;flex:0 0 40px;display:grid;place-items:center;border-radius:11px;background:var(--bs-tertiary-bg);font-size:18px}
+.resident-choice .choice-icon{color:#0d6efd;background:rgba(13,110,253,.09)}.admin-choice .choice-icon{color:#198754;background:rgba(25,135,84,.1)}
+.context-choice>span:nth-child(2){flex:1;min-width:0}.context-choice strong,.context-choice small{display:block}.context-choice strong{font-size:13px;font-weight:800}.context-choice small{font-size:11px;color:var(--bs-secondary-color);margin-top:4px}.context-choice>i{color:var(--bs-secondary-color)}
+.context-footer{display:flex;justify-content:space-between;gap:12px;padding:8px 2px;color:var(--bs-secondary-color);font-size:11px}.context-footer a{text-decoration:none;font-weight:700}
+@@media(max-width:600px){.context-page{margin:18px auto;padding:0 10px}.context-header,.context-section{padding:17px}.context-heading{flex-wrap:wrap}.context-heading>b{margin-inline-start:auto}}
+</style>

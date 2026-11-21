@@ -514,6 +514,202 @@ public sealed class AccountManagementServiceTests
         Assert.Empty(await verify.UserCredentials.Where(x => x.AccountId == accountId).ToListAsync());
     }
 
+    [Fact]
+    public async Task ResetManagedAccountPinAsync_IgnoresSuperAdminPhoneDuplicates()
+    {
+        var factory = new TestContextFactory();
+        var hasher = new BcryptPasswordHasher();
+        var now = DateTime.UtcNow;
+        var residentPersonId = Guid.NewGuid();
+        var superAdminGmailPersonId = Guid.NewGuid();
+        var superAdminHotmailPersonId = Guid.NewGuid();
+        var residentAccountId = Guid.NewGuid();
+        await using (var db = await factory.CreateDbContextAsync())
+        {
+            db.RoleDefinitions.AddRange(
+                new RoleDefinitionEntity { RoleKey = "resident", DisplayName = "Resident", IsActive = true },
+                new RoleDefinitionEntity { RoleKey = "superadmin", DisplayName = "Super Administrator", IsSystemRole = true, IsActive = true });
+            db.Persons.AddRange(
+                new PersonEntity { PersonId = residentPersonId, DisplayName = "Resident", PrimaryPhone = "+201119221000", CreatedAtUtc = now },
+                new PersonEntity { PersonId = superAdminGmailPersonId, DisplayName = "Super Admin Gmail", PrimaryPhone = "+201119221000", CreatedAtUtc = now },
+                new PersonEntity { PersonId = superAdminHotmailPersonId, DisplayName = "Super Admin Hotmail", PrimaryPhone = "01119221000", CreatedAtUtc = now });
+            db.UserAccounts.Add(new UserAccountEntity
+            {
+                AccountId = residentAccountId, PersonId = residentPersonId, AccountStatus = 0,
+                MustChangePin = true, SecurityStamp = "pending", CreatedAtUtc = now
+            });
+            db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            {
+                RoleAssignmentId = Guid.NewGuid(), AccountId = residentAccountId, RoleKey = "resident",
+                ScopeType = 2, ScopeBuildingId = "building-1", ScopeApartmentId = "apt-1",
+                ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1)
+            });
+            foreach (var personId in new[] { superAdminGmailPersonId, superAdminHotmailPersonId })
+            {
+                var adminAccountId = Guid.NewGuid();
+                db.UserAccounts.Add(new UserAccountEntity
+                {
+                    AccountId = adminAccountId, PersonId = personId, AccountStatus = 1,
+                    SecurityStamp = Guid.NewGuid().ToString("N"), CreatedAtUtc = now
+                });
+                db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+                {
+                    RoleAssignmentId = Guid.NewGuid(), AccountId = adminAccountId, RoleKey = "superadmin",
+                    ScopeType = 0, ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1)
+                });
+            }
+            await db.SaveChangesAsync();
+        }
+
+        var result = await new AccountManagementService(factory, CreateAuditMock().Object)
+            .ResetManagedAccountPinAsync(residentAccountId, "superadmin-actor", hasher, identityVerified: true);
+
+        Assert.True(result.Success);
+        Assert.False(string.IsNullOrWhiteSpace(result.TemporaryPin));
+        await using var verify = await factory.CreateDbContextAsync();
+        var account = await verify.UserAccounts.SingleAsync(x => x.AccountId == residentAccountId);
+        Assert.Equal((byte)1, account.AccountStatus);
+        Assert.True(account.MustChangePin);
+        Assert.Single(await verify.UserCredentials.Where(x => x.AccountId == residentAccountId && x.RevokedAtUtc == null).ToListAsync());
+    }
+    [Fact]
+    public async Task IdentityGovernance_CreateOccupancy_CreatesPendingAccountAndApartmentScopedResidentRole()
+    {
+        var factory = new TestContextFactory();
+        var now = DateTime.UtcNow;
+        var personId = Guid.NewGuid();
+        await using (var db = await factory.CreateDbContextAsync())
+        {
+            db.Persons.Add(new PersonEntity
+            {
+                PersonId = personId, DisplayName = "New Resident", PrimaryPhone = "+201000000881",
+                PrimaryEmail = "resident@example.test", CreatedAtUtc = now
+            });
+            db.Buildings.Add(new BuildingEntity { Id = "building-1", BuildingNumber = "B1", Name = "Building One" });
+            db.Apartments.Add(new ApartmentEntity
+            {
+                BuildingId = "building-1", Id = "apt-1", FloorId = "floor-1", Number = 1
+            });
+            db.RoleDefinitions.Add(new RoleDefinitionEntity
+            {
+                RoleKey = "resident", DisplayName = "Resident", IsActive = true
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var audit = CreateAuditMock();
+        var service = new IdentityGovernanceService(factory, audit.Object);
+        var result = await service.CreateOccupancyAsync(
+            personId, "building-1", "apt-1", 1, true, now.AddMinutes(-1), "Initial occupancy",
+            Guid.NewGuid(), CancellationToken.None);
+
+        Assert.True(result.Success);
+        await using var verify = await factory.CreateDbContextAsync();
+        var account = await verify.UserAccounts.SingleAsync(x => x.PersonId == personId);
+        Assert.Equal((byte)0, account.AccountStatus);
+        Assert.True(account.MustChangePin);
+        Assert.Equal("RESIDENT@EXAMPLE.TEST", account.NormalizedEmail);
+        Assert.Empty(await verify.UserCredentials.Where(x => x.AccountId == account.AccountId).ToListAsync());
+        var residentRole = await verify.UserRoleAssignments.SingleAsync(x => x.AccountId == account.AccountId);
+        Assert.Equal("resident", residentRole.RoleKey);
+        Assert.Equal((byte)2, residentRole.ScopeType);
+        Assert.Equal("building-1", residentRole.ScopeBuildingId);
+        Assert.Equal("apt-1", residentRole.ScopeApartmentId);
+    }
+
+    [Fact]
+    public async Task IdentityGovernance_CreateOccupancy_AddsResidentRoleWithoutChangingExistingAdminAccount()
+    {
+        var factory = new TestContextFactory();
+        var now = DateTime.UtcNow;
+        var personId = Guid.NewGuid();
+        var accountId = Guid.NewGuid();
+        await using (var db = await factory.CreateDbContextAsync())
+        {
+            db.Persons.Add(new PersonEntity
+            {
+                PersonId = personId, DisplayName = "Resident Admin", PrimaryPhone = "+201000000882", CreatedAtUtc = now
+            });
+            db.UserAccounts.Add(new UserAccountEntity
+            {
+                AccountId = accountId, PersonId = personId, AccountStatus = 1,
+                SecurityStamp = "existing-stamp", CreatedAtUtc = now
+            });
+            db.Buildings.Add(new BuildingEntity { Id = "building-1", BuildingNumber = "B1", Name = "Building One" });
+            db.Apartments.Add(new ApartmentEntity
+            {
+                BuildingId = "building-1", Id = "apt-2", FloorId = "floor-1", Number = 2
+            });
+            db.RoleDefinitions.AddRange(
+                new RoleDefinitionEntity { RoleKey = "resident", DisplayName = "Resident", IsActive = true },
+                new RoleDefinitionEntity { RoleKey = "admin", DisplayName = "Admin", IsActive = true });
+            db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            {
+                RoleAssignmentId = Guid.NewGuid(), AccountId = accountId, RoleKey = "admin",
+                ScopeType = 1, ScopeBuildingId = "building-1", ValidFromUtc = now.AddDays(-1), GrantedAtUtc = now.AddDays(-1)
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var result = await new IdentityGovernanceService(factory, CreateAuditMock().Object).CreateOccupancyAsync(
+            personId, "building-1", "apt-2", 1, true, now.AddMinutes(-1), null,
+            Guid.NewGuid(), CancellationToken.None);
+
+        Assert.True(result.Success);
+        await using var verify = await factory.CreateDbContextAsync();
+        var account = await verify.UserAccounts.SingleAsync(x => x.AccountId == accountId);
+        Assert.Equal((byte)1, account.AccountStatus);
+        Assert.Equal("existing-stamp", account.SecurityStamp);
+        var assignments = await verify.UserRoleAssignments.Where(x => x.AccountId == accountId).ToListAsync();
+        Assert.Contains(assignments, x => x.RoleKey == "admin" && x.ScopeType == 1);
+        Assert.Contains(assignments, x => x.RoleKey == "resident" && x.ScopeType == 2 &&
+            x.ScopeBuildingId == "building-1" && x.ScopeApartmentId == "apt-2");
+    }
+
+    [Fact]
+    public async Task IdentityGovernance_CreatePendingAccount_ProvisionsResidentRolesForEveryActiveApartment()
+    {
+        var factory = new TestContextFactory();
+        var now = DateTime.UtcNow;
+        var personId = Guid.NewGuid();
+        await using (var db = await factory.CreateDbContextAsync())
+        {
+            db.Persons.Add(new PersonEntity
+            {
+                PersonId = personId, DisplayName = "Multi Apartment Resident", PrimaryPhone = "+201000000883", CreatedAtUtc = now
+            });
+            db.RoleDefinitions.Add(new RoleDefinitionEntity
+            {
+                RoleKey = "resident", DisplayName = "Resident", IsActive = true
+            });
+            db.ApartmentOccupancies.AddRange(
+                new ApartmentOccupancyEntity
+                {
+                    OccupancyId = Guid.NewGuid(), PersonId = personId, BuildingId = "building-1", ApartmentId = "apt-1",
+                    OccupancyType = 1, IsPrimary = true, ValidFromUtc = now.AddDays(-2), RecordedAtUtc = now.AddDays(-2)
+                },
+                new ApartmentOccupancyEntity
+                {
+                    OccupancyId = Guid.NewGuid(), PersonId = personId, BuildingId = "building-2", ApartmentId = "apt-9",
+                    OccupancyType = 1, IsPrimary = false, ValidFromUtc = now.AddDays(-1), RecordedAtUtc = now.AddDays(-1)
+                });
+            await db.SaveChangesAsync();
+        }
+
+        var result = await new IdentityGovernanceService(factory, CreateAuditMock().Object)
+            .CreatePendingAccountAsync(personId, Guid.NewGuid(), CancellationToken.None);
+
+        Assert.True(result.Success);
+        await using var verify = await factory.CreateDbContextAsync();
+        var account = await verify.UserAccounts.SingleAsync(x => x.PersonId == personId);
+        Assert.Equal((byte)0, account.AccountStatus);
+        Assert.True(account.MustChangePin);
+        Assert.Empty(await verify.UserCredentials.Where(x => x.AccountId == account.AccountId).ToListAsync());
+        var roles = await verify.UserRoleAssignments.Where(x => x.AccountId == account.AccountId).ToListAsync();
+        Assert.Equal(2, roles.Count);
+        Assert.Contains(roles, x => x.ScopeBuildingId == "building-1" && x.ScopeApartmentId == "apt-1");
+        Assert.Contains(roles, x => x.ScopeBuildingId == "building-2" && x.ScopeApartmentId == "apt-9");
+    }
     private static Mock<IAuditLogger> CreateAuditMock()
     {
         var audit = new Mock<IAuditLogger>();

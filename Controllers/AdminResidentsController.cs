@@ -439,7 +439,7 @@ public class AdminResidentsController : Controller
 
         try
         {
-            var result = await _residents.MigrateFromApartmentsAsync(buildingId, isDryRun);
+            var result = await _residents.MigrateFromApartmentsAsync(buildingId, isDryRun, CurrentUserId);
 
             // âœ… ط±ط³ط§ظ„ط© ظ†ط¬ط§ط­
             if (isDryRun)

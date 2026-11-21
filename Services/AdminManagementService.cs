@@ -32,11 +32,15 @@ public sealed class AdminManagementService
             join person in db.Persons.AsNoTracking() on account.PersonId equals person.PersonId
             join assignment in db.UserRoleAssignments.AsNoTracking() on account.AccountId equals assignment.AccountId
             where (assignment.RoleKey == "admin" || assignment.RoleKey == "building-admin") && assignment.ScopeType == 1
-                && assignment.RevokedAtUtc == null
-                && (assignment.ValidFromUtc <= now)
+                && (assignment.RevokedAtUtc == null || assignment.RevocationReason == "Administrator account deactivated")
+                && assignment.ValidFromUtc <= now
                 && (assignment.ValidToUtc == null || assignment.ValidToUtc > now)
                 && (buildingId == null || assignment.ScopeBuildingId == buildingId)
-            select new { Account = account, Person = person, assignment.ScopeBuildingId })
+            select new
+            {
+                Account = account, Person = person, assignment.ScopeBuildingId,
+                assignment.RevokedAtUtc, assignment.ValidFromUtc, assignment.ValidToUtc
+            })
             .ToListAsync();
 
         var result = new List<AppUserDoc>();
@@ -45,8 +49,13 @@ public sealed class AdminManagementService
             var first = group.First();
             var buildings = group.Select(x => x.ScopeBuildingId).Where(x => x != null)
                 .Cast<string>().Distinct(StringComparer.Ordinal).ToList();
-            var permissions = await GetEffectivePermissionsAsync(db, first.Account.AccountId, buildings, now);
-            result.Add(Map(first.Account, first.Person, buildings, permissions));
+            var activeBuildings = group.Where(x => x.RevokedAtUtc == null
+                    && x.ValidFromUtc <= now && (x.ValidToUtc == null || x.ValidToUtc > now))
+                .Select(x => x.ScopeBuildingId).Where(x => x != null).Cast<string>()
+                .Distinct(StringComparer.Ordinal).ToList();
+            var permissions = await GetEffectivePermissionsAsync(db, first.Account.AccountId, activeBuildings, now);
+            var adminActive = first.Account.AccountStatus == 1 && activeBuildings.Count > 0;
+            result.Add(Map(first.Account, first.Person, buildings, permissions, adminActive));
         }
         return result.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToList();
     }
@@ -64,14 +73,19 @@ public sealed class AdminManagementService
             select new { Account = account, Person = person }).SingleOrDefaultAsync();
         if (record is null) return null;
 
-        var buildings = await db.UserRoleAssignments.AsNoTracking()
+        var assignments = await db.UserRoleAssignments.AsNoTracking()
             .Where(item => item.AccountId == accountId && (item.RoleKey == "admin" || item.RoleKey == "building-admin")
-                && item.ScopeType == 1 && item.RevokedAtUtc == null
+                && item.ScopeType == 1
+                && (item.RevokedAtUtc == null || item.RevocationReason == "Administrator account deactivated")
                 && item.ValidFromUtc <= now && (item.ValidToUtc == null || item.ValidToUtc > now))
-            .Select(item => item.ScopeBuildingId!).Distinct().ToListAsync();
-        if (buildings.Count == 0) return null;
-        var permissions = await GetEffectivePermissionsAsync(db, accountId, buildings, now);
-        return Map(record.Account, record.Person, buildings, permissions);
+            .ToListAsync();
+        if (assignments.Count == 0) return null;
+        var buildings = assignments.Select(item => item.ScopeBuildingId!).Distinct().ToList();
+        var activeBuildings = assignments.Where(item => item.RevokedAtUtc == null)
+            .Select(item => item.ScopeBuildingId!).Distinct().ToList();
+        var permissions = await GetEffectivePermissionsAsync(db, accountId, activeBuildings, now);
+        var adminActive = record.Account.AccountStatus == 1 && activeBuildings.Count > 0;
+        return Map(record.Account, record.Person, buildings, permissions, adminActive);
     }
 
     /// <summary> Creates or saves data through CreateAdminAsync. </summary>
@@ -88,8 +102,6 @@ public sealed class AdminManagementService
             throw new ArgumentException("A valid building is required.");
 
         var now = DateTime.UtcNow;
-        var accountId = Guid.NewGuid();
-        var personId = Guid.NewGuid();
         var grantedBy = Guid.TryParse(createdBy, out var actorId) ? actorId : (Guid?)null;
         var selectedPermissions = NormalizePermissions(permissions);
 
@@ -98,58 +110,185 @@ public sealed class AdminManagementService
         var buildingExists = await db.Buildings.AnyAsync(item => item.Id == buildingId);
         if (!buildingExists) throw new InvalidOperationException("The selected building does not exist.");
 
-        var duplicatePhone = await db.Persons.AsNoTracking().Where(item => item.PrimaryPhone != null)
-            .Select(item => item.PrimaryPhone).ToListAsync();
-        if (duplicatePhone.Any(value => string.Equals(AuthHelpers.NormalizePhone(value), normalizedPhone, StringComparison.Ordinal)))
-            throw new InvalidOperationException("This phone number is already linked to another person.");
+        // A shared phone reuses the one canonical person/account so a resident can
+        // also administer the building without creating a second login identity.
+        var superAdminPersonIds = await (
+            from userAccountRow in db.UserAccounts.AsNoTracking()
+            join superAdminAssignment in db.UserRoleAssignments.AsNoTracking()
+                on userAccountRow.AccountId equals superAdminAssignment.AccountId
+            where superAdminAssignment.RoleKey == "superadmin" && superAdminAssignment.RevokedAtUtc == null
+            select userAccountRow.PersonId).Distinct().ToListAsync();
+        var phonePeople = await db.Persons.Where(item => !item.IsArchived && item.PrimaryPhone != null
+            && !superAdminPersonIds.Contains(item.PersonId)).ToListAsync();
+        var matchingPeople = phonePeople.Where(item => string.Equals(
+            AuthHelpers.NormalizePhone(item.PrimaryPhone), normalizedPhone, StringComparison.Ordinal)).ToList();
+        PersonEntity? person = matchingPeople.Count == 1 ? matchingPeople[0] : null;
+        if (matchingPeople.Count > 1)
+        {
+            var matchingPersonIds = matchingPeople.Select(item => item.PersonId).ToHashSet();
+            var matchingAccounts = await db.UserAccounts.AsNoTracking()
+                .Where(item => matchingPersonIds.Contains(item.PersonId)).ToListAsync();
+            var matchingAccountIds = matchingAccounts.Select(item => item.AccountId).ToHashSet();
+            var activeAssignments = await db.UserRoleAssignments.AsNoTracking()
+                .Where(item => matchingAccountIds.Contains(item.AccountId) && item.RevokedAtUtc == null
+                    && item.ValidFromUtc <= now && (item.ValidToUtc == null || item.ValidToUtc > now))
+                .ToListAsync();
+            var credentials = await db.UserCredentials.AsNoTracking()
+                .Where(item => matchingAccountIds.Contains(item.AccountId) && item.CredentialType == 0
+                    && item.RevokedAtUtc == null && (item.ExpiresAtUtc == null || item.ExpiresAtUtc > now))
+                .ToListAsync();
+            person = matchingPeople
+                .OrderByDescending(candidate => matchingAccounts.Any(item => item.PersonId == candidate.PersonId))
+                .ThenByDescending(candidate => activeAssignments.Count(item =>
+                    matchingAccounts.Any(account => account.PersonId == candidate.PersonId && account.AccountId == item.AccountId)
+                    && item.RoleKey == "resident" && item.ScopeType == 2))
+                .ThenByDescending(candidate => activeAssignments.Count(item =>
+                    matchingAccounts.Any(account => account.PersonId == candidate.PersonId && account.AccountId == item.AccountId)
+                    && (item.RoleKey == "admin" || item.RoleKey == "building-admin")))
+                .ThenByDescending(candidate => matchingAccounts.Any(item =>
+                    item.PersonId == candidate.PersonId && item.AccountStatus == 1))
+                .ThenByDescending(candidate => credentials.Count(item =>
+                    matchingAccounts.Any(account => account.PersonId == candidate.PersonId && account.AccountId == item.AccountId)))
+                .ThenBy(candidate => candidate.CreatedAtUtc)
+                .ThenBy(candidate => candidate.PersonId)
+                .First();
+        }
+        var personCreated = person is null;
+        if (person is null)
+        {
+            person = new PersonEntity
+            {
+                PersonId = Guid.NewGuid(),
+                DisplayName = displayName,
+                PrimaryPhone = normalizedPhone,
+                Whatsapp = normalizedPhone,
+                CreatedAtUtc = now
+            };
+            db.Persons.Add(person);
+        }
 
-        var person = new PersonEntity
+        var account = await db.UserAccounts.SingleOrDefaultAsync(item => item.PersonId == person.PersonId);
+        var accountCreated = account is null;
+        if (account is null)
         {
-            PersonId = personId,
-            DisplayName = displayName,
-            PrimaryPhone = normalizedPhone,
-            Whatsapp = normalizedPhone,
-            CreatedAtUtc = now
-        };
-        var account = new UserAccountEntity
+            account = new UserAccountEntity
+            {
+                AccountId = Guid.NewGuid(),
+                PersonId = person.PersonId,
+                AccountStatus = 1,
+                MustChangePin = false,
+                NormalizedEmail = AuthHelpers.AdminEmailForPhone(buildingId, normalizedPhone).ToUpperInvariant(),
+                SecurityStamp = Guid.NewGuid().ToString("N"),
+                CreatedAtUtc = now
+            };
+            db.UserAccounts.Add(account);
+        }
+        else if (account.AccountStatus is 2 or 3)
         {
-            AccountId = accountId,
-            PersonId = personId,
-            AccountStatus = 1,
-            MustChangePin = false,
-            NormalizedEmail = AuthHelpers.AdminEmailForPhone(buildingId, normalizedPhone).ToUpperInvariant(),
-            SecurityStamp = Guid.NewGuid().ToString("N"),
-            CreatedAtUtc = now
-        };
-        db.Persons.Add(person);
-        db.UserAccounts.Add(account);
-        db.UserCredentials.Add(new UserCredentialEntity
+            throw new InvalidOperationException("admin-existing-account-disabled");
+        }
+
+        var activeCredentialExists = await db.UserCredentials.AnyAsync(item =>
+            item.AccountId == account.AccountId && item.CredentialType == 0
+            && item.RevokedAtUtc == null && (item.ExpiresAtUtc == null || item.ExpiresAtUtc > now));
+        var credentialCreated = false;
+        if (!activeCredentialExists)
         {
-            CredentialId = Guid.NewGuid(),
-            AccountId = accountId,
-            CredentialType = 0,
-            CredentialHash = _hasher.HashPin(pin),
-            HashAlgorithm = "BCrypt.Net-Next",
-            CreatedAtUtc = now
-        });
-        db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            db.UserCredentials.Add(new UserCredentialEntity
+            {
+                CredentialId = Guid.NewGuid(),
+                AccountId = account.AccountId,
+                CredentialType = 0,
+                CredentialHash = _hasher.HashPin(pin),
+                HashAlgorithm = "BCrypt.Net-Next",
+                CreatedAtUtc = now
+            });
+            account.MustChangePin = false;
+            credentialCreated = true;
+        }
+        account.AccountStatus = 1;
+        account.NormalizedEmail ??= AuthHelpers.AdminEmailForPhone(buildingId, normalizedPhone).ToUpperInvariant();
+        account.SecurityStamp = Guid.NewGuid().ToString("N");
+
+        var adminRole = await db.RoleDefinitions.SingleOrDefaultAsync(item => item.RoleKey == "building-admin");
+        if (adminRole is null)
+            db.RoleDefinitions.Add(new RoleDefinitionEntity
+            {
+                RoleKey = "building-admin", DisplayName = "Building Administrator",
+                IsSystemRole = true, IsActive = true
+            });
+        else if (!adminRole.IsActive)
+            throw new InvalidOperationException("building-admin-role-inactive");
+
+        // If this person already occupies apartments but did not yet have a login,
+        // provision the Resident scopes on the same account instead of creating an
+        // Admin-only identity for someone who is also a resident.
+        var activeOccupancies = await db.ApartmentOccupancies.Where(item =>
+            item.PersonId == person.PersonId && item.ValidFromUtc <= now
+            && (item.ValidToUtc == null || item.ValidToUtc > now)).ToListAsync();
+        if (activeOccupancies.Count > 0)
         {
-            RoleAssignmentId = Guid.NewGuid(),
-            AccountId = accountId,
-            RoleKey = "building-admin",
-            ScopeType = 1,
-            ScopeBuildingId = buildingId,
-            ValidFromUtc = now,
-            GrantedAtUtc = now,
-            GrantedByAccountId = grantedBy,
-            GrantReason = "Administrator account created"
-        });
-        AddPermissionOverrides(db, accountId, new[] { buildingId }, selectedPermissions, grantedBy, now);
+            var residentRole = await db.RoleDefinitions.SingleOrDefaultAsync(item => item.RoleKey == "resident");
+            if (residentRole is null)
+                db.RoleDefinitions.Add(new RoleDefinitionEntity
+                {
+                    RoleKey = "resident", DisplayName = "Resident", IsSystemRole = true, IsActive = true
+                });
+            else if (!residentRole.IsActive)
+                throw new InvalidOperationException("resident-role-inactive");
+
+            foreach (var occupancy in activeOccupancies)
+            {
+                var residentScopeExists = await db.UserRoleAssignments.AnyAsync(item =>
+                    item.AccountId == account.AccountId && item.RoleKey == "resident" && item.ScopeType == 2
+                    && item.ScopeBuildingId == occupancy.BuildingId && item.ScopeApartmentId == occupancy.ApartmentId
+                    && item.RevokedAtUtc == null && item.ValidFromUtc <= now
+                    && (item.ValidToUtc == null || item.ValidToUtc > now));
+                if (!residentScopeExists)
+                {
+                    db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+                    {
+                        RoleAssignmentId = Guid.NewGuid(), AccountId = account.AccountId,
+                        RoleKey = "resident", ScopeType = 2,
+                        ScopeBuildingId = occupancy.BuildingId, ScopeApartmentId = occupancy.ApartmentId,
+                        ValidFromUtc = now, GrantedAtUtc = now, GrantedByAccountId = grantedBy,
+                        GrantReason = "Resident access linked to the shared account during Admin activation"
+                    });
+                }
+            }
+        }
+
+        var assignmentExists = await db.UserRoleAssignments.AnyAsync(item =>
+            item.AccountId == account.AccountId && item.RoleKey == "building-admin"
+            && item.ScopeType == 1 && item.ScopeBuildingId == buildingId
+            && item.RevokedAtUtc == null && item.ValidFromUtc <= now
+            && (item.ValidToUtc == null || item.ValidToUtc > now));
+        if (!assignmentExists)
+        {
+            db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            {
+                RoleAssignmentId = Guid.NewGuid(),
+                AccountId = account.AccountId,
+                RoleKey = "building-admin",
+                ScopeType = 1,
+                ScopeBuildingId = buildingId,
+                ValidFromUtc = now,
+                GrantedAtUtc = now,
+                GrantedByAccountId = grantedBy,
+                GrantReason = "Administrator access granted"
+            });
+        }
+        AddPermissionOverrides(db, account.AccountId, new[] { buildingId }, selectedPermissions, grantedBy, now);
         db.AuditEvents.Add(CreateAudit(grantedBy, createdBy, buildingId, "admin.create",
-            accountId.ToString("D"), new { accountId, personId, phone = normalizedPhone, permissions = selectedPermissions }, now));
+            account.AccountId.ToString("D"), new
+            {
+                accountId = account.AccountId, personId = person.PersonId, personCreated, accountCreated,
+                credentialCreated, reusedExistingIdentity = !personCreated,
+                phone = normalizedPhone, permissions = selectedPermissions
+            }, now));
         await db.SaveChangesAsync();
         await transaction.CommitAsync();
-        return accountId.ToString("D");
+        return account.AccountId.ToString("D");
     }
 
     /// <summary> Updates account or operational data through UpdateAdminAsync. </summary>
@@ -172,21 +311,54 @@ public sealed class AdminManagementService
         if (account is null || person is null) throw new InvalidOperationException(Loc.T("The_Admin_Does_Not_Exist"));
 
         var assignments = await db.UserRoleAssignments.Where(item => item.AccountId == accountId
-            && (item.RoleKey == "admin" || item.RoleKey == "building-admin") && item.ScopeType == 1 && item.RevokedAtUtc == null
+            && (item.RoleKey == "admin" || item.RoleKey == "building-admin") && item.ScopeType == 1
+            && (item.RevokedAtUtc == null || item.RevocationReason == "Administrator account deactivated")
             && item.ValidFromUtc <= now && (item.ValidToUtc == null || item.ValidToUtc > now)).ToListAsync();
         if (assignments.Count == 0) throw new InvalidOperationException(Loc.T("The_Admin_Does_Not_Exist"));
 
-        var duplicatePhone = await db.Persons.AsNoTracking()
-            .Where(item => item.PersonId != person.PersonId && item.PrimaryPhone != null)
+        // A shared phone is accepted during role assignment (CreateAdminAsync reuses
+        // the canonical identity). A profile change cannot silently merge two existing people.
+        var superAdminPersonIdsForPhoneCheck = await (
+            from userAccountRow in db.UserAccounts.AsNoTracking()
+            join superAdminAssignment in db.UserRoleAssignments.AsNoTracking()
+                on userAccountRow.AccountId equals superAdminAssignment.AccountId
+            where superAdminAssignment.RoleKey == "superadmin" && superAdminAssignment.RevokedAtUtc == null
+            select userAccountRow.PersonId).Distinct().ToListAsync();
+        var phoneOwners = await db.Persons.AsNoTracking()
+            .Where(item => item.PersonId != person.PersonId && !item.IsArchived
+                && item.PrimaryPhone != null && !superAdminPersonIdsForPhoneCheck.Contains(item.PersonId))
             .Select(item => item.PrimaryPhone).ToListAsync();
-        if (duplicatePhone.Any(value => string.Equals(AuthHelpers.NormalizePhone(value), normalizedPhone, StringComparison.Ordinal)))
-            throw new InvalidOperationException("This phone number is already linked to another person.");
+        if (phoneOwners.Any(value => string.Equals(
+            AuthHelpers.NormalizePhone(value), normalizedPhone, StringComparison.Ordinal)))
+            throw new InvalidOperationException("admin-phone-change-requires-identity-resolution");
 
         person.DisplayName = displayName;
         person.PrimaryPhone = normalizedPhone;
         person.Whatsapp = normalizedPhone;
         person.UpdatedAtUtc = now;
-        account.AccountStatus = isActive ? (byte)1 : (byte)0;
+        foreach (var assignment in assignments)
+        {
+            if (isActive && assignment.RevokedAtUtc != null
+                && assignment.RevocationReason == "Administrator account deactivated")
+            {
+                assignment.RevokedAtUtc = null;
+                assignment.RevokedByAccountId = null;
+                assignment.RevocationReason = null;
+            }
+            else if (!isActive && assignment.RevokedAtUtc == null)
+            {
+                assignment.RevokedAtUtc = now;
+                assignment.RevokedByAccountId = grantedBy;
+                assignment.RevocationReason = "Administrator account deactivated";
+            }
+        }
+        var hasOtherActiveRole = await db.UserRoleAssignments.AnyAsync(item =>
+            item.AccountId == accountId
+            && item.RoleKey != "admin" && item.RoleKey != "building-admin"
+            && item.RevokedAtUtc == null && item.ValidFromUtc <= now
+            && (item.ValidToUtc == null || item.ValidToUtc > now));
+        var hasActiveAdminRole = isActive;
+        account.AccountStatus = hasActiveAdminRole || hasOtherActiveRole ? (byte)1 : (byte)0;
         account.SecurityStamp = Guid.NewGuid().ToString("N");
         var buildings = assignments.Select(item => item.ScopeBuildingId!).Distinct(StringComparer.Ordinal).ToArray();
         AddPermissionOverrides(db, accountId, buildings, selectedPermissions, grantedBy, now);
@@ -234,9 +406,35 @@ public sealed class AdminManagementService
         await using var db = await _factory.CreateDbContextAsync();
         var account = await db.UserAccounts.SingleOrDefaultAsync(item => item.AccountId == accountId)
             ?? throw new InvalidOperationException(Loc.T("The_Admin_Does_Not_Exist"));
-        account.AccountStatus = activate ? (byte)1 : (byte)0;
+        var assignments = await db.UserRoleAssignments.Where(item => item.AccountId == accountId
+            && (item.RoleKey == "admin" || item.RoleKey == "building-admin") && item.ScopeType == 1
+            && (item.RevokedAtUtc == null || item.RevocationReason == "Administrator account deactivated")
+            && item.ValidFromUtc <= now && (item.ValidToUtc == null || item.ValidToUtc > now)).ToListAsync();
+        if (assignments.Count == 0)
+            throw new InvalidOperationException(Loc.T("The_Admin_Does_Not_Exist"));
+        var actorId = Guid.TryParse(updatedBy, out var parsedActor) ? parsedActor : (Guid?)null;
+        foreach (var assignment in assignments)
+        {
+            if (activate && assignment.RevokedAtUtc != null)
+            {
+                assignment.RevokedAtUtc = null;
+                assignment.RevokedByAccountId = null;
+                assignment.RevocationReason = null;
+            }
+            else if (!activate && assignment.RevokedAtUtc == null)
+            {
+                assignment.RevokedAtUtc = now;
+                assignment.RevokedByAccountId = actorId;
+                assignment.RevocationReason = "Administrator account deactivated";
+            }
+        }
+        var hasOtherActiveRole = await db.UserRoleAssignments.AnyAsync(item => item.AccountId == accountId
+            && item.RoleKey != "admin" && item.RoleKey != "building-admin"
+            && item.RevokedAtUtc == null && item.ValidFromUtc <= now
+            && (item.ValidToUtc == null || item.ValidToUtc > now));
+        account.AccountStatus = activate || hasOtherActiveRole ? (byte)1 : (byte)0;
         account.SecurityStamp = Guid.NewGuid().ToString("N");
-        db.AuditEvents.Add(CreateAudit(Guid.TryParse(updatedBy, out var actorId) ? actorId : null,
+        db.AuditEvents.Add(CreateAudit(actorId,
             updatedBy, null, activate ? "admin.activate" : "admin.deactivate",
             accountId.ToString("D"), new { accountId }, now));
         await db.SaveChangesAsync();
@@ -293,7 +491,7 @@ public sealed class AdminManagementService
     }
 
     private static AppUserDoc Map(UserAccountEntity account, PersonEntity person,
-        List<string> buildings, List<string> permissions) => new()
+        List<string> buildings, List<string> permissions, bool adminActive) => new()
     {
         Uid = account.AccountId.ToString("D"),
         Email = account.NormalizedEmail ?? person.PrimaryEmail ?? "",
@@ -303,8 +501,8 @@ public sealed class AdminManagementService
         PhotoUrl = person.PhotoUrl ?? "",
         Role = "admin",
         BuildingIds = buildings,
-        Disabled = account.AccountStatus != 1,
-        IsActive = account.AccountStatus == 1,
+        Disabled = !adminActive,
+        IsActive = adminActive,
         Permissions = permissions,
         LastLoginAt = account.LastLoginAtUtc?.ToString("o"),
         CreatedAt = account.CreatedAtUtc.ToString("o")

@@ -438,6 +438,12 @@ public sealed class TargetDepositWorkflowService
         if (!await HasFinanceManagementRoleAsync(db, actorAccountId, deposit.BuildingId, authorizationTime, cancellationToken))
             throw new InvalidOperationException("The actor has no active finance-management assignment for this building.");
 
+        var period = await db.FinancialPeriods.SingleOrDefaultAsync(
+            item => item.PeriodId == deposit.PeriodId && item.BuildingId == deposit.BuildingId,
+            cancellationToken);
+        if (period is null || period.Status == FinancialPeriodStatus.Closed)
+            throw new InvalidOperationException("A pending deposit can only be cancelled while its source financial period remains open.");
+
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         deposit.Status = PaymentDepositStatus.Cancelled;
         deposit.CancelledAtUtc = now;

@@ -42,6 +42,78 @@ public sealed class TargetExpenseRevenueWorkflowServiceTests
     }
 
     [Fact]
+    public async Task ReverseAsync_RejectsPostingFromAnotherFinancialPeriodWithoutCreatingReversal()
+    {
+        var (factory, _, actorId) = await SeedAsync();
+        var zone = TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo");
+        var localNow = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, zone);
+        var currentMonthStart = new DateTime(localNow.Year, localNow.Month, 1, 0, 0, 0, DateTimeKind.Unspecified);
+        var previousMonthStart = currentMonthStart.AddMonths(-1);
+        var previousPeriodId = Guid.NewGuid();
+        var commandId = Guid.NewGuid();
+        var originalTransactionId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        await using (var seed = factory.CreateDbContext())
+        {
+            seed.FinancialPeriods.Add(new FinancialPeriodEntity
+            {
+                PeriodId = previousPeriodId,
+                BuildingId = "B1",
+                PeriodKey = localNow.AddMonths(-1).ToString("yyyy-MM"),
+                TimeZoneId = "Africa/Cairo",
+                Status = FinancialPeriodStatus.Open,
+                StartsAtUtc = TimeZoneInfo.ConvertTimeToUtc(previousMonthStart, zone),
+                EndsAtUtc = TimeZoneInfo.ConvertTimeToUtc(currentMonthStart, zone),
+                CreatedAtUtc = now
+            });
+            seed.LedgerTransactions.Add(new LedgerTransactionEntity
+            {
+                LedgerTransactionId = originalTransactionId,
+                PeriodId = previousPeriodId,
+                BuildingId = "B1",
+                Kind = LedgerTransactionKind.Expense,
+                Status = LedgerTransactionStatus.Posted,
+                IdempotencyKey = $"finance:expense:{commandId:D}",
+                SourceSystem = "application",
+                SourceType = "Expense",
+                SourceKey = commandId.ToString("D"),
+                ActorAccountId = actorId,
+                CreatedAtUtc = now,
+                PostedAtUtc = now
+            });
+            seed.LedgerEntries.Add(new LedgerEntryEntity
+            {
+                LedgerEntryId = Guid.NewGuid(),
+                LedgerTransactionId = originalTransactionId,
+                PeriodId = previousPeriodId,
+                BuildingId = "B1",
+                ApartmentId = "A1",
+                EntryKind = LedgerEntryKind.ExpenseAllocation,
+                SignedAmount = -10m,
+                CurrencyCode = "EGP",
+                EffectiveAtUtc = TimeZoneInfo.ConvertTimeToUtc(previousMonthStart.AddDays(2), zone),
+                CreatedAtUtc = now
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetExpenseRevenueWorkflowService(factory, TimeProvider.System);
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.ReverseAsync(false, "B1", commandId.ToString("D"),
+                "Late reversal", Guid.NewGuid(), actorId));
+
+        Assert.Equal(
+            "A finance posting can only be reversed within its original financial period.",
+            error.Message);
+        await using var verify = factory.CreateDbContext();
+        Assert.Single(await verify.LedgerTransactions.ToListAsync());
+        Assert.Single(await verify.LedgerEntries.ToListAsync());
+        Assert.DoesNotContain(await verify.AuditEvents.ToListAsync(),
+            item => item.EventType == "ExpenseReversed");
+    }
+
+    [Fact]
     public async Task AddRevenue_UsesPositiveWalletMovementsAndIsIdempotent()
     {
         var (factory, _, actorId) = await SeedAsync();

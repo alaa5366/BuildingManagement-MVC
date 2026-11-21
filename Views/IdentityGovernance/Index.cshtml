@@ -1,119 +1,204 @@
 @model BuildingManagementMvc.Models.IdentityGovernancePage
 @{
-    ViewData["Title"] = "مركز حوكمة الهوية والصلاحيات";
-    var now = DateTime.UtcNow;
+    ViewData["Title"] = "مركز الهوية والصلاحيات";
+    var activePeople = Model.Persons.Count(x => !x.IsArchived);
+    var pendingAccounts = Model.Accounts.Count(x => x.Status == 0);
 }
-<div class="container-fluid py-3">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <div><h2 class="mb-1">مركز حوكمة الهوية والصلاحيات</h2><div class="text-muted">إدارة مترابطة للهويات والحسابات والتسكين والأدوار، مع رقابة على جداول الأمن والمرجعية.</div></div>
-        <a asp-controller="AccountManagement" asp-action="Index" class="btn btn-outline-primary">مركز الحسابات وPIN</a>
-    </div>
-    <div class="row g-3 mb-4">
-        <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">الهويات</div><h3>@Model.PersonCount</h3></div></div></div>
-        <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">الحسابات</div><h3>@Model.AccountCount</h3></div></div></div>
-        <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">الإشغالات النشطة</div><h3>@Model.ActiveOccupancyCount</h3></div></div></div>
-        <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted">إسنادات الأدوار النشطة</div><h3>@Model.ActiveRoleAssignmentCount</h3></div></div></div>
-    </div>
-    <div class="alert alert-info">قاعدة العمل: Person هوية مستقلة، UserAccount وسيلة دخول مستقلة، Occupancy علاقة زمنية بالشقة، وUserRoleAssignment صلاحية محددة بالنطاق. تكرار الهاتف لا يمنع إنشاء هوية؛ لكنه يمنع اعتماد الهاتف كمعرّف دخول فريد حتى تتم معالجته.</div>
-
-    <div class="card mb-4">
-        <div class="card-header fw-bold">إضافة هوية Person</div>
-        <div class="card-body">
-            <form asp-action="CreatePerson" method="post" class="row g-2">
-                @Html.AntiForgeryToken()
-                <div class="col-md-3"><label class="form-label">اسم العرض</label><input name="displayName" class="form-control" maxlength="160" required /></div>
-                <div class="col-md-3"><label class="form-label">الاسم القانوني</label><input name="legalName" class="form-control" maxlength="200" /></div>
-                <div class="col-md-2"><label class="form-label">الهاتف</label><input name="phone" class="form-control" maxlength="32" /></div>
-                <div class="col-md-3"><label class="form-label">البريد</label><input name="email" type="email" class="form-control" maxlength="254" /></div>
-                <div class="col-md-1 d-flex align-items-end"><button class="btn btn-primary w-100">إضافة</button></div>
-            </form>
-            <small class="text-muted">إنشاء الهوية لا ينشئ حساب دخول أو PIN تلقائيًا.</small>
-        </div>
-    </div>
-
-    <div class="card mb-4">
-        <div class="card-header fw-bold">الهويات والأشخاص — Persons (أحدث 200)</div>
-        <div class="table-responsive"><table class="table table-sm table-striped align-middle mb-0">
-            <thead><tr><th>الشخص</th><th>Person ID</th><th>الهاتف / البريد</th><th>الحساب</th><th>إشغال</th><th>أدوار نشطة</th><th>الحالة / إجراء</th></tr></thead><tbody>
-            @foreach (var p in Model.Persons)
-            {
-                <tr><td><strong>@p.DisplayName</strong><div class="small text-muted">@p.LegalName</div></td><td class="small">@p.PersonId</td><td>@p.Phone<div class="small text-muted">@p.Email</div></td><td class="small">@(p.AccountId?.ToString() ?? "لا يوجد")<div>الحالة: @(p.AccountStatus?.ToString() ?? "-")</div></td><td>@p.ActiveOccupancies</td><td>@p.ActiveRoles</td><td>
-                    @if (p.IsArchived) { <span class="badge bg-secondary">مؤرشفة</span> }
-                    else { <span class="badge bg-success">نشطة</span> }
-                    <details class="mt-1"><summary class="small">تعديل</summary>
-                        <form asp-action="UpdatePerson" method="post" class="d-grid gap-1 mt-2">
-                            @Html.AntiForgeryToken()<input type="hidden" name="personId" value="@p.PersonId" />
-                            <input class="form-control form-control-sm" name="displayName" value="@p.DisplayName" maxlength="160" required />
-                            <input class="form-control form-control-sm" name="legalName" value="@p.LegalName" maxlength="200" placeholder="الاسم القانوني" />
-                            <input class="form-control form-control-sm" name="phone" value="@p.Phone" maxlength="32" placeholder="الهاتف" />
-                            <input class="form-control form-control-sm" name="email" value="@p.Email" maxlength="254" placeholder="البريد" />
-                            <button class="btn btn-sm btn-outline-primary">حفظ</button>
-                        </form>
-                        <form asp-action="SetPersonArchived" method="post" class="mt-1">
-                            @Html.AntiForgeryToken()<input type="hidden" name="personId" value="@p.PersonId" /><input type="hidden" name="archived" value="@(!p.IsArchived)" />
-                            <button class="btn btn-sm btn-outline-danger" onclick="return confirm('تأكيد تغيير حالة أرشفة الهوية؟')">@(p.IsArchived ? "استعادة" : "أرشفة")</button>
-                        </form>
-                        @if (p.AccountId == null && p.ActiveOccupancies > 0 && !p.IsArchived)
-                        {
-                            <form asp-action="CreatePendingAccount" method="post" class="mt-1">@Html.AntiForgeryToken()<input type="hidden" name="personId" value="@p.PersonId" /><button class="btn btn-sm btn-outline-success" onclick="return confirm('إنشاء حساب انتظار دون PIN؟')">إنشاء حساب انتظار</button></form>
-                        }
-                    </details>
-                </td></tr>
-            }
-            </tbody></table></div>
-    </div>
-
-    <div class="card mb-4">
-        <div class="card-header fw-bold">سجلات التسكين — ApartmentOccupancies (أحدث 300)</div>
-        <div class="card-body border-bottom">
-            <form asp-action="CreateOccupancy" method="post" class="row g-2">
-                @Html.AntiForgeryToken()
-                <div class="col-md-3"><label class="form-label">Person ID</label><input name="personId" class="form-control" required /></div>
-                <div class="col-md-2"><label class="form-label">العمارة</label><select name="buildingId" class="form-select" required><option value="">اختر</option>@foreach(var b in Model.Buildings){<option value="@b.Key">@b.Title — @b.Key</option>}</select></div>
-                <div class="col-md-2"><label class="form-label">الشقة</label><input name="apartmentId" class="form-control" required placeholder="ApartmentId" /></div>
-                <div class="col-md-1"><label class="form-label">النوع</label><select name="occupancyType" class="form-select"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
-                <div class="col-md-2"><label class="form-label">بداية الإشغال UTC</label><input name="validFromUtc" type="datetime-local" class="form-control" required /></div>
-                <div class="col-md-1 d-flex align-items-end"><label><input type="checkbox" name="isPrimary" value="true" /> أساسي</label></div>
-                <div class="col-md-1 d-flex align-items-end"><button class="btn btn-primary">تسكين</button></div>
-                <div class="col-12"><input name="notes" class="form-control" maxlength="1000" placeholder="ملاحظات / مرجع المستند" /></div>
-            </form>
-        </div>
-        <div class="table-responsive"><table class="table table-sm table-striped mb-0"><thead><tr><th>الشخص</th><th>العمارة / الشقة</th><th>النوع</th><th>أساسي</th><th>من</th><th>إلى</th><th>الحالة / إجراء</th></tr></thead><tbody>
-        @foreach(var o in Model.Occupancies){<tr><td>@o.PersonName<div class="small text-muted">@o.PersonId</div></td><td>@o.BuildingId / @o.ApartmentId</td><td>@o.OccupancyType</td><td>@o.IsPrimary</td><td>@o.ValidFromUtc.ToString("u")</td><td>@(o.ValidToUtc?.ToString("u") ?? "—")</td><td>@(o.IsCurrent ? "نشط" : "تاريخي") @if(o.ValidToUtc == null){<form asp-action="EndOccupancy" method="post" class="d-flex gap-1 mt-1">@Html.AntiForgeryToken()<input type="hidden" name="occupancyId" value="@o.OccupancyId" /><input name="validToUtc" type="datetime-local" class="form-control form-control-sm" required /><button class="btn btn-sm btn-outline-danger">إنهاء</button></form>}</td></tr>}
-        </tbody></table></div>
-    </div>
-
-    <div class="card mb-4">
-        <div class="card-header fw-bold">إسنادات الأدوار — UserRoleAssignments (أحدث 300)</div>
-        <div class="card-body border-bottom">
-            <form asp-action="GrantRole" method="post" class="row g-2">
-                @Html.AntiForgeryToken()
-                <div class="col-md-2"><label class="form-label">Account ID</label><input name="accountId" class="form-control" required /></div>
-                <div class="col-md-2"><label class="form-label">Role</label><select name="roleKey" class="form-select" required><option value="">اختر</option>@foreach(var r in Model.RoleCatalog.Where(x => x.Status == "Active" && x.Key != "superadmin")){<option value="@r.Key">@r.Key — @r.Title</option>}</select></div>
-                <div class="col-md-1"><label class="form-label">Scope</label><select name="scopeType" class="form-select"><option value="1">عمارة</option><option value="2">شقة</option><option value="3">شخصي</option></select></div>
-                <div class="col-md-2"><label class="form-label">Building ID</label><select name="buildingId" class="form-select"><option value="">—</option>@foreach(var b in Model.Buildings){<option value="@b.Key">@b.Title (@b.Key)</option>}</select></div>
-                <div class="col-md-2"><label class="form-label">Apartment ID</label><input name="apartmentId" class="form-control" /></div>
-                <div class="col-md-1"><label class="form-label">بداية UTC</label><input name="validFromUtc" type="datetime-local" class="form-control" required /></div>
-                <div class="col-md-2"><label class="form-label">سبب المنح</label><input name="reason" class="form-control" maxlength="500" required /></div>
-                <div class="col-12"><button class="btn btn-primary">منح دور</button><small class="text-muted ms-2">لا يمكن منح SuperAdmin من هذه الشاشة. Resident يتطلب إشغالًا نشطًا في الشقة.</small></div>
-            </form>
-        </div>
-        <div class="table-responsive"><table class="table table-sm table-striped mb-0"><thead><tr><th>الشخص</th><th>الدور</th><th>النطاق</th><th>الفترة</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>
-        @foreach(var r in Model.RoleAssignments){<tr><td>@r.PersonName<div class="small text-muted">@r.AccountId</div></td><td>@r.RoleKey</td><td>@r.ScopeType — @r.BuildingId / @r.ApartmentId</td><td>@r.ValidFromUtc.ToString("u") إلى @(r.ValidToUtc?.ToString("u") ?? "مفتوح")</td><td>@(r.RevokedAtUtc == null ? "غير ملغى" : "ملغى")</td><td>@if(r.RevokedAtUtc == null && r.RoleKey != "superadmin"){<form asp-action="RevokeRole" method="post" class="d-flex gap-1">@Html.AntiForgeryToken()<input type="hidden" name="assignmentId" value="@r.AssignmentId" /><input name="reason" class="form-control form-control-sm" placeholder="سبب الإلغاء" required /><button class="btn btn-sm btn-outline-danger">إلغاء</button></form>}</td></tr>}
-        </tbody></table></div>
-    </div>
-
-    <div class="card mb-4"><div class="card-header fw-bold">حالة الحسابات وبيانات الدخول — UserAccounts / UserCredentials / 2FA / Recovery</div><div class="table-responsive"><table class="table table-sm table-striped mb-0"><thead><tr><th>الشخص</th><th>Account ID</th><th>الحالة</th><th>تغيير PIN</th><th>آخر دخول</th><th>Credentials نشطة</th><th>2FA</th><th>Recovery غير مستخدمة</th><th>تفضيلات</th></tr></thead><tbody>@foreach(var a in Model.Accounts){<tr><td>@a.PersonName</td><td>@a.AccountId</td><td>@a.Status</td><td>@a.MustChangePin</td><td>@a.LastLoginAtUtc?.ToString("u")</td><td>@a.ActiveCredentials</td><td>@(a.TwoFactorEnabled ? "مفعل" : "غير مفعل")</td><td>@a.UnusedRecoveryCodes</td><td>@a.PreferenceCount</td></tr>}</tbody></table></div><div class="card-body small text-muted">لا تعرض الشاشة hashes أو أسرار 2FA أو recovery codes، ولا تسمح بتعديلها مباشرة. التفضيلات تُعرض كعدد فقط، والجلسات وسجل التدقيق للرقابة دون تحرير أو حذف.</div></div>
-
-    <div class="row g-3">
-        <div class="col-lg-6"><div class="card h-100"><div class="card-header fw-bold">RoleDefinitions — كتالوج الأدوار (قراءة رقابية)</div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Key</th><th>الاسم</th><th>النوع</th><th>الحالة</th></tr></thead><tbody>@foreach(var x in Model.RoleCatalog){<tr><td>@x.Key</td><td>@x.Title</td><td>@x.Detail</td><td>@x.Status</td></tr>}</tbody></table></div></div></div>
-        <div class="col-lg-6"><div class="card h-100"><div class="card-header fw-bold">RolePermissions — مصفوفة الأدوار (قراءة رقابية)</div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Role / Permission</th><th>التأثير</th></tr></thead><tbody>@foreach(var x in Model.PermissionCatalog){<tr><td>@x.Key</td><td>@x.Status</td></tr>}</tbody></table></div></div></div>
-        <div class="col-lg-6"><div class="card h-100"><div class="card-header fw-bold">AccountPermissionOverrides</div><div class="table-responsive"><table class="table table-sm mb-0"><tbody>@foreach(var x in Model.PermissionOverrides){<tr><td>@x.Title<div class="small text-muted">@x.Detail</div></td><td>@x.Status</td></tr>}</tbody></table></div></div></div>
-        <div class="col-lg-6"><div class="card h-100"><div class="card-header fw-bold">ApartmentAccessGrants</div><div class="table-responsive"><table class="table table-sm mb-0"><tbody>@foreach(var x in Model.ApartmentAccessGrants){<tr><td>@x.Title<div class="small text-muted">@x.Detail</div></td><td>@x.Status</td></tr>}</tbody></table></div></div></div>
-        <div class="col-lg-6"><div class="card h-100"><div class="card-header fw-bold">ApartmentOwnerships — ملكية الشقق</div><div class="table-responsive"><table class="table table-sm mb-0"><tbody>@foreach(var x in Model.OwnershipRecords){<tr><td>@x.Title<div class="small text-muted">@x.Detail</div></td><td>@x.Status</td></tr>}</tbody></table></div></div></div>
-        <div class="col-lg-6"><div class="card h-100"><div class="card-header fw-bold">LegacyIdentityMaps — الربط التاريخي</div><div class="table-responsive"><table class="table table-sm mb-0"><tbody>@foreach(var x in Model.LegacyMappings){<tr><td>@x.Title<div class="small text-muted">@x.Detail</div></td><td>@x.Status</td></tr>}</tbody></table></div></div></div>
-        <div class="col-lg-6"><div class="card h-100"><div class="card-header fw-bold">PresenceSessions — جلسات الدخول (قراءة رقابية)</div><div class="table-responsive"><table class="table table-sm mb-0"><tbody>@foreach(var x in Model.PresenceSessions){<tr><td>@x.Title<div class="small text-muted">@x.Detail</div></td><td>@x.Status</td></tr>}</tbody></table></div></div></div>
-        <div class="col-lg-6"><div class="card h-100"><div class="card-header fw-bold">AuditEvents — سجل التدقيق (Append-only)</div><div class="table-responsive"><table class="table table-sm mb-0"><tbody>@foreach(var x in Model.AuditEvents){<tr><td>@x.Title<div class="small text-muted">@x.Detail</div></td><td>@x.Status</td></tr>}</tbody></table></div></div></div>
-        <div class="col-lg-6"><div class="card h-100"><div class="card-header fw-bold">PersonPhoneChangeRequests — طلبات تصحيح الهاتف (@Model.PendingPhoneChangeCount pending)</div><div class="table-responsive"><table class="table table-sm mb-0"><tbody>@foreach(var x in Model.PhoneChangeRequests){<tr><td>@x.Title<div class="small text-muted">@x.Detail</div></td><td>@x.Status</td></tr>}</tbody></table></div></div></div>
-    </div>
+<div class="identity-console" dir="rtl">
+    <header class="identity-hero">
+        <div><div class="identity-eyebrow"><i class="bi bi-shield-check"></i> IDENTITY GOVERNANCE</div><h1>مركز الهوية والصلاحيات</h1><p>إدارة الأشخاص والحسابات والإشغالات والأدوار، مع رقابة أمنية وسجل مرجعي.</p></div>
+        <a asp-controller="AccountManagement" asp-action="Index" class="identity-primary-link"><i class="bi bi-key"></i> إدارة الحسابات وPIN</a>
+    </header>
+    <section class="identity-metrics">
+        <article class="metric-card"><span class="metric-icon blue"><i class="bi bi-people"></i></span><div><small>إجمالي الهويات</small><strong>@Model.PersonCount.ToString("N0")</strong><span>@activePeople هوية نشطة ضمن النتائج</span></div></article>
+        <article class="metric-card"><span class="metric-icon violet"><i class="bi bi-person-badge"></i></span><div><small>حسابات الدخول</small><strong>@Model.AccountCount.ToString("N0")</strong><span>@pendingAccounts حساب انتظار ضمن النتائج</span></div></article>
+        <article class="metric-card"><span class="metric-icon teal"><i class="bi bi-house-check"></i></span><div><small>الإشغالات النشطة</small><strong>@Model.ActiveOccupancyCount.ToString("N0")</strong><span>ارتباطات سكن سارية</span></div></article>
+        <article class="metric-card"><span class="metric-icon amber"><i class="bi bi-shield-lock"></i></span><div><small>إسنادات الصلاحيات</small><strong>@Model.ActiveRoleAssignmentCount.ToString("N0")</strong><span>@Model.PendingPhoneChangeCount طلب هاتف معلق</span></div></article>
+    </section>
+    <section class="identity-toolbar">
+        <form asp-action="Index" method="get" class="identity-search"><i class="bi bi-search"></i><input type="search" name="q" value="@Model.SearchTerm" placeholder="ابحث بالاسم أو الهاتف أو البريد أو العمارة أو الشقة أو الدور..." aria-label="بحث شامل" /><button type="submit">بحث</button>@if(!string.IsNullOrWhiteSpace(Model.SearchTerm)){<a asp-action="Index">مسح</a>}</form>
+        <div class="identity-search-hint">البحث يشمل الأشخاص والحسابات والإشغالات والأدوار. يمكن تضييق النتائج حسب الحالة.</div>
+    </section>
+    <nav class="identity-tabs" role="tablist" aria-label="أقسام إدارة الهوية">
+        <button type="button" class="identity-tab active" role="tab" aria-selected="true" data-tab="overview"><i class="bi bi-grid-1x2"></i> نظرة عامة</button>
+        <button type="button" class="identity-tab" role="tab" aria-selected="false" data-tab="people"><i class="bi bi-people"></i> الأشخاص والهويات <b>@Model.Persons.Count</b></button>
+        <button type="button" class="identity-tab" role="tab" aria-selected="false" data-tab="occupancies"><i class="bi bi-houses"></i> الإشغالات والشقق <b>@Model.Occupancies.Count</b></button>
+        <button type="button" class="identity-tab" role="tab" aria-selected="false" data-tab="roles"><i class="bi bi-shield-check"></i> الأدوار والصلاحيات <b>@Model.RoleAssignments.Count</b></button>
+        <button type="button" class="identity-tab" role="tab" aria-selected="false" data-tab="accounts"><i class="bi bi-person-lock"></i> الحسابات والأمان <b>@Model.Accounts.Count</b></button>
+        <button type="button" class="identity-tab" role="tab" aria-selected="false" data-tab="governance"><i class="bi bi-journal-text"></i> السجلات الرقابية</button>
+    </nav>
+    <main>
+        <section class="identity-panel active" id="panel-overview" role="tabpanel">
+            <div class="panel-heading"><div><span class="panel-kicker">WORKSPACE</span><h2>ملخص إدارة الهوية</h2><p>كل نوع بيانات له مساحة مستقلة وإجراءات واضحة.</p></div></div>
+            <div class="overview-grid">
+                <button type="button" class="overview-card" data-open-tab="people"><i class="bi bi-person-vcard blue"></i><strong>الأشخاص والهويات</strong><small>بيانات الأشخاص ووسائل الاتصال والأرشفة</small><b>@Model.PersonCount هوية</b></button>
+                <button type="button" class="overview-card" data-open-tab="occupancies"><i class="bi bi-house-check teal"></i><strong>الإشغالات والشقق</strong><small>الشخص والشقة وفترة الإشغال</small><b>@Model.ActiveOccupancyCount إشغال نشط</b></button>
+                <button type="button" class="overview-card" data-open-tab="roles"><i class="bi bi-shield-check amber"></i><strong>الأدوار والصلاحيات</strong><small>Resident وBuildingAdmin ونطاق كل صلاحية</small><b>@Model.ActiveRoleAssignmentCount إسناد نشط</b></button>
+                <button type="button" class="overview-card" data-open-tab="accounts"><i class="bi bi-person-lock violet"></i><strong>الحسابات والأمان</strong><small>حالة الدخول وPIN و2FA ومؤشرات الحماية</small><b>@Model.AccountCount حساب</b></button>
+                <button type="button" class="overview-card" data-open-tab="governance"><i class="bi bi-journal-check slate"></i><strong>السجلات الرقابية</strong><small>الكتالوجات والسجلات التاريخية والتدقيق</small><b>عرض رقابي</b></button>
+            </div>
+            <div class="identity-note"><i class="bi bi-info-circle"></i><div><strong>العلاقة بين سجلات الهوية</strong><p><b>Person</b> هوية الشخص، <b>UserAccount</b> حساب الدخول، <b>Occupancy</b> علاقة سكن بشقة وفترة، و<b>Role Assignment</b> صلاحية مستقلة بنطاق عمارة أو شقة. يمكن للحساب الواحد الجمع بين عدة أدوار وشقق دون إنشاء هوية ثانية.</p></div></div>
+        </section>
+        <section class="identity-panel" id="panel-people" role="tabpanel" hidden>
+            <div class="panel-heading"><div><span class="panel-kicker">IDENTITY DIRECTORY</span><h2>الأشخاص والهويات</h2><p>إدارة سجل الشخص وبيانات الاتصال، دون خلطه بحساب الدخول.</p></div><button type="button" class="identity-action" data-toggle-details="create-person"><i class="bi bi-plus-lg"></i> إضافة هوية</button></div>
+            <details class="identity-create" id="create-person"><summary><i class="bi bi-person-plus"></i> إنشاء سجل شخص جديد</summary>
+                <form asp-action="CreatePerson" method="post" class="identity-form">@Html.AntiForgeryToken()
+                    <label>اسم العرض<input name="displayName" maxlength="160" required /></label><label>الاسم القانوني<input name="legalName" maxlength="200" /></label><label>رقم الهاتف<input name="phone" maxlength="32" /></label><label>البريد الإلكتروني<input name="email" type="email" maxlength="254" /></label><button type="submit" class="identity-submit">إنشاء الهوية</button><p class="form-hint">إنشاء Person لا ينشئ حساب دخول أو PIN تلقائيًا.</p>
+                </form>
+            </details>
+            <div class="table-card"><div class="table-card-heading"><div><h3>دليل الأشخاص</h3><p>حتى 200 نتيجة مطابقة للبحث</p></div><span>@Model.Persons.Count نتيجة</span></div>
+                <div class="table-responsive"><table class="table identity-table" data-identity-table data-server-filtered="true"><thead><tr><th>الشخص</th><th>بيانات الاتصال</th><th>الحساب</th><th>الإشغال</th><th>الأدوار</th><th>الحالة والإجراءات</th></tr></thead><tbody>
+                @foreach(var p in Model.Persons)
+                {
+                    <tr data-state="@(p.IsArchived?"archived":"active")">
+                        <td><strong>@p.DisplayName</strong><small>@p.LegalName</small><small>Person: @p.PersonId</small></td>
+                        <td>@(p.Phone??"—")<small>@(p.Email??"—")</small></td>
+                        <td>@(p.AccountId?.ToString("N")??"لا يوجد")<small>الحالة: @(p.AccountStatus?.ToString()??"—")</small></td>
+                        <td><span class="number-pill">@p.ActiveOccupancies</span></td><td><span class="number-pill">@p.ActiveRoles</span></td>
+                        <td><span class="state-pill @(p.IsArchived?"muted":"success")">@(p.IsArchived?"مؤرشفة":"نشطة")</span>
+                            <details class="row-actions"><summary>إجراءات</summary>
+                                <form asp-action="UpdatePerson" method="post" class="row-edit-form">@Html.AntiForgeryToken()<input type="hidden" name="personId" value="@p.PersonId" />
+                                    <label>اسم العرض<input name="displayName" value="@p.DisplayName" maxlength="160" required /></label><label>الاسم القانوني<input name="legalName" value="@p.LegalName" maxlength="200" /></label><label>الهاتف<input name="phone" value="@p.Phone" maxlength="32" /></label><label>البريد<input name="email" value="@p.Email" maxlength="254" /></label><button type="submit" class="identity-submit">حفظ التعديلات</button>
+                                </form>
+                                <form asp-action="SetPersonArchived" method="post" class="inline-action">@Html.AntiForgeryToken()<input type="hidden" name="personId" value="@p.PersonId" /><input type="hidden" name="archived" value="@(!p.IsArchived)" /><button type="submit" class="danger-link" onclick="return confirm('تأكيد تغيير حالة أرشفة الهوية؟')">@(p.IsArchived?"استعادة الهوية":"أرشفة الهوية")</button></form>
+                                @if(p.AccountId==null&&p.ActiveOccupancies>0&&!p.IsArchived){<form asp-action="CreatePendingAccount" method="post" class="inline-action">@Html.AntiForgeryToken()<input type="hidden" name="personId" value="@p.PersonId" /><button type="submit" class="success-link" onclick="return confirm('إنشاء حساب انتظار دون PIN؟')">إنشاء حساب انتظار</button></form>}
+                            </details>
+                        </td>
+                    </tr>
+                }
+                </tbody></table></div><div class="table-pager" data-pager></div>
+            </div>
+        </section>
+        <section class="identity-panel" id="panel-occupancies" role="tabpanel" hidden>
+            <div class="panel-heading"><div><span class="panel-kicker">RESIDENTIAL RECORDS</span><h2>الإشغالات والشقق</h2><p>كل إشغال يربط شخصًا بشقة محددة داخل عمارة ولفترة زمنية.</p></div></div>
+            <details class="identity-create"><summary><i class="bi bi-house-add"></i> تسجيل إشغال جديد</summary>
+                <form asp-action="CreateOccupancy" method="post" class="identity-form">@Html.AntiForgeryToken()
+                    <label>الشخص<select name="personId" required><option value="">اختر الشخص</option>@foreach(var p in Model.Persons.Where(x=>!x.IsArchived)){<option value="@p.PersonId">@p.DisplayName — @p.Phone</option>}</select></label>
+                    <label>العمارة<select name="buildingId" id="identityGovernanceBuildingId" required><option value="">اختر العمارة</option>@foreach(var b in Model.Buildings){<option value="@b.Key">@b.Title — @b.Detail</option>}</select></label>
+                    <label>الشقة<select name="apartmentId" id="identityGovernanceApartmentId" required><option value="">اختر الشقة</option>@foreach(var a in Model.Apartments){var parts=a.Key.Split('|',2);if(parts.Length==2){<option value="@parts[1]" data-building-id="@parts[0]">@a.Title</option>}}</select></label>
+                    <label>نوع الإشغال<select name="occupancyType"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label><label>بداية الإشغال<input name="validFromUtc" type="datetime-local" required /></label><label class="check-label"><input type="checkbox" name="isPrimary" value="true" /> إشغال أساسي</label><label class="wide-field">ملاحظات أو مرجع المستند<input name="notes" maxlength="1000" /></label><button type="submit" class="identity-submit">حفظ الإشغال</button>
+                </form>
+            </details>
+            <div class="table-card"><div class="table-card-heading"><div><h3>سجل الإشغالات</h3><p>الحالي والتاريخي — حتى 300 نتيجة</p></div><span>@Model.Occupancies.Count نتيجة</span></div>
+                <div class="table-responsive"><table class="table identity-table" data-identity-table data-server-filtered="true"><thead><tr><th>الشخص</th><th>العمارة</th><th>الشقة</th><th>النوع</th><th>الفترة</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>
+                @foreach(var o in Model.Occupancies){<tr data-state="@(o.IsCurrent?"active":"historical")"><td><strong>@o.PersonName</strong><small>@o.PersonId</small></td><td><strong>@o.BuildingName</strong><small>@o.BuildingId</small></td><td><strong>شقة @o.ApartmentNumber</strong><small>@o.ApartmentId</small> @(o.IsPrimary?" · أساسي":"")</td><td>@o.OccupancyType</td><td>@o.ValidFromUtc.ToString("yyyy-MM-dd")<small>إلى @(o.ValidToUtc?.ToString("yyyy-MM-dd")??"مفتوح")</small></td><td><span class="state-pill @(o.IsCurrent?"success":"muted")">@(o.IsCurrent?"نشط":"تاريخي")</span></td><td>@if(o.ValidToUtc==null){<form asp-action="EndOccupancy" method="post" class="end-occupancy-form">@Html.AntiForgeryToken()<input type="hidden" name="occupancyId" value="@o.OccupancyId" /><input name="validToUtc" type="datetime-local" required aria-label="تاريخ انتهاء الإشغال" /><button type="submit" class="danger-link">إنهاء</button></form>}</td></tr>}
+                </tbody></table></div><div class="table-pager" data-pager></div>
+            </div>
+        </section>
+        <section class="identity-panel" id="panel-roles" role="tabpanel" hidden>
+            <div class="panel-heading"><div><span class="panel-kicker">ACCESS CONTROL</span><h2>الأدوار والصلاحيات</h2><p>الإسناد يحدد الدور والنطاق؛ الحساب الواحد يمكنه امتلاك أكثر من دور ونطاق.</p></div></div>
+            <details class="identity-create"><summary><i class="bi bi-shield-plus"></i> منح صلاحية جديدة</summary>
+                <form asp-action="GrantRole" method="post" class="identity-form">@Html.AntiForgeryToken()
+                    <label>الحساب<select name="accountId" required><option value="">اختر الحساب</option>@foreach(var a in Model.Accounts){<option value="@a.AccountId">@a.PersonName — @a.Status</option>}</select></label>
+                    <label>الدور<select name="roleKey" required><option value="">اختر الدور</option>@foreach(var r in Model.RoleCatalog.Where(x=>x.Status=="Active"&&x.Key!="superadmin")){<option value="@r.Key">@r.Title (@r.Key)</option>}</select></label>
+                    <label>نطاق الصلاحية<select name="scopeType" id="identityScopeType"><option value="1">عمارة</option><option value="2">شقة</option><option value="3">شخصي</option></select></label>
+                    <label>العمارة<select name="buildingId" id="identityRoleBuilding"><option value="">اختر العمارة</option>@foreach(var b in Model.Buildings){<option value="@b.Key">@b.Detail — @b.Title</option>}</select></label>
+                    <label>الشقة<select name="apartmentId" id="identityRoleApartment"><option value="">اختر الشقة</option>@foreach(var a in Model.Apartments){var parts=a.Key.Split('|',2);if(parts.Length==2){<option value="@parts[1]" data-building-id="@parts[0]">@a.Title</option>}}</select></label>
+                    <label>بداية الصلاحية<input name="validFromUtc" type="datetime-local" required /></label><label class="wide-field">سبب المنح<input name="reason" maxlength="500" required /></label><button type="submit" class="identity-submit">منح الصلاحية</button><p class="form-hint">لا يمكن منح SuperAdmin من هنا. صلاحية Resident تتطلب إشغالًا نشطًا مطابقًا للشقة.</p>
+                </form>
+            </details>
+            <div class="table-card"><div class="table-card-heading"><div><h3>سجل إسنادات الأدوار</h3><p>كل إسناد مع نطاقه وفترة سريانه</p></div><span>@Model.RoleAssignments.Count نتيجة</span></div>
+                <div class="table-responsive"><table class="table identity-table" data-identity-table data-server-filtered="true"><thead><tr><th>الشخص</th><th>الدور</th><th>النطاق</th><th>الفترة</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>
+                @foreach(var r in Model.RoleAssignments){<tr data-state="@(r.RevokedAtUtc==null&&(r.ValidToUtc==null||r.ValidToUtc>DateTime.UtcNow)?"active":"inactive")"><td><strong>@r.PersonName</strong><small>@r.AccountId</small></td><td><span class="role-pill">@r.RoleKey</span></td><td>@(r.ScopeType==1?"عمارة":r.ScopeType==2?"شقة":r.ScopeType==3?"شخصي":"نظام")<strong>@r.BuildingName</strong><small>@(r.ApartmentNumber==null?"—":"شقة "+r.ApartmentNumber)</small></td><td>@r.ValidFromUtc.ToString("yyyy-MM-dd")<small>إلى @(r.ValidToUtc?.ToString("yyyy-MM-dd")??"مفتوح")</small></td><td><span class="state-pill @(r.RevokedAtUtc==null?"success":"muted")">@(r.RevokedAtUtc==null?"غير ملغى":"ملغى")</span></td><td>@if(r.RevokedAtUtc==null&&r.RoleKey!="superadmin"){<form asp-action="RevokeRole" method="post" class="revoke-role-form">@Html.AntiForgeryToken()<input type="hidden" name="assignmentId" value="@r.AssignmentId" /><input name="reason" maxlength="500" placeholder="سبب الإلغاء" required /><button type="submit" class="danger-link">إلغاء</button></form>}</td></tr>}
+                </tbody></table></div><div class="table-pager" data-pager></div>
+            </div>
+        </section>
+        <section class="identity-panel" id="panel-accounts" role="tabpanel" hidden>
+            <div class="panel-heading"><div><span class="panel-kicker">ACCOUNT SECURITY</span><h2>الحسابات والأمان</h2><p>حالة الحساب ووسائل الدخول ومؤشرات الحماية دون عرض أي أسرار.</p></div><a asp-controller="AccountManagement" asp-action="Index" class="identity-action"><i class="bi bi-key"></i> فتح مركز PIN</a></div>
+            <div class="table-card"><div class="table-card-heading"><div><h3>حسابات المستخدمين</h3><p>بيانات الاعتماد وحالة المصادقة</p></div><span>@Model.Accounts.Count حساب</span></div>
+                <div class="table-responsive"><table class="table identity-table" data-identity-table data-server-filtered="true"><thead><tr><th>صاحب الحساب</th><th>الحالة</th><th>PIN</th><th>آخر دخول</th><th>اعتمادات نشطة</th><th>2FA</th><th>Recovery</th><th>تفضيلات</th></tr></thead><tbody>
+                @foreach(var a in Model.Accounts){<tr data-state="@(a.Status==1?"active":"pending")"><td><strong>@a.PersonName</strong><small>@a.PersonId</small><small>@a.AccountId</small></td><td><span class="state-pill @(a.Status==1?"success":"warning")">@(a.Status==1?"نشط":a.Status==0?"انتظار":"موقوف")</span></td><td>@(a.MustChangePin?"يتطلب تغييرًا":"مهيأ")</td><td>@(a.LastLoginAtUtc?.ToString("yyyy-MM-dd HH:mm")??"لم يسجل")</td><td>@a.ActiveCredentials</td><td><span class="state-pill @(a.TwoFactorEnabled?"success":"muted")">@(a.TwoFactorEnabled?"مفعل":"غير مفعل")</span></td><td>@a.UnusedRecoveryCodes غير مستخدم</td><td>@a.PreferenceCount</td></tr>}
+                </tbody></table></div><div class="table-pager" data-pager></div><div class="security-footnote"><i class="bi bi-shield-lock"></i> لا يتم عرض PIN hashes أو أسرار 2FA أو قيم Recovery Codes. إدارة PIN من مركز الحسابات.</div>
+            </div>
+        </section>
+        <section class="identity-panel" id="panel-governance" role="tabpanel" hidden>
+            <div class="panel-heading"><div><span class="panel-kicker">AUDIT & REFERENCE</span><h2>السجلات الرقابية والمرجعية</h2><p>بيانات قراءة ومراجعة؛ سجلات التدقيق والأسرار غير قابلة للتحرير من هنا.</p></div></div>
+            <div class="reference-grid">
+                <article class="reference-card"><header><div><h3>تعريفات الأدوار</h3><p>RoleDefinitions · كتالوج النظام</p></div><span>@Model.RoleCatalog.Count</span></header><div class="table-responsive"><table class="table identity-table compact-table" data-identity-table><thead><tr><th>الدور</th><th>النوع</th><th>الحالة</th></tr></thead><tbody>@foreach(var x in Model.RoleCatalog){<tr data-state="@x.Status.ToLowerInvariant()"><td><strong>@x.Title</strong><small>@x.Key</small></td><td>@x.Detail</td><td>@x.Status</td></tr>}</tbody></table></div><div class="table-pager" data-pager></div></article>
+                <article class="reference-card"><header><div><h3>صلاحيات الأدوار</h3><p>RolePermissions · Allow / Deny</p></div><span>@Model.PermissionCatalog.Count</span></header><div class="table-responsive"><table class="table identity-table compact-table" data-identity-table><thead><tr><th>الدور والصلاحية</th><th>التأثير</th></tr></thead><tbody>@foreach(var x in Model.PermissionCatalog){<tr data-state="@x.Status.ToLowerInvariant()"><td>@x.Key</td><td>@x.Status</td></tr>}</tbody></table></div><div class="table-pager" data-pager></div></article>
+                <article class="reference-card"><header><div><h3>استثناءات الصلاحيات</h3><p>AccountPermissionOverrides</p></div><span>@Model.PermissionOverrides.Count</span></header><div class="table-responsive"><table class="table identity-table compact-table" data-identity-table><tbody>@foreach(var x in Model.PermissionOverrides){<tr data-state="@x.Status.ToLowerInvariant()"><td><strong>@x.Title</strong><small>@x.Detail</small></td><td>@x.Status</td></tr>}</tbody></table></div><div class="table-pager" data-pager></div></article>
+                <article class="reference-card"><header><div><h3>منح الوصول للشقق</h3><p>ApartmentAccessGrants</p></div><span>@Model.ApartmentAccessGrants.Count</span></header><div class="table-responsive"><table class="table identity-table compact-table" data-identity-table><tbody>@foreach(var x in Model.ApartmentAccessGrants){<tr data-state="@x.Status.ToLowerInvariant()"><td><strong>@x.Title</strong><small>@x.Detail</small></td><td>@x.Status</td></tr>}</tbody></table></div><div class="table-pager" data-pager></div></article>
+                <article class="reference-card"><header><div><h3>ملكية الشقق</h3><p>ApartmentOwnerships</p></div><span>@Model.OwnershipRecords.Count</span></header><div class="table-responsive"><table class="table identity-table compact-table" data-identity-table><tbody>@foreach(var x in Model.OwnershipRecords){<tr data-state="@x.Status.ToLowerInvariant()"><td><strong>@x.Title</strong><small>@x.Detail</small></td><td>@x.Status</td></tr>}</tbody></table></div><div class="table-pager" data-pager></div></article>
+                <article class="reference-card"><header><div><h3>الربط التاريخي</h3><p>LegacyIdentityMap</p></div><span>@Model.LegacyMappings.Count</span></header><div class="table-responsive"><table class="table identity-table compact-table" data-identity-table><tbody>@foreach(var x in Model.LegacyMappings){<tr data-state="@x.Status.ToLowerInvariant()"><td><strong>@x.Title</strong><small>@x.Detail</small></td><td>@x.Status</td></tr>}</tbody></table></div><div class="table-pager" data-pager></div></article>
+                <article class="reference-card"><header><div><h3>جلسات الحضور</h3><p>PresenceSessions · قراءة فقط</p></div><span>@Model.PresenceSessions.Count</span></header><div class="table-responsive"><table class="table identity-table compact-table" data-identity-table><tbody>@foreach(var x in Model.PresenceSessions){<tr data-state="@x.Status.ToLowerInvariant()"><td><strong>@x.Title</strong><small>@x.Detail</small></td><td>@x.Status</td></tr>}</tbody></table></div><div class="table-pager" data-pager></div></article>
+                <article class="reference-card"><header><div><h3>سجل التدقيق</h3><p>AuditEvents · Append-only</p></div><span>@Model.AuditEvents.Count</span></header><div class="table-responsive"><table class="table identity-table compact-table" data-identity-table><tbody>@foreach(var x in Model.AuditEvents){<tr data-state="@x.Status.ToLowerInvariant()"><td><strong>@x.Title</strong><small>@x.Detail</small></td><td>@x.Status</td></tr>}</tbody></table></div><div class="table-pager" data-pager></div></article>
+                <article class="reference-card"><header><div><h3>طلبات تصحيح الهاتف</h3><p>PersonPhoneChangeRequests</p></div><span>@Model.PendingPhoneChangeCount معلق</span></header><div class="table-responsive"><table class="table identity-table compact-table" data-identity-table><tbody>@foreach(var x in Model.PhoneChangeRequests){<tr data-state="@x.Status.ToLowerInvariant()"><td><strong>@x.Title</strong><small>@x.Detail</small></td><td>@x.Status</td></tr>}</tbody></table></div><div class="table-pager" data-pager></div></article>
+            </div>
+        </section>
+    </main>
+    <footer class="identity-footer"><span>Identity Governance Center</span><span>المعلومات الحساسة محمية · السجلات الرقابية للقراءة فقط</span></footer>
 </div>
+<style>
+.identity-console{--id-border:var(--bs-border-color);--id-muted:var(--bs-secondary-color);color:var(--bs-body-color);padding:8px 2px 30px}
+.identity-hero{display:flex;justify-content:space-between;align-items:center;gap:22px;padding:28px 30px;border:1px solid var(--id-border);border-radius:20px;background:linear-gradient(115deg,var(--bs-tertiary-bg),var(--bs-body-bg));margin-bottom:18px}
+.identity-eyebrow,.panel-kicker{font-size:10px;letter-spacing:1.5px;font-weight:800;color:var(--id-muted)}.identity-eyebrow i{color:#198754;margin-left:5px}.identity-hero h1{font-size:25px;font-weight:850;margin:7px 0}.identity-hero p{margin:0;color:var(--id-muted);font-size:13px}
+.identity-primary-link,.identity-action{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:11px;background:#176b55;color:white;text-decoration:none;border:0;font-size:13px;font-weight:750;white-space:nowrap}
+.identity-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}.metric-card{display:flex;align-items:center;gap:13px;min-height:100px;padding:16px;border:1px solid var(--id-border);border-radius:15px;background:var(--bs-body-bg)}
+.metric-icon{width:42px;height:42px;flex:0 0 42px;display:grid;place-items:center;border-radius:13px;font-size:19px}.metric-icon.blue{background:rgba(13,110,253,.1);color:#0d6efd}.metric-icon.violet{background:rgba(111,66,193,.1);color:#7952b3}.metric-icon.teal{background:rgba(13,148,136,.1);color:#0d9488}.metric-icon.amber{background:rgba(217,119,6,.12);color:#b7791f}
+.metric-card small,.metric-card span{display:block;color:var(--id-muted);font-size:10px}.metric-card strong{display:block;font-size:23px;font-weight:850;font-variant-numeric:tabular-nums}.metric-card div>span{font-size:9px}
+.identity-toolbar{padding:12px 15px;border:1px solid var(--id-border);border-radius:14px;background:var(--bs-body-bg);margin-bottom:15px}.identity-search{display:flex;align-items:center;gap:10px}.identity-search>i{color:var(--id-muted)}.identity-search input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--bs-body-color);font-size:13px;padding:8px}.identity-search button{border:0;border-radius:9px;background:#176b55;color:white;padding:9px 18px;font-size:12px;font-weight:750}.identity-search a{font-size:11px;text-decoration:none}.identity-search-hint{font-size:10px;color:var(--id-muted);margin:6px 28px 0}
+.identity-tabs{display:flex;gap:5px;overflow-x:auto;padding:6px;border:1px solid var(--id-border);border-radius:14px;background:var(--bs-tertiary-bg);margin-bottom:17px;scrollbar-width:thin}.identity-tab{display:flex;align-items:center;gap:7px;padding:11px 13px;border:0;border-radius:10px;background:transparent;color:var(--id-muted);white-space:nowrap;font-size:12px;font-weight:700}.identity-tab.active{background:var(--bs-body-bg);color:var(--bs-body-color);box-shadow:0 1px 5px rgba(0,0,0,.08)}.identity-tab b{font-size:10px;padding:2px 7px;border-radius:20px;background:var(--bs-tertiary-bg)}
+.identity-panel{display:none}.identity-panel.active{display:block}.panel-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:5px 0 17px}.panel-heading h2{font-size:20px;font-weight:850;margin:5px 0}.panel-heading p{font-size:12px;color:var(--id-muted);margin:0}
+.overview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.overview-card{text-align:right;display:grid;grid-template-columns:43px 1fr;column-gap:12px;align-items:center;padding:17px;border:1px solid var(--id-border);border-radius:15px;background:var(--bs-body-bg);color:var(--bs-body-color)}.overview-card:hover{border-color:#198754;transform:translateY(-1px)}.overview-card>i{grid-row:span 3;font-size:24px}.overview-card .blue{color:#0d6efd}.overview-card .teal{color:#0d9488}.overview-card .amber{color:#b7791f}.overview-card .violet{color:#7952b3}.overview-card .slate{color:var(--id-muted)}.overview-card strong{font-size:13px}.overview-card small{font-size:10px;color:var(--id-muted);margin-top:3px}.overview-card b{font-size:10px;color:#198754;margin-top:7px}
+.identity-note{display:flex;gap:13px;padding:16px;margin-top:15px;border:1px solid rgba(13,148,136,.22);border-radius:14px;background:rgba(13,148,136,.045);font-size:12px}.identity-note>i{font-size:20px;color:#0d9488}.identity-note p{margin:5px 0 0;color:var(--id-muted);line-height:1.8}
+.identity-create{margin-bottom:14px;border:1px solid var(--id-border);border-radius:13px;background:var(--bs-body-bg);overflow:hidden}.identity-create>summary{cursor:pointer;list-style:none;padding:14px 17px;font-size:12px;font-weight:750}.identity-create>summary::-webkit-details-marker{display:none}.identity-create>summary i{margin-left:8px;color:#198754}.identity-create[open]>summary{border-bottom:1px solid var(--id-border)}
+.identity-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;padding:17px}.identity-form label,.row-edit-form label{display:grid;gap:6px;font-size:11px;color:var(--id-muted);font-weight:700}.identity-form input,.identity-form select,.row-edit-form input,.end-occupancy-form input,.revoke-role-form input{width:100%;min-width:0;border:1px solid var(--id-border);border-radius:8px;background:var(--bs-body-bg);color:var(--bs-body-color);padding:9px 10px;font-size:12px}.identity-form .wide-field{grid-column:span 2}.identity-form .check-label{display:flex;align-items:center;gap:8px}.identity-form .check-label input{width:auto}.identity-submit{justify-self:start;border:0;border-radius:9px;background:#176b55;color:white;padding:10px 17px;font-size:12px;font-weight:750}.form-hint{grid-column:1/-1;margin:0;color:var(--id-muted);font-size:10px}
+.table-card{border:1px solid var(--id-border);border-radius:15px;background:var(--bs-body-bg);overflow:hidden;margin-bottom:15px}.table-card-heading{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--id-border)}.table-card-heading h3{font-size:14px;font-weight:800;margin:0 0 4px}.table-card-heading p{font-size:10px;color:var(--id-muted);margin:0}.table-card-heading>span{font-size:10px;color:var(--id-muted);background:var(--bs-tertiary-bg);padding:6px 9px;border-radius:20px;white-space:nowrap}
+.identity-table{width:100%;margin:0;font-size:11px;vertical-align:middle}.identity-table thead th{padding:12px;background:var(--bs-tertiary-bg);color:var(--id-muted);font-size:10px;font-weight:800;white-space:nowrap;border-bottom:1px solid var(--id-border)}.identity-table tbody td{padding:11px 12px;border-bottom:1px solid var(--id-border);max-width:260px}.identity-table tbody tr:last-child td{border-bottom:0}.identity-table td strong,.identity-table td small{display:block}.identity-table td strong{font-size:11px}.identity-table td small{font-size:9px;color:var(--id-muted);margin-top:4px;overflow-wrap:anywhere}
+.state-pill,.role-pill,.number-pill{display:inline-flex;align-items:center;justify-content:center;padding:4px 8px;border-radius:30px;font-size:10px;font-weight:750;white-space:nowrap}.state-pill.success{background:rgba(25,135,84,.11);color:#198754}.state-pill.warning{background:rgba(217,119,6,.12);color:#b7791f}.state-pill.muted{background:var(--bs-tertiary-bg);color:var(--id-muted)}.role-pill{background:rgba(13,110,253,.09);color:#0d6efd}.number-pill{min-width:25px;background:var(--bs-tertiary-bg)}
+.row-actions{margin-top:7px}.row-actions>summary{font-size:10px;color:#176b55;font-weight:750;cursor:pointer}.row-edit-form{display:grid;gap:8px;min-width:210px;padding:10px;margin-top:8px;border:1px solid var(--id-border);border-radius:9px}.inline-action{margin-top:7px}.danger-link,.success-link{border:0;background:transparent;padding:3px 0;font-size:10px;font-weight:750;color:#dc3545}.success-link{color:#198754}
+.table-pager{display:flex;align-items:center;justify-content:flex-end;gap:5px;padding:10px 13px;border-top:1px solid var(--id-border);font-size:10px;color:var(--id-muted)}.table-pager button{border:1px solid var(--id-border);border-radius:7px;background:var(--bs-body-bg);color:var(--bs-body-color);padding:5px 9px}.table-pager button:disabled{opacity:.35}.table-pager .page-current{background:var(--bs-tertiary-bg);font-weight:800}
+.end-occupancy-form,.revoke-role-form{display:flex;align-items:center;gap:6px;min-width:160px}.end-occupancy-form input,.revoke-role-form input{font-size:10px;padding:6px}.security-footnote{padding:13px 16px;border-top:1px solid var(--id-border);font-size:10px;color:var(--id-muted)}.security-footnote i{color:#198754;margin-left:6px}
+.reference-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.reference-card{min-width:0;border:1px solid var(--id-border);border-radius:14px;background:var(--bs-body-bg);overflow:hidden}.reference-card header{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-bottom:1px solid var(--id-border)}.reference-card header h3{font-size:12px;font-weight:800;margin:0 0 4px}.reference-card header p{font-size:9px;color:var(--id-muted);margin:0}.reference-card header>span{font-size:10px;padding:4px 8px;border-radius:20px;background:var(--bs-tertiary-bg)}.compact-table tbody td{padding:9px 12px}
+.identity-footer{display:flex;justify-content:space-between;gap:10px;padding:16px 2px 0;margin-top:18px;border-top:1px solid var(--id-border);font-size:9px;color:var(--id-muted)}
+@@media(max-width:1050px){.identity-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@@media(max-width:650px){.identity-hero{align-items:flex-start;flex-direction:column;padding:20px}.identity-hero h1{font-size:21px}.identity-metrics{gap:8px}.metric-card{padding:11px;gap:8px;min-height:85px}.metric-icon{width:35px;height:35px;flex-basis:35px}.metric-card strong{font-size:20px}.overview-grid,.reference-grid{grid-template-columns:1fr}.panel-heading{align-items:flex-start;flex-direction:column}.identity-form{grid-template-columns:1fr}.identity-form .wide-field{grid-column:auto}.identity-search{flex-wrap:wrap}.identity-search input{flex-basis:calc(100% - 40px)}.identity-search button{margin-right:auto}.identity-footer{flex-direction:column}}
+</style>
+<script>
+(() => {
+    const tabs=[...document.querySelectorAll('.identity-tab')], panels=[...document.querySelectorAll('.identity-panel')];
+    const activate=name=>{
+        tabs.forEach(tab=>{const on=tab.dataset.tab===name;tab.classList.toggle('active',on);tab.setAttribute('aria-selected',on?'true':'false');});
+        panels.forEach(panel=>{const on=panel.id==='panel-'+name;panel.classList.toggle('active',on);panel.hidden=!on;});
+    };
+    tabs.forEach(tab=>tab.addEventListener('click',()=>activate(tab.dataset.tab)));
+    document.querySelectorAll('[data-open-tab]').forEach(button=>button.addEventListener('click',()=>activate(button.dataset.openTab)));
+    document.querySelectorAll('[data-toggle-details]').forEach(button=>button.addEventListener('click',()=>{const target=document.getElementById(button.dataset.toggleDetails);if(target){target.open=true;target.scrollIntoView({behavior:'smooth',block:'center'});}}));
+    const search=document.querySelector('.identity-search input[name="q"]'), filter=document.createElement('select');
+    filter.className='identity-state-filter';filter.setAttribute('aria-label','تصفية حسب الحالة');
+    filter.innerHTML='<option value="">كل الحالات</option><option value="active">نشط</option><option value="archived">مؤرشف</option><option value="inactive">غير نشط</option><option value="pending">انتظار</option><option value="historical">تاريخي</option>';
+    document.querySelector('.identity-search').appendChild(filter);
+    const tables=[...document.querySelectorAll('[data-identity-table]')], size=10;
+    const submittedTerm=(search?.value||'').trim().toLocaleLowerCase();
+    const refresh=()=>{
+        const rawTerm=(search?.value||'').trim().toLocaleLowerCase();
+        const state=filter.value;
+        tables.forEach(table=>{
+            const term=rawTerm===submittedTerm&&table.dataset.serverFiltered==='true'?'':rawTerm;
+            const digits=term.replace(/[^0-9]/g,'');
+            const phoneDigits=digits.length>=7?(digits.startsWith('0')?'20'+digits.slice(1):digits):'';
+            const rows=[...table.querySelectorAll('tbody tr')], matches=rows.filter(row=>{
+                const rowText=row.innerText.toLocaleLowerCase(), rowDigits=rowText.replace(/\D/g,'');
+                const textMatch=!term||rowText.includes(term)||(phoneDigits&&rowDigits.includes(phoneDigits));
+                return (!state||(row.dataset.state||'').toLowerCase()===state)&&textMatch;
+            });
+            const pager=table.closest('.table-card,.reference-card')?.querySelector('[data-pager]'), pages=Math.max(1,Math.ceil(matches.length/size));
+            const page=Math.min(Number(table.dataset.page||1),pages);table.dataset.page=String(page);rows.forEach(row=>row.hidden=true);matches.slice((page-1)*size,page*size).forEach(row=>row.hidden=false);
+            if(pager){pager.replaceChildren();const label=document.createElement('span');label.textContent=matches.length?((page-1)*size+1)+'–'+Math.min(page*size,matches.length)+' من '+matches.length:'لا توجد نتائج';pager.append(label);
+                if(pages>1){const prev=document.createElement('button');prev.type='button';prev.textContent='السابق';prev.disabled=page<=1;prev.onclick=()=>{table.dataset.page=String(page-1);refresh();};const next=document.createElement('button');next.type='button';next.textContent='التالي';next.disabled=page>=pages;next.onclick=()=>{table.dataset.page=String(page+1);refresh();};const current=document.createElement('span');current.className='page-current';current.textContent=page+' / '+pages;pager.append(prev,current,next);}
+            }
+        });
+    };
+    search?.addEventListener('input',()=>{tables.forEach(t=>t.dataset.page='1');refresh();});filter.addEventListener('change',()=>{tables.forEach(t=>t.dataset.page='1');refresh();});refresh();
+    const filterApartments=(building,apartment)=>{
+        if(!building||!apartment)return;const selected=building.value;
+        [...apartment.options].forEach(option=>{if(!option.value)return;const ok=!selected||option.dataset.buildingId===selected;option.hidden=!ok;option.disabled=!ok;});
+        const current=apartment.selectedOptions[0];if(current?.value&&current.dataset.buildingId!==selected)apartment.value='';
+    };
+    const b=document.getElementById('identityGovernanceBuildingId'),a=document.getElementById('identityGovernanceApartmentId');
+    if(b&&a){b.addEventListener('change',()=>filterApartments(b,a));filterApartments(b,a);}
+    const rb=document.getElementById('identityRoleBuilding'),ra=document.getElementById('identityRoleApartment'),scope=document.getElementById('identityScopeType');
+    const sync=()=>{filterApartments(rb,ra);if(ra)ra.disabled=scope?.value!=='2';if(rb)rb.disabled=scope?.value==='3';};
+    rb?.addEventListener('change',sync);scope?.addEventListener('change',sync);sync();
+})();
+</script>

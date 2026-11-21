@@ -396,6 +396,8 @@ public sealed class TargetExpenseRevenueWorkflowService
         if (period is null || period.Status == FinancialPeriodStatus.Closed ||
             now < period.StartsAtUtc || now >= period.EndsAtUtc)
             throw new InvalidOperationException("A reversal requires the current open financial period.");
+        if (original.PeriodId != period.PeriodId)
+            throw new InvalidOperationException("A finance posting can only be reversed within its original financial period.");
 
         var originalEntries = await db.LedgerEntries.AsNoTracking()
             .Where(x => x.LedgerTransactionId == original.LedgerTransactionId &&

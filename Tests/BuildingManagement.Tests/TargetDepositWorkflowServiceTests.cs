@@ -392,6 +392,63 @@ public sealed class TargetDepositWorkflowServiceTests
             "B1", "A1", Guid.NewGuid(), Guid.NewGuid(), 10m, note: new string('n', 1001)));
     }
 
+    [Fact]
+    public async Task CancelPending_RejectsClosedSourcePeriodWithoutChangingDepositOrAudit()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+        var now = DateTime.UtcNow;
+        var periodId = Guid.NewGuid();
+        var actorId = Guid.NewGuid();
+        var depositId = Guid.NewGuid();
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.FinancialPeriods.Add(new FinancialPeriodEntity
+            {
+                PeriodId = periodId, BuildingId = "B1", PeriodKey = now.AddMonths(-1).ToString("yyyy-MM"),
+                TimeZoneId = "Africa/Cairo", Status = FinancialPeriodStatus.Closed,
+                StartsAtUtc = new DateTime(now.AddMonths(-1).Year, now.AddMonths(-1).Month, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndsAtUtc = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc),
+                CreatedAtUtc = now.AddMonths(-1), ClosedAtUtc = now.AddDays(-1), ClosedByAccountId = actorId
+            });
+            var personId = Guid.NewGuid();
+            seed.Persons.Add(new PersonEntity { PersonId = personId, DisplayName = "Actor", CreatedAtUtc = now });
+            seed.UserAccounts.Add(new UserAccountEntity
+            {
+                AccountId = actorId, PersonId = personId, AccountStatus = 1,
+                SecurityStamp = "test", CreatedAtUtc = now
+            });
+            seed.RoleDefinitions.Add(new RoleDefinitionEntity
+            {
+                RoleKey = "building-admin", DisplayName = "Building Admin", IsActive = true
+            });
+            seed.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            {
+                RoleAssignmentId = Guid.NewGuid(), AccountId = actorId, RoleKey = "building-admin",
+                ScopeType = 1, ScopeBuildingId = "B1", ValidFromUtc = now.AddMonths(-1), GrantedAtUtc = now
+            });
+            seed.PaymentDeposits.Add(new PaymentDepositEntity
+            {
+                PaymentDepositId = depositId, PeriodId = periodId, BuildingId = "B1",
+                ApartmentId = "A1", Amount = 50m, CurrencyCode = "EGP",
+                Status = PaymentDepositStatus.Pending, SubmittedAtUtc = now.AddMonths(-1), SourceSystem = "application"
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = new TargetDepositWorkflowService(new TestContextFactory(options), TimeProvider.System);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.CancelAsync(depositId, actorId, "late cancellation"));
+
+        await using var verify = new AppDbContext(options);
+        Assert.Equal(PaymentDepositStatus.Pending, (await verify.PaymentDeposits.SingleAsync()).Status);
+        Assert.Empty(await verify.AuditEvents.ToListAsync());
+        Assert.Empty(await verify.LedgerTransactions.ToListAsync());
+        Assert.Empty(await verify.LedgerEntries.ToListAsync());
+    }
+
     private sealed class TestContextFactory(DbContextOptions<AppDbContext> options)
         : IDbContextFactory<AppDbContext>
     {

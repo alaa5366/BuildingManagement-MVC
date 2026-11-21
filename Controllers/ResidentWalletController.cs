@@ -326,27 +326,29 @@ public class ResidentWalletController : Controller
                 });
             }
 
-            if (!parsed.IsSuccessful)
+            if (parsed.IsFailed)
             {
                 return Json(new
                 {
                     success = false,
                     error = Loc.T("This_Image_Shows_A_Failed_Or"),
-                    status = "FAILED",
-                    rawText = text
+                    status = parsed.Status
                 });
             }
 
+            // "success" here means fields were extracted for the resident to review.
+            // It never means the transfer is verified or the deposit is approved.
             return Json(new
             {
                 success = true,
                 amount = parsed.Amount,
                 reference = parsed.Reference,
                 date = parsed.Date,
-                status = "SUCCESS",
+                status = parsed.Status,
                 from = parsed.From,
                 recipientAccount = parsed.RecipientAccount,
-                note = BuildNote(parsed)
+                note = BuildNote(parsed),
+                requiresManualReview = parsed.Status is "UNKNOWN" or "PENDING"
             });
         }
         catch (Exception)

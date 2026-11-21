@@ -1576,7 +1576,7 @@
     <value>مرحبًا بك في نظام إدارة العمارات! هذا الكتيب هيشرحلك خطوة بخطوة كل حاجة محتاج تعرفها عن النظام — من تسجيل الدخول لحد إصدار الفواتير وإدارة المحافظ.</value>
   </data>
   <data name="When_You_Open_The_System_You" xml:space="preserve">
-    <value>عند فتح النظام، هتلاقي شاشة دخول موحّدة. اتبع الخطوات:</value>
+    <value>يستخدم النظام طرق دخول مختلفة حسب الدور. الساكن ومدير العمارة يستخدمان رقم الهاتف المسجل ورقم PIN شخصي، أما SuperAdmin فيستخدم بريدًا إلكترونيًا معتمدًا وكلمة مرور.</value>
   </data>
   <data name="1_Enter_The_Mobile_Number_You" xml:space="preserve">
     <value>&lt;span class="badge-step"&gt;1&lt;/span&gt; اكتب &lt;strong&gt;رقم الموبايل&lt;/strong&gt; اللي مسجّل بيه (مثال: &lt;code&gt;+201119221000&lt;/code&gt;)</value>
@@ -1591,7 +1591,7 @@
     <value>&lt;span class="badge-step"&gt;4&lt;/span&gt; لو عندك أكتر من دور (أدمن + ساكن)، هيظهرلك &lt;strong&gt;اختيار السياق&lt;/strong&gt; — اختار اللي عايز تدخل بيه</value>
   </data>
   <data name="Tip_If_You_Forgot_Your_PIN" xml:space="preserve">
-    <value>💡 &lt;strong&gt;نصيحة&lt;/strong&gt;: لو نسيت PIN، كلّم الأدمن يعملك PIN جديد.</value>
+    <value>💡 &lt;strong&gt;نصيحة&lt;/strong&gt;: نسيت PIN؟ تواصل مع مسؤول معتمد لإدارة الحسابات. بعد التحقق من هويتك، يمكن إصدار PIN بديل من خلال مسار إدارة الحسابات المعتمد؛ لا يمكن عرض PIN الحالي.</value>
   </data>
   <data name="Login_With_QR" xml:space="preserve">
     <value>الدخول بالـ QR</value>
@@ -1792,7 +1792,7 @@
     <value>👥 إدارة الأدمنة والصلاحيات</value>
   </data>
   <data name="You_Have_22_Permissions_Grouped_Into" xml:space="preserve">
-    <value>عندك &lt;strong&gt;22 صلاحية&lt;/strong&gt; موزّعة على 4 تصنيفات:</value>
+    <value>ينظم فهرس الصلاحيات الوصول حسب مجال العمل. امنح الحد الأدنى من الصلاحيات اللازمة فقط؛ ويظل نطاق العمارة وسياق الدور المختار مطبقين.</value>
   </data>
   <data name="Management_Buildings_Admins_Residents" xml:space="preserve">
     <value>🏢 &lt;strong&gt;إدارة&lt;/strong&gt; — العمارات، الأدمنة، السكان</value>
@@ -1807,7 +1807,7 @@
     <value>🛠️ &lt;strong&gt;نظام&lt;/strong&gt; — السجل، الإعدادات، الأدوات، النسخ الاحتياطي</value>
   </data>
   <data name="There_Are_4_Ready_Made_Templates" xml:space="preserve">
-    <value>فيه &lt;strong&gt;4 قوالب جاهزة&lt;/strong&gt;:</value>
+    <value>قوالب الأدوار المتاحة نقطة بداية وليست منحًا تلقائيًا للصلاحيات. راجع كل صلاحية ونطاق قبل تعيين القالب.</value>
   </data>
   <data name="Full_12_Permissions_The_Basics" xml:space="preserve">
     <value>&lt;strong&gt;Full&lt;/strong&gt; — 12 صلاحية (الأساسية)</value>
@@ -1825,7 +1825,7 @@
     <value>💾 النسخ الاحتياطي</value>
   </data>
   <data name="The_Backup_Page_Gives_You_4" xml:space="preserve">
-    <value>صفحة &lt;code&gt;/Backup&lt;/code&gt; بتديك 4 تبويبات:</value>
+    <value>توفر صفحة &lt;code&gt;/Backup&lt;/code&gt; للمسؤولين المصرح لهم إنشاء النسخ الاحتياطية والتحقق من الأرشيف ومعاينة الاستعادة ومراجعة سجل الاستعادة. تحقق دائمًا من البيئة المستهدفة قبل الاستعادة.</value>
   </data>
   <data name="Overview_Document_Statistics_For_Each_Collection" xml:space="preserve">
     <value>&lt;strong&gt;نظرة عامة&lt;/strong&gt; — إحصائيات المستندات في كل Collection</value>
@@ -1843,7 +1843,7 @@
     <value>نسيت الـ PIN بتاعي، أعمل إيه؟</value>
   </data>
   <data name="Contact_The_Admin_They_Can_Set" xml:space="preserve">
-    <value>كلّم الأدمن. هو يقدر يعملك PIN جديد من صفحة الشقق أو من إعداداتك.</value>
+    <value>تواصل مع مدير العمارة أو مسؤول معتمد لإدارة الحسابات. يجب التحقق من هويتك قبل إصدار PIN بديل من خلال مسار إدارة الحسابات المعتمد؛ لا يمكن لأحد عرض PIN الحالي.</value>
   </data>
   <data name="My_Pending_Payment_Doesn_T_Show" xml:space="preserve">
     <value>الدفعة المعلقة مش بتظهر عندي كساكن، ليه؟</value>
@@ -1924,13 +1924,13 @@
     <value>حالات الدفعة</value>
   </data>
   <data name="Pending_Awaiting_Confirmation" xml:space="preserve">
-    <value>⏳ &lt;strong&gt;pending&lt;/strong&gt; — في انتظار التأكيد</value>
+    <value>&lt;strong&gt;قيد المراجعة&lt;/strong&gt; — بانتظار مراجعة مسؤول مصرح له؛ لم يتم ترحيله بعد.</value>
   </data>
   <data name="Confirmed_Confirmed" xml:space="preserve">
-    <value>✅ &lt;strong&gt;confirmed&lt;/strong&gt; — اتأكدت</value>
+    <value>&lt;strong&gt;مؤكد&lt;/strong&gt; — تمت الموافقة عليه وترحيله إلى الدفتر المالي.</value>
   </data>
   <data name="Cancelled_Cancelled" xml:space="preserve">
-    <value>❌ &lt;strong&gt;cancelled&lt;/strong&gt; — اتلغت</value>
+    <value>&lt;strong&gt;ملغى&lt;/strong&gt; — تم إلغاء إيداع معلق قبل ترحيله.</value>
   </data>
   <data name="Support" xml:space="preserve">
     <value>الدعم</value>
@@ -4730,4 +4730,121 @@
   <data name="Backup_Collection_pollEligibility" xml:space="preserve"><value>أهلية التصويت</value></data>
   <data name="Backup_Collection_pollBallots" xml:space="preserve"><value>أصوات الاقتراع المجهولة</value></data>
   <data name="Backup_Collection_pollLifecycleEvents" xml:space="preserve"><value>أحداث دورة حياة الاستطلاع</value></data>
+  <data name="Phone_Number" xml:space="preserve">
+    <value>رقم الهاتف</value>
+  </data>
+  <data name="Select_Apartment" xml:space="preserve">
+    <value>اختر الشقة</value>
+  </data>
+  <data name="Exception" xml:space="preserve">
+    <value>استثناء</value>
+  </data>
+  <data name="History" xml:space="preserve">
+    <value>السجل</value>
+  </data>
+  <data name="Reversed" xml:space="preserve">
+    <value>معكوس</value>
+  </data>
+  <data name="UserGuide_AccountAccess" xml:space="preserve">
+    <value>الحسابات والأدوار وتأمين الدخول</value>
+  </data>
+  <data name="UserGuide_ResidentSignIn" xml:space="preserve">
+    <value>دخول الساكن</value>
+  </data>
+  <data name="UserGuide_ResidentSignInDetails" xml:space="preserve">
+    <value>يدخل الساكن باستخدام رقم الهاتف المسجل والرقم السري الشخصي PIN. يقتصر الدخول على دور ساكن نشط وعلى إشغال الشقة المرتبط بالحساب.</value>
+  </data>
+  <data name="UserGuide_AdminSignIn" xml:space="preserve">
+    <value>دخول مدير العمارة</value>
+  </data>
+  <data name="UserGuide_AdminSignInDetails" xml:space="preserve">
+    <value>يدخل مدير العمارة باستخدام رقم هاتفه المسجل والرقم السري PIN. تقتصر صلاحيات الحساب على العمارة المسندة إليه والأذونات الممنوحة له.</value>
+  </data>
+  <data name="UserGuide_SuperAdminSignIn" xml:space="preserve">
+    <value>دخول المدير العام</value>
+  </data>
+  <data name="UserGuide_SuperAdminSignInDetails" xml:space="preserve">
+    <value>يدخل المدير العام باستخدام بريد إلكتروني معتمد وكلمة مرور. إذا كان التحقق الثنائي مفعّلًا أو مطلوبًا للحساب، يجب إكمال خطوة تطبيق المصادقة قبل إصدار الجلسة.</value>
+  </data>
+  <data name="UserGuide_MultipleRoles" xml:space="preserve">
+    <value>حساب واحد بأكثر من دور</value>
+  </data>
+  <data name="UserGuide_MultipleRolesDetails" xml:space="preserve">
+    <value>يمكن للشخص أن يكون ساكنًا في شقة ومديرًا لعمارة أو أكثر في الوقت نفسه. اختر الدور والنطاق المطلوبين عند ظهور شاشة الاختيار. تظل صلاحية الساكن مرتبطة بشقته، وصلاحية المدير مرتبطة بالعمارة. لا يتم دمج النطاقات أو إنشاء هويات مكررة لمجرد إضافة دور آخر.</value>
+  </data>
+  <data name="UserGuide_IdentityGovernance" xml:space="preserve">
+    <value>تفعيل الحساب وأمان الرقم السري</value>
+  </data>
+  <data name="UserGuide_IdentityGovernanceDetails" xml:space="preserve">
+    <value>يتطلب دخول الساكن التحقق من الهوية ووجود إشغال نشط ودور صالح ورقم هاتف مسجل وفريد. الحسابات التي تنتظر المراجعة لا يمكنها تسجيل الدخول. يجب تغيير الرقم السري الأولي أو المستعاد عند طلب ذلك. لا تشارك PIN أو رموز الاستعادة أو سر تطبيق المصادقة.</value>
+  </data>
+  <data name="UserGuide_TwoFactor" xml:space="preserve">
+    <value>التحقق بخطوتين</value>
+  </data>
+  <data name="UserGuide_TwoFactorDetails" xml:space="preserve">
+    <value>عند تفعيل التحقق الثنائي لحساب إداري، أدخل الرمز الحالي من تطبيق المصادقة بعد بيانات الدخول. رموز الاستعادة تستخدم مرة واحدة؛ احتفظ بها في مكان آمن خارج الإنترنت ولا ترسلها للدعم.</value>
+  </data>
+  <data name="UserGuide_Impersonation" xml:space="preserve">
+    <value>الدخول المؤقت بهوية أخرى (Impersonation)</value>
+  </data>
+  <data name="UserGuide_ImpersonationDetails" xml:space="preserve">
+    <value>يمكن للمسؤول المصرح له الدخول مؤقتًا إلى نطاق ساكن أو عمارة مسموح بها لفحص مشكلة. يوضح الشريط العلوي أنك في وضع الانتحال. استخدم زر العودة إلى حسابي لاستعادة الهوية السابقة؛ وفي الانتحال المتداخل تتم العودة مستوى واحدًا في كل مرة. تظل الإجراءات خاضعة لفحص الصلاحيات والتسجيل في السجلات.</value>
+  </data>
+  <data name="UserGuide_ReceiptImages" xml:space="preserve">
+    <value>صور التحويلات وقراءة OCR</value>
+  </data>
+  <data name="UserGuide_ReceiptImagesDetails" xml:space="preserve">
+    <value>تساعد صورة الإيصال في استخراج بيانات مبدئية مثل المبلغ والتاريخ والمرجع وحالة التحويل. القراءة الآلية مساعدة فقط وقد تخطئ مع الصور المضغوطة أو المقتطعة أو المائلة أو منخفضة الجودة. ظهور رسالة نجاح مقروءة لا يثبت وصول الأموال. يجب على المدير المختص مطابقة التحويل مع مصدر دفع موثوق قبل تأكيد الإيداع.</value>
+  </data>
+  <data name="UserGuide_ReceiptImageQuality" xml:space="preserve">
+    <value>كيفية تصوير إيصال واضح</value>
+  </data>
+  <data name="UserGuide_ReceiptImageQualityDetails" xml:space="preserve">
+    <value>ارفع لقطة الشاشة الأصلية أو الصورة بأعلى جودة متاحة. أظهر تفاصيل العملية كاملة والمبلغ والعملة والتاريخ والرقم المرجعي والحالة. تجنب الوهج والاهتزاز والضغط الشديد والفلاتر والقص الضيق. عند التصوير بالكاميرا اجعل الهاتف موازيًا للشاشة أو الورقة واستخدم إضاءة متوازنة وتجنب الانعكاسات. لا تعدّل المبلغ أو تفاصيل العملية.</value>
+  </data>
+  <data name="UserGuide_DepositHistory" xml:space="preserve">
+    <value>مراجعة الإيداعات وسجلها</value>
+  </data>
+  <data name="UserGuide_DepositHistoryDetails" xml:space="preserve">
+    <value>تظل الإيداعات الجديدة معلقة حتى يراجعها مدير مخول ويؤكدها. التأكيد والإلغاء والعكس حالات مالية مختلفة. تظل السجلات التاريخية وروابط الإيصالات المتاحة ظاهرة في شاشات المحفظة أو كشف الحساب المناسبة؛ صورة الإيصال وحدها لا تسجل أموالًا في دفتر الأستاذ.</value>
+  </data>
+  <data name="UserGuide_InvoiceQR" xml:space="preserve">
+    <value>الفواتير والتحقق برمز QR</value>
+  </data>
+  <data name="UserGuide_InvoiceQRDetails" xml:space="preserve">
+    <value>تحتوي ملفات PDF للفواتير الصادرة على رابط تحقق موقّع داخل رمز QR. يؤدي مسحه إلى صفحة تحقق عامة تعرض بيانات محدودة مثل العمارة ورقم الشقة والفترة وتاريخ الإصدار. لا تعرض الصفحة بيانات اتصال الساكن أو أرصدة الحسابات. يتم رفض التوقيع غير الصحيح أو الفاتورة غير المعروفة.</value>
+  </data>
+  <data name="UserGuide_AuditLogs" xml:space="preserve">
+    <value>سجلات التدقيق وسجلات التطبيق</value>
+  </data>
+  <data name="UserGuide_AuditLogsDetails" xml:space="preserve">
+    <value>تسجل سجلات التدقيق الإجراءات المهمة للمستخدمين والعمليات المالية، بينما تساعد سجلات التطبيق في تشخيص أخطاء التشغيل. تُقيّد النتائج بنطاق العمارة أو الشقة المسموح للمستخدم بها، وتُحجب البيانات الحساسة. استخدم رقم الارتباط عند الإبلاغ عن مشكلة. السجلات أداة للتحقيق وليست بديلًا عن مستندات الإثبات المالية.</value>
+  </data>
+  <data name="UserGuide_BackupRestore" xml:space="preserve">
+    <value>النسخ الاحتياطي والاستعادة</value>
+  </data>
+  <data name="UserGuide_BackupRestoreDetails" xml:space="preserve">
+    <value>أنشئ نسخًا احتياطية واحتفظ بها قبل التغييرات الكبيرة. راجع معاينة الاستعادة والمجموعات المحددة بعناية. ترتبط جلسة الاستعادة بالحساب الذي أجرى المعاينة، وتنتهي صلاحيتها، وتُستخدم مرة واحدة، وتتحقق من بصمة الأرشيف قبل تطبيق التغييرات داخل معاملة واحدة. لا تنفذ الاستعادة إلا بعد مراجعة مصرح بها وعلى البيئة المقصودة؛ لا تجرّب على الإنتاج.</value>
+  </data>
+  <data name="UserGuide_FinancialPeriods" xml:space="preserve">
+    <value>الفترات المالية والفترات المغلقة</value>
+  </data>
+  <data name="UserGuide_FinancialPeriodsDetails" xml:space="preserve">
+    <value>ترتبط القيود المالية بعمارة وفترة محددتين. تمنع الفترات المغلقة أو غير المهيأة التغييرات المالية المحمية، بما فيها إلغاء الإيداع المعلق. لا تغيّر الفترات التاريخية لتمرير معاملة؛ استخدم إجراءات إدارة الفترات والتصحيح المعتمدة.</value>
+  </data>
+  <data name="UserGuide_ResidentAdminLoginStep" xml:space="preserve">
+    <value>للساكن ومدير العمارة: سجّل الدخول برقم الهاتف المسجل ورقم PIN الشخصي.</value>
+  </data>
+  <data name="UserGuide_SuperAdminLoginStep" xml:space="preserve">
+    <value>SuperAdmin: استخدم البريد الإلكتروني المعتمد وكلمة المرور، وأكمل التحقق الثنائي إذا طُلب منك ذلك.</value>
+  </data>
+  <data name="UserGuide_RoleContextStep" xml:space="preserve">
+    <value>إذا كان لحسابك أكثر من دور أو نطاق عمارة، اختر السياق الذي تريد استخدامه. صلاحية الساكن مرتبطة بالشقة، وصلاحية مدير العمارة مرتبطة بالعمارة.</value>
+  </data>
+  <data name="UserGuide_InitialPinStep" xml:space="preserve">
+    <value>عند أول دخول، غيّر رقم PIN الذي تم إصداره لك عندما يطلب النظام ذلك. لا تشارك PIN الخاص بك ولا تستخدم بيانات دخول شخص آخر.</value>
+  </data>
+  <data name="Reversed_Reversed" xml:space="preserve">
+    <value>&lt;strong&gt;معكوس&lt;/strong&gt; — تم عكس إيداع سبق ترحيله، ويظل السجل المالي الأصلي متاحًا.</value>
+  </data>
 </root>

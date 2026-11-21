@@ -299,39 +299,28 @@ public class AccountController : Controller
             return await CompleteSignInAsync(superAdminResult, throttleKey);
         }
 
-        var identityResult = await _identityAuth.AuthenticateResidentAsync(identifier, credential);
-        if (identityResult != null)
+        var authenticatedContexts = await AuthenticatePhonePinContextsAsync(identifier, credential);
+        if (authenticatedContexts.Count == 0)
         {
-            if (!identityResult.Success)
-            {
-                _throttle.RegisterFailure(throttleKey, ClientIp);
-                ViewBag.Error = Loc.T("Invalid_Login_Details");
-                return View(vm);
-            }
-
-            _throttle.Reset(throttleKey);
-            if (identityResult.MustChangePin)
-                return StartPinChangeChallenge(identityResult, identifier);
-            await SignInCookieAsync(identityResult);
-            return RedirectBasedOnRole(identityResult.Role!);
+            _throttle.RegisterFailure(throttleKey, ClientIp);
+            ViewBag.Error = Loc.T("Invalid_Login_Details");
+            return View(vm);
         }
 
-        var adminResult = await _identityAuth.AuthenticateAdminAsync(identifier, credential);
-        if (adminResult is not null)
+        _throttle.Reset(throttleKey);
+        if (authenticatedContexts.Any(result => result.MustChangePin))
         {
-            if (!adminResult.Success)
-            {
-                _throttle.RegisterFailure(throttleKey, ClientIp);
-                ViewBag.Error = Loc.T("Invalid_Login_Details");
-                return View(vm);
-            }
-
-            return await CompleteSignInAsync(adminResult, throttleKey);
+            var pinChangeResult = authenticatedContexts.FirstOrDefault(result => result.Role == "resident")
+                ?? authenticatedContexts[0];
+            return StartPinChangeChallenge(
+                pinChangeResult, identifier,
+                pinChangeRole: authenticatedContexts.Count > 1 ? "multi" : pinChangeResult.Role);
         }
 
-        _throttle.RegisterFailure(throttleKey, ClientIp);
-        ViewBag.Error = Loc.T("Invalid_Login_Details");
-        return View(vm);
+        if (authenticatedContexts.Count > 1)
+            return await StartRoleContextSelectionAsync(authenticatedContexts, throttleKey);
+
+        return await CompleteSignInAsync(authenticatedContexts[0], throttleKey);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -390,11 +379,231 @@ public class AccountController : Controller
             return RedirectToAction("ChooseContext", new { token = sessionToken });
         }
 
-        // Contexts issued by the retired legacy SQL identity flow are no longer accepted.
-        // A fresh sign-in must resolve the account and its active role assignments in target identity tables.
+        // Legacy account-context tokens are never used to issue a target-identity session.
         HttpContext.Session.Remove("ctx_" + sessionToken);
-        TempData["Error"] = Loc.T("Invalid_Login_Details");
-        return RedirectToAction("UnifiedLogin");
+        TempData["Error"] = Loc.T("The_Session_Has_Expired_Please_Try");
+        return RedirectToAction(nameof(UnifiedLogin));
+    }
+
+    /// <summary>Displays the short-lived, session-bound role and scope choices after successful phone/PIN authentication.</summary>
+    [HttpGet]
+    public async Task<IActionResult> SelectRoleContext()
+    {
+        Response.Headers["Cache-Control"] = "no-store, no-cache, max-age=0";
+        Response.Headers["Pragma"] = "no-cache";
+        Response.Headers["Referrer-Policy"] = "no-referrer";
+        var token = HttpContext.Session.GetString("role_ctx_token") ?? "";
+        var pending = GetPendingRoleContexts(token);
+        if (pending == null)
+        {
+            TempData["Error"] = Loc.T("The_Session_Has_Expired_Please_Try");
+            return RedirectToAction(nameof(UnifiedLogin));
+        }
+
+        var vm = new RoleContextSelectionVm
+        {
+            FullName = pending.Contexts.FirstOrDefault()?.Name ?? Loc.T("User"),
+            SessionToken = token,
+            Contexts = await BuildRoleContextOptionsAsync(pending.Contexts)
+        };
+        return View(vm);
+    }
+
+    /// <summary>Completes sign-in for the selected role and scope after rechecking its current authorization.</summary>
+    [HttpPost]
+    [EnableRateLimiting("login")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SelectRoleContext(string sessionToken, string contextId)
+    {
+        var pending = GetPendingRoleContexts(sessionToken);
+        if (pending == null)
+        {
+            TempData["Error"] = Loc.T("The_Session_Has_Expired_Please_Try");
+            return RedirectToAction(nameof(UnifiedLogin));
+        }
+
+        var selected = pending.Contexts.FirstOrDefault(result =>
+            string.Equals(GetRoleContextId(result), contextId, StringComparison.Ordinal));
+        if (selected == null)
+        {
+            TempData["Error"] = Loc.T("The_Selected_Context_Does_Not_Exist");
+            return RedirectToAction(nameof(SelectRoleContext));
+        }
+
+        if (!await _identityAuth.IsRoleContextStillAuthorizedAsync(selected, HttpContext.RequestAborted))
+        {
+            HttpContext.Session.Remove("role_ctx_" + sessionToken);
+            TempData["Error"] = Loc.T("Invalid_Login_Details");
+            return RedirectToAction(nameof(UnifiedLogin));
+        }
+
+        HttpContext.Session.Remove("role_ctx_" + sessionToken);
+        HttpContext.Session.Remove("role_ctx_token");
+        return await CompleteSignInAsync(selected, pending.ThrottleKey);
+    }
+
+    private sealed class PendingRoleContexts
+    {
+        public List<AuthResult> Contexts { get; set; } = new();
+        public string? ThrottleKey { get; set; }
+        public DateTimeOffset ExpiresAt { get; set; }
+    }
+
+    private async Task<List<AuthResult>> AuthenticatePhonePinContextsAsync(string identifier, string credential)
+    {
+        var resident = await _identityAuth.AuthenticateResidentAsync(
+            identifier, credential, cancellationToken: HttpContext.RequestAborted);
+        var admin = await _identityAuth.AuthenticateAdminAsync(
+            identifier, credential, cancellationToken: HttpContext.RequestAborted);
+
+        var results = new List<AuthResult>();
+        if (resident?.Success == true)
+        {
+            var scopes = resident.ResidentScopes.Count > 0
+                ? resident.ResidentScopes
+                : new List<ResidentLoginScope>
+                {
+                    new() { BuildingId = resident.BuildingIds.FirstOrDefault() ?? "", ApartmentId = resident.ApartmentId ?? "" }
+                };
+            foreach (var scope in scopes.Where(scope =>
+                !string.IsNullOrWhiteSpace(scope.BuildingId) && !string.IsNullOrWhiteSpace(scope.ApartmentId)))
+            {
+                results.Add(CloneAuthResult(resident, "resident",
+                    new List<string> { scope.BuildingId }, scope.ApartmentId));
+            }
+        }
+
+        if (admin?.Success == true && admin.BuildingIds.Count > 0)
+        {
+            foreach (var buildingId in admin.BuildingIds.Distinct(StringComparer.Ordinal))
+            {
+                // Re-authenticate in the individual building scope so permission overrides
+                // are evaluated for this building rather than intersected across buildings.
+                var scopedAdmin = await _identityAuth.AuthenticateAdminAsync(
+                    identifier, credential, buildingId, HttpContext.RequestAborted);
+                if (scopedAdmin?.Success == true)
+                    results.Add(scopedAdmin);
+            }
+        }
+
+        return results
+            .GroupBy(GetRoleContextId, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToList();
+    }
+
+    private static AuthResult CloneAuthResult(
+        AuthResult source, string role, List<string> buildingIds, string? apartmentId) => new()
+    {
+        Success = source.Success,
+        Uid = source.Uid,
+        Role = role,
+        Email = source.Email,
+        Name = source.Name,
+        Phone = source.Phone,
+        UsesTargetIdentity = source.UsesTargetIdentity,
+        MustChangePin = source.MustChangePin,
+        SecurityStamp = source.SecurityStamp,
+        BuildingIds = buildingIds,
+        Permissions = source.Permissions.ToList(),
+        ApartmentId = apartmentId,
+        ApartmentNumber = source.ApartmentNumber
+    };
+
+    private async Task<IActionResult> StartRoleContextSelectionAsync(
+        List<AuthResult> contexts, string throttleKey)
+    {
+        var token = Guid.NewGuid().ToString("N");
+        var pending = new PendingRoleContexts
+        {
+            Contexts = contexts,
+            ThrottleKey = throttleKey,
+            ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(5)
+        };
+        HttpContext.Session.Clear();
+        HttpContext.Session.SetString("role_ctx_token", token);
+        HttpContext.Session.SetString(
+            "role_ctx_" + token, System.Text.Json.JsonSerializer.Serialize(pending));
+        return RedirectToAction(nameof(SelectRoleContext));
+    }
+
+    private PendingRoleContexts? GetPendingRoleContexts(string token)
+    {
+        if (!Guid.TryParseExact(token, "N", out _) ||
+            !string.Equals(HttpContext.Session.GetString("role_ctx_token"), token, StringComparison.Ordinal))
+            return null;
+        var json = HttpContext.Session.GetString("role_ctx_" + token);
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            var pending = System.Text.Json.JsonSerializer.Deserialize<PendingRoleContexts>(json);
+            if (pending == null || pending.ExpiresAt <= DateTimeOffset.UtcNow ||
+                pending.Contexts.Count < 2 || pending.Contexts.Any(result =>
+                    !result.Success || !result.UsesTargetIdentity || result.Uid == null))
+            {
+                HttpContext.Session.Remove("role_ctx_" + token);
+                return null;
+            }
+            return pending;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            HttpContext.Session.Remove("role_ctx_" + token);
+            return null;
+        }
+    }
+
+    private static string GetRoleContextId(AuthResult result) =>
+        result.Role == "resident"
+            ? "resident:" + (result.BuildingIds.FirstOrDefault() ?? "") + ":" + (result.ApartmentId ?? "")
+            : result.Role == "admin"
+                ? "admin:" + (result.BuildingIds.FirstOrDefault() ?? "")
+                : result.Role ?? "";
+
+    private async Task<List<RoleContextOptionVm>> BuildRoleContextOptionsAsync(List<AuthResult> contexts)
+    {
+        var options = new List<RoleContextOptionVm>();
+        foreach (var context in contexts)
+        {
+            if (context.Role == "resident")
+            {
+                var buildingId = context.BuildingIds.FirstOrDefault() ?? "";
+                var building = await _buildings.GetByIdAsync(buildingId);
+                var apartment = building?.Apartments.FirstOrDefault(item => item.Id == context.ApartmentId);
+                var buildingLabel = building == null
+                    ? Loc.T("Building")
+                    : $"{building.Name} ({building.BuildingNumber})";
+                var apartmentLabel = apartment == null
+                    ? context.ApartmentId ?? ""
+                    : Loc.T("Apartment_N", apartment.Number);
+                options.Add(new RoleContextOptionVm
+                {
+                    Id = GetRoleContextId(context),
+                    Role = "resident",
+                    GroupTitle = buildingLabel,
+                    Title = apartmentLabel,
+                    Description = "دخول الساكن لهذه الشقة"
+                });
+            }
+            else if (context.Role == "admin")
+            {
+                var buildingId = context.BuildingIds.SingleOrDefault();
+                if (string.IsNullOrWhiteSpace(buildingId)) continue;
+                var building = await _buildings.GetByIdAsync(buildingId);
+                var buildingLabel = building == null
+                    ? Loc.T("Building")
+                    : $"{building.Name} ({building.BuildingNumber})";
+                options.Add(new RoleContextOptionVm
+                {
+                    Id = GetRoleContextId(context),
+                    Role = "admin",
+                    GroupTitle = buildingLabel,
+                    Title = "مدير العمارة",
+                    Description = $"إدارة وصلاحيات عمارة {buildingLabel}"
+                });
+            }
+        }
+        return options;
     }
 
     private IActionResult? EnsureAdministratorTwoFactorAccess()
@@ -433,13 +642,15 @@ public class AccountController : Controller
         }
     }
 
-    private IActionResult StartPinChangeChallenge(AuthResult result, string identifier, string? buildingId = null, string? apartmentId = null)
+    private IActionResult StartPinChangeChallenge(
+        AuthResult result, string identifier, string? buildingId = null,
+        string? apartmentId = null, string? pinChangeRole = null)
     {
         HttpContext.Session.Clear();
         HttpContext.Session.SetString("resident_pin_change_account", result.Uid!);
         HttpContext.Session.SetString("resident_pin_change_stamp", result.SecurityStamp ?? "");
         HttpContext.Session.SetString("resident_pin_change_identifier", identifier);
-        HttpContext.Session.SetString("resident_pin_change_role", result.Role ?? "resident");
+        HttpContext.Session.SetString("resident_pin_change_role", pinChangeRole ?? result.Role ?? "resident");
         if (!string.IsNullOrWhiteSpace(buildingId))
             HttpContext.Session.SetString("resident_pin_change_building", buildingId);
         if (!string.IsNullOrWhiteSpace(apartmentId))
@@ -494,8 +705,23 @@ public class AccountController : Controller
         }
 
         var pinChangeRole = HttpContext.Session.GetString("resident_pin_change_role") ?? "resident";
+        if (pinChangeRole == "multi")
+        {
+            var contexts = await AuthenticatePhonePinContextsAsync(identifier, vm.NewPin);
+            if (contexts.Count == 0 || contexts.Any(result => result.MustChangePin))
+            {
+                HttpContext.Session.Clear();
+                TempData["Error"] = Loc.T("Invalid_Login_Details");
+                return RedirectToAction(nameof(UnifiedLogin));
+            }
+            if (contexts.Count > 1)
+                return await StartRoleContextSelectionAsync(contexts, AcctKey(identifier));
+            if (contexts.Count == 1)
+                return await CompleteSignInAsync(contexts[0], AcctKey(identifier));
+        }
+
         var result = pinChangeRole == "admin"
-            ? await _identityAuth.AuthenticateAdminAsync(identifier, vm.NewPin, buildingId ?? "", HttpContext.RequestAborted)
+            ? await _identityAuth.AuthenticateAdminAsync(identifier, vm.NewPin, buildingId, HttpContext.RequestAborted)
             : await _identityAuth.AuthenticateResidentAsync(identifier, vm.NewPin, buildingId, apartmentId);
         if (result == null || !result.Success || result.MustChangePin)
         {
@@ -582,6 +808,14 @@ public class AccountController : Controller
             _throttle.RegisterFailure(throttleKey, ClientIp);
             ViewBag.Error = "The verification code is invalid or has already been used.";
             return View("UnifiedLogin", new UnifiedLoginVm());
+        }
+
+        if (pending.Result.UsesTargetIdentity && (pending.Result.Role is "admin" or "resident") &&
+            !await _identityAuth.IsRoleContextStillAuthorizedAsync(pending.Result, HttpContext.RequestAborted))
+        {
+            HttpContext.Session.Remove("2fa_pending");
+            TempData["Error"] = Loc.T("Invalid_Login_Details");
+            return RedirectToAction(nameof(UnifiedLogin));
         }
 
         _log.LogInformation("Two-factor verification succeeded for account {Uid}", pending.Result.Uid);

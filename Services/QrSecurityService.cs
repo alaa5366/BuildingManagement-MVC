@@ -87,6 +87,33 @@ public class QrSecurityService
             Encoding.UTF8.GetBytes(sig));
     }
 
+    /// <summary>Creates a full-length HMAC signature for an immutable invoice verification link.</summary>
+    public string SignInvoiceVerification(string invoiceNo)
+    {
+        if (string.IsNullOrWhiteSpace(invoiceNo) || invoiceNo.Length > 128)
+            throw new ArgumentException("A valid invoice number is required.", nameof(invoiceNo));
+
+        var payload = Encoding.UTF8.GetBytes("/Invoice/Verify\n" + invoiceNo);
+        return Convert.ToHexString(HMACSHA256.HashData(Encoding.UTF8.GetBytes(_secretKey), payload)).ToLowerInvariant();
+    }
+
+    /// <summary>Validates an invoice verification signature using constant-time comparison.</summary>
+    public bool VerifyInvoiceVerification(string invoiceNo, string? signature)
+    {
+        if (string.IsNullOrWhiteSpace(invoiceNo) || invoiceNo.Length > 128 ||
+            string.IsNullOrWhiteSpace(signature) || signature.Length != 64)
+            return false;
+
+        byte[] supplied;
+        try { supplied = Convert.FromHexString(signature); }
+        catch (FormatException) { return false; }
+
+        var expected = HMACSHA256.HashData(
+            Encoding.UTF8.GetBytes(_secretKey),
+            Encoding.UTF8.GetBytes("/Invoice/Verify\n" + invoiceNo));
+        return CryptographicOperations.FixedTimeEquals(expected, supplied);
+    }
+
     /// <summary>
     /// ظٹظˆظ„ط¯ Quick QR Token (v2).
     /// </summary>

@@ -124,7 +124,33 @@
                             <td class="audit-actor-cell"><span>@(e.UserId ?? "—")</span>@if(!string.IsNullOrWhiteSpace(e.UserRole)){<small>@e.UserRole</small>}</td>
                             <td class="audit-scope-cell"><span>@(e.BuildingId ?? "—")</span><small>@(e.ApartmentId ?? "—")</small></td>
                             <td class="audit-correlation-cell">@if(!string.IsNullOrWhiteSpace(e.CorrelationId)){<a asp-action="Index" asp-route-correlationId="@e.CorrelationId" title="Filter by correlation ID"><code>@e.CorrelationId</code></a>}else{<span class="text-muted">—</span>}</td>
-                            <td>@if(e.Metadata != null && e.Metadata.Count > 0){<details class="log-event-details"><summary><i class="bi bi-braces"></i> @Loc.T("Log_Inspect")</summary><div class="log-detail-block"><pre>@System.Text.Json.JsonSerializer.Serialize(e.Metadata, new System.Text.Json.JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.Default })</pre></div></details>}else{<span class="text-muted">—</span>}</td>
+                            <td>
+                                @if (e.Metadata != null &&
+                                    e.Metadata.TryGetValue("receiptUrl", out var receiptUrlValue) &&
+                                    Uri.TryCreate(receiptUrlValue?.ToString(), UriKind.Absolute, out var receiptUri) &&
+                                    receiptUri.Scheme == Uri.UriSchemeHttps)
+                                {
+                                    <a href="@receiptUri.AbsoluteUri" target="_blank" rel="noopener noreferrer"
+                                       title="@Loc.T("View_Receipt")" class="d-inline-block mb-1">
+                                        <img src="@receiptUri.AbsoluteUri" alt="@Loc.T("Receipt_2")"
+                                             loading="lazy" referrerpolicy="no-referrer"
+                                             style="max-width:96px;max-height:64px;object-fit:contain;border-radius:6px;" />
+                                    </a>
+                                }
+                                @if (e.Metadata != null && e.Metadata.Count > 0)
+                                {
+                                    <details class="log-event-details">
+                                        <summary><i class="bi bi-braces"></i> @Loc.T("Log_Inspect")</summary>
+                                        <div class="log-detail-block">
+                                            <pre>@System.Text.Json.JsonSerializer.Serialize(e.Metadata, new System.Text.Json.JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.Default })</pre>
+                                        </div>
+                                    </details>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
                         </tr>
                     }
                 }

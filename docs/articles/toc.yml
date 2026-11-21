@@ -1,3 +1,9 @@
+- name: User handbook
+  href: user-handbook.md
+- name: Technical reference
+  href: technical-reference.md
+- name: OCR evaluation
+  href: ocr-evaluation.md
 - name: Architecture
   href: architecture.md
 - name: Security

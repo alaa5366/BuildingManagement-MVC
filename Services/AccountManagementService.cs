@@ -216,8 +216,17 @@ public sealed class AccountManagementService
 
     private static async Task<bool> HasUniqueResidentPhoneAsync(AppDbContext db, Guid personId, CancellationToken ct)
     {
+        // SuperAdmin identities authenticate by allow-listed email, never by phone.
+        // Their contact numbers therefore do not participate in phone-login uniqueness.
+        var superAdminPersonIds = await (
+            from account in db.UserAccounts.AsNoTracking()
+            join assignment in db.UserRoleAssignments.AsNoTracking()
+                on account.AccountId equals assignment.AccountId
+            where assignment.RoleKey == "superadmin" && assignment.RevokedAtUtc == null
+            select account.PersonId).Distinct().ToListAsync(ct);
         var people = await db.Persons.AsNoTracking()
-            .Where(x => x.PrimaryPhone != null)
+            .Where(x => !x.IsArchived && x.PrimaryPhone != null
+                && !superAdminPersonIds.Contains(x.PersonId))
             .Select(x => new { x.PersonId, x.PrimaryPhone })
             .ToListAsync(ct);
         var person = people.SingleOrDefault(x => x.PersonId == personId);

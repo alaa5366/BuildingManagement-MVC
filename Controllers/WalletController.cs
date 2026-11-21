@@ -95,12 +95,22 @@ public class WalletController : Controller
         var pagedPending = PagedResult<(Apartment Apt, Deposit Deposit, string MonthKey)>
             .Create(allPending, 1, pageSize);
 
+        var depositHistory = snapshot.DepositHistory
+            .Select(item =>
+            {
+                var apartment = building.Apartments.FirstOrDefault(a => a.Id == item.ApartmentId)
+                    ?? new Apartment { Id = item.ApartmentId, Number = 0, Label = item.ApartmentId };
+                return (apartment, item.Deposit, item.MonthKey);
+            })
+            .ToList();
+
         var totals = snapshot.Totals;
 
         ViewBag.Building = building;
         ViewBag.Month = mk;
         ViewBag.Balances = pagedBalances;
         ViewBag.Pending = pagedPending;
+        ViewBag.DepositHistory = depositHistory;
         ViewBag.Totals = totals;
         ViewBag.RouteValues = new Dictionary<string, string?>
         {

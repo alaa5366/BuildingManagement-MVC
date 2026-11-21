@@ -120,17 +120,100 @@ public sealed class ResidentsServiceTests
     }
 
     [Fact]
-    public async Task DuplicatePhoneDoesNotMergeDifferentPeople()
+    public async Task SharedPhoneReusesOnePersonAndAccountAcrossIndependentApartmentOccupancies()
+    {
+        await using var context = new ResidentsServiceTestContext();
+        await context.SeedApartmentAsync("b1", "a1", owner: "Apartment One");
+        await context.SeedApartmentAsync("b1", "a2", owner: "Apartment Two");
+
+        var firstOccupancyId = await Create(context, "a1", "Shared Account Holder", "01001234567");
+        var secondOccupancyId = await Create(context, "a2", "Different Apartment Label", "00201001234567");
+
+        await using var db = context.CreateDb();
+        var person = await db.Persons.SingleAsync();
+        var account = await db.UserAccounts.SingleAsync();
+        var occupancies = await db.ApartmentOccupancies.OrderBy(x => x.ApartmentId).ToListAsync();
+
+        Assert.Equal(1, await db.Persons.CountAsync());
+        Assert.Equal(1, await db.UserAccounts.CountAsync());
+        Assert.Equal(2, occupancies.Count);
+        Assert.Equal(firstOccupancyId, occupancies[0].OccupancyId);
+        Assert.Equal(secondOccupancyId, occupancies[1].OccupancyId);
+        Assert.All(occupancies, occupancy => Assert.Equal(person.PersonId, occupancy.PersonId));
+        Assert.Equal(new[] { "a1", "a2" }, occupancies.Select(x => x.ApartmentId).ToArray());
+        Assert.Equal(2, await db.UserRoleAssignments.CountAsync(x =>
+            x.AccountId == account.AccountId && x.RoleKey == "resident" && x.RevokedAtUtc == null));
+        Assert.Empty(await db.UserCredentials.ToListAsync());
+    }
+
+    [Fact]
+    public async Task SharedPhoneAcrossMultipleExistingPeopleReusesCanonicalIdentity()
     {
         await using var context = new ResidentsServiceTestContext();
         await context.SeedApartmentAsync("b1", "a1");
         await context.SeedApartmentAsync("b1", "a2");
         await Create(context, "a1", "Person One", "01001234567");
+        await using (var db = context.CreateDb())
+        {
+            db.Persons.Add(new BuildingManagementMvc.Data.Entities.PersonEntity
+            {
+                PersonId = Guid.NewGuid(), DisplayName = "Legacy Duplicate",
+                PrimaryPhone = "+201001234567", CreatedAtUtc = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+
         await Create(context, "a2", "Person Two", "01001234567");
-        await using var db = context.CreateDb();
-        Assert.Equal(2, await db.Persons.CountAsync());
-        Assert.Equal(2, await db.UserAccounts.CountAsync());
-        Assert.Empty(await db.UserCredentials.ToListAsync());
+        await using var verify = context.CreateDb();
+        Assert.Equal(2, await verify.ApartmentOccupancies.CountAsync());
+        Assert.Single(await verify.UserAccounts.ToListAsync());
+        Assert.Equal(1, await verify.ApartmentOccupancies.Select(item => item.PersonId).Distinct().CountAsync());
+    }
+
+    [Fact]
+    public async Task MigrateFromApartmentsAsync_CreatesSharedIdentityAndApartmentScopedOccupanciesIdempotently()
+    {
+        await using var context = new ResidentsServiceTestContext();
+        await context.SeedApartmentAsync("b1", "a1", owner: "Shared Resident", phone: "01001234567");
+        await context.SeedApartmentAsync("b1", "a2", owner: "Shared Resident", phone: "00201001234567");
+        await using (var seed = context.CreateDb())
+        {
+            (await seed.Apartments.SingleAsync(item => item.Id == "a1")).Pin = "2468";
+            (await seed.Apartments.SingleAsync(item => item.Id == "a2")).Pin = "8642";
+            await seed.SaveChangesAsync();
+        }
+
+        var preview = await context.Service.MigrateFromApartmentsAsync("b1", dryRun: true);
+        Assert.Equal(2, preview.EntriesFound);
+        Assert.Equal(2, preview.EntriesMigrated);
+        await using (var dryRunDb = context.CreateDb())
+        {
+            Assert.Empty(await dryRunDb.ApartmentOccupancies.ToListAsync());
+            Assert.Empty(await dryRunDb.UserAccounts.ToListAsync());
+        }
+
+        var migrated = await context.Service.MigrateFromApartmentsAsync("b1", dryRun: false);
+        Assert.Equal(2, migrated.EntriesMigrated);
+        await using (var db = context.CreateDb())
+        {
+            Assert.Single(await db.Persons.ToListAsync());
+            Assert.Single(await db.UserAccounts.ToListAsync());
+            Assert.Equal(2, await db.ApartmentOccupancies.CountAsync());
+            Assert.Equal(2, await db.UserRoleAssignments.CountAsync(x => x.RoleKey == "resident" && x.RevokedAtUtc == null));
+            var account = await db.UserAccounts.SingleAsync();
+            Assert.Equal((byte)1, account.AccountStatus);
+            Assert.True(account.MustChangePin);
+            var credentials = await db.UserCredentials.Where(x => x.AccountId == account.AccountId && x.RevokedAtUtc == null).ToListAsync();
+            Assert.Equal(2, credentials.Count);
+            var hasher = new BcryptPasswordHasher();
+            Assert.Contains(credentials, item => hasher.VerifyPin("2468", item.CredentialHash));
+            Assert.Contains(credentials, item => hasher.VerifyPin("8642", item.CredentialHash));
+            Assert.All(await db.ApartmentOccupancies.ToListAsync(), item => Assert.Equal("b1", item.BuildingId));
+        }
+
+        var repeated = await context.Service.MigrateFromApartmentsAsync("b1", dryRun: false);
+        Assert.Equal(0, repeated.EntriesMigrated);
+        Assert.Equal(2, repeated.EntriesSkipped);
     }
 
     [Fact]

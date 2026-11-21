@@ -1,4 +1,4 @@
-using BuildingManagementMvc.Data;
+﻿using BuildingManagementMvc.Data;
 using BuildingManagementMvc.Data.Entities;
 using BuildingManagementMvc.Models;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +8,7 @@ namespace BuildingManagementMvc.Services;
 /// <summary>SuperAdmin governance operations over canonical identity, occupancy and access-control records.</summary>
 public sealed class IdentityGovernanceService
 {
+    private const byte PendingAccountStatus = 0;
     private readonly IDbContextFactory<AppDbContext> _factory;
     private readonly IAuditLogger _audit;
 
@@ -17,22 +18,39 @@ public sealed class IdentityGovernanceService
         _audit = audit;
     }
 
-    public async Task<IdentityGovernancePage> GetPageAsync(CancellationToken ct = default)
+    /// <summary>Loads the identity governance page, including identity, access and security inventory.</summary>
+    public Task<IdentityGovernancePage> GetPageAsync(CancellationToken ct = default)
+        => GetPageAsync(null, ct);
+
+    /// <summary>Loads identity governance records filtered by an optional person, phone, building, apartment or role search term.</summary>
+    public async Task<IdentityGovernancePage> GetPageAsync(string? searchTerm, CancellationToken ct)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
         var now = DateTime.UtcNow;
+        searchTerm = string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm.Trim();
+        var hasSearch = searchTerm != null;
+        var searchText = searchTerm ?? string.Empty;
+        var phoneSearchTerm = hasSearch && searchText.Any(char.IsDigit)
+            ? AuthHelpers.NormalizePhone(searchText)
+            : null;
         var page = new IdentityGovernancePage
         {
             PersonCount = await db.Persons.CountAsync(ct),
             AccountCount = await db.UserAccounts.CountAsync(ct),
             ActiveOccupancyCount = await db.ApartmentOccupancies.CountAsync(x => x.ValidFromUtc <= now && (x.ValidToUtc == null || x.ValidToUtc > now), ct),
             ActiveRoleAssignmentCount = await db.UserRoleAssignments.CountAsync(x => x.ValidFromUtc <= now && (x.ValidToUtc == null || x.ValidToUtc > now) && x.RevokedAtUtc == null, ct),
-            PendingPhoneChangeCount = await db.PersonPhoneChangeRequests.CountAsync(x => x.Status == 0, ct)
+            PendingPhoneChangeCount = await db.PersonPhoneChangeRequests.CountAsync(x => x.Status == 0, ct),
+            SearchTerm = searchTerm ?? ""
         };
 
         page.Persons = await (from p in db.Persons.AsNoTracking()
                               join a in db.UserAccounts.AsNoTracking() on p.PersonId equals a.PersonId into accounts
                               from a in accounts.DefaultIfEmpty()
+                              where !hasSearch || p.DisplayName.Contains(searchText)
+                                  || (p.LegalName != null && p.LegalName.Contains(searchText))
+                                  || (p.PrimaryPhone != null && p.PrimaryPhone.Contains(searchText))
+                                  || (phoneSearchTerm != null && p.PrimaryPhone != null && p.PrimaryPhone.Contains(phoneSearchTerm))
+                                  || (p.PrimaryEmail != null && p.PrimaryEmail.Contains(searchText))
                               orderby p.DisplayName, p.PersonId
                               select new IdentityGovernancePersonRow
                               {
@@ -45,6 +63,10 @@ public sealed class IdentityGovernanceService
 
         page.Accounts = await (from a in db.UserAccounts.AsNoTracking()
                                join p in db.Persons.AsNoTracking() on a.PersonId equals p.PersonId
+                               where !hasSearch || p.DisplayName.Contains(searchText)
+                                   || (p.PrimaryPhone != null && p.PrimaryPhone.Contains(searchText))
+                                   || (phoneSearchTerm != null && p.PrimaryPhone != null && p.PrimaryPhone.Contains(phoneSearchTerm))
+                                   || (p.PrimaryEmail != null && p.PrimaryEmail.Contains(searchText))
                                orderby p.DisplayName
                                select new IdentityGovernanceAccountRow
                                {
@@ -58,6 +80,10 @@ public sealed class IdentityGovernanceService
 
         page.Security = await (from a in db.UserAccounts.AsNoTracking()
                                join p in db.Persons.AsNoTracking() on a.PersonId equals p.PersonId
+                               where !hasSearch || p.DisplayName.Contains(searchText)
+                                   || (p.PrimaryPhone != null && p.PrimaryPhone.Contains(searchText))
+                                   || (phoneSearchTerm != null && p.PrimaryPhone != null && p.PrimaryPhone.Contains(phoneSearchTerm))
+                                   || (p.PrimaryEmail != null && p.PrimaryEmail.Contains(searchText))
                                orderby p.DisplayName
                                select new IdentityGovernanceSecurityRow
                                {
@@ -71,11 +97,21 @@ public sealed class IdentityGovernanceService
 
         page.Occupancies = await (from o in db.ApartmentOccupancies.AsNoTracking()
                                   join p in db.Persons.AsNoTracking() on o.PersonId equals p.PersonId
+                                  join b in db.Buildings.AsNoTracking() on o.BuildingId equals b.Id
+                                  join apartment in db.Apartments.AsNoTracking() on o.ApartmentId equals apartment.Id
+                                  where !hasSearch || p.DisplayName.Contains(searchText)
+                                      || (p.PrimaryPhone != null && p.PrimaryPhone.Contains(searchText))
+                                      || (phoneSearchTerm != null && p.PrimaryPhone != null && p.PrimaryPhone.Contains(phoneSearchTerm))
+                                      || b.Name.Contains(searchText) || b.BuildingNumber.Contains(searchText)
+                                      || apartment.Number.ToString().Contains(searchText)
+                                      || o.BuildingId.Contains(searchText) || o.ApartmentId.Contains(searchText)
                                   orderby o.ValidToUtc == null descending, o.ValidFromUtc descending
                                   select new IdentityGovernanceOccupancyRow
                                   {
                                       OccupancyId = o.OccupancyId, PersonId = o.PersonId, PersonName = p.DisplayName,
-                                      BuildingId = o.BuildingId, ApartmentId = o.ApartmentId, OccupancyType = o.OccupancyType,
+                                      BuildingId = o.BuildingId, BuildingName = b.Name,
+                                      ApartmentId = o.ApartmentId, ApartmentNumber = apartment.Number.ToString(),
+                                      OccupancyType = o.OccupancyType,
                                       IsPrimary = o.IsPrimary, ValidFromUtc = o.ValidFromUtc, ValidToUtc = o.ValidToUtc,
                                       IsCurrent = o.ValidFromUtc <= now && (o.ValidToUtc == null || o.ValidToUtc > now)
                                   }).Take(300).ToListAsync(ct);
@@ -83,12 +119,27 @@ public sealed class IdentityGovernanceService
         page.RoleAssignments = await (from r in db.UserRoleAssignments.AsNoTracking()
                                       join a in db.UserAccounts.AsNoTracking() on r.AccountId equals a.AccountId
                                       join p in db.Persons.AsNoTracking() on a.PersonId equals p.PersonId
+                                      join b in db.Buildings.AsNoTracking() on r.ScopeBuildingId equals b.Id into buildings
+                                      from b in buildings.DefaultIfEmpty()
+                                      join apartment in db.Apartments.AsNoTracking() on r.ScopeApartmentId equals apartment.Id into apartments
+                                      from apartment in apartments.DefaultIfEmpty()
+                                      where !hasSearch || p.DisplayName.Contains(searchText)
+                                          || (p.PrimaryPhone != null && p.PrimaryPhone!.Contains(searchText))
+                                          || (phoneSearchTerm != null && p.PrimaryPhone != null && p.PrimaryPhone!.Contains(phoneSearchTerm))
+                                          || r.RoleKey.Contains(searchText)
+                                          || (r.ScopeBuildingId != null && r.ScopeBuildingId!.Contains(searchText))
+                                          || (r.ScopeApartmentId != null && r.ScopeApartmentId!.Contains(searchText))
+                                          || (b != null && (b.Name.Contains(searchText) || b.BuildingNumber.Contains(searchText)))
+                                          || (apartment != null && apartment.Number.ToString().Contains(searchText))
                                       orderby r.RevokedAtUtc == null descending, r.GrantedAtUtc descending
                                       select new IdentityGovernanceRoleRow
                                       {
                                           AssignmentId = r.RoleAssignmentId, AccountId = r.AccountId, PersonName = p.DisplayName,
                                           RoleKey = r.RoleKey, ScopeType = r.ScopeType, BuildingId = r.ScopeBuildingId,
-                                          ApartmentId = r.ScopeApartmentId, ValidFromUtc = r.ValidFromUtc,
+                                          BuildingName = b == null ? r.ScopeBuildingId : b.Name,
+                                          ApartmentId = r.ScopeApartmentId,
+                                          ApartmentNumber = apartment == null ? r.ScopeApartmentId : apartment.Number.ToString(),
+                                          ValidFromUtc = r.ValidFromUtc,
                                           ValidToUtc = r.ValidToUtc, RevokedAtUtc = r.RevokedAtUtc, GrantReason = r.GrantReason
                                       }).Take(300).ToListAsync(ct);
 
@@ -117,6 +168,7 @@ public sealed class IdentityGovernanceService
         return page;
     }
 
+    /// <summary>Creates a person and records the governance action in the audit trail.</summary>
     public async Task<(bool Success, string Message)> CreatePersonAsync(string displayName, string? legalName, string? phone, string? email, Guid actor, CancellationToken ct)
     {
         displayName = (displayName ?? "").Trim();
@@ -131,6 +183,7 @@ public sealed class IdentityGovernanceService
         return (true, "تم إنشاء الهوية. لم يتم إنشاء حساب دخول تلقائيًا.");
     }
 
+    /// <summary>Updates a person and records the governance action in the audit trail.</summary>
     public async Task<(bool Success, string Message)> UpdatePersonAsync(Guid personId, string displayName, string? legalName, string? phone, string? email, Guid actor, CancellationToken ct)
     {
         displayName = (displayName ?? "").Trim();
@@ -148,6 +201,7 @@ public sealed class IdentityGovernanceService
         return (true, "تم تحديث بيانات الهوية وإبطال صلاحية الجلسات القديمة عبر Security Stamp.");
     }
 
+    /// <summary>Archives or restores a person after checking active dependencies and access.</summary>
     public async Task<(bool Success, string Message)> SetPersonArchivedAsync(Guid personId, bool archived, Guid actor, CancellationToken ct)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
@@ -158,18 +212,18 @@ public sealed class IdentityGovernanceService
         if (archived)
         {
             var now = DateTime.UtcNow;
-            if (await db.ApartmentOccupancies.AnyAsync(x => x.PersonId == personId && x.ValidFromUtc <= now && (x.ValidToUtc == null || x.ValidToUtc > now), ct))
+            if (await db.ApartmentOccupancies.AnyAsync(x => x.PersonId == personId && (x.ValidToUtc == null || x.ValidToUtc > now), ct))
                 return (false, "يجب إنهاء كل فترات الإشغال النشطة قبل أرشفة الهوية.");
-            if (await db.ApartmentOwnerships.AnyAsync(x => x.PersonId == personId && x.ValidFromUtc <= now && (x.ValidToUtc == null || x.ValidToUtc > now), ct))
+            if (await db.ApartmentOwnerships.AnyAsync(x => x.PersonId == personId && (x.ValidToUtc == null || x.ValidToUtc > now), ct))
                 return (false, "لا يمكن أرشفة هوية لها سجل ملكية شقة ساري. راجع دورة الملكية أولًا.");
-            if (await db.ApartmentAccessGrants.AnyAsync(x => x.PersonId == personId && x.RevokedAtUtc == null && x.ValidFromUtc <= now && (x.ValidToUtc == null || x.ValidToUtc > now), ct))
+            if (await db.ApartmentAccessGrants.AnyAsync(x => x.PersonId == personId && x.RevokedAtUtc == null && (x.ValidToUtc == null || x.ValidToUtc > now), ct))
                 return (false, "يجب إلغاء صلاحيات الوصول النشطة للشقق قبل أرشفة الهوية.");
             var account = await db.UserAccounts.SingleOrDefaultAsync(x => x.PersonId == personId, ct);
             if (account != null)
             {
                 if (await db.UserRoleAssignments.AnyAsync(x => x.AccountId == account.AccountId && x.RevokedAtUtc == null && (x.ValidToUtc == null || x.ValidToUtc > now), ct))
                     return (false, "يجب إلغاء/إنهاء كل إسنادات الأدوار النشطة قبل أرشفة الهوية.");
-                if (await db.AccountPermissionOverrides.AnyAsync(x => x.AccountId == account.AccountId && x.RevokedAtUtc == null && x.ValidFromUtc <= now && (x.ValidToUtc == null || x.ValidToUtc > now), ct))
+                if (await db.AccountPermissionOverrides.AnyAsync(x => x.AccountId == account.AccountId && x.RevokedAtUtc == null && (x.ValidToUtc == null || x.ValidToUtc > now), ct))
                     return (false, "يجب مراجعة وإلغاء تجاوزات الصلاحيات النشطة قبل أرشفة الهوية.");
                 account.AccountStatus = 0;
                 account.SecurityStamp = Guid.NewGuid().ToString("N");
@@ -185,36 +239,74 @@ public sealed class IdentityGovernanceService
         return (true, archived ? "تمت أرشفة الهوية دون حذفها." : "تم استعادة الهوية.");
     }
 
+    /// <summary>Creates an occupancy transaction and ensures a pending account exists when needed.</summary>
     public async Task<(bool Success, string Message)> CreateOccupancyAsync(Guid personId, string buildingId, string apartmentId, byte occupancyType, bool isPrimary, DateTime validFromUtc, string? notes, Guid actor, CancellationToken ct)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
         await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
         var person = await db.Persons.SingleOrDefaultAsync(x => x.PersonId == personId && !x.IsArchived, ct);
-        if (person == null) return (false, "الهوية غير موجودة أو مؤرشفة.");
-        if (occupancyType > 3 || string.IsNullOrWhiteSpace(buildingId) || string.IsNullOrWhiteSpace(apartmentId)) return (false, "بيانات التسكين غير صحيحة.");
-        if (!await db.Apartments.AnyAsync(x => x.BuildingId == buildingId && x.Id == apartmentId, ct)) return (false, "الشقة غير موجودة داخل العمارة المحددة.");
+        if (person == null) return (false, "The person does not exist or is archived.");
+        if (occupancyType > 3 || string.IsNullOrWhiteSpace(buildingId) || string.IsNullOrWhiteSpace(apartmentId))
+            return (false, "The occupancy details are invalid.");
+        if (!await db.Apartments.AnyAsync(x => x.BuildingId == buildingId && x.Id == apartmentId, ct))
+            return (false, "The selected apartment does not exist in the selected building.");
+        if (!await db.RoleDefinitions.AnyAsync(x => x.RoleKey == "resident" && x.IsActive, ct))
+            return (false, "The resident role is unavailable; no occupancy or account changes were made.");
         if (await db.ApartmentOccupancies.AnyAsync(x => x.PersonId == personId && x.BuildingId == buildingId && x.ApartmentId == apartmentId && (x.ValidToUtc == null || x.ValidToUtc > validFromUtc), ct))
-            return (false, "توجد فترة تسكين متداخلة للشخص في الشقة نفسها.");
+            return (false, "An overlapping occupancy already exists for this person and apartment.");
         if (isPrimary && await db.ApartmentOccupancies.AnyAsync(x => x.BuildingId == buildingId && x.ApartmentId == apartmentId && x.IsPrimary && (x.ValidToUtc == null || x.ValidToUtc > validFromUtc), ct))
-            return (false, "توجد إقامة أساسية متداخلة للشقة. راجع الفترة الحالية أولًا.");
-        var now = DateTime.UtcNow;
-        var entity = new ApartmentOccupancyEntity { OccupancyId = Guid.NewGuid(), PersonId = personId, BuildingId = buildingId, ApartmentId = apartmentId, OccupancyType = occupancyType, IsPrimary = isPrimary, ValidFromUtc = DateTime.SpecifyKind(validFromUtc, DateTimeKind.Utc), RecordedAtUtc = now, RecordedByAccountId = actor, Notes = Clean(notes, 1000) };
-        db.ApartmentOccupancies.Add(entity);
-        var createdPendingAccount = false;
-        if (!await db.UserAccounts.AnyAsync(x => x.PersonId == personId, ct))
-        {
-            db.UserAccounts.Add(new UserAccountEntity
-            {
-                AccountId = Guid.NewGuid(), PersonId = personId, AccountStatus = 3,
-                MustChangePin = true, SecurityStamp = Guid.NewGuid().ToString("N"), CreatedAtUtc = now
-            });
-            createdPendingAccount = true;
-        }
-        await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
-        await _audit.LogAsync("identity.occupancy.created", buildingId: buildingId, apartmentId: apartmentId, userId: actor.ToString(), userRole: "superadmin", metadata: new { entity.OccupancyId, personId, pendingAccountCreated = createdPendingAccount, credentialIssued = false });
-        return (true, createdPendingAccount ? "تم إنشاء سجل التسكين وحساب انتظار تلقائي دون PIN." : "تم إنشاء سجل التسكين؛ الحساب الموجود لم يتم تعديله.");
-    }
+            return (false, "Another primary occupancy overlaps this apartment period.");
 
+        var now = DateTime.UtcNow;
+        var entity = new ApartmentOccupancyEntity
+        {
+            OccupancyId = Guid.NewGuid(), PersonId = personId, BuildingId = buildingId, ApartmentId = apartmentId,
+            OccupancyType = occupancyType, IsPrimary = isPrimary,
+            ValidFromUtc = DateTime.SpecifyKind(validFromUtc, DateTimeKind.Utc), RecordedAtUtc = now,
+            RecordedByAccountId = actor, Notes = Clean(notes, 1000)
+        };
+        db.ApartmentOccupancies.Add(entity);
+
+        var account = await db.UserAccounts.SingleOrDefaultAsync(x => x.PersonId == personId, ct);
+        var createdPendingAccount = account == null;
+        if (account == null)
+        {
+            account = new UserAccountEntity
+            {
+                AccountId = Guid.NewGuid(), PersonId = personId, AccountStatus = PendingAccountStatus,
+                MustChangePin = true,
+                NormalizedEmail = string.IsNullOrWhiteSpace(person.PrimaryEmail) ? null : person.PrimaryEmail.Trim().ToUpperInvariant(),
+                SecurityStamp = Guid.NewGuid().ToString("N"), CreatedAtUtc = now
+            };
+            db.UserAccounts.Add(account);
+        }
+
+        var hasOverlappingResidentRole = await db.UserRoleAssignments.AnyAsync(x =>
+            x.AccountId == account.AccountId && x.RoleKey == "resident" && x.ScopeType == 2 &&
+            x.ScopeBuildingId == buildingId && x.ScopeApartmentId == apartmentId && x.RevokedAtUtc == null &&
+            (x.ValidToUtc == null || x.ValidToUtc > entity.ValidFromUtc) &&
+            x.ValidFromUtc < (entity.ValidToUtc ?? DateTime.MaxValue), ct);
+        if (!hasOverlappingResidentRole)
+        {
+            db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            {
+                RoleAssignmentId = Guid.NewGuid(), AccountId = account.AccountId, RoleKey = "resident",
+                ScopeType = 2, ScopeBuildingId = buildingId, ScopeApartmentId = apartmentId,
+                ValidFromUtc = entity.ValidFromUtc, GrantedAtUtc = now, GrantedByAccountId = actor,
+                GrantReason = "Resident access provisioned with the apartment occupancy."
+            });
+        }
+
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        await _audit.LogAsync("identity.occupancy.created", buildingId: buildingId, apartmentId: apartmentId,
+            userId: actor.ToString(), userRole: "superadmin",
+            metadata: new { entity.OccupancyId, personId, accountId = account.AccountId, pendingAccountCreated = createdPendingAccount, residentRoleProvisioned = !hasOverlappingResidentRole, credentialIssued = false });
+        return (true, createdPendingAccount
+            ? "Occupancy and pending resident account created. Issue an individual PIN only after identity and phone verification."
+            : "Occupancy and apartment-scoped resident access created. Existing account credentials and other roles were preserved.");
+    }
+    /// <summary>Ends an occupancy and removes its effective resident access.</summary>
     public async Task<(bool Success, string Message)> EndOccupancyAsync(Guid occupancyId, DateTime validToUtc, Guid actor, CancellationToken ct)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
@@ -229,10 +321,10 @@ public sealed class IdentityGovernanceService
         var linkedAccount = await db.UserAccounts.SingleOrDefaultAsync(x => x.PersonId == entity.PersonId, ct);
         if (linkedAccount != null)
         {
-            var residentAssignments = await db.UserRoleAssignments.Where(x => x.AccountId == linkedAccount.AccountId && x.RoleKey == "resident" && x.ScopeBuildingId == entity.BuildingId && x.ScopeApartmentId == entity.ApartmentId && x.ValidFromUtc < end && x.RevokedAtUtc == null && (x.ValidToUtc == null || x.ValidToUtc > end)).ToListAsync(ct);
+            var residentAssignments = await db.UserRoleAssignments.Where(x => x.AccountId == linkedAccount.AccountId && x.RoleKey == "resident" && x.ScopeType == 2 && x.ScopeBuildingId == entity.BuildingId && x.ScopeApartmentId == entity.ApartmentId && x.ValidFromUtc < end && x.RevokedAtUtc == null && (x.ValidToUtc == null || x.ValidToUtc > end)).ToListAsync(ct);
             foreach (var assignment in residentAssignments)
             {
-                assignment.RevokedAtUtc = end; assignment.RevokedByAccountId = actor; assignment.RevocationReason = "Occupancy ended by SuperAdmin governance.";
+                assignment.ValidToUtc = end; assignment.RevokedAtUtc = DateTime.UtcNow; assignment.RevokedByAccountId = actor; assignment.RevocationReason = "Occupancy ended by SuperAdmin governance.";
             }
             linkedAccount.SecurityStamp = Guid.NewGuid().ToString("N");
         }
@@ -242,9 +334,10 @@ public sealed class IdentityGovernanceService
         return (true, "تم إنهاء فترة الإشغال مع الاحتفاظ بالسجل التاريخي.");
     }
 
+    /// <summary>Creates a scoped role assignment after validating scope and effective-period integrity.</summary>
     public async Task<(bool Success, string Message)> GrantRoleAsync(Guid accountId, string roleKey, byte scopeType, string? buildingId, string? apartmentId, DateTime validFromUtc, DateTime? validToUtc, string reason, Guid actor, CancellationToken ct)
     {
-        roleKey = (roleKey ?? "").Trim(); reason = (reason ?? "").Trim();
+        roleKey = (roleKey ?? "").Trim().ToLowerInvariant(); reason = (reason ?? "").Trim();
         buildingId = string.IsNullOrWhiteSpace(buildingId) ? null : buildingId.Trim();
         apartmentId = string.IsNullOrWhiteSpace(apartmentId) ? null : apartmentId.Trim();
         if (roleKey.Length == 0 || reason.Length is < 3 or > 500 || scopeType is not (1 or 2 or 3)) return (false, "بيانات الدور أو النطاق أو سبب المنح غير صحيحة. نطاق النظام محجوز لمسار الصلاحيات المحمي.");
@@ -274,6 +367,7 @@ public sealed class IdentityGovernanceService
         return (true, "تم منح الدور بالنطاق المحدد.");
     }
 
+    /// <summary>Revokes a role assignment and records the governance action.</summary>
     public async Task<(bool Success, string Message)> RevokeRoleAsync(Guid assignmentId, string reason, Guid actor, CancellationToken ct)
     {
         reason = (reason ?? "").Trim();
@@ -291,24 +385,50 @@ public sealed class IdentityGovernanceService
         return (true, "تم إلغاء إسناد الدور مع الاحتفاظ بسجل المنح والإلغاء.");
     }
 
+    /// <summary>Creates a pending account for a person who has an active occupancy.</summary>
     public async Task<(bool Success, string Message)> CreatePendingAccountAsync(Guid personId, Guid actor, CancellationToken ct)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);
         await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
         var person = await db.Persons.SingleOrDefaultAsync(x => x.PersonId == personId && !x.IsArchived, ct);
-        if (person == null) return (false, "الهوية غير موجودة أو مؤرشفة.");
-        if (await db.UserAccounts.AnyAsync(x => x.PersonId == personId, ct)) return (false, "يوجد حساب بالفعل لهذه الهوية.");
+        if (person == null) return (false, "The person does not exist or is archived.");
+        if (await db.UserAccounts.AnyAsync(x => x.PersonId == personId, ct))
+            return (false, "An account already exists for this person; existing accounts are not modified.");
         var now = DateTime.UtcNow;
-        if (!await db.ApartmentOccupancies.AnyAsync(x => x.PersonId == personId && x.ValidFromUtc <= now && (x.ValidToUtc == null || x.ValidToUtc > now), ct))
-            return (false, "لا يمكن إنشاء حساب ساكن دون إشغال نشط مرتبط بشقة.");
-        var account = new UserAccountEntity { AccountId = Guid.NewGuid(), PersonId = personId, AccountStatus = 3, MustChangePin = true, SecurityStamp = Guid.NewGuid().ToString("N"), CreatedAtUtc = now };
+        var occupancies = await db.ApartmentOccupancies
+            .Where(x => x.PersonId == personId && x.ValidFromUtc <= now && (x.ValidToUtc == null || x.ValidToUtc > now))
+            .Select(x => new { x.BuildingId, x.ApartmentId })
+            .Distinct()
+            .ToListAsync(ct);
+        if (occupancies.Count == 0)
+            return (false, "An active apartment occupancy is required before creating a resident account.");
+        if (!await db.RoleDefinitions.AnyAsync(x => x.RoleKey == "resident" && x.IsActive, ct))
+            return (false, "The resident role is unavailable; no account was created.");
+
+        var account = new UserAccountEntity
+        {
+            AccountId = Guid.NewGuid(), PersonId = personId, AccountStatus = PendingAccountStatus,
+            MustChangePin = true,
+            NormalizedEmail = string.IsNullOrWhiteSpace(person.PrimaryEmail) ? null : person.PrimaryEmail.Trim().ToUpperInvariant(),
+            SecurityStamp = Guid.NewGuid().ToString("N"), CreatedAtUtc = now
+        };
         db.UserAccounts.Add(account);
+        foreach (var occupancy in occupancies)
+        {
+            db.UserRoleAssignments.Add(new UserRoleAssignmentEntity
+            {
+                RoleAssignmentId = Guid.NewGuid(), AccountId = account.AccountId, RoleKey = "resident",
+                ScopeType = 2, ScopeBuildingId = occupancy.BuildingId, ScopeApartmentId = occupancy.ApartmentId,
+                ValidFromUtc = now, GrantedAtUtc = now, GrantedByAccountId = actor,
+                GrantReason = "Resident access provisioned with the pending account."
+            });
+        }
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
-        await _audit.LogAsync("identity.account.created.pending", userId: actor.ToString(), userRole: "superadmin", metadata: new { account.AccountId, personId, credentialIssued = false, accountStatus = account.AccountStatus });
-        return (true, "تم إنشاء حساب انتظار دون PIN. استخدم مركز الحسابات للتحقق وإصدار PIN لاحقًا.");
+        await _audit.LogAsync("identity.account.created.pending", userId: actor.ToString(), userRole: "superadmin",
+            metadata: new { account.AccountId, personId, residentAssignments = occupancies.Count, credentialIssued = false, accountStatus = account.AccountStatus });
+        return (true, "Pending resident account and apartment-scoped resident roles created. PIN issuance still requires identity and phone verification.");
     }
-
     private static string? Clean(string? value, int max)
     {
         if (string.IsNullOrWhiteSpace(value)) return null;

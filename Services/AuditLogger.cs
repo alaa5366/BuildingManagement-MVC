@@ -235,13 +235,81 @@ public class AuditLogger : IAuditLogger
                 total);
         }
 
+        var items = rows.Select(ToDoc).ToList();
+        await EnrichDepositReceiptLinksAsync(db, items);
+
         return new BuildingManagementMvc.Models.PagedResult<AuditEntryDoc>
         {
-            Items = rows.Select(ToDoc).ToList(),
+            Items = items,
             CurrentPage = page,
             PageSize = pageSize,
             TotalItems = total
         };
+    }
+
+    private static async Task EnrichDepositReceiptLinksAsync(
+        AppDbContext db,
+        List<AuditEntryDoc> entries)
+    {
+        var references = new List<(AuditEntryDoc Entry, Guid DepositId)>();
+        foreach (var entry in entries)
+        {
+            if (!entry.Action.StartsWith("PaymentDeposit", StringComparison.Ordinal) ||
+                string.IsNullOrWhiteSpace(entry.Details))
+                continue;
+
+            try
+            {
+                var details = JObject.Parse(entry.Details);
+                if (Guid.TryParse(details["paymentDepositId"]?.ToString(), out var depositId))
+                    references.Add((entry, depositId));
+            }
+            catch (JsonException)
+            {
+                // Malformed historical metadata must not break the audit page.
+            }
+        }
+
+        var depositIds = references.Select(item => item.DepositId).Distinct().ToList();
+        if (depositIds.Count == 0)
+            return;
+
+        var deposits = await db.PaymentDeposits.AsNoTracking()
+            .Where(deposit => depositIds.Contains(deposit.PaymentDepositId))
+            .Select(deposit => new
+            {
+                deposit.PaymentDepositId,
+                deposit.BuildingId,
+                deposit.ApartmentId,
+                deposit.ReceiptMetadataJson
+            })
+            .ToListAsync();
+
+        foreach (var reference in references)
+        {
+            var deposit = deposits.FirstOrDefault(item =>
+                item.PaymentDepositId == reference.DepositId &&
+                item.BuildingId == reference.Entry.BuildingId &&
+                item.ApartmentId == reference.Entry.ApartmentId);
+            if (deposit is null || string.IsNullOrWhiteSpace(deposit.ReceiptMetadataJson))
+                continue;
+
+            try
+            {
+                var receipt = JObject.Parse(deposit.ReceiptMetadataJson);
+                var url = receipt["Url"]?.Value<string>();
+                if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+                    uri.Scheme != Uri.UriSchemeHttps)
+                    continue;
+
+                reference.Entry.Metadata ??= new Dictionary<string, object>();
+                reference.Entry.Metadata["receiptUrl"] = uri.AbsoluteUri;
+            }
+            catch (JsonException)
+            {
+                // A damaged receipt must not hide or fail its audit event.
+            }
+        }
     }
 
     private static IQueryable<AuditEventEntity> ApplyFilters(

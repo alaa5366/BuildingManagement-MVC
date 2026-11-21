@@ -271,7 +271,10 @@ public sealed class TargetWalletReadService
         return result;
     }
 
-    /// <summary>Gets the current financial period key.</summary>
+    /// <summary>
+    /// Gets the current building-local financial period, creating the month when it has not
+    /// yet been provisioned. A closed period is never reopened by this read path.
+    /// </summary>
     public async Task<string> GetCurrentPeriodKeyAsync(
         string buildingId,
         DateTimeOffset? utcNow = null,
@@ -280,26 +283,37 @@ public sealed class TargetWalletReadService
         if (string.IsNullOrWhiteSpace(buildingId))
             throw new ArgumentException("Building is required.", nameof(buildingId));
 
+        var now = utcNow ?? DateTimeOffset.UtcNow;
         await using var db = await _factory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken)
+            : null;
+
         var periods = await db.FinancialPeriods.AsNoTracking()
             .Where(period => period.BuildingId == buildingId)
             .OrderByDescending(period => period.PeriodKey)
             .Select(period => new { period.PeriodKey, period.TimeZoneId, period.StartsAtUtc, period.EndsAtUtc })
             .ToListAsync(cancellationToken);
 
-        if (periods.Count == 0)
-            return (utcNow ?? DateTimeOffset.UtcNow).UtcDateTime.ToString("yyyy-MM");
-
-        var now = (utcNow ?? DateTimeOffset.UtcNow).UtcDateTime;
         var activePeriod = periods.FirstOrDefault(period =>
-            now >= period.StartsAtUtc && now < period.EndsAtUtc);
-        if (activePeriod is not null) return activePeriod.PeriodKey;
+            now.UtcDateTime >= period.StartsAtUtc && now.UtcDateTime < period.EndsAtUtc);
+        if (activePeriod is not null)
+        {
+            if (transaction is not null)
+                await transaction.CommitAsync(cancellationToken);
+            return activePeriod.PeriodKey;
+        }
 
+        // Preserve the building's established accounting time zone. New buildings use
+        // the application's Egypt default until a building-specific zone is configured.
+        var timeZoneId = periods.FirstOrDefault()?.TimeZoneId;
+        if (string.IsNullOrWhiteSpace(timeZoneId))
+            timeZoneId = "Africa/Cairo";
+
+        TimeZoneInfo timeZone;
         try
         {
-            var timeZone = TimeZoneInfo.FindSystemTimeZoneById(periods[0].TimeZoneId);
-            return TimeZoneInfo.ConvertTime(new DateTimeOffset(now, TimeSpan.Zero), timeZone)
-                .ToString("yyyy-MM");
+            timeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
         }
         catch (TimeZoneNotFoundException ex)
         {
@@ -309,6 +323,40 @@ public sealed class TargetWalletReadService
         {
             throw new InvalidOperationException("The building financial period time zone is invalid.", ex);
         }
+
+        var localNow = TimeZoneInfo.ConvertTime(now, timeZone);
+        var monthKey = localNow.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
+        if (periods.Any(period => string.Equals(period.PeriodKey, monthKey, StringComparison.Ordinal)))
+        {
+            if (transaction is not null)
+                await transaction.CommitAsync(cancellationToken);
+            return monthKey;
+        }
+
+        if (!await db.Buildings.AsNoTracking().AnyAsync(building => building.Id == buildingId, cancellationToken))
+            throw new InvalidOperationException("The requested building does not exist.");
+
+        var localStart = DateTime.SpecifyKind(
+            new DateTime(localNow.Year, localNow.Month, 1), DateTimeKind.Unspecified);
+        var localEnd = localStart.AddMonths(1);
+        var period = new FinancialPeriodEntity
+        {
+            PeriodId = Guid.NewGuid(),
+            BuildingId = buildingId,
+            PeriodKey = monthKey,
+            TimeZoneId = timeZoneId,
+            Status = FinancialPeriodStatus.Open,
+            StartsAtUtc = TimeZoneInfo.ConvertTimeToUtc(localStart, timeZone),
+            EndsAtUtc = TimeZoneInfo.ConvertTimeToUtc(localEnd, timeZone),
+            CreatedAtUtc = now.UtcDateTime
+        };
+
+        db.FinancialPeriods.Add(period);
+        await db.SaveChangesAsync(cancellationToken);
+        if (transaction is not null)
+            await transaction.CommitAsync(cancellationToken);
+
+        return monthKey;
     }
 
     /// <summary>Gets the number of financial periods for the requested scope.</summary>
@@ -406,6 +454,55 @@ public sealed class TargetWalletReadService
             deposit.ApartmentId,
             deposit.PeriodKey)).ToList();
 
+        // Keep the receipt discoverable after a pending submission is confirmed,
+        // cancelled or reversed. The pending queue alone is not a durable history.
+        var historyRows = await (
+            from deposit in db.PaymentDeposits.AsNoTracking()
+            join period in db.FinancialPeriods.AsNoTracking()
+                on deposit.PeriodId equals period.PeriodId
+            join apartment in db.Apartments.AsNoTracking()
+                on new { deposit.BuildingId, deposit.ApartmentId }
+                equals new { apartment.BuildingId, ApartmentId = apartment.Id }
+            where deposit.BuildingId == buildingId &&
+                deposit.CurrencyCode == currencyCode &&
+                deposit.Status != PaymentDepositStatus.Pending &&
+                period.BuildingId == buildingId
+            orderby (deposit.ConfirmedAtUtc ?? deposit.CancelledAtUtc ?? deposit.SubmittedAtUtc) descending,
+                deposit.PaymentDepositId descending
+            select new
+            {
+                deposit.PaymentDepositId,
+                deposit.ApartmentId,
+                apartment.Number,
+                apartment.Label,
+                deposit.Amount,
+                deposit.Note,
+                deposit.Status,
+                deposit.ReceiptMetadataJson,
+                deposit.SubmittedAtUtc,
+                deposit.ConfirmedAtUtc,
+                deposit.CancelledAtUtc,
+                deposit.ResolutionReason,
+                period.PeriodKey
+            }).Take(100).ToListAsync(cancellationToken);
+
+        var history = historyRows.Select(deposit => new TargetPendingWalletDeposit(
+            new Deposit
+            {
+                Id = deposit.PaymentDepositId.ToString("D"),
+                Number = deposit.PaymentDepositId.ToString("N")[..8].ToUpperInvariant(),
+                AptId = deposit.ApartmentId,
+                Amount = deposit.Amount,
+                Note = deposit.ResolutionReason ?? deposit.Note ?? "",
+                Receipt = DeserializeReceipt(deposit.ReceiptMetadataJson),
+                Status = deposit.Status.ToString().ToLowerInvariant(),
+                CreatedAt = deposit.SubmittedAtUtc.ToString("O"),
+                ConfirmedAt = deposit.ConfirmedAtUtc?.ToString("O"),
+                CancelledAt = deposit.CancelledAtUtc?.ToString("O")
+            },
+            deposit.ApartmentId,
+            deposit.PeriodKey)).ToList();
+
         var periodDepositRows = await db.PaymentDeposits.AsNoTracking()
             .Where(d => d.BuildingId == buildingId && currentPeriodIds.Contains(d.PeriodId) && d.CurrencyCode == currencyCode)
             .Select(d => new { d.Status, d.Amount })
@@ -429,7 +526,7 @@ public sealed class TargetWalletReadService
             Balance: currentEntries.Sum(e => e.SignedAmount),
             TotalWallet: balances.Values.Sum());
 
-        return new TargetWalletAdminSnapshot(balances, pending, totals);
+        return new TargetWalletAdminSnapshot(balances, pending, history, totals);
     }
 
     /// <summary>Gets apartment details used by wallet operations.</summary>
@@ -581,6 +678,7 @@ public sealed class TargetWalletReadService
                 d.PaymentDepositId,
                 d.Amount,
                 d.ResolutionReason,
+                d.ReceiptMetadataJson,
                 OccurredAtUtc = d.CancelledAtUtc ?? d.SubmittedAtUtc
             })
             .ToListAsync(cancellationToken);
@@ -594,6 +692,7 @@ public sealed class TargetWalletReadService
             Note = string.IsNullOrWhiteSpace(deposit.ResolutionReason)
                 ? "Deposit cancelled"
                 : deposit.ResolutionReason,
+            ReceiptUrl = DeserializeReceipt(deposit.ReceiptMetadataJson)?.Url ?? "",
             CreatedAt = deposit.OccurredAtUtc.ToString("O")
         }));
 
@@ -697,5 +796,6 @@ public sealed record TargetWalletPeriodTotals(
 public sealed record TargetWalletAdminSnapshot(
     IReadOnlyDictionary<string, decimal> Balances,
     IReadOnlyList<TargetPendingWalletDeposit> PendingDeposits,
+    IReadOnlyList<TargetPendingWalletDeposit> DepositHistory,
     (decimal Collected, decimal Expenses, decimal Revenues, int OpenCount, int ClosedCount, decimal Balance, decimal TotalWallet) Totals);
 
