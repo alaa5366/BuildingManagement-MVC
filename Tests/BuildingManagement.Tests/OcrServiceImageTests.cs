@@ -66,7 +66,7 @@ public sealed class OcrServiceImageTests
             canvas.Clear(SKColors.White);
             canvas.Translate(rotated.Width, 0);
             canvas.RotateDegrees(90);
-            canvas.DrawBitmap(bitmap, 0, 0);
+            canvas.DrawBitmap(bitmap, 0, 0, new SKSamplingOptions(SKFilterMode.Linear));
             canvas.Flush();
         }
 
