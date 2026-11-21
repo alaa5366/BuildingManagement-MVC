@@ -166,8 +166,9 @@ Real SQL Server backup/restore tests live in Tests/BuildingManagement.SqlServerI
 
 Validation baseline for this change:
 - Release application, unit-test, and SQL Server integration project builds: zero warnings and zero errors.
-- Unit suite: 728 passed, zero failed, zero skipped, including resident-plus-admin and SuperAdmin MFA enforcement regressions.
+- Unit suite: 729 passed, zero failed, zero skipped, including resident-plus-admin, SuperAdmin MFA, and translation CSV formula-injection regressions.
 - SQL Server integration suite: 2 passed, zero failed, zero skipped when BM_SQLSERVER_TEST_CONNECTION targets the isolated test database; both tests are automatically skipped when that variable is absent.
 - SQL Server migration chain was applied to the isolated LocalDB instance BM_QA_20261121 and database BM_QA_Restore_20261121; no production database was used.
 - DocFX 2.81.0 documentation build: zero warnings and zero errors.
 - MFA resource audit: 27 MFA keys in each of the five resource files, with no duplicate keys or empty values.
+- CSV formula-injection coverage: application-log and translation exports use the shared sanitizer; audit-log and financial-report exports already use it.

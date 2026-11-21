@@ -224,9 +224,8 @@ public sealed class LanguageAdministrationService
                         join v in db.TranslationValues.AsNoTracking() on e.Key equals v.Key
                         orderby e.Category,e.SourceGroup,e.Key,v.CultureCode
                         select new { e.Key,e.Category,e.SourceGroup,e.Description,v.CultureCode,v.Value }).ToListAsync(ct);
-        static string Q(string? value) => "\""+(value??"").Replace("\"","\"\"")+"\"";
         var lines=new List<string>{"Key,Category,SourceGroup,Description,Culture,Value"};
-        lines.AddRange(rows.Select(x=>string.Join(",",Q(x.Key),Q(x.Category),Q(x.SourceGroup),Q(x.Description),Q(x.CultureCode),Q(x.Value))));
+        lines.AddRange(rows.Select(x=>string.Join(",",CsvExportSafety.Cell(x.Key),CsvExportSafety.Cell(x.Category),CsvExportSafety.Cell(x.SourceGroup),CsvExportSafety.Cell(x.Description),CsvExportSafety.Cell(x.CultureCode),CsvExportSafety.Cell(x.Value))));
         return string.Join("\r\n",lines);
     }
 

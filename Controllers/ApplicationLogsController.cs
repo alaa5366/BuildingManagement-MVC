@@ -134,20 +134,11 @@ public sealed class ApplicationLogsController : Controller
                 item.HttpStatusCode?.ToString(CultureInfo.InvariantCulture) ?? "",
                 item.DurationMs?.ToString("0.###", CultureInfo.InvariantCulture) ?? ""
             };
-            csv.AppendLine(string.Join(",", fields.Select(EscapeCsv)));
+            csv.AppendLine(string.Join(",", fields.Select(CsvExportSafety.Cell)));
         }
 
         var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(csv.ToString())).ToArray();
         return File(bytes, "text/csv; charset=utf-8", $"application-logs-page-{result.CurrentPage}.csv");
-    }
-
-    private static string EscapeCsv(string? value)
-    {
-        value ??= "";
-        var trimmed = value.TrimStart();
-        if (trimmed.Length > 0 && trimmed[0] is '=' or '+' or '-' or '@' or '\t' or '\r')
-            value = "'" + value;
-        return "\"" + value.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"";
     }
 
     private static DateTimeOffset? ParseDate(string? value, bool endOfDay)
