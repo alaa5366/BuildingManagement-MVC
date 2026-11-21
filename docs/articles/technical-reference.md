@@ -1,4 +1,4 @@
-﻿# Technical Reference
+# Technical Reference
 
 This document is the implementation-oriented reference for the current ASP.NET Core 8 MVC application. It describes the observed source structure and current workflows; it is not a promise that every legacy subsystem has already been retired.
 
